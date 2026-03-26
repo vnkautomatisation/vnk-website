@@ -31,7 +31,7 @@ app.get('/{*splat}', (req, res) => {
 });
 
 
-// Démarrer le serveur
+// Démarrer le serveur.
 app.listen(PORT, () => {
     console.log(`VNK Automatisation Inc.`);
     console.log(`Serveur démarré sur http://localhost:${PORT}`);
