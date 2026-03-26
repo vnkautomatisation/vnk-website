@@ -3,7 +3,7 @@ node_modules/
 npm-debug.log
 .npm
 
-# Environnement
+# Environnement — JAMAIS sur GitHub
 .env
 .env.local
 .env.production
@@ -16,10 +16,15 @@ npm-debug.log
 # Windows
 Thumbs.db
 Desktop.ini
+$RECYCLE.BIN/
 
 # Logs
 logs/
 *.log
+
+# Base de données
+*.sql
+*.dump
 
 # Build
 dist/
