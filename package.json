@@ -1,0 +1,21 @@
+{
+  "name": "vnk-website",
+  "version": "1.0.0",
+  "description": "Site web VNK Automatisation Inc.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VNK-Automatisation/vnk-website.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/VNK-Automatisation/vnk-website/issues"
+  },
+  "homepage": "https://github.com/VNK-Automatisation/vnk-website#readme"
+}
