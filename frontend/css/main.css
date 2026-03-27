@@ -2168,3 +2168,200 @@ img {
     display: flex;
     justify-content: center;
 }
+
+/* ---------- Page Header with image ---------- */
+.page-header {
+    position: relative;
+    padding: calc(var(--nav-height) + 3rem) 0 3rem;
+    overflow: hidden;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+}
+
+.page-header-bg {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+}
+
+    .page-header-bg img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.3;
+    }
+
+.page-header-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(15,45,82,0.95), rgba(27,79,138,0.88));
+}
+
+.page-header-content {
+    position: relative;
+    z-index: 2;
+    color: white;
+}
+
+    .page-header-content h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: white;
+        margin: 0.5rem 0;
+    }
+
+    .page-header-content p {
+        font-size: 1.05rem;
+        color: rgba(255,255,255,0.75);
+        margin-bottom: 1.5rem;
+    }
+
+.page-header-nav {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.page-header-link {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.85);
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: var(--transition);
+}
+
+    .page-header-link:hover {
+        background: rgba(255,255,255,0.2);
+        color: white;
+    }
+
+/* ---------- Service detail icon wrap ---------- */
+.service-detail-icon-wrap {
+    width: 64px;
+    height: 64px;
+    background: var(--color-light-blue);
+    border-radius: var(--border-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--spacing-sm);
+}
+
+.service-detail-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.5rem;
+}
+
+.service-detail-lead {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--color-text);
+    margin-bottom: var(--spacing-md);
+}
+
+/* ---------- Service detail image ---------- */
+.service-detail-image {
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    margin-bottom: var(--spacing-sm);
+}
+
+    .service-detail-image img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        display: block;
+        transition: transform 0.5s ease;
+    }
+
+    .service-detail-image:hover img {
+        transform: scale(1.03);
+    }
+
+/* ---------- Process section ---------- */
+.process-section {
+    padding: var(--spacing-xl) 0;
+    background: var(--color-bg);
+}
+
+.process-steps {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin-top: var(--spacing-lg);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.process-step-block {
+    flex: 1;
+    min-width: 140px;
+    max-width: 180px;
+    text-align: center;
+    padding: var(--spacing-sm);
+    position: relative;
+}
+
+.process-step-number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--color-light-blue);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.process-step-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--color-white);
+    border-radius: 50%;
+    border: 2px solid var(--color-light-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--spacing-xs);
+}
+
+.process-step-block h4 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 0.4rem;
+}
+
+.process-step-block p {
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+    line-height: 1.5;
+}
+
+.process-arrow {
+    font-size: 1.5rem;
+    color: var(--color-light-blue);
+    align-self: center;
+    padding: 0 0.25rem;
+    margin-top: -1rem;
+}
+
+@media (max-width: 768px) {
+    .process-steps {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .process-arrow {
+        transform: rotate(90deg);
+        margin: -0.5rem 0;
+    }
+
+    .page-header-content h1 {
+        font-size: 1.8rem;
+    }
+}
