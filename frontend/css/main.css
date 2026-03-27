@@ -2365,3 +2365,256 @@ img {
         font-size: 1.8rem;
     }
 }
+/* ---------- About page layout ---------- */
+.founder-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: var(--spacing-lg);
+    align-items: start;
+}
+
+.founder-visual {
+    position: sticky;
+    top: calc(var(--nav-height) + 1rem);
+}
+
+.founder-photo-wrap {
+    position: relative;
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    margin-bottom: var(--spacing-sm);
+}
+
+.founder-photo {
+    width: 100%;
+    height: 320px;
+    object-fit: cover;
+    display: block;
+}
+
+.founder-photo-badge {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    background: rgba(15,45,82,0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: var(--border-radius);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+    .founder-photo-badge svg {
+        background: var(--color-success);
+        border-radius: 50%;
+        padding: 3px;
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+    }
+
+    .founder-photo-badge strong {
+        display: block;
+        color: white;
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+
+    .founder-photo-badge span {
+        color: rgba(255,255,255,0.6);
+        font-size: 0.78rem;
+    }
+
+.founder-card {
+    background: var(--color-white);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow);
+}
+
+.founder-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.founder-initials {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.founder-card-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 0.15rem;
+}
+
+.founder-card-header p {
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+}
+
+.founder-role-title {
+    font-size: 1rem;
+    color: var(--color-secondary);
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+}
+
+.founder-desc {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--color-text);
+    margin-bottom: var(--spacing-sm);
+}
+
+/* ---------- VNK Values ---------- */
+.vnk-values {
+    margin-top: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.vnk-value-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: var(--spacing-sm);
+    background: var(--color-bg);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+    transition: var(--transition);
+}
+
+    .vnk-value-item:hover {
+        border-color: var(--color-secondary);
+        background: var(--color-white);
+        box-shadow: var(--shadow);
+    }
+
+.vnk-value-letter {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.vnk-value-item strong {
+    display: block;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 0.2rem;
+}
+
+.vnk-value-item p {
+    font-size: 0.85rem;
+    color: var(--color-text-light);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ---------- Expertise cards with colored headers ---------- */
+.expertise-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem var(--spacing-sm);
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    margin: calc(-1 * var(--spacing-sm)) calc(-1 * var(--spacing-sm)) var(--spacing-sm);
+}
+
+    .expertise-card-header h4 {
+        color: white;
+        font-size: 0.9rem;
+        font-weight: 700;
+        border-bottom: none;
+        padding-bottom: 0;
+        margin-bottom: 0;
+    }
+
+.expertise-siemens {
+    background: linear-gradient(135deg, #007878, #009999);
+}
+
+.expertise-rockwell {
+    background: linear-gradient(135deg, #AA0000, #CC0000);
+}
+
+.expertise-br {
+    background: linear-gradient(135deg, #CC5500, #FF6600);
+}
+
+.expertise-schneider {
+    background: linear-gradient(135deg, #2AAA44, #3DCD58);
+}
+
+.expertise-standards {
+    background: linear-gradient(135deg, #1B4F8A, #2E75B6);
+}
+
+.expertise-safety {
+    background: linear-gradient(135deg, #2C3E50, #4A6280);
+}
+
+/* ---------- Commitment icons ---------- */
+.commitment-icon-wrap {
+    width: 64px;
+    height: 64px;
+    background: var(--color-light-blue);
+    border-radius: var(--border-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--spacing-sm);
+}
+
+/* ---------- Info items with icons ---------- */
+.info-label {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: 600;
+    color: var(--color-text-light);
+    font-size: 0.82rem;
+}
+
+/* ---------- Responsive About ---------- */
+@media (max-width: 1024px) {
+    .founder-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .founder-visual {
+        position: static;
+    }
+
+    .founder-photo {
+        height: 250px;
+    }
+}
+

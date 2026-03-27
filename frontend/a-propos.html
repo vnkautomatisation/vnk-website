@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -17,20 +17,20 @@
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="nav-logo">
-                <svg width="200" height="40" viewBox="0 0 200 40">
-                    <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#1B4F8A" opacity="0.08" />
-                    <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#1B4F8A" stroke-width="1.8" />
-                    <text x="20" y="25" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#1B4F8A;font-family:sans-serif">VNK</text>
-                    <text x="46" y="18" style="font-size:13px;font-weight:700;fill:var(--color-text-primary);font-family:sans-serif">Automatisation Inc.</text>
-                    <text x="46" y="32" style="font-size:7px;fill:var(--color-text-secondary);font-family:sans-serif;letter-spacing:1px">VALUE · NETWORK · KNOWLEDGE</text>
+                <svg width="220" height="42" viewBox="0 0 220 42">
+                    <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="#1B4F8A" opacity="0.08" />
+                    <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="none" stroke="#1B4F8A" stroke-width="2" />
+                    <text x="21" y="26" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#1B4F8A;font-family:sans-serif">VNK</text>
+                    <text x="48" y="18" style="font-size:13px;font-weight:700;fill:#333;font-family:sans-serif">Automatisation Inc.</text>
+                    <text x="48" y="33" style="font-size:7.5px;fill:#888;font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text>
                 </svg>
             </div>
             <ul class="nav-links" id="nav-links">
-                <li><a href="index.html" class="nav-link" data-i18n="nav.home">Accueil</a></li>
-                <li><a href="services.html" class="nav-link" data-i18n="nav.services">Services</a></li>
-                <li><a href="a-propos.html" class="nav-link active" data-i18n="nav.about">À propos</a></li>
-                <li><a href="contact.html" class="nav-link" data-i18n="nav.contact">Contact</a></li>
-                <li><a href="portail.html" class="nav-link nav-portal" data-i18n="nav.portal">Portail client</a></li>
+                <li><a href="index.html" class="nav-link">Accueil</a></li>
+                <li><a href="services.html" class="nav-link">Services</a></li>
+                <li><a href="a-propos.html" class="nav-link active">À propos</a></li>
+                <li><a href="contact.html" class="nav-link">Contact</a></li>
+                <li><a href="portail.html" class="nav-link nav-portal">Portail client</a></li>
             </ul>
             <div class="nav-actions">
                 <button class="lang-toggle" id="lang-toggle" onclick="toggleLanguage()">EN</button>
@@ -41,80 +41,109 @@
 
     <!-- PAGE HEADER -->
     <section class="page-header">
-        <div class="container">
-            <h1 data-i18n="about.title">À propos de VNK</h1>
-            <p data-i18n="about.subtitle">Value. Network. Knowledge.</p>
+        <div class="page-header-bg">
+            <img src="images/about-hero.jpg" alt="À propos de VNK Automatisation">
+            <div class="page-header-overlay"></div>
+        </div>
+        <div class="container page-header-content">
+            <div class="section-tag" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3)">À propos</div>
+            <h1>VNK Automatisation Inc.</h1>
+            <p>Value. Network. Knowledge. — Services industriels B2B spécialisés au Québec</p>
         </div>
     </section>
 
     <!-- FOUNDER SECTION -->
     <section class="about-founder">
         <div class="container">
-            <div class="founder-grid">
-                <div class="founder-content">
-                    <h2 data-i18n="about.founder.title">Yan Verone Kengne</h2>
-                    <p class="founder-role" data-i18n="about.founder.role">Fondateur et expert en automatisation industrielle</p>
-                    <p data-i18n="about.founder.desc1">
-                        Technicien spécialisé en automatisation industrielle avec une expertise approfondie
-                        en programmation PLC, SCADA et HMI pour plusieurs marques d'automates industriels
-                        — Siemens, Rockwell Allen-Bradley, B&R Automation et Schneider Electric.
-                    </p>
-                    <p data-i18n="about.founder.desc2">
-                        VNK Automatisation Inc. a été fondée en mars 2026 avec une mission claire :
-                        offrir des services techniques spécialisés de haute qualité aux entreprises
-                        industrielles du Québec, avec la rigueur et le professionnalisme d'une vraie
-                        entreprise de services B2B.
-                    </p>
-                    <div class="founder-values">
-                        <div class="value-item">
-                            <span class="value-letter">V</span>
+            <div class="founder-layout">
+
+                <!-- Photo et carte -->
+                <div class="founder-visual animate-on-scroll">
+                    <div class="founder-photo-wrap">
+                        <img src="images/about-hero.jpg" alt="Yan Verone Kengne — VNK Automatisation Inc." class="founder-photo">
+                        <div class="founder-photo-badge">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            <div>
+                                <strong>Société par actions</strong>
+                                <span>Constituée au Québec — mars 2026</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="founder-card-header">
+                        <div class="founder-initials">YV</div>
+                        <div>
+                            <h3>Yan Verone</h3>
+                            <p>Fondateur — VNK Automatisation Inc.</p>
+                        </div>
+                    </div>
+                    <div class="founder-info">
+                        <div class="info-item">
+                            <span class="info-label">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                                Localisation
+                            </span>
+                            <span>Québec, QC, Canada</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                                Fondée
+                            </span>
+                            <span>Mars 2026</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" /><polyline points="16 21 12 17 8 21" /><polyline points="16 3 12 7 8 3" /></svg>
+                                Secteur
+                            </span>
+                            <span>Automatisation industrielle B2B</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+                                Marché
+                            </span>
+                            <span>Québec, Canada</span>
+                        </div>
+                        <a href="contact.html" class="btn btn-primary" style="width:100%; margin-top:1rem">Prendre contact</a>
+                    </div>
+                </div>
+
+                <!-- Texte -->
+                <div class="founder-text">
+                    <div class="section-tag">Le fondateur</div>
+                    <h2>Yan Verone</h2>
+                    <p class="founder-role-title">Fondateur — VNK Automatisation Inc.</p>
+                    <p class="founder-desc">VNK Automatisation Inc. est une entreprise de services spécialisée exclusivement en automatisation industrielle — PLC, SCADA, HMI. Fondée en mars 2026 au Québec, elle répond à un besoin concret des entreprises industrielles : avoir accès à une expertise technique de pointe, rapidement, sans les délais et les coûts d'un grand intégrateur.</p>
+                    <p class="founder-desc">L'approche VNK est simple — chaque mandat est structuré avec un contrat, exécuté avec rigueur et livré avec un rapport écrit. Pas de zone grise, pas de surprise sur la facturation.</p>
+
+                    <div class="vnk-values">
+                        <div class="vnk-value-item animate-on-scroll">
+                            <div class="vnk-value-letter">V</div>
                             <div>
                                 <strong>Value</strong>
-                                <p data-i18n="about.value.desc">Chaque intervention apporte une valeur concrète et mesurable à votre opération.</p>
+                                <p>Chaque intervention apporte une valeur concrète et mesurable à votre opération.</p>
                             </div>
                         </div>
-                        <div class="value-item">
-                            <span class="value-letter">N</span>
+                        <div class="vnk-value-item animate-on-scroll delay-1">
+                            <div class="vnk-value-letter">N</div>
                             <div>
                                 <strong>Network</strong>
-                                <p data-i18n="about.network.desc">Des relations de confiance avec les clients, construites sur la transparence et les résultats.</p>
+                                <p>Des relations de confiance avec les clients, construites sur la transparence et les résultats.</p>
                             </div>
                         </div>
-                        <div class="value-item">
-                            <span class="value-letter">K</span>
+                        <div class="vnk-value-item animate-on-scroll delay-2">
+                            <div class="vnk-value-letter">K</div>
                             <div>
                                 <strong>Knowledge</strong>
-                                <p data-i18n="about.knowledge.desc">Une expertise technique profonde, constamment mise à jour sur les technologies industrielles.</p>
+                                <p>Une expertise technique profonde, constamment mise à jour sur les technologies industrielles.</p>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="founder-aside">
-                    <div class="founder-card">
-                        <div class="founder-avatar">YVK</div>
-                        <h3>Yan Verone Kengne</h3>
-                        <p>VNK Automatisation Inc.</p>
-                        <div class="founder-info">
-                            <div class="info-item">
-                                <span class="info-label" data-i18n="about.location">Localisation</span>
-                                <span>Québec, QC, Canada</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label" data-i18n="about.founded">Fondée</span>
-                                <span>Mars 2026</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">NEQ</span>
-                                <span>1181943359</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label" data-i18n="about.type">Type</span>
-                                <span data-i18n="about.type_value">Société par actions</span>
-                            </div>
-                        </div>
-                        <a href="contact.html" class="btn btn-primary" style="width:100%; margin-top:1rem" data-i18n="about.contact_btn">Prendre contact</a>
-                    </div>
-                </div>
+
             </div>
         </div>
     </section>
@@ -123,32 +152,43 @@
     <section class="about-expertise">
         <div class="container">
             <div class="section-header">
-                <h2 data-i18n="about.expertise.title">Expertise technique</h2>
-                <p data-i18n="about.expertise.subtitle">Compétences spécialisées en automatisation industrielle</p>
+                <div class="section-tag">Compétences</div>
+                <h2>Expertise technique</h2>
+                <p>Maîtrise approfondie des principales plateformes d'automatisation industrielle.</p>
             </div>
             <div class="expertise-grid">
-                <div class="expertise-card">
-                    <h4>Siemens</h4>
+
+                <div class="expertise-card animate-on-scroll">
+                    <div class="expertise-card-header expertise-siemens">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" /></svg>
+                        <h4>Siemens</h4>
+                    </div>
                     <ul class="expertise-list">
                         <li>TIA Portal</li>
-                        <li>S7-300 / S7-400</li>
-                        <li>S7-1200 / S7-1500</li>
+                        <li>S7-300 / S7-400 / S7-1200 / S7-1500</li>
                         <li>WinCC SCADA</li>
                         <li>Step 7</li>
                     </ul>
                 </div>
-                <div class="expertise-card">
-                    <h4>Rockwell Allen-Bradley</h4>
+
+                <div class="expertise-card animate-on-scroll delay-1">
+                    <div class="expertise-card-header expertise-rockwell">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="4" /></svg>
+                        <h4>Rockwell Allen-Bradley</h4>
+                    </div>
                     <ul class="expertise-list">
                         <li>Studio 5000</li>
-                        <li>ControlLogix</li>
-                        <li>CompactLogix</li>
+                        <li>ControlLogix / CompactLogix</li>
                         <li>FactoryTalk View</li>
                         <li>RSLogix 500</li>
                     </ul>
                 </div>
-                <div class="expertise-card">
-                    <h4>B&R Automation</h4>
+
+                <div class="expertise-card animate-on-scroll delay-2">
+                    <div class="expertise-card-header expertise-br">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+                        <h4>B&R Automation</h4>
+                    </div>
                     <ul class="expertise-list">
                         <li>Automation Studio</li>
                         <li>X20 Series</li>
@@ -156,17 +196,25 @@
                         <li>Visualization</li>
                     </ul>
                 </div>
-                <div class="expertise-card">
-                    <h4>Schneider Electric</h4>
+
+                <div class="expertise-card animate-on-scroll delay-3">
+                    <div class="expertise-card-header expertise-schneider">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+                        <h4>Schneider Electric</h4>
+                    </div>
                     <ul class="expertise-list">
                         <li>EcoStruxure</li>
-                        <li>Modicon M340/M580</li>
+                        <li>Modicon M340 / M580</li>
                         <li>Unity Pro / Control Expert</li>
                         <li>Vijeo Designer</li>
                     </ul>
                 </div>
-                <div class="expertise-card">
-                    <h4>Standards & Protocols</h4>
+
+                <div class="expertise-card animate-on-scroll">
+                    <div class="expertise-card-header expertise-standards">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+                        <h4>Protocoles & Standards</h4>
+                    </div>
                     <ul class="expertise-list">
                         <li>IEC 61131-3</li>
                         <li>Profibus / Profinet</li>
@@ -175,8 +223,12 @@
                         <li>OPC UA</li>
                     </ul>
                 </div>
-                <div class="expertise-card">
-                    <h4>Safety & Documentation</h4>
+
+                <div class="expertise-card animate-on-scroll delay-1">
+                    <div class="expertise-card-header expertise-safety">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                        <h4>Sécurité & Documentation</h4>
+                    </div>
                     <ul class="expertise-list">
                         <li>Safety PLC programming</li>
                         <li>CSA Z432 awareness</li>
@@ -184,6 +236,7 @@
                         <li>Process documentation</li>
                     </ul>
                 </div>
+
             </div>
         </div>
     </section>
@@ -192,29 +245,57 @@
     <section class="about-commitment">
         <div class="container">
             <div class="section-header">
-                <h2 data-i18n="about.commitment.title">Notre engagement</h2>
+                <div class="section-tag">Notre engagement</div>
+                <h2>Ce que vous pouvez attendre de VNK</h2>
+                <p>Un standard professionnel rigoureux à chaque mandat.</p>
             </div>
             <div class="commitment-grid">
-                <div class="commitment-item">
-                    <div class="commitment-icon">📋</div>
-                    <h4 data-i18n="about.commitment.contract">Contrat systématique</h4>
-                    <p data-i18n="about.commitment.contract_desc">Aucune intervention sans contrat signé. Périmètre, délais et tarifs clairement définis avant de commencer.</p>
+
+                <div class="commitment-item animate-on-scroll">
+                    <div class="commitment-icon-wrap">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="9" y1="15" x2="15" y2="15" />
+                        </svg>
+                    </div>
+                    <h4>Contrat systématique</h4>
+                    <p>Aucune intervention sans contrat signé. Périmètre, délais et tarifs clairement définis avant de commencer.</p>
                 </div>
-                <div class="commitment-item">
-                    <div class="commitment-icon">📝</div>
-                    <h4 data-i18n="about.commitment.report">Rapport écrit</h4>
-                    <p data-i18n="about.commitment.report_desc">Chaque intervention génère un rapport écrit détaillé — ce qui a été fait, pourquoi, et les recommandations.</p>
+
+                <div class="commitment-item animate-on-scroll delay-1">
+                    <div class="commitment-icon-wrap">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <polyline points="9 11 12 14 22 4" />
+                        </svg>
+                    </div>
+                    <h4>Rapport écrit</h4>
+                    <p>Chaque intervention génère un rapport écrit détaillé — ce qui a été fait, pourquoi, et les recommandations.</p>
                 </div>
-                <div class="commitment-item">
-                    <div class="commitment-icon">🔒</div>
-                    <h4 data-i18n="about.commitment.confidential">Confidentialité</h4>
-                    <p data-i18n="about.commitment.confidential_desc">NDA disponible sur demande. Vos données et procédés industriels restent confidentiels.</p>
+
+                <div class="commitment-item animate-on-scroll delay-2">
+                    <div class="commitment-icon-wrap">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                    </div>
+                    <h4>Confidentialité</h4>
+                    <p>NDA disponible sur demande. Vos données et procédés industriels restent strictement confidentiels.</p>
                 </div>
-                <div class="commitment-item">
-                    <div class="commitment-icon">⚡</div>
-                    <h4 data-i18n="about.commitment.responsive">Réactivité</h4>
-                    <p data-i18n="about.commitment.responsive_desc">Intervention à distance sans délai de déplacement. Réponse rapide quand votre production est en jeu.</p>
+
+                <div class="commitment-item animate-on-scroll delay-3">
+                    <div class="commitment-icon-wrap">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                        </svg>
+                    </div>
+                    <h4>Réactivité</h4>
+                    <p>Intervention à distance sans délai de déplacement. Réponse rapide quand votre production est en jeu.</p>
                 </div>
+
             </div>
         </div>
     </section>
@@ -223,9 +304,17 @@
     <section class="cta-section">
         <div class="container">
             <div class="cta-content">
-                <h2 data-i18n="cta.title">Prêt à optimiser votre système ?</h2>
-                <p data-i18n="cta.subtitle">Réservez une consultation gratuite de 30 minutes pour discuter de vos besoins.</p>
-                <a href="contact.html" class="btn btn-primary btn-large" data-i18n="cta.button">Réserver maintenant</a>
+                <div class="cta-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                    </svg>
+                </div>
+                <h2>Prêt à optimiser votre système ?</h2>
+                <p>Consultation gratuite de 30 minutes — sans engagement.</p>
+                <div class="cta-actions">
+                    <a href="contact.html" class="btn btn-primary btn-large">Réserver maintenant</a>
+                    <a href="services.html" class="btn btn-secondary btn-large">Voir les services</a>
+                </div>
             </div>
         </div>
     </section>
@@ -244,38 +333,40 @@
                             <text x="48" y="33" style="font-size:7.5px;fill:rgba(255,255,255,0.6);font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text>
                         </svg>
                     </div>
+                    <p class="footer-desc">Services d'automatisation industrielle B2B — Québec, Canada.</p>
                 </div>
                 <div class="footer-links">
-                    <h4 data-i18n="footer.services">Services</h4>
+                    <h4>Services</h4>
                     <ul>
-                        <li><a href="services.html#plc" data-i18n="services.plc.title">Support PLC</a></li>
-                        <li><a href="services.html#audit" data-i18n="services.audit.title">Audit technique</a></li>
-                        <li><a href="services.html#documentation" data-i18n="services.doc.title">Documentation</a></li>
-                        <li><a href="services.html#refactoring" data-i18n="services.refactor.title">Refactorisation</a></li>
+                        <li><a href="services.html#plc">Support PLC</a></li>
+                        <li><a href="services.html#audit">Audit technique</a></li>
+                        <li><a href="services.html#documentation">Documentation</a></li>
+                        <li><a href="services.html#refactoring">Refactorisation</a></li>
                     </ul>
                 </div>
                 <div class="footer-links">
-                    <h4 data-i18n="footer.company">Entreprise</h4>
+                    <h4>Entreprise</h4>
                     <ul>
-                        <li><a href="a-propos.html" data-i18n="nav.about">À propos</a></li>
-                        <li><a href="contact.html" data-i18n="nav.contact">Contact</a></li>
-                        <li><a href="portail.html" data-i18n="nav.portal">Portail client</a></li>
+                        <li><a href="a-propos.html">À propos</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                        <li><a href="portail.html">Portail client</a></li>
                     </ul>
                 </div>
                 <div class="footer-contact">
-                    <h4 data-i18n="footer.contact">Contact</h4>
+                    <h4>Contact</h4>
                     <p>vnkautomatisation@gmail.com</p>
                     <p>Québec, QC, Canada</p>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p data-i18n="footer.copyright">© 2026 VNK Automatisation Inc. Tous droits réservés.</p>
+                <p>© 2026 VNK Automatisation Inc. Tous droits réservés.</p>
             </div>
         </div>
     </footer>
 
     <script src="js/i18n.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/animations.js"></script>
 
 </body>
 </html>
