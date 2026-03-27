@@ -63,12 +63,3 @@ const downloadInvoicePDF = [authenticateToken, async (req, res) => {
 }];
 
 module.exports = { downloadQuotePDF, downloadInvoicePDF };
-```
-
----
-
-**FICHIER 6 — Installer les dépendances manquantes**
-
-Dans le terminal :
-```
-npm install @dropbox/sign pdfkit

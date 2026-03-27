@@ -143,13 +143,17 @@
                         </div>
                     </div>
 
+                    <!-- Calendly inline widget -->
                     <div class="contact-calendly-card">
                         <h3 data-i18n="contact.calendly.title">Réserver directement</h3>
                         <p data-i18n="contact.calendly.desc">Choisissez un créneau qui vous convient pour une consultation gratuite de 30 minutes.</p>
-                        <a href="https://calendly.com" target="_blank" class="btn btn-outline" style="width:100%" data-i18n="contact.calendly.btn">
-                            Ouvrir le calendrier →
-                        </a>
-                        <p class="contact-calendly-note" data-i18n="contact.calendly.note">Lien Calendly disponible au lancement officiel</p>
+
+                        <!-- Calendly inline embed -->
+                        <div class="calendly-inline-widget"
+                             data-url="https://calendly.com/vnkautomatisation/consultation-30min?hide_gdpr_banner=1&primary_color=1b4f8a"
+                             style="min-width:280px; height:630px;">
+                        </div>
+                        <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
                     </div>
 
                     <div class="contact-process-card">

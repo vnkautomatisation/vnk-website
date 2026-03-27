@@ -35,6 +35,7 @@ app.use('/api/payments', require('./backend/routes/payments'));
 app.use('/api/mandates', require('./backend/routes/mandates'));
 app.use('/api/messages', require('./backend/routes/messages'));
 app.use('/api/contracts', require('./backend/routes/contracts'));
+app.use('/api/calendly', require('./backend/routes/calendly'));
 // PDF download routes
 app.get('/api/quotes/:id/pdf', require('./backend/routes/pdf').downloadQuotePDF);
 app.get('/api/invoices/:id/pdf', require('./backend/routes/pdf').downloadInvoicePDF);
