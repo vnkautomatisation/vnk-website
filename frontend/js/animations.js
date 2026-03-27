@@ -4,19 +4,23 @@
 
 // ---------- Counter animation ----------
 function animateCounter(element) {
-  const target = parseInt(element.getAttribute('data-target'));
-  const duration = 2000;
-  const step = target / (duration / 16);
-  let current = 0;
+    const target = parseInt(element.getAttribute('data-target'));
+    const duration = 1500;
+    const startTime = performance.now();
 
-  const timer = setInterval(() => {
-    current += step;
-    if (current >= target) {
-      current = target;
-      clearInterval(timer);
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        element.textContent = Math.floor(eased * target);
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        } else {
+            element.textContent = target;
+        }
     }
-    element.textContent = Math.floor(current);
-  }, 16);
+
+    requestAnimationFrame(update);
 }
 
 // ---------- Scroll animations ----------
