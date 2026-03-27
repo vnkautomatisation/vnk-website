@@ -181,27 +181,36 @@ router.get('/:id/status', authenticateToken, async (req, res) => {
 // POST /api/contracts/webhook — HelloSign webhook
 router.post('/webhook', async (req, res) => {
     try {
-        const event = req.body;
+        // HelloSign requires responding with text/html "Hello API Event Received"
+        console.log('HelloSign webhook received');
 
-        if (event.event && event.event.event_type === 'signature_request_signed') {
-            const signatureRequestId = event.signature_request.signature_request_id;
+        const payload = req.body;
 
-            // Update contract status
-            await pool.query(
-                `UPDATE contracts 
-         SET status = 'signed', signature_date = NOW(), updated_at = NOW()
-         WHERE hellosign_request_id = $1`,
-                [signatureRequestId]
-            );
+        // Handle the event if it exists
+        if (payload && payload.event) {
+            const eventType = payload.event.event_type;
+            console.log(`HelloSign event: ${eventType}`);
 
-            console.log(`Contract signed — HelloSign ID: ${signatureRequestId}`);
+            if (eventType === 'signature_request_signed') {
+                const signatureRequestId = payload.signature_request?.signature_request_id;
+                if (signatureRequestId) {
+                    await pool.query(
+                        `UPDATE contracts 
+             SET status = 'signed', signature_date = NOW(), updated_at = NOW()
+             WHERE hellosign_request_id = $1`,
+                        [signatureRequestId]
+                    );
+                    console.log(`Contract signed — ID: ${signatureRequestId}`);
+                }
+            }
         }
 
-        res.json({ success: true });
+        // HelloSign requires exactly this response
+        res.status(200).send('Hello API Event Received');
 
     } catch (error) {
         console.error('HelloSign webhook error:', error);
-        res.status(500).json({ success: false });
+        res.status(200).send('Hello API Event Received');
     }
 });
 
