@@ -19,62 +19,43 @@ function animateCounter(element) {
             element.textContent = target;
         }
     }
-
     requestAnimationFrame(update);
 }
 
-// ---------- Scroll animations ----------
+// ---------- Scroll observer ----------
 const observerOptions = {
-  threshold: 0.15,
-  rootMargin: '0px 0px -50px 0px'
+    threshold: 0.1,
+    rootMargin: '0px 0px -30px 0px'
 };
 
 const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-
-      // Trigger counters
-      const counters = entry.target.querySelectorAll('.counter');
-      counters.forEach(counter => {
-        if (!counter.classList.contains('counted')) {
-          counter.classList.add('counted');
-          animateCounter(counter);
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            const counters = entry.target.querySelectorAll('.counter');
+            counters.forEach(counter => {
+                if (!counter.classList.contains('counted')) {
+                    counter.classList.add('counted');
+                    animateCounter(counter);
+                }
+            });
+            observer.unobserve(entry.target);
         }
-      });
-
-      observer.unobserve(entry.target);
-    }
-  });
+    });
 }, observerOptions);
 
-// Hero fade-up animations — force visible after 100ms
-document.addEventListener('DOMContentLoaded', () => {
-    // Force all hero elements visible immediately
-    setTimeout(() => {
-        document.querySelectorAll('.animate-fade-up').forEach(el => {
-            el.classList.add('visible');
-        });
-    }, 100);
-
-    // Scroll animations
-    document.querySelectorAll('.animate-on-scroll').forEach(el => {
-        observer.observe(el);
-    });
-
-    // Hero counters
-    setTimeout(() => {
-        document.querySelectorAll('.hero .counter').forEach(counter => {
-            animateCounter(counter);
-        });
-    }, 300);
+// ---------- Init ----------
+// Force hero visible immédiatement — pas d'attente
+document.querySelectorAll('.animate-fade-up').forEach(el => {
+    el.classList.add('visible');
 });
 
-// ---------- Parallax hero image ----------
-window.addEventListener('scroll', () => {
-  const heroImg = document.getElementById('hero-img');
-  if (heroImg) {
-    const scrolled = window.scrollY;
-    heroImg.style.transform = `translateY(${scrolled * 0.3}px)`;
-  }
+// Hero counters
+document.querySelectorAll('.hero .counter').forEach(counter => {
+    animateCounter(counter);
+});
+
+// Scroll animations pour le reste de la page
+document.querySelectorAll('.animate-on-scroll').forEach(el => {
+    observer.observe(el);
 });
