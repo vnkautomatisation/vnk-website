@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="VNK Automatisation Inc. - Industrial automation services, PLC programming, SCADA, HMI - Quebec">
+    <meta name="keywords" content="automation, PLC, SCADA, HMI, Siemens, Rockwell, Quebec, industrial">
+    <title>VNK Automatisation Inc. | Value. Network. Knowledge.</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- NAVIGATION -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-vnk">VNK</span>
+                <span class="logo-text">Automatisation Inc.</span>
+            </div>
+            <ul class="nav-links" id="nav-links">
+                <li><a href="index.html" class="nav-link active" data-i18n="nav.home">Accueil</a></li>
+                <li><a href="services.html" class="nav-link" data-i18n="nav.services">Services</a></li>
+                <li><a href="a-propos.html" class="nav-link" data-i18n="nav.about">À propos</a></li>
+                <li><a href="contact.html" class="nav-link" data-i18n="nav.contact">Contact</a></li>
+                <li><a href="portail.html" class="nav-link nav-portal" data-i18n="nav.portal">Portail client</a></li>
+            </ul>
+            <div class="nav-actions">
+                <button class="lang-toggle" id="lang-toggle" onclick="toggleLanguage()">EN</button>
+                <button class="nav-toggle" id="nav-toggle" onclick="toggleMenu()">☰</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="hero" id="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <div class="hero-badge" data-i18n="hero.badge">Services d'automatisation industrielle</div>
+                <h1 class="hero-title">
+                    <span data-i18n="hero.title1">Solutions PLC,</span>
+                    <span class="hero-title-accent" data-i18n="hero.title2">SCADA & HMI</span>
+                    <span data-i18n="hero.title3">pour l'industrie</span>
+                </h1>
+                <p class="hero-subtitle" data-i18n="hero.subtitle">
+                    Support technique à distance, audits, documentation et modernisation
+                    de systèmes automatisés pour les entreprises industrielles au Québec.
+                </p>
+                <div class="hero-actions">
+                    <a href="contact.html" class="btn btn-primary" data-i18n="hero.cta.primary">Réserver une consultation</a>
+                    <a href="services.html" class="btn btn-secondary" data-i18n="hero.cta.secondary">Voir les services</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-number">4</span>
+                        <span class="stat-label" data-i18n="hero.stats.services">Services spécialisés</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">5+</span>
+                        <span class="stat-label" data-i18n="hero.stats.brands">Marques d'automates</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">B2B</span>
+                        <span class="stat-label" data-i18n="hero.stats.market">Marché industriel</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICES SECTION -->
+    <section class="services-preview" id="services">
+        <div class="container">
+            <div class="section-header">
+                <h2 data-i18n="services.title">Nos services</h2>
+                <p data-i18n="services.subtitle">Solutions techniques adaptées à vos besoins industriels</p>
+            </div>
+            <div class="services-grid">
+
+                <div class="service-card">
+                    <div class="service-icon">⚙️</div>
+                    <h3 data-i18n="services.plc.title">Support PLC à distance</h3>
+                    <p data-i18n="services.plc.desc">Diagnostic et résolution rapide de pannes sur vos automates Siemens, Rockwell, B&R et Schneider.</p>
+                    <div class="service-price" data-i18n="services.plc.price">120–150 CAD/h</div>
+                    <a href="services.html" class="service-link" data-i18n="services.learn_more">En savoir plus →</a>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-icon">🔍</div>
+                    <h3 data-i18n="services.audit.title">Audit technique</h3>
+                    <p data-i18n="services.audit.desc">Évaluation complète de votre système d'automatisation — risques, performance et recommandations.</p>
+                    <div class="service-price" data-i18n="services.audit.price">1 500–4 000 CAD</div>
+                    <a href="services.html" class="service-link" data-i18n="services.learn_more">En savoir plus →</a>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-icon">📄</div>
+                    <h3 data-i18n="services.doc.title">Documentation industrielle</h3>
+                    <p data-i18n="services.doc.desc">Création de procédures opérateur, maintenance, dépannage et documentation complète du code PLC.</p>
+                    <div class="service-price" data-i18n="services.doc.price">800–5 000 CAD</div>
+                    <a href="services.html" class="service-link" data-i18n="services.learn_more">En savoir plus →</a>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-icon">🔧</div>
+                    <h3 data-i18n="services.refactor.title">Refactorisation PLC</h3>
+                    <p data-i18n="services.refactor.desc">Modernisation et restructuration de code legacy — amélioration de la fiabilité et de la maintenabilité.</p>
+                    <div class="service-price" data-i18n="services.refactor.price">3 000–50 000 CAD</div>
+                    <a href="services.html" class="service-link" data-i18n="services.learn_more">En savoir plus →</a>
+                </div>
+
+            </div>
+            <div class="section-cta">
+                <a href="services.html" class="btn btn-outline" data-i18n="services.all">Voir tous les services</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- BRANDS SECTION -->
+    <section class="brands" id="brands">
+        <div class="container">
+            <h3 class="brands-title" data-i18n="brands.title">Automates supportés</h3>
+            <div class="brands-grid">
+                <div class="brand-item">Siemens</div>
+                <div class="brand-item">Rockwell Allen-Bradley</div>
+                <div class="brand-item">B&R Automation</div>
+                <div class="brand-item">Schneider Electric</div>
+                <div class="brand-item">+ autres</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- WHY VNK SECTION -->
+    <section class="why-vnk" id="why">
+        <div class="container">
+            <div class="section-header">
+                <h2 data-i18n="why.title">Pourquoi VNK ?</h2>
+            </div>
+            <div class="why-grid">
+                <div class="why-card">
+                    <div class="why-icon">🎯</div>
+                    <h4 data-i18n="why.specialized.title">Spécialisé</h4>
+                    <p data-i18n="why.specialized.desc">Focus exclusif sur l'automatisation industrielle — pas de généraliste.</p>
+                </div>
+                <div class="why-card">
+                    <div class="why-icon">⚡</div>
+                    <h4 data-i18n="why.remote.title">À distance</h4>
+                    <p data-i18n="why.remote.desc">Intervention rapide sans délai de déplacement — disponibilité maximale.</p>
+                </div>
+                <div class="why-card">
+                    <div class="why-icon">📋</div>
+                    <h4 data-i18n="why.documented.title">Documenté</h4>
+                    <p data-i18n="why.documented.desc">Chaque intervention est documentée — rapport écrit systématique.</p>
+                </div>
+                <div class="why-card">
+                    <div class="why-icon">🤝</div>
+                    <h4 data-i18n="why.structured.title">Structuré</h4>
+                    <p data-i18n="why.structured.desc">Contrat, devis et facturation professionnels à chaque mandat.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA SECTION -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-content">
+                <h2 data-i18n="cta.title">Prêt à optimiser votre système ?</h2>
+                <p data-i18n="cta.subtitle">Réservez une consultation gratuite de 30 minutes pour discuter de vos besoins.</p>
+                <a href="contact.html" class="btn btn-primary btn-large" data-i18n="cta.button">Réserver maintenant</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <span class="logo-vnk">VNK</span>
+                        <span class="logo-text">Automatisation Inc.</span>
+                    </div>
+                    <p class="footer-tagline">Value. Network. Knowledge.</p>
+                    <p class="footer-legal">NEQ : 1181943359</p>
+                </div>
+                <div class="footer-links">
+                    <h4 data-i18n="footer.services">Services</h4>
+                    <ul>
+                        <li><a href="services.html" data-i18n="services.plc.title">Support PLC</a></li>
+                        <li><a href="services.html" data-i18n="services.audit.title">Audit technique</a></li>
+                        <li><a href="services.html" data-i18n="services.doc.title">Documentation</a></li>
+                        <li><a href="services.html" data-i18n="services.refactor.title">Refactorisation</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4 data-i18n="footer.company">Entreprise</h4>
+                    <ul>
+                        <li><a href="a-propos.html" data-i18n="nav.about">À propos</a></li>
+                        <li><a href="contact.html" data-i18n="nav.contact">Contact</a></li>
+                        <li><a href="portail.html" data-i18n="nav.portal">Portail client</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4 data-i18n="footer.contact">Contact</h4>
+                    <p>vnkautomatisation@gmail.com</p>
+                    <p>Québec, QC, Canada</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p data-i18n="footer.copyright">© 2026 VNK Automatisation Inc. Tous droits réservés.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/i18n.js"></script>
+    <script src="js/main.js"></script>
+
+</body>
+</html>
