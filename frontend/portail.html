@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Portail client VNK Automatisation Inc. - Accès sécurisé à vos mandats, devis et factures">
+    <title>Portail client | VNK Automatisation Inc.</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+
+    <!-- NAVIGATION -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-vnk">VNK</span>
+                <span class="logo-text">Automatisation Inc.</span>
+            </div>
+            <ul class="nav-links" id="nav-links">
+                <li><a href="index.html" class="nav-link" data-i18n="nav.home">Accueil</a></li>
+                <li><a href="services.html" class="nav-link" data-i18n="nav.services">Services</a></li>
+                <li><a href="a-propos.html" class="nav-link" data-i18n="nav.about">À propos</a></li>
+                <li><a href="contact.html" class="nav-link" data-i18n="nav.contact">Contact</a></li>
+                <li><a href="portail.html" class="nav-link nav-portal active" data-i18n="nav.portal">Portail client</a></li>
+            </ul>
+            <div class="nav-actions">
+                <button class="lang-toggle" id="lang-toggle" onclick="toggleLanguage()">EN</button>
+                <button class="nav-toggle" id="nav-toggle" onclick="toggleMenu()">☰</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- LOGIN SECTION -->
+    <section class="portal-login-section">
+        <div class="portal-login-container">
+            <div class="portal-login-card">
+
+                <!-- Logo -->
+                <div class="portal-logo">
+                    <span class="logo-vnk">VNK</span>
+                    <span class="logo-text">Automatisation Inc.</span>
+                </div>
+
+                <!-- Login Form -->
+                <div id="login-view">
+                    <h2 data-i18n="portal.login.title">Connexion au portail</h2>
+                    <p data-i18n="portal.login.subtitle">Accédez à vos mandats, devis et factures</p>
+
+                    <form id="login-form" class="portal-form">
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="portal.login.email">Courriel</label>
+                            <input type="email" class="form-input" id="login-email" required placeholder="votre@courriel.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="portal.login.password">Mot de passe</label>
+                            <input type="password" class="form-input" id="login-password" required placeholder="••••••••">
+                        </div>
+                        <div class="portal-form-options">
+                            <label class="portal-remember">
+                                <input type="checkbox" id="remember-me">
+                                <span data-i18n="portal.login.remember">Se souvenir de moi</span>
+                            </label>
+                            <a href="#" class="portal-forgot" data-i18n="portal.login.forgot">Mot de passe oublié ?</a>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width:100%" id="login-btn">
+                            <span data-i18n="portal.login.submit">Se connecter</span>
+                        </button>
+                        <div id="login-error" class="alert alert-error" style="display:none; margin-top:1rem"></div>
+                    </form>
+
+                    <div class="portal-no-account">
+                        <p data-i18n="portal.login.no_account">Pas encore de compte ?</p>
+                        <p data-i18n="portal.login.contact_us">Contactez-nous pour démarrer un mandat.</p>
+                        <a href="contact.html" class="btn btn-outline" style="width:100%; margin-top:0.5rem" data-i18n="portal.login.contact_btn">Nous contacter</a>
+                    </div>
+                </div>
+
+                <!-- Dashboard (shown after login) -->
+                <div id="dashboard-view" style="display:none;">
+                    <div class="dashboard-header">
+                        <h2 data-i18n="portal.dashboard.title">Tableau de bord</h2>
+                        <button class="btn btn-outline" onclick="logout()" data-i18n="portal.dashboard.logout">Déconnexion</button>
+                    </div>
+
+                    <div class="dashboard-stats">
+                        <div class="dashboard-stat">
+                            <span class="stat-number" id="active-mandates">0</span>
+                            <span class="stat-label" data-i18n="portal.dashboard.mandates">Mandats actifs</span>
+                        </div>
+                        <div class="dashboard-stat">
+                            <span class="stat-number" id="pending-quotes">0</span>
+                            <span class="stat-label" data-i18n="portal.dashboard.quotes">Devis en attente</span>
+                        </div>
+                        <div class="dashboard-stat">
+                            <span class="stat-number" id="pending-invoices">0</span>
+                            <span class="stat-label" data-i18n="portal.dashboard.invoices">Factures à payer</span>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-sections">
+                        <div class="dashboard-section">
+                            <h3 data-i18n="portal.dashboard.recent">Activité récente</h3>
+                            <div id="activity-list" class="activity-list">
+                                <p class="no-activity" data-i18n="portal.dashboard.no_activity">Aucune activité récente</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Calendly in portal -->
+                    <div class="dashboard-section" style="margin-top:1rem;">
+                        <h3>Réserver une consultation</h3>
+                        <a href="https://calendly.com/vnkautomatisation/consultation-30min"
+                           target="_blank"
+                           class="btn btn-outline"
+                           style="width:100%; margin-top:0.5rem;">
+                            📅 Réserver un créneau →
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Portal Info -->
+            <div class="portal-info">
+                <h3 data-i18n="portal.info.title">Votre espace client</h3>
+                <div class="portal-feature">
+                    <span class="portal-feature-icon">📊</span>
+                    <div>
+                        <strong data-i18n="portal.info.mandates">Mandats en cours</strong>
+                        <p data-i18n="portal.info.mandates_desc">Suivez l'avancement de vos projets en temps réel</p>
+                    </div>
+                </div>
+                <div class="portal-feature">
+                    <span class="portal-feature-icon">📄</span>
+                    <div>
+                        <strong data-i18n="portal.info.quotes">Devis et contrats</strong>
+                        <p data-i18n="portal.info.quotes_desc">Consultez, acceptez et signez en ligne</p>
+                    </div>
+                </div>
+                <div class="portal-feature">
+                    <span class="portal-feature-icon">💳</span>
+                    <div>
+                        <strong data-i18n="portal.info.invoices">Factures</strong>
+                        <p data-i18n="portal.info.invoices_desc">Téléchargez et payez vos factures en ligne</p>
+                    </div>
+                </div>
+                <div class="portal-feature">
+                    <span class="portal-feature-icon">💬</span>
+                    <div>
+                        <strong data-i18n="portal.info.messages">Messagerie</strong>
+                        <p data-i18n="portal.info.messages_desc">Communiquez directement avec votre technicien</p>
+                    </div>
+                </div>
+                <div class="portal-coming-soon">
+                    <p data-i18n="portal.info.coming_soon">⚠️ Portail complet disponible au lancement officiel du site — automne 2026</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <span class="logo-vnk">VNK</span>
+                        <span class="logo-text">Automatisation Inc.</span>
+                    </div>
+                    <p class="footer-tagline">Value. Network. Knowledge.</p>
+                    <p class="footer-legal">NEQ : 1181943359</p>
+                </div>
+                <div class="footer-links">
+                    <h4 data-i18n="footer.services">Services</h4>
+                    <ul>
+                        <li><a href="services.html#plc">Support PLC</a></li>
+                        <li><a href="services.html#audit">Audit technique</a></li>
+                        <li><a href="services.html#documentation">Documentation</a></li>
+                        <li><a href="services.html#refactoring">Refactorisation</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4 data-i18n="footer.company">Entreprise</h4>
+                    <ul>
+                        <li><a href="a-propos.html">À propos</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4 data-i18n="footer.contact">Contact</h4>
+                    <p>vnkautomatisation@gmail.com</p>
+                    <p>Québec, QC, Canada</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p data-i18n="footer.copyright">© 2026 VNK Automatisation Inc. Tous droits réservés.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/i18n.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/stripe-payment.js"></script>
+    <script src="js/portal.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,126 @@
+/* ============================================
+   VNK Automatisation Inc. - Responsive Styles
+   ============================================ */
+
+/* ---------- Tablet — 1024px ---------- */
+@media (max-width: 1024px) {
+    .services-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .why-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .footer-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-md);
+    }
+
+    .hero-title {
+        font-size: 2.5rem;
+    }
+}
+
+/* ---------- Mobile — 768px ---------- */
+@media (max-width: 768px) {
+    :root {
+        --spacing-xl: 3rem;
+        --spacing-lg: 2rem;
+    }
+
+    /* Navbar */
+    .nav-links {
+        display: none;
+        position: fixed;
+        top: var(--nav-height);
+        left: 0;
+        right: 0;
+        background: var(--color-white);
+        flex-direction: column;
+        padding: var(--spacing-md);
+        border-bottom: 1px solid var(--color-border);
+        box-shadow: var(--shadow);
+        gap: var(--spacing-sm);
+    }
+
+        .nav-links.open {
+            display: flex;
+        }
+
+    .nav-toggle {
+        display: block;
+    }
+
+    /* Hero */
+    .hero-title {
+        font-size: 2rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1rem;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+    }
+
+        .hero-actions .btn {
+            width: 100%;
+            text-align: center;
+        }
+
+    .hero-stats {
+        gap: var(--spacing-md);
+    }
+
+    /* Services */
+    .services-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Why */
+    .why-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    /* Brands */
+    .brands-grid {
+        gap: var(--spacing-md);
+    }
+
+    /* Footer */
+    .footer-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+
+    /* Section headers */
+    .section-header h2 {
+        font-size: 1.6rem;
+    }
+
+    .cta-content h2 {
+        font-size: 1.6rem;
+    }
+}
+
+/* ---------- Small Mobile — 480px ---------- */
+@media (max-width: 480px) {
+    .hero-title {
+        font-size: 1.7rem;
+    }
+
+    .hero-stats {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .why-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .container {
+        padding: 0 var(--spacing-sm);
+    }
+}

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="VNK Automatisation Inc. - Services d'automatisation industrielle - PLC, SCADA, HMI, audit, documentation">
+  <title>Services | VNK Automatisation Inc.</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- NAVIGATION -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <span class="logo-vnk">VNK</span>
+        <span class="logo-text">Automatisation Inc.</span>
+      </div>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="index.html" class="nav-link" data-i18n="nav.home">Accueil</a></li>
+        <li><a href="services.html" class="nav-link active" data-i18n="nav.services">Services</a></li>
+        <li><a href="a-propos.html" class="nav-link" data-i18n="nav.about">À propos</a></li>
+        <li><a href="contact.html" class="nav-link" data-i18n="nav.contact">Contact</a></li>
+        <li><a href="portail.html" class="nav-link nav-portal" data-i18n="nav.portal">Portail client</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="lang-toggle" id="lang-toggle" onclick="toggleLanguage()">EN</button>
+        <button class="nav-toggle" id="nav-toggle" onclick="toggleMenu()">☰</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <section class="page-header">
+    <div class="container">
+      <h1 data-i18n="services.title">Nos services</h1>
+      <p data-i18n="services.subtitle">Solutions techniques adaptées à vos besoins industriels</p>
+    </div>
+  </section>
+
+  <!-- SERVICE 1 — PLC Support -->
+  <section class="service-detail" id="plc">
+    <div class="container">
+      <div class="service-detail-grid">
+        <div class="service-detail-content">
+          <div class="service-detail-icon">⚙️</div>
+          <h2 data-i18n="services.plc.title">Support PLC à distance</h2>
+          <p data-i18n="services.plc.desc">Diagnostic et résolution rapide de pannes sur vos automates industriels. Intervention à distance sans délai de déplacement — disponible rapidement quand votre production est arrêtée.</p>
+          <div class="service-detail-includes">
+            <h4 data-i18n="services.includes">Ce qui est inclus</h4>
+            <ul class="service-list">
+              <li data-i18n="services.plc.inc1">Diagnostic à distance de la panne</li>
+              <li data-i18n="services.plc.inc2">Modification et correction du programme PLC</li>
+              <li data-i18n="services.plc.inc3">Tests et validation du bon fonctionnement</li>
+              <li data-i18n="services.plc.inc4">Rapport d'intervention écrit</li>
+              <li data-i18n="services.plc.inc5">Recommandations pour éviter la récurrence</li>
+            </ul>
+          </div>
+          <div class="service-detail-brands">
+            <h4 data-i18n="services.brands">Automates supportés</h4>
+            <div class="brands-tags">
+              <span class="brand-tag">Siemens S7-300/400/1200/1500</span>
+              <span class="brand-tag">Rockwell ControlLogix/CompactLogix</span>
+              <span class="brand-tag">B&R Automation Studio</span>
+              <span class="brand-tag">Schneider Modicon</span>
+            </div>
+          </div>
+        </div>
+        <div class="service-detail-pricing">
+          <div class="pricing-card">
+            <h3 data-i18n="services.pricing">Tarification</h3>
+            <div class="pricing-option">
+              <div class="pricing-name" data-i18n="services.plc.rate">Taux horaire</div>
+              <div class="pricing-amount">120–150 CAD/h</div>
+            </div>
+            <div class="pricing-option">
+              <div class="pricing-name" data-i18n="services.plc.pack">Banque 10h prépayée</div>
+              <div class="pricing-amount">1 100 CAD</div>
+              <div class="pricing-note" data-i18n="services.plc.pack_note">Économie de 400 CAD</div>
+            </div>
+            <div class="pricing-option">
+              <div class="pricing-name" data-i18n="services.plc.monthly">Forfait mensuel standard</div>
+              <div class="pricing-amount">1 200 CAD/mois</div>
+            </div>
+            <div class="pricing-option pricing-featured">
+              <div class="pricing-name" data-i18n="services.plc.priority">Forfait mensuel prioritaire</div>
+              <div class="pricing-amount">2 500 CAD/mois</div>
+              <div class="pricing-note" data-i18n="services.plc.priority_note">Temps de réponse garanti</div>
+            </div>
+            <a href="contact.html" class="btn btn-primary" style="width:100%; margin-top:1rem" data-i18n="services.cta">Demander un devis</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICE 2 — Audit -->
+  <section class="service-detail service-detail-alt" id="audit">
+    <div class="container">
+      <div class="service-detail-grid">
+        <div class="service-detail-content">
+          <div class="service-detail-icon">🔍</div>
+          <h2 data-i18n="services.audit.title">Audit technique automatisation</h2>
+          <p data-i18n="services.audit.desc">Évaluation complète et objective de votre système d'automatisation. Identification des risques, des lacunes et des opportunités d'amélioration — avec un plan d'action concret.</p>
+          <div class="service-detail-includes">
+            <h4 data-i18n="services.includes">Ce qui est inclus</h4>
+            <ul class="service-list">
+              <li data-i18n="services.audit.inc1">Analyse complète du code PLC existant</li>
+              <li data-i18n="services.audit.inc2">Évaluation de la documentation disponible</li>
+              <li data-i18n="services.audit.inc3">Identification des risques et points de défaillance</li>
+              <li data-i18n="services.audit.inc4">Rapport d'audit structuré avec priorités</li>
+              <li data-i18n="services.audit.inc5">Plan d'action recommandé</li>
+              <li data-i18n="services.audit.inc6">Présentation des résultats à votre équipe</li>
+            </ul>
+          </div>
+        </div>
+        <div class="service-detail-pricing">
+          <div class="pricing-card">
+            <h3 data-i18n="services.pricing">Tarification</h3>
+            <div class="pricing-option">
+              <div class="pricing-name" data-i18n="services.audit.small">Audit standard</div>
+              <div class="pricing-amount">1 500–2 500 CAD</div>
+              <div class="pricing-note" data-i18n="services.audit.small_note">Système simple — 1 à 2 automates</div>
+            </div>
+            <div class="pricing-option pricing-featured">
+              <div class="pricing-name" data-i18n="services.audit.full">Audit complet</div>
+              <div class="pricing-amount">2 500–4 000 CAD</div>
+              <div class="pricing-note" data-i18n="services.audit.full_note">Système complexe — multiple automates</div>
+            </div>
+            <a href="contact.html" class="btn btn-primary" style="width:100%; margin-top:1rem" data-i18n="services.cta">Demander un devis</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICE 3 — Documentation -->
+  <section class="service-detail" id="documentation">
+    <div class="container">
+      <div class="service-detail-grid">
+        <div class="service-detail-content">
+          <div class="service-detail-icon">📄</div>
+          <h2 data-i18n="services.doc.title">Documentation industrielle</h2>
+          <p data-i18n="services.doc.desc">Création de documentation technique complète pour vos systèmes automatisés. Réduisez la dépendance à une seule personne et facilitez la formation de vos équipes.</p>
+          <div class="service-detail-includes">
+            <h4 data-i18n="services.includes">Ce qui est inclus</h4>
+            <ul class="service-list">
+              <li data-i18n="services.doc.inc1">Procédures opérateur étape par étape</li>
+              <li data-i18n="services.doc.inc2">Guide de maintenance préventive</li>
+              <li data-i18n="services.doc.inc3">Guide de dépannage avec arbres de décision</li>
+              <li data-i18n="services.doc.inc4">Documentation complète du code PLC</li>
+              <li data-i18n="services.doc.inc5">Schémas fonctionnels et logigrammes</li>
+              <li data-i18n="services.doc.inc6">Format Word, PDF et en ligne selon besoin</li>
+            </ul>
+          </div>
+        </div>
+        <div class="service-detail-pricing">
+          <div class="pricing-card">
+            <h3 data-i18n="services.pricing">Tarification</h3>
+            <div class="pricing-option">
+              <div class="pricing-name" data-i18n="services.doc.basic">Documentation de base</div>
+              <div class="pricing-amount">800–2 000 CAD</div>
+            </div>
+            <div class="pricing-option pricing-featured">
+              <div class="pricing-name" data-i18n="services.doc.complete">Documentation complète</div>
+              <div class="pricing-amount">2 000–5 000 CAD</div>
+            </div>
+            <a href="contact.html" class="btn btn-primary" style="width:100%; margin-top:1rem" data-i18n="services.cta">Demander un devis</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICE 4 — Refactoring -->
+  <section class="service-detail service-detail-alt" id="refactoring">
+    <div class="container">
+      <div class="service-detail-grid">
+        <div class="service-detail-content">
+          <div class="service-detail-icon">🔧</div>
+          <h2 data-i18n="services.refactor.title">Refactorisation et modernisation PLC</h2>
+          <p data-i18n="services.refactor.desc">Restructuration et modernisation de code PLC legacy. Amélioration de la lisibilité, de la fiabilité et de la maintenabilité de vos programmes existants.</p>
+          <div class="service-detail-includes">
+            <h4 data-i18n="services.includes">Ce qui est inclus</h4>
+            <ul class="service-list">
+              <li data-i18n="services.refactor.inc1">Analyse et cartographie du code existant</li>
+              <li data-i18n="services.refactor.inc2">Restructuration selon les meilleures pratiques IEC 61131-3</li>
+              <li data-i18n="services.refactor.inc3">Ajout de commentaires et de documentation inline</li>
+              <li data-i18n="services.refactor.inc4">Tests complets avant et après modification</li>
+              <li data-i18n="services.refactor.inc5">Rapport des modifications effectuées</li>
+              <li data-i18n="services.refactor.inc6">Formation de l'équipe sur le nouveau code</li>
+            </ul>
+          </div>
+        </div>
+        <div class="service-detail-pricing">
+          <div class="pricing-card">
+            <h3 data-i18n="services.pricing">Tarification</h3>
+            <div class="pricing-option">
+              <div class="pricing-name" data-i18n="services.refactor.small">Refactorisation partielle</div>
+              <div class="pricing-amount">3 000–10 000 CAD</div>
+            </div>
+            <div class="pricing-option">
+              <div class="pricing-name" data-i18n="services.refactor.full">Refactorisation complète</div>
+              <div class="pricing-amount">10 000–25 000 CAD</div>
+            </div>
+            <div class="pricing-option pricing-featured">
+              <div class="pricing-name" data-i18n="services.refactor.new">Nouvelle implémentation</div>
+              <div class="pricing-amount">5 000–50 000 CAD</div>
+            </div>
+            <a href="contact.html" class="btn btn-primary" style="width:100%; margin-top:1rem" data-i18n="services.cta">Demander un devis</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-content">
+        <h2 data-i18n="cta.title">Prêt à optimiser votre système ?</h2>
+        <p data-i18n="cta.subtitle">Réservez une consultation gratuite de 30 minutes pour discuter de vos besoins.</p>
+        <a href="contact.html" class="btn btn-primary btn-large" data-i18n="cta.button">Réserver maintenant</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <span class="logo-vnk">VNK</span>
+            <span class="logo-text">Automatisation Inc.</span>
+          </div>
+          <p class="footer-tagline">Value. Network. Knowledge.</p>
+          <p class="footer-legal">NEQ : 1181943359</p>
+        </div>
+        <div class="footer-links">
+          <h4 data-i18n="footer.services">Services</h4>
+          <ul>
+            <li><a href="#plc" data-i18n="services.plc.title">Support PLC</a></li>
+            <li><a href="#audit" data-i18n="services.audit.title">Audit technique</a></li>
+            <li><a href="#documentation" data-i18n="services.doc.title">Documentation</a></li>
+            <li><a href="#refactoring" data-i18n="services.refactor.title">Refactorisation</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4 data-i18n="footer.company">Entreprise</h4>
+          <ul>
+            <li><a href="a-propos.html" data-i18n="nav.about">À propos</a></li>
+            <li><a href="contact.html" data-i18n="nav.contact">Contact</a></li>
+            <li><a href="portail.html" data-i18n="nav.portal">Portail client</a></li>
+          </ul>
+        </div>
+        <div class="footer-contact">
+          <h4 data-i18n="footer.contact">Contact</h4>
+          <p>vnkautomatisation@gmail.com</p>
+          <p>Québec, QC, Canada</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p data-i18n="footer.copyright">© 2026 VNK Automatisation Inc. Tous droits réservés.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/main.js"></script>
+
+</body>
+</html>
