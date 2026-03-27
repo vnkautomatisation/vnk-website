@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="À propos de VNK Automatisation Inc. - Yan Verone Kengne - Expert en automatisation industrielle au Québec">
+    <title>À propos | VNK Automatisation Inc.</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- NAVIGATION -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-vnk">VNK</span>
+                <span class="logo-text">Automatisation Inc.</span>
+            </div>
+            <ul class="nav-links" id="nav-links">
+                <li><a href="index.html" class="nav-link" data-i18n="nav.home">Accueil</a></li>
+                <li><a href="services.html" class="nav-link" data-i18n="nav.services">Services</a></li>
+                <li><a href="a-propos.html" class="nav-link active" data-i18n="nav.about">À propos</a></li>
+                <li><a href="contact.html" class="nav-link" data-i18n="nav.contact">Contact</a></li>
+                <li><a href="portail.html" class="nav-link nav-portal" data-i18n="nav.portal">Portail client</a></li>
+            </ul>
+            <div class="nav-actions">
+                <button class="lang-toggle" id="lang-toggle" onclick="toggleLanguage()">EN</button>
+                <button class="nav-toggle" id="nav-toggle" onclick="toggleMenu()">☰</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- PAGE HEADER -->
+    <section class="page-header">
+        <div class="container">
+            <h1 data-i18n="about.title">À propos de VNK</h1>
+            <p data-i18n="about.subtitle">Value. Network. Knowledge.</p>
+        </div>
+    </section>
+
+    <!-- FOUNDER SECTION -->
+    <section class="about-founder">
+        <div class="container">
+            <div class="founder-grid">
+                <div class="founder-content">
+                    <h2 data-i18n="about.founder.title">Yan Verone Kengne</h2>
+                    <p class="founder-role" data-i18n="about.founder.role">Fondateur et expert en automatisation industrielle</p>
+                    <p data-i18n="about.founder.desc1">
+                        Technicien spécialisé en automatisation industrielle avec une expertise approfondie
+                        en programmation PLC, SCADA et HMI pour plusieurs marques d'automates industriels
+                        — Siemens, Rockwell Allen-Bradley, B&R Automation et Schneider Electric.
+                    </p>
+                    <p data-i18n="about.founder.desc2">
+                        VNK Automatisation Inc. a été fondée en mars 2026 avec une mission claire :
+                        offrir des services techniques spécialisés de haute qualité aux entreprises
+                        industrielles du Québec, avec la rigueur et le professionnalisme d'une vraie
+                        entreprise de services B2B.
+                    </p>
+                    <div class="founder-values">
+                        <div class="value-item">
+                            <span class="value-letter">V</span>
+                            <div>
+                                <strong>Value</strong>
+                                <p data-i18n="about.value.desc">Chaque intervention apporte une valeur concrète et mesurable à votre opération.</p>
+                            </div>
+                        </div>
+                        <div class="value-item">
+                            <span class="value-letter">N</span>
+                            <div>
+                                <strong>Network</strong>
+                                <p data-i18n="about.network.desc">Des relations de confiance avec les clients, construites sur la transparence et les résultats.</p>
+                            </div>
+                        </div>
+                        <div class="value-item">
+                            <span class="value-letter">K</span>
+                            <div>
+                                <strong>Knowledge</strong>
+                                <p data-i18n="about.knowledge.desc">Une expertise technique profonde, constamment mise à jour sur les technologies industrielles.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="founder-aside">
+                    <div class="founder-card">
+                        <div class="founder-avatar">YVK</div>
+                        <h3>Yan Verone Kengne</h3>
+                        <p>VNK Automatisation Inc.</p>
+                        <div class="founder-info">
+                            <div class="info-item">
+                                <span class="info-label" data-i18n="about.location">Localisation</span>
+                                <span>Québec, QC, Canada</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label" data-i18n="about.founded">Fondée</span>
+                                <span>Mars 2026</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">NEQ</span>
+                                <span>1181943359</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label" data-i18n="about.type">Type</span>
+                                <span data-i18n="about.type_value">Société par actions</span>
+                            </div>
+                        </div>
+                        <a href="contact.html" class="btn btn-primary" style="width:100%; margin-top:1rem" data-i18n="about.contact_btn">Prendre contact</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- EXPERTISE SECTION -->
+    <section class="about-expertise">
+        <div class="container">
+            <div class="section-header">
+                <h2 data-i18n="about.expertise.title">Expertise technique</h2>
+                <p data-i18n="about.expertise.subtitle">Compétences spécialisées en automatisation industrielle</p>
+            </div>
+            <div class="expertise-grid">
+                <div class="expertise-card">
+                    <h4>Siemens</h4>
+                    <ul class="expertise-list">
+                        <li>TIA Portal</li>
+                        <li>S7-300 / S7-400</li>
+                        <li>S7-1200 / S7-1500</li>
+                        <li>WinCC SCADA</li>
+                        <li>Step 7</li>
+                    </ul>
+                </div>
+                <div class="expertise-card">
+                    <h4>Rockwell Allen-Bradley</h4>
+                    <ul class="expertise-list">
+                        <li>Studio 5000</li>
+                        <li>ControlLogix</li>
+                        <li>CompactLogix</li>
+                        <li>FactoryTalk View</li>
+                        <li>RSLogix 500</li>
+                    </ul>
+                </div>
+                <div class="expertise-card">
+                    <h4>B&R Automation</h4>
+                    <ul class="expertise-list">
+                        <li>Automation Studio</li>
+                        <li>X20 Series</li>
+                        <li>mapp Technology</li>
+                        <li>Visualization</li>
+                    </ul>
+                </div>
+                <div class="expertise-card">
+                    <h4>Schneider Electric</h4>
+                    <ul class="expertise-list">
+                        <li>EcoStruxure</li>
+                        <li>Modicon M340/M580</li>
+                        <li>Unity Pro / Control Expert</li>
+                        <li>Vijeo Designer</li>
+                    </ul>
+                </div>
+                <div class="expertise-card">
+                    <h4>Standards & Protocols</h4>
+                    <ul class="expertise-list">
+                        <li>IEC 61131-3</li>
+                        <li>Profibus / Profinet</li>
+                        <li>EtherNet/IP</li>
+                        <li>Modbus TCP/RTU</li>
+                        <li>OPC UA</li>
+                    </ul>
+                </div>
+                <div class="expertise-card">
+                    <h4>Safety & Documentation</h4>
+                    <ul class="expertise-list">
+                        <li>Safety PLC programming</li>
+                        <li>CSA Z432 awareness</li>
+                        <li>Technical writing</li>
+                        <li>Process documentation</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- COMMITMENT SECTION -->
+    <section class="about-commitment">
+        <div class="container">
+            <div class="section-header">
+                <h2 data-i18n="about.commitment.title">Notre engagement</h2>
+            </div>
+            <div class="commitment-grid">
+                <div class="commitment-item">
+                    <div class="commitment-icon">📋</div>
+                    <h4 data-i18n="about.commitment.contract">Contrat systématique</h4>
+                    <p data-i18n="about.commitment.contract_desc">Aucune intervention sans contrat signé. Périmètre, délais et tarifs clairement définis avant de commencer.</p>
+                </div>
+                <div class="commitment-item">
+                    <div class="commitment-icon">📝</div>
+                    <h4 data-i18n="about.commitment.report">Rapport écrit</h4>
+                    <p data-i18n="about.commitment.report_desc">Chaque intervention génère un rapport écrit détaillé — ce qui a été fait, pourquoi, et les recommandations.</p>
+                </div>
+                <div class="commitment-item">
+                    <div class="commitment-icon">🔒</div>
+                    <h4 data-i18n="about.commitment.confidential">Confidentialité</h4>
+                    <p data-i18n="about.commitment.confidential_desc">NDA disponible sur demande. Vos données et procédés industriels restent confidentiels.</p>
+                </div>
+                <div class="commitment-item">
+                    <div class="commitment-icon">⚡</div>
+                    <h4 data-i18n="about.commitment.responsive">Réactivité</h4>
+                    <p data-i18n="about.commitment.responsive_desc">Intervention à distance sans délai de déplacement. Réponse rapide quand votre production est en jeu.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-content">
+                <h2 data-i18n="cta.title">Prêt à optimiser votre système ?</h2>
+                <p data-i18n="cta.subtitle">Réservez une consultation gratuite de 30 minutes pour discuter de vos besoins.</p>
+                <a href="contact.html" class="btn btn-primary btn-large" data-i18n="cta.button">Réserver maintenant</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <span class="logo-vnk">VNK</span>
+                        <span class="logo-text">Automatisation Inc.</span>
+                    </div>
+                    <p class="footer-tagline">Value. Network. Knowledge.</p>
+                    <p class="footer-legal">NEQ : 1181943359</p>
+                </div>
+                <div class="footer-links">
+                    <h4 data-i18n="footer.services">Services</h4>
+                    <ul>
+                        <li><a href="services.html#plc" data-i18n="services.plc.title">Support PLC</a></li>
+                        <li><a href="services.html#audit" data-i18n="services.audit.title">Audit technique</a></li>
+                        <li><a href="services.html#documentation" data-i18n="services.doc.title">Documentation</a></li>
+                        <li><a href="services.html#refactoring" data-i18n="services.refactor.title">Refactorisation</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4 data-i18n="footer.company">Entreprise</h4>
+                    <ul>
+                        <li><a href="a-propos.html" data-i18n="nav.about">À propos</a></li>
+                        <li><a href="contact.html" data-i18n="nav.contact">Contact</a></li>
+                        <li><a href="portail.html" data-i18n="nav.portal">Portail client</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4 data-i18n="footer.contact">Contact</h4>
+                    <p>vnkautomatisation@gmail.com</p>
+                    <p>Québec, QC, Canada</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p data-i18n="footer.copyright">© 2026 VNK Automatisation Inc. Tous droits réservés.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/i18n.js"></script>
+    <script src="js/main.js"></script>
+
+</body>
+</html>

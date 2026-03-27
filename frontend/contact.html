@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Contactez VNK Automatisation Inc. - Réservez une consultation gratuite en automatisation industrielle">
+    <title>Contact | VNK Automatisation Inc.</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- NAVIGATION -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-vnk">VNK</span>
+                <span class="logo-text">Automatisation Inc.</span>
+            </div>
+            <ul class="nav-links" id="nav-links">
+                <li><a href="index.html" class="nav-link" data-i18n="nav.home">Accueil</a></li>
+                <li><a href="services.html" class="nav-link" data-i18n="nav.services">Services</a></li>
+                <li><a href="a-propos.html" class="nav-link" data-i18n="nav.about">À propos</a></li>
+                <li><a href="contact.html" class="nav-link active" data-i18n="nav.contact">Contact</a></li>
+                <li><a href="portail.html" class="nav-link nav-portal" data-i18n="nav.portal">Portail client</a></li>
+            </ul>
+            <div class="nav-actions">
+                <button class="lang-toggle" id="lang-toggle" onclick="toggleLanguage()">EN</button>
+                <button class="nav-toggle" id="nav-toggle" onclick="toggleMenu()">☰</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- PAGE HEADER -->
+    <section class="page-header">
+        <div class="container">
+            <h1 data-i18n="contact.title">Contactez-nous</h1>
+            <p data-i18n="contact.subtitle">Consultation gratuite de 30 minutes — sans engagement</p>
+        </div>
+    </section>
+
+    <!-- CONTACT SECTION -->
+    <section class="contact-section">
+        <div class="container">
+            <div class="contact-grid">
+
+                <!-- Contact Form -->
+                <div class="contact-form-wrapper">
+                    <h2 data-i18n="contact.form.title">Envoyez-nous un message</h2>
+                    <p data-i18n="contact.form.desc">Décrivez votre situation et nous vous répondrons dans les 24 heures.</p>
+
+                    <form class="contact-form" id="contact-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="contact.form.name">Nom complet *</label>
+                                <input type="text" class="form-input" id="name" name="name" required placeholder="Jean Tremblay">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="contact.form.company">Entreprise</label>
+                                <input type="text" class="form-input" id="company" name="company" placeholder="Industries XYZ Inc.">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="contact.form.email">Courriel *</label>
+                                <input type="email" class="form-input" id="email" name="email" required placeholder="jean@entreprise.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="contact.form.phone">Téléphone</label>
+                                <input type="tel" class="form-input" id="phone" name="phone" placeholder="418 000-0000">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="contact.form.service">Service qui vous intéresse</label>
+                            <select class="form-select" id="service" name="service">
+                                <option value="" data-i18n="contact.form.select">Sélectionner un service</option>
+                                <option value="plc-support" data-i18n="services.plc.title">Support PLC à distance</option>
+                                <option value="audit" data-i18n="services.audit.title">Audit technique</option>
+                                <option value="documentation" data-i18n="services.doc.title">Documentation industrielle</option>
+                                <option value="refactoring" data-i18n="services.refactor.title">Refactorisation PLC</option>
+                                <option value="other" data-i18n="contact.form.other">Autre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="contact.form.plc_brand">Marque d'automate concernée</label>
+                            <select class="form-select" id="plc-brand" name="plc_brand">
+                                <option value="">Sélectionner</option>
+                                <option value="siemens">Siemens</option>
+                                <option value="rockwell">Rockwell Allen-Bradley</option>
+                                <option value="br">B&R Automation</option>
+                                <option value="schneider">Schneider Electric</option>
+                                <option value="other">Autre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="contact.form.message">Décrivez votre situation *</label>
+                            <textarea class="form-textarea" id="message" name="message" required rows="5"
+                                      placeholder="Décrivez votre équipement, le problème rencontré ou vos besoins..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width:100%" id="submit-btn">
+                            <span data-i18n="contact.form.submit">Envoyer le message</span>
+                        </button>
+                        <div id="form-feedback" style="margin-top:1rem; display:none;"></div>
+                    </form>
+                </div>
+
+                <!-- Contact Info -->
+                <div class="contact-info-wrapper">
+                    <div class="contact-info-card">
+                        <h3 data-i18n="contact.info.title">Informations de contact</h3>
+                        <div class="contact-info-item">
+                            <span class="contact-info-icon">📧</span>
+                            <div>
+                                <strong data-i18n="contact.info.email">Courriel</strong>
+                                <p>vnkautomatisation@gmail.com</p>
+                            </div>
+                        </div>
+                        <div class="contact-info-item">
+                            <span class="contact-info-icon">📍</span>
+                            <div>
+                                <strong data-i18n="contact.info.location">Localisation</strong>
+                                <p>Québec, QC, Canada</p>
+                                <p data-i18n="contact.info.remote">Service à distance — partout au Québec</p>
+                            </div>
+                        </div>
+                        <div class="contact-info-item">
+                            <span class="contact-info-icon">⏱️</span>
+                            <div>
+                                <strong data-i18n="contact.info.response">Temps de réponse</strong>
+                                <p data-i18n="contact.info.response_time">Dans les 24 heures ouvrables</p>
+                            </div>
+                        </div>
+                        <div class="contact-info-item">
+                            <span class="contact-info-icon">🏢</span>
+                            <div>
+                                <strong data-i18n="contact.info.company">Entreprise</strong>
+                                <p>VNK Automatisation Inc.</p>
+                                <p>NEQ : 1181943359</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="contact-calendly-card">
+                        <h3 data-i18n="contact.calendly.title">Réserver directement</h3>
+                        <p data-i18n="contact.calendly.desc">Choisissez un créneau qui vous convient pour une consultation gratuite de 30 minutes.</p>
+                        <a href="https://calendly.com" target="_blank" class="btn btn-outline" style="width:100%" data-i18n="contact.calendly.btn">
+                            Ouvrir le calendrier →
+                        </a>
+                        <p class="contact-calendly-note" data-i18n="contact.calendly.note">Lien Calendly disponible au lancement officiel</p>
+                    </div>
+
+                    <div class="contact-process-card">
+                        <h3 data-i18n="contact.process.title">Notre processus</h3>
+                        <div class="process-step">
+                            <span class="process-number">1</span>
+                            <div>
+                                <strong data-i18n="contact.process.step1">Message ou réservation</strong>
+                                <p data-i18n="contact.process.step1_desc">Décrivez votre besoin via le formulaire ou Calendly</p>
+                            </div>
+                        </div>
+                        <div class="process-step">
+                            <span class="process-number">2</span>
+                            <div>
+                                <strong data-i18n="contact.process.step2">Appel de qualification</strong>
+                                <p data-i18n="contact.process.step2_desc">Discussion de 30 minutes pour comprendre votre situation</p>
+                            </div>
+                        </div>
+                        <div class="process-step">
+                            <span class="process-number">3</span>
+                            <div>
+                                <strong data-i18n="contact.process.step3">Devis formel</strong>
+                                <p data-i18n="contact.process.step3_desc">Proposition détaillée avec périmètre, délais et tarifs</p>
+                            </div>
+                        </div>
+                        <div class="process-step">
+                            <span class="process-number">4</span>
+                            <div>
+                                <strong data-i18n="contact.process.step4">Contrat et démarrage</strong>
+                                <p data-i18n="contact.process.step4_desc">Signature électronique et début de l'intervention</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <span class="logo-vnk">VNK</span>
+                        <span class="logo-text">Automatisation Inc.</span>
+                    </div>
+                    <p class="footer-tagline">Value. Network. Knowledge.</p>
+                    <p class="footer-legal">NEQ : 1181943359</p>
+                </div>
+                <div class="footer-links">
+                    <h4 data-i18n="footer.services">Services</h4>
+                    <ul>
+                        <li><a href="services.html#plc">Support PLC</a></li>
+                        <li><a href="services.html#audit">Audit technique</a></li>
+                        <li><a href="services.html#documentation">Documentation</a></li>
+                        <li><a href="services.html#refactoring">Refactorisation</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4 data-i18n="footer.company">Entreprise</h4>
+                    <ul>
+                        <li><a href="a-propos.html">À propos</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                        <li><a href="portail.html">Portail client</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4 data-i18n="footer.contact">Contact</h4>
+                    <p>vnkautomatisation@gmail.com</p>
+                    <p>Québec, QC, Canada</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p data-i18n="footer.copyright">© 2026 VNK Automatisation Inc. Tous droits réservés.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/i18n.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/contact.js"></script>
+
+</body>
+</html>
