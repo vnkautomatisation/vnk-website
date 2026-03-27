@@ -2122,3 +2122,49 @@ img {
         grid-template-columns: 1fr;
     }
 }
+
+/* ---------- Brand logos SVG ---------- */
+.brand-logo-svg {
+    display: block;
+    margin: 0 auto 0.4rem;
+}
+
+.brand-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+/* ---------- Service card icon style ---------- */
+.service-card-icon {
+    position: absolute;
+    bottom: 0.75rem;
+    left: 1rem;
+    width: 40px;
+    height: 40px;
+    background: rgba(27, 79, 138, 0.85);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+
+/* ---------- Why icon box style ---------- */
+.why-icon-box {
+    width: 40px;
+    height: 40px;
+    background: var(--color-light-blue);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* ---------- CTA icon ---------- */
+.cta-icon {
+    margin-bottom: var(--spacing-sm);
+    display: flex;
+    justify-content: center;
+}
