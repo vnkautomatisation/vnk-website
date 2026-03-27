@@ -23,7 +23,6 @@ logs/
 *.log
 
 # Base de données
-*.sql
 *.dump
 
 # Build

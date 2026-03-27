@@ -1,0 +1,38 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "services": "Services",
+    "about": "À propos",
+    "contact": "Contact",
+    "portal": "Portail client"
+  },
+  "hero": {
+    "badge": "Services d'automatisation industrielle",
+    "title": "Solutions PLC, SCADA & HMI pour l'industrie",
+    "subtitle": "Support technique à distance, audits, documentation et modernisation de systèmes automatisés pour les entreprises industrielles au Québec.",
+    "cta_primary": "Réserver une consultation",
+    "cta_secondary": "Voir les services"
+  },
+  "services": {
+    "title": "Nos services",
+    "plc": {
+      "title": "Support PLC à distance",
+      "price": "120–150 CAD/h"
+    },
+    "audit": {
+      "title": "Audit technique",
+      "price": "1 500–4 000 CAD"
+    },
+    "documentation": {
+      "title": "Documentation industrielle",
+      "price": "800–5 000 CAD"
+    },
+    "refactoring": {
+      "title": "Refactorisation PLC",
+      "price": "3 000–50 000 CAD"
+    }
+  },
+  "footer": {
+    "copyright": "© 2026 VNK Automatisation Inc. Tous droits réservés."
+  }
+}
