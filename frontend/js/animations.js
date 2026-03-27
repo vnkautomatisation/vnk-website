@@ -48,26 +48,26 @@ const observer = new IntersectionObserver((entries) => {
   });
 }, observerOptions);
 
-// Observe all animated elements
+// Hero fade-up animations — force visible after 100ms
 document.addEventListener('DOMContentLoaded', () => {
-  // Animate on scroll elements
-  document.querySelectorAll('.animate-on-scroll').forEach(el => {
-    observer.observe(el);
-  });
-
-  // Hero counters on load
-  setTimeout(() => {
-    document.querySelectorAll('.hero .counter').forEach(counter => {
-      animateCounter(counter);
-    });
-  }, 800);
-
-  // Hero fade-up animations
-  document.querySelectorAll('.animate-fade-up').forEach((el, index) => {
+    // Force all hero elements visible immediately
     setTimeout(() => {
-      el.classList.add('visible');
-    }, 200 + (index * 150));
-  });
+        document.querySelectorAll('.animate-fade-up').forEach(el => {
+            el.classList.add('visible');
+        });
+    }, 100);
+
+    // Scroll animations
+    document.querySelectorAll('.animate-on-scroll').forEach(el => {
+        observer.observe(el);
+    });
+
+    // Hero counters
+    setTimeout(() => {
+        document.querySelectorAll('.hero .counter').forEach(counter => {
+            animateCounter(counter);
+        });
+    }, 300);
 });
 
 // ---------- Parallax hero image ----------
