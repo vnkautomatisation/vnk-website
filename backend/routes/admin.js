@@ -1,7 +1,11 @@
 /* ============================================
    VNK Automatisation Inc. - Admin Routes
-   Version Phase 1 — Remboursements, Litiges,
-   Déclarations fiscales, Dépenses, Contrats
+   Version Phase 2 — Toutes fonctionnalités
+   + Toggle archive client
+   + Mark messages as read (thread + all)
+   + Export CSV (via frontend)
+   + Contrats, Litiges, Remboursements,
+     Dépenses, Déclarations fiscales
    ============================================ */
 
 const express = require('express');
@@ -62,7 +66,7 @@ router.get('/dashboard', authenticateAdmin, async (req, res) => {
             pool.query(`SELECT COALESCE(SUM(amount_ttc),0) as total FROM invoices WHERE status = 'paid' AND EXTRACT(MONTH FROM paid_at) = EXTRACT(MONTH FROM NOW()) AND EXTRACT(YEAR FROM paid_at) = EXTRACT(YEAR FROM NOW())`),
             pool.query("SELECT COUNT(*) FROM quotes WHERE status = 'pending'"),
             pool.query("SELECT COUNT(*) FROM messages WHERE sender='client' AND is_read=false"),
-            pool.query("SELECT COUNT(*) FROM disputes WHERE status IN ('open','in_progress') LIMIT 1").catch(() => ({ rows: [{ count: 0 }] })),
+            pool.query("SELECT COUNT(*) FROM disputes WHERE status IN ('open','in_progress')").catch(() => ({ rows: [{ count: 0 }] })),
             pool.query(`
                 SELECT 'invoice' as type, CONCAT('Facture ', i.invoice_number, ' — ', i.title) as description, i.amount_ttc as amount, i.status, i.created_at as date, c.full_name as client_name FROM invoices i JOIN clients c ON i.client_id = c.id
                 UNION ALL
@@ -139,6 +143,25 @@ router.post('/clients', authenticateAdmin, async (req, res) => {
         res.status(201).json({ success: true, client: result.rows[0] });
     } catch (err) {
         console.error('Admin create client error:', err);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// ============================================
+// PUT /api/admin/clients/:id/toggle-active — Archiver/Réactiver
+// ============================================
+router.put('/clients/:id/toggle-active', authenticateAdmin, async (req, res) => {
+    try {
+        const current = await pool.query('SELECT is_active FROM clients WHERE id = $1', [req.params.id]);
+        if (!current.rows.length) return res.status(404).json({ success: false, message: 'Client non trouvé.' });
+        const newStatus = !current.rows[0].is_active;
+        const result = await pool.query(
+            'UPDATE clients SET is_active = $1, updated_at = NOW() WHERE id = $2 RETURNING id, full_name, is_active',
+            [newStatus, req.params.id]
+        );
+        res.json({ success: true, client: result.rows[0], is_active: newStatus });
+    } catch (err) {
+        console.error('Toggle client active error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
@@ -364,11 +387,13 @@ router.post('/disputes', authenticateAdmin, async (req, res) => {
 router.put('/disputes/:id', authenticateAdmin, async (req, res) => {
     try {
         const { status, resolution } = req.body;
-        const resolved_at = status === 'resolved' ? 'NOW()' : 'NULL';
         const result = await pool.query(
-            `UPDATE disputes SET status=$1, resolution=$2, resolved_at=${status === 'resolved' ? 'NOW()' : 'resolved_at'} WHERE id=$3 RETURNING *`,
+            `UPDATE disputes SET status=$1, resolution=$2,
+             resolved_at = CASE WHEN $1 = 'resolved' THEN NOW() ELSE resolved_at END
+             WHERE id=$3 RETURNING *`,
             [status, resolution || null, req.params.id]
         );
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Litige non trouvé.' });
         res.json({ success: true, dispute: result.rows[0] });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -423,6 +448,7 @@ router.put('/contracts/:id/sign', authenticateAdmin, async (req, res) => {
             `UPDATE contracts SET status='signed', signed_at=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *`,
             [req.params.id]
         );
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Contrat non trouvé.' });
         res.json({ success: true, contract: result.rows[0] });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -434,11 +460,9 @@ router.put('/contracts/:id/sign', authenticateAdmin, async (req, res) => {
 // ============================================
 router.get('/expenses', authenticateAdmin, async (req, res) => {
     try {
-        const result = await pool.query(
-            `SELECT * FROM expenses ORDER BY expense_date DESC`
-        );
+        const result = await pool.query(`SELECT * FROM expenses ORDER BY expense_date DESC`);
         const totals = await pool.query(
-            `SELECT 
+            `SELECT
                 COALESCE(SUM(amount),0) as total_ht,
                 COALESCE(SUM(tps_paid),0) as total_tps,
                 COALESCE(SUM(tvq_paid),0) as total_tvq
@@ -480,17 +504,16 @@ router.delete('/expenses/:id', authenticateAdmin, async (req, res) => {
 router.get('/tax-declarations', authenticateAdmin, async (req, res) => {
     try {
         const decls = await pool.query(`SELECT * FROM tax_declarations ORDER BY period_start DESC`);
-        // Données pour générer automatiquement les périodes
         const summary = await pool.query(`
-            SELECT 
-                EXTRACT(QUARTER FROM created_at) as quarter,
-                EXTRACT(YEAR FROM created_at) as year,
+            SELECT
+                EXTRACT(QUARTER FROM paid_at) as quarter,
+                EXTRACT(YEAR FROM paid_at) as year,
                 COALESCE(SUM(amount_ht),0) as revenue_ht,
                 COALESCE(SUM(tps_amount),0) as tps,
                 COALESCE(SUM(tvq_amount),0) as tvq,
                 COALESCE(SUM(amount_ttc),0) as ttc
             FROM invoices
-            WHERE status = 'paid'
+            WHERE status = 'paid' AND paid_at IS NOT NULL
             GROUP BY quarter, year
             ORDER BY year DESC, quarter DESC
         `);
@@ -503,10 +526,13 @@ router.get('/tax-declarations', authenticateAdmin, async (req, res) => {
 router.post('/tax-declarations', authenticateAdmin, async (req, res) => {
     try {
         const { period_type, period_label, period_start, period_end, notes } = req.body;
-        // Calculer les montants automatiquement depuis la base
+        if (!period_type || !period_label || !period_start || !period_end) {
+            return res.status(400).json({ success: false, message: 'Champs requis manquants.' });
+        }
+        // Calculer automatiquement depuis la base
         const revenue = await pool.query(
             `SELECT COALESCE(SUM(amount_ht),0) as ht, COALESCE(SUM(tps_amount),0) as tps, COALESCE(SUM(tvq_amount),0) as tvq
-             FROM invoices WHERE status='paid' AND created_at >= $1 AND created_at <= $2`,
+             FROM invoices WHERE status='paid' AND paid_at >= $1 AND paid_at <= $2`,
             [period_start, period_end]
         );
         const r = revenue.rows[0];
@@ -527,6 +553,7 @@ router.put('/tax-declarations/:id/submit', authenticateAdmin, async (req, res) =
             `UPDATE tax_declarations SET status='submitted', submitted_at=NOW() WHERE id=$1 RETURNING *`,
             [req.params.id]
         );
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Déclaration non trouvée.' });
         res.json({ success: true, declaration: result.rows[0] });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -571,17 +598,26 @@ router.delete('/documents/:id', authenticateAdmin, async (req, res) => {
 });
 
 // ============================================
-// MESSAGES + polling
+// MESSAGES + polling + mark-read
 // ============================================
 router.get('/messages', authenticateAdmin, async (req, res) => {
     try {
         const allClients = await pool.query(
-            `SELECT DISTINCT c.id, c.full_name, c.company_name FROM clients c JOIN messages m ON m.client_id = c.id ORDER BY c.full_name`
+            `SELECT DISTINCT c.id, c.full_name, c.company_name
+             FROM clients c
+             JOIN messages m ON m.client_id = c.id
+             ORDER BY c.full_name`
         );
         const threads = await Promise.all(allClients.rows.map(async (c) => {
             const msgs = await pool.query(`SELECT * FROM messages WHERE client_id=$1 ORDER BY created_at ASC`, [c.id]);
             const unread = await pool.query(`SELECT COUNT(*) FROM messages WHERE client_id=$1 AND sender='client' AND is_read=false`, [c.id]);
-            return { client_id: c.id, client_name: c.full_name, company_name: c.company_name, messages: msgs.rows, unread_count: parseInt(unread.rows[0].count) };
+            return {
+                client_id: c.id,
+                client_name: c.full_name,
+                company_name: c.company_name,
+                messages: msgs.rows,
+                unread_count: parseInt(unread.rows[0].count)
+            };
         }));
         res.json({ success: true, threads });
     } catch (err) {
@@ -597,8 +633,37 @@ router.post('/messages/:clientId', authenticateAdmin, async (req, res) => {
             `INSERT INTO messages (client_id, sender, content, is_read, created_at) VALUES ($1, 'vnk', $2, false, NOW()) RETURNING *`,
             [req.params.clientId, content.trim()]
         );
-        await pool.query(`UPDATE messages SET is_read=true WHERE client_id=$1 AND sender='client' AND is_read=false`, [req.params.clientId]);
+        // Marquer les messages du client comme lus en même temps
+        await pool.query(
+            `UPDATE messages SET is_read=true WHERE client_id=$1 AND sender='client' AND is_read=false`,
+            [req.params.clientId]
+        );
         res.status(201).json({ success: true, message: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// PUT /api/admin/messages/:clientId/mark-read — marquer thread comme lu
+router.put('/messages/:clientId/mark-read', authenticateAdmin, async (req, res) => {
+    try {
+        await pool.query(
+            `UPDATE messages SET is_read=true WHERE client_id=$1 AND sender='client' AND is_read=false`,
+            [req.params.clientId]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// PUT /api/admin/messages/mark-all-read — marquer tous les messages comme lus
+router.put('/messages/mark-all-read', authenticateAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `UPDATE messages SET is_read=true WHERE sender='client' AND is_read=false`
+        );
+        res.json({ success: true, updated: result.rowCount });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error.' });
     }
@@ -611,12 +676,37 @@ router.get('/payments', authenticateAdmin, async (req, res) => {
     try {
         const [invoices, totals] = await Promise.all([
             pool.query(`SELECT i.*, c.full_name as client_name FROM invoices i JOIN clients c ON i.client_id = c.id ORDER BY i.created_at DESC`),
-            pool.query(`SELECT COALESCE(SUM(CASE WHEN status='paid' THEN amount_ttc END),0) as total_paid, COALESCE(SUM(CASE WHEN status='unpaid' THEN amount_ttc END),0) as total_unpaid, COALESCE(SUM(amount_ttc),0) as total_invoiced FROM invoices`)
+            pool.query(`SELECT
+                COALESCE(SUM(CASE WHEN status='paid' THEN amount_ttc END),0) as total_paid,
+                COALESCE(SUM(CASE WHEN status='unpaid' THEN amount_ttc END),0) as total_unpaid,
+                COALESCE(SUM(amount_ttc),0) as total_invoiced
+                FROM invoices`)
         ]);
-        res.json({ success: true, invoices: invoices.rows, totalPaid: parseFloat(totals.rows[0].total_paid), totalUnpaid: parseFloat(totals.rows[0].total_unpaid), totalInvoiced: parseFloat(totals.rows[0].total_invoiced) });
+        res.json({
+            success: true,
+            invoices: invoices.rows,
+            totalPaid: parseFloat(totals.rows[0].total_paid),
+            totalUnpaid: parseFloat(totals.rows[0].total_unpaid),
+            totalInvoiced: parseFloat(totals.rows[0].total_invoiced)
+        });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error.' });
     }
+});
+
+router.post('/contracts/:id/send-signature', authenticateAdmin, async (req, res) => {
+    const { signer_email, signer_name, message } = req.body;
+    const contract = await pool.query('SELECT * FROM contracts WHERE id=$1', [req.params.id]);
+    // Appeler le service HelloSign existant (backend/services/hellosign.js)
+    const result = await hellosignService.sendForSignature({
+        file_url: contract.rows[0].file_url,
+        signer_email, signer_name, message,
+        title: contract.rows[0].title
+    });
+    if (result.success) {
+        await pool.query('UPDATE contracts SET status=$1 WHERE id=$2', ['pending', req.params.id]);
+        res.json({ success: true });
+    } else res.status(500).json({ success: false, message: result.error });
 });
 
 module.exports = router;
