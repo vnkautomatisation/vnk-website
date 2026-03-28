@@ -875,4 +875,27 @@ router.post('/contracts/:id/send-signature', authenticateAdmin, async (req, res)
 });
 
 
+// ============================================
+// CONTRACTS — Modifier un contrat (titre, URL, statut, contenu)
+// ============================================
+router.put('/contracts/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const { title, file_url, content, status } = req.body;
+        const result = await pool.query(
+            `UPDATE contracts 
+             SET title=$1, file_url=$2, content=$3, status=$4, updated_at=NOW()
+             WHERE id=$5 RETURNING *`,
+            [title, file_url || null, content || null, status || 'draft', req.params.id]
+        );
+        if (!result.rows.length) {
+            return res.status(404).json({ success: false, message: 'Contrat non trouve.' });
+        }
+        res.json({ success: true, contract: result.rows[0] });
+    } catch (err) {
+        console.error('PUT contracts error:', err);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+
 module.exports = router;
