@@ -1739,9 +1739,9 @@
                             </div>
                         </div>
                         <div style="padding:0.4rem 0">
-                            <button onclick="toggleAdminProfile();window.open('https://vnk-website-production.up.railway.app/portail','_blank')" style="width:100%;text-align:left;padding:0.65rem 1rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.65rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                            <button onclick="toggleAdminProfile();showAdminAccount()" style="width:100%;text-align:left;padding:0.65rem 1rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.65rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-                                Mon portail client
+                                Mon compte administrateur
                             </button>
                             <button onclick="toggleAdminProfile();window.open('https://dashboard.stripe.com','_blank')" style="width:100%;text-align:left;padding:0.65rem 1rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.65rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#635BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
@@ -2638,7 +2638,7 @@
             try {
                 const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: v('admin-email'), password: v('admin-password') }) });
                 const d = await r.json();
-                if (d.success && d.token) { adminToken = d.token; localStorage.setItem('vnk-admin-token', d.token); document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; var _n = document.getElementById('mobile-bottom-nav'); if (_n) _n.style.display = 'block'; loadAllAdmin().then(() => startAdminPolling()); }
+                if (d.success && d.token) { adminToken = d.token; localStorage.setItem('vnk-admin-token', d.token); document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; var _n = document.getElementById('mobile-bottom-nav'); if (_n && window.innerWidth <= 600) _n.style.display = 'block'; loadAllAdmin().then(() => startAdminPolling()); }
                 else { errEl.textContent = d.message || 'Identifiants incorrects.'; errEl.style.display = 'block'; }
             } catch { errEl.textContent = 'Erreur de connexion.'; errEl.style.display = 'block'; }
         });
@@ -2647,7 +2647,7 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             const saved = localStorage.getItem('vnk-admin-token');
-            if (saved) { adminToken = saved; document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; var _na = document.getElementById('mobile-bottom-nav'); if (_na) _na.style.display = 'block'; loadAllAdmin().then(() => startAdminPolling()); }
+            if (saved) { adminToken = saved; document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; var _na = document.getElementById('mobile-bottom-nav'); if (_na && window.innerWidth <= 600) _na.style.display = 'block'; loadAllAdmin().then(() => startAdminPolling()); }
             const h = new Date().getHours();
             document.getElementById('dash-greeting').textContent = (h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir') + ', Yan Verone';
             document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
@@ -2868,7 +2868,7 @@
             <div class="cdp-item">
                 <div class="cdp-item-head"><div class="cdp-item-title">${q.quote_number} — ${q.title}</div><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></div>
                 <div class="cdp-item-meta">${fmt(q.amount_ttc)} TTC · Exp: ${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</div>
-                <div style="margin-top:0.5rem"><button onclick="downloadPdf(\'/api/quotes/\' + q.id + \'/pdf\', q.quote_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button></div>
+                <div style="margin-top:0.5rem"><button onclick="downloadPdf(\'/api/admin/quotes/\' + q.id + \'/pdf\', q.quote_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button></div>
             </div>`).join('') : '<div class="empty-state"><p>Aucun devis.</p></div>';
             const cis = allInvoices.filter(i => i.client_id === clientId);
             document.getElementById('cdp-factures').innerHTML = cis.length ? cis.map(i => {
@@ -2877,7 +2877,7 @@
                 <div class="cdp-item-head"><div class="cdp-item-title">${i.invoice_number} — ${i.title}</div><span class="badge badge-${ov ? 'overdue' : i.status}">${ov ? 'En retard' : statusLabel(i.status)}</span></div>
                 <div class="cdp-item-meta">${fmt(i.amount_ttc)} TTC · Échéance: ${i.due_date ? fmtDate(i.due_date) : '—'}</div>
                 <div style="display:flex;gap:0.4rem;margin-top:0.5rem">
-                    <button onclick="downloadPdf(\'/api/invoices/\' + inv.id + \'/pdf\', inv.invoice_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button>
+                    <button onclick="downloadPdf(\'/api/admin/invoices/\' + inv.id + \'/pdf\', inv.invoice_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button>
                     ${i.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${i.id})">Marquer payée</button>` : ''}
                 </div>
             </div>`;
@@ -2948,7 +2948,7 @@
             <td>${fmt(q.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(q.amount_ttc)}</td>
             <td><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></td>
             <td>${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</td>
-            <td><div class="td-actions"><button onclick="downloadPdf(\'/api/quotes/\' + q.id + \'/pdf\', q.quote_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button>${q.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="acceptQuote(${q.id}, q.quote_number)">✓ Accepter</button><button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
+            <td><div class="td-actions"><button onclick="downloadPdf(\'/api/admin/quotes/\' + q.id + \'/pdf\', q.quote_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button>${q.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="acceptQuote(${q.id}, q.quote_number)">✓ Accepter</button><button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
         </tr>`).join('');
             else if (name === 'invoices' || name === 'payments') tbody.innerHTML = paged.map(inv => {
                 const ov = inv.status === 'unpaid' && new Date(inv.due_date) < new Date();
@@ -2958,7 +2958,7 @@
                 <td><span class="badge badge-${ov ? 'overdue' : inv.status}">${ov ? 'En retard' : statusLabel(inv.status)}</span></td>
                 <td>${inv.due_date ? fmtDate(inv.due_date) : '—'}</td>
                 <td>${inv.paid_at ? fmtDate(inv.paid_at) : '—'}</td>
-                <td><div class="td-actions"><button onclick="downloadPdf(\'/api/invoices/\' + inv.id + \'/pdf\', inv.invoice_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button>${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">Payée</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</div></td>
+                <td><div class="td-actions"><button onclick="downloadPdf(\'/api/admin/invoices/\' + inv.id + \'/pdf\', inv.invoice_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button>${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">Payée</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</div></td>
             </tr>`;
             }).join('');
             else if (name === 'documents') tbody.innerHTML = paged.map(d => `<tr>
@@ -4244,6 +4244,103 @@
             } else {
                 showToast(d.message || 'Erreur', 'error');
             }
+        }
+
+
+        // ============================================
+        // MON COMPTE ADMINISTRATEUR
+        // ============================================
+        function showAdminAccount() {
+            var existing = document.getElementById('admin-account-modal');
+            if (existing) existing.remove();
+            var overlay = document.createElement('div');
+            overlay.id = 'admin-account-modal';
+            overlay.className = 'modal-overlay open';
+            var modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.maxWidth = '520px';
+
+            var head = document.createElement('div'); head.className = 'modal-head';
+            var ttl = document.createElement('span'); ttl.className = 'modal-title';
+            ttl.textContent = 'Mon compte administrateur';
+            var xBtn = document.createElement('button'); xBtn.className = 'modal-close';
+            xBtn.textContent = 'x'; xBtn.onclick = function () { overlay.remove(); };
+            head.appendChild(ttl); head.appendChild(xBtn);
+
+            var body = document.createElement('div'); body.className = 'modal-body';
+            body.style.padding = '0';
+
+            // Header profile
+            var profileHead = document.createElement('div');
+            profileHead.style.cssText = 'background:linear-gradient(135deg,#1B4F8A,#2E6DB4);padding:1.5rem;display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem';
+            var avatar = document.createElement('div');
+            avatar.style.cssText = 'width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:white;flex-shrink:0';
+            avatar.textContent = 'YV';
+            var info = document.createElement('div');
+            info.innerHTML = '<div style="font-weight:800;font-size:1.1rem;color:white">Yan Verone Kengne</div>'
+                + '<div style="font-size:0.78rem;color:rgba(255,255,255,0.8);margin-top:3px">yan.verone@vnk.ca</div>'
+                + '<div style="font-size:0.72rem;color:rgba(255,255,255,0.65);margin-top:2px">Administrateur principal</div>';
+            profileHead.appendChild(avatar); profileHead.appendChild(info);
+            body.appendChild(profileHead);
+
+            // Info fields
+            var fields = document.createElement('div');
+            fields.style.padding = '0 1.25rem 1.25rem';
+            var rows = [
+                ['Entreprise', 'VNK Automatisation Inc.'],
+                ['NEQ', '1181943359'],
+                ['Courriel', 'yan.verone@vnk.ca'],
+                ['Telephone', '(819) 290-8686'],
+                ['Province', 'Quebec, QC, Canada'],
+                ['TPS', 'Enregistre (a completer — Revenu Canada)'],
+                ['TVQ', 'Enregistre (a completer — Revenu Quebec)'],
+                ['Role', 'Administrateur principal'],
+                ['Acces', 'Tableau de bord complet'],
+            ];
+            rows.forEach(function (r) {
+                var row = document.createElement('div');
+                row.style.cssText = 'display:flex;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--border);font-size:0.85rem';
+                var label = document.createElement('span');
+                label.style.cssText = 'color:var(--text-light);font-weight:500;min-width:110px';
+                label.textContent = r[0];
+                var val = document.createElement('span');
+                val.style.cssText = 'color:var(--text);font-weight:600;text-align:right';
+                val.textContent = r[1];
+                row.appendChild(label); row.appendChild(val);
+                fields.appendChild(row);
+            });
+
+            // Quick links
+            var links = document.createElement('div');
+            links.style.cssText = 'margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem';
+            var quickLinks = [
+                ['Stripe Dashboard', 'https://dashboard.stripe.com', '#635BFF'],
+                ['Dropbox Sign', 'https://app.hellosign.com', '#0061FF'],
+                ['Railway', 'https://railway.app', '#0B0D0E'],
+                ['pgAdmin / DB', 'https://railway.app', '#336791'],
+            ];
+            quickLinks.forEach(function (ql) {
+                var btn = document.createElement('a');
+                btn.href = ql[1]; btn.target = '_blank';
+                btn.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:8px;text-decoration:none;font-size:0.78rem;font-weight:600;color:var(--text);background:white;transition:all 0.15s';
+                btn.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:' + ql[2] + ';flex-shrink:0"></span>' + ql[0];
+                links.appendChild(btn);
+            });
+            fields.appendChild(links);
+            body.appendChild(fields);
+
+            var footer = document.createElement('div'); footer.className = 'modal-footer';
+            var logoutBtn = document.createElement('button'); logoutBtn.className = 'btn btn-ghost';
+            logoutBtn.style.color = 'var(--error)'; logoutBtn.textContent = 'Deconnexion';
+            logoutBtn.onclick = function () { overlay.remove(); adminLogout(); };
+            var closeBtn2 = document.createElement('button'); closeBtn2.className = 'btn btn-primary';
+            closeBtn2.textContent = 'Fermer';
+            closeBtn2.onclick = function () { overlay.remove(); };
+            footer.appendChild(logoutBtn); footer.appendChild(closeBtn2);
+            modal.appendChild(head); modal.appendChild(body); modal.appendChild(footer);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
         }
 
     </script>
