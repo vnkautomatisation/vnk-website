@@ -15,6 +15,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const pdfTemplates = require('./pdf-templates');
 
 // ---------- Middleware admin auth ----------
 function authenticateAdmin(req, res, next) {
@@ -894,6 +895,118 @@ router.put('/contracts/:id', authenticateAdmin, async (req, res) => {
     } catch (err) {
         console.error('PUT contracts error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+
+// ============================================================
+// QUOTES — PDF professionnel
+// ============================================================
+router.get('/quotes/:id/pdf', authenticateAdmin, async (req, res) => {
+    try {
+        const q = await pool.query(
+            `SELECT q.*, c.full_name, c.email, c.phone, c.company_name, c.address, c.city, c.province, c.postal_code
+             FROM quotes q JOIN clients c ON q.client_id = c.id WHERE q.id = $1`, [req.params.id]
+        );
+        if (!q.rows.length) return res.status(404).json({ success: false, message: 'Devis non trouve.' });
+        const quote = q.rows[0];
+        const client = { full_name: quote.full_name, email: quote.email, phone: quote.phone, company_name: quote.company_name, address: quote.address, city: quote.city, province: quote.province, postal_code: quote.postal_code };
+        await pdfTemplates.generateQuotePDF(res, quote, client, null);
+    } catch (err) {
+        console.error('Quote PDF error:', err);
+        if (!res.headersSent) res.status(500).json({ success: false, message: 'Erreur PDF.' });
+    }
+});
+
+// ============================================================
+// QUOTES — Accepter + générer contrat automatiquement
+// ============================================================
+router.put('/quotes/:id/accept', authenticateAdmin, async (req, res) => {
+    try {
+        // Marquer devis comme accepté
+        await pool.query('UPDATE quotes SET status=$1 WHERE id=$2', ['accepted', req.params.id]);
+
+        // Générer contrat automatiquement
+        const { contract, quote } = await pdfTemplates.autoGenerateContract(pool, req.params.id);
+
+        // Envoyer pour signature Dropbox Sign si configuré
+        let signatureRequestSent = false;
+        if (process.env.DROPBOXSIGN_API_KEY && quote.email) {
+            try {
+                const hellosignService = require('../services/hellosign');
+                if (hellosignService && hellosignService.sendForSignature) {
+                    // Note: le PDF sera généré à la demande - on envoie juste la demande
+                    const result = await hellosignService.sendForSignature({
+                        title: contract.title,
+                        signer_email: quote.email,
+                        signer_name: quote.full_name,
+                        message: `Bonjour ${quote.full_name}, votre devis ${quote.quote_number} a été accepté. Veuillez signer le contrat de service ci-joint pour confirmer le mandat.`
+                    });
+                    if (result.success) {
+                        signatureRequestSent = true;
+                        await pool.query('UPDATE contracts SET status=$1 WHERE id=$2', ['pending', contract.id]);
+                    }
+                }
+            } catch (hsErr) {
+                console.warn('Dropbox Sign auto-send error:', hsErr.message);
+            }
+        }
+
+        res.json({
+            success: true,
+            contract_number: contract.contract_number,
+            signature_sent: signatureRequestSent,
+            message: signatureRequestSent
+                ? 'Devis accepte et contrat envoye pour signature au client.'
+                : 'Devis accepte et contrat cree. Envoyez-le manuellement pour signature.'
+        });
+    } catch (err) {
+        console.error('Accept quote error:', err);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// ============================================================
+// INVOICES — PDF professionnel
+// ============================================================
+router.get('/invoices/:id/pdf', authenticateAdmin, async (req, res) => {
+    try {
+        const q = await pool.query(
+            `SELECT i.*, c.full_name, c.email, c.phone, c.company_name, c.address, c.city, c.province, c.postal_code
+             FROM invoices i JOIN clients c ON i.client_id = c.id WHERE i.id = $1`, [req.params.id]
+        );
+        if (!q.rows.length) return res.status(404).json({ success: false, message: 'Facture non trouvee.' });
+        const invoice = q.rows[0];
+        const client = { full_name: invoice.full_name, email: invoice.email, phone: invoice.phone, company_name: invoice.company_name, address: invoice.address, city: invoice.city, province: invoice.province, postal_code: invoice.postal_code };
+        await pdfTemplates.generateInvoicePDF(res, invoice, client);
+    } catch (err) {
+        console.error('Invoice PDF error:', err);
+        if (!res.headersSent) res.status(500).json({ success: false, message: 'Erreur PDF.' });
+    }
+});
+
+// ============================================================
+// CONTRACTS — PDF professionnel
+// ============================================================
+router.get('/contracts/:id/pdf', authenticateAdmin, async (req, res) => {
+    try {
+        const q = await pool.query(
+            `SELECT ct.*, c.full_name, c.email, c.phone, c.company_name, c.address, c.city, c.province, c.postal_code,
+                    qo.quote_number, qo.amount_ttc, qo.description as quote_description, qo.title as quote_title
+             FROM contracts ct 
+             JOIN clients c ON ct.client_id = c.id
+             LEFT JOIN quotes qo ON ct.quote_id = qo.id
+             WHERE ct.id = $1`, [req.params.id]
+        );
+        if (!q.rows.length) return res.status(404).json({ success: false, message: 'Contrat non trouve.' });
+        const row = q.rows[0];
+        const contract = { ...row };
+        const client = { full_name: row.full_name, email: row.email, phone: row.phone, company_name: row.company_name, address: row.address, city: row.city, province: row.province, postal_code: row.postal_code };
+        const quote = row.quote_number ? { quote_number: row.quote_number, amount_ttc: row.amount_ttc, description: row.quote_description, title: row.quote_title } : null;
+        await pdfTemplates.generateContractPDF(res, contract, client, quote);
+    } catch (err) {
+        console.error('Contract PDF error:', err);
+        if (!res.headersSent) res.status(500).json({ success: false, message: 'Erreur PDF.' });
     }
 });
 
