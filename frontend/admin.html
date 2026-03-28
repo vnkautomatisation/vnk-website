@@ -2183,6 +2183,51 @@
         </div>
     </div>
 
+
+    <!-- ===== MOBILE BOTTOM NAV ===== -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+        <div class="mobile-nav-inner">
+            <button class="mobile-nav-btn active" id="mobnav-dashboard" onclick="mobileNav('dashboard',this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
+                Tableau
+            </button>
+            <button class="mobile-nav-btn" id="mobnav-clients" onclick="mobileNav('clients',this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                Clients
+                <span class="mobile-nav-badge" id="mob-badge-clients" style="display:none">0</span>
+            </button>
+            <button class="mobile-nav-btn" id="mobnav-messages" onclick="mobileNav('messages',this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                Messages
+                <span class="mobile-nav-badge" id="mob-badge-messages" style="background:var(--error);display:none">0</span>
+            </button>
+            <button class="mobile-nav-btn" id="mobnav-invoices" onclick="mobileNav('invoices',this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                Factures
+                <span class="mobile-nav-badge" id="mob-badge-invoices" style="background:var(--error);display:none">0</span>
+            </button>
+            <button class="mobile-nav-btn" id="mobnav-more" onclick="mobileNav('more',this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" /></svg>
+                Plus
+            </button>
+        </div>
+    </nav>
+    <div id="mobile-more-overlay" onclick="closeMoreDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:498"></div>
+    <div id="mobile-more-drawer" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:499;background:white;border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,0.15);padding:0.75rem 1rem 5.5rem">
+        <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 1.25rem"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.55rem">
+            <button onclick="closeMoreDrawer();mobileNav('mandates',null)" style="display:flex;flex-direction:column;align-items:center;gap:0.35rem;padding:0.8rem 0.4rem;border:1.5px solid var(--border);border-radius:12px;background:none;cursor:pointer;font-family:inherit;font-size:0.72rem;font-weight:600;color:var(--text)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>Mandats</button>
+            <button onclick="closeMoreDrawer();mobileNav('quotes',null)" style="display:flex;flex-direction:column;align-items:center;gap:0.35rem;padding:0.8rem 0.4rem;border:1.5px solid var(--border);border-radius:12px;background:none;cursor:pointer;font-family:inherit;font-size:0.72rem;font-weight:600;color:var(--text)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>Devis</button>
+            <button onclick="closeMoreDrawer();mobileNav('finance',null)" style="display:flex;flex-direction:column;align-items:center;gap:0.35rem;padding:0.8rem 0.4rem;border:1.5px solid var(--border);border-radius:12px;background:none;cursor:pointer;font-family:inherit;font-size:0.72rem;font-weight:600;color:var(--text)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>Finance</button>
+            <button onclick="closeMoreDrawer();mobileNav('contracts',null)" style="display:flex;flex-direction:column;align-items:center;gap:0.35rem;padding:0.8rem 0.4rem;border:1.5px solid var(--border);border-radius:12px;background:none;cursor:pointer;font-family:inherit;font-size:0.72rem;font-weight:600;color:var(--text)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>Contrats</button>
+            <button onclick="closeMoreDrawer();mobileNav('expenses',null)" style="display:flex;flex-direction:column;align-items:center;gap:0.35rem;padding:0.8rem 0.4rem;border:1.5px solid var(--border);border-radius:12px;background:none;cursor:pointer;font-family:inherit;font-size:0.72rem;font-weight:600;color:var(--text)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>Dépenses</button>
+            <button onclick="closeMoreDrawer();mobileNav('documents',null)" style="display:flex;flex-direction:column;align-items:center;gap:0.35rem;padding:0.8rem 0.4rem;border:1.5px solid var(--border);border-radius:12px;background:none;cursor:pointer;font-family:inherit;font-size:0.72rem;font-weight:600;color:var(--text)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>Docs</button>
+        </div>
+        <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border)">
+            <button onclick="adminLogout()" style="width:100%;padding:0.65rem;border:1.5px solid var(--error);border-radius:10px;background:none;cursor:pointer;font-family:inherit;font-size:0.82rem;font-weight:600;color:var(--error)">Deconnexion</button>
+        </div>
+    </div>
+
     <!-- ===== MODALS ===== -->
     <div class="modal-overlay" id="modal-new-client">
         <div class="modal">
@@ -2748,7 +2793,7 @@
             list.innerHTML = msgs.length ? msgs.map(m => `
             <div class="msg-row ${m.sender === 'client' ? 'msg-row-client' : 'msg-row-vnk'}">
                 <div style="font-size:0.7rem;color:var(--text-light);margin-bottom:0.12rem;font-weight:600">${m.sender === 'client' ? 'Client' : 'VNK Automatisation'}</div>
-                <div class="msg-bubble ${m.sender === 'client' ? 'msg-bubble-client' : 'msg-bubble-vnk'}">${m.content}</div>
+                <div class="msg-bubble ${m.sender === 'client' ? 'msg-bubble-client' : 'msg-bubble-vnk'}">${m.content}${m.attachment_data ? (function () { var a = []; try { a = typeof m.attachment_data === 'string' ? JSON.parse(m.attachment_data) : m.attachment_data; } catch (e) { } return a.map(function (f) { return '<a href="data:' + f.type + ';base64,' + f.data + '" download="' + f.name + '" style="display:flex;align-items:center;gap:0.3rem;margin-top:0.35rem;font-size:0.73rem;font-weight:600;color:inherit;opacity:0.9"><svg width=\'11\' height=\'11\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\'><path d=\'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\'/><polyline points=\'7 10 12 15 17 10\'/><line x1=\'12\' y1=\'15\' x2=\'12\' y2=\'3\'/></svg>' + f.name + '</a>'; }).join(''); })() : ''}</div>
                 <div style="font-size:0.68rem;color:var(--text-light);margin-top:0.2rem">${new Date(m.created_at).toLocaleString('fr-CA')}</div>
             </div>`) : '<p style="color:var(--text-light);font-size:0.85rem;text-align:center;padding:1rem">Aucun message échangé.</p>';
             setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
@@ -2852,6 +2897,44 @@
             filterMessages();
         }
 
+        function renderBubbles(t) {
+            var msgs = t.messages || [];
+            if (!msgs.length) return '<p style="color:var(--text-light);font-size:0.82rem;text-align:center;padding:1rem">Aucun message.</p>';
+            return msgs.map(function (m) {
+                var isClient = m.sender === 'client';
+                var bubbleStyle = isClient
+                    ? 'background:var(--light-blue);color:var(--text);border-bottom-left-radius:3px'
+                    : 'background:var(--primary);color:white;border-bottom-right-radius:3px';
+                // Attachments
+                var attachHtml = '';
+                if (m.attachment_data) {
+                    var atts = [];
+                    try { atts = typeof m.attachment_data === 'string' ? JSON.parse(m.attachment_data) : (m.attachment_data || []); } catch (e) { }
+                    attachHtml = atts.map(function (a) {
+                        var dataUrl = 'data:' + (a.type || 'application/octet-stream') + ';base64,' + a.data;
+                        var col = isClient ? 'var(--primary)' : 'rgba(255,255,255,0.92)';
+                        var bg = isClient ? 'rgba(27,79,138,0.08)' : 'rgba(255,255,255,0.15)';
+                        return '<a href="' + dataUrl + '" download="' + a.name + '" style="display:flex;align-items:center;gap:0.4rem;margin-top:0.4rem;padding:0.35rem 0.65rem;border-radius:6px;background:' + bg + ';color:' + col + ';text-decoration:none;font-size:0.75rem;font-weight:600">'
+                            + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
+                            + a.name + '</a>';
+                    }).join('');
+                }
+                // Clean content: strip the 📎 line if real attachments present
+                var txt = m.content || '';
+                if (attachHtml && txt.indexOf('\uD83D\uDCCE') >= 0) {
+                    txt = txt.split('\n').filter(function (l) { return l.indexOf('\uD83D\uDCCE') < 0; }).join('\n').trim();
+                }
+                return '<div style="display:flex;flex-direction:column;align-items:' + (isClient ? 'flex-start' : 'flex-end') + ';margin-bottom:0.1rem">'
+                    + '<div style="font-size:0.7rem;color:var(--text-light);margin-bottom:0.12rem;font-weight:600">' + (isClient ? t.client_name : 'VNK Automatisation') + '</div>'
+                    + '<div style="max-width:80%;padding:0.65rem 1rem;border-radius:10px;font-size:0.85rem;line-height:1.55;' + bubbleStyle + '">'
+                    + txt + attachHtml
+                    + '</div>'
+                    + '<div style="font-size:0.68rem;color:var(--text-light);margin-top:0.18rem">'
+                    + new Date(m.created_at).toLocaleString('fr-CA', { dateStyle: 'short', timeStyle: 'short' })
+                    + '</div></div>';
+            }).join('');
+        }
+
         function filterMessages() {
             const search = document.getElementById('messages-search')?.value.toLowerCase() || '';
             const fil = allMessages.filter(t => !search || (t.client_name + ' ' + (t.company_name || '')).toLowerCase().includes(search));
@@ -2869,13 +2952,7 @@
                 </div>
                 <div id="msg-${t.client_id}" style="display:${openIds.has(String(t.client_id)) ? 'block' : 'none'}">
                     <div id="mlist-${t.client_id}" style="padding:1rem 1.25rem;display:flex;flex-direction:column;gap:0.65rem;max-height:400px;overflow-y:auto">
-                        ${(t.messages || []).length === 0 ? '<p style="color:var(--text-light);font-size:0.82rem;text-align:center">Aucun message.</p>' :
-                    (t.messages || []).map(m => `
-                            <div style="display:flex;flex-direction:column;align-items:${m.sender === 'client' ? 'flex-start' : 'flex-end'}">
-                                <div style="font-size:0.7rem;color:var(--text-light);margin-bottom:0.15rem;font-weight:600">${m.sender === 'client' ? t.client_name : 'VNK Automatisation'}</div>
-                                <div style="max-width:80%;padding:0.65rem 1rem;border-radius:10px;font-size:0.85rem;line-height:1.55;${m.sender === 'client' ? 'background:var(--light-blue);color:var(--text);border-bottom-left-radius:3px' : 'background:var(--primary);color:white;border-bottom-right-radius:3px'}">${m.content}</div>
-                                <div style="font-size:0.68rem;color:var(--text-light);margin-top:0.2rem">${new Date(m.created_at).toLocaleString('fr-CA', { dateStyle: 'short', timeStyle: 'short' })}</div>
-                            </div>`).join('')}
+                        ${renderBubbles(t)}
                     </div>
                     <div style="padding:0.85rem 1.25rem;border-top:1px solid var(--border)">
                         <div id="attach-preview-${t.client_id}" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.4rem;min-height:0"></div>

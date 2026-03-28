@@ -13,6 +13,8 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // ---------- Middleware admin auth ----------
 function authenticateAdmin(req, res, next) {
@@ -609,7 +611,7 @@ router.get('/messages', authenticateAdmin, async (req, res) => {
              ORDER BY c.full_name`
         );
         const threads = await Promise.all(allClients.rows.map(async (c) => {
-            const msgs = await pool.query(`SELECT * FROM messages WHERE client_id=$1 ORDER BY created_at ASC`, [c.id]);
+            const msgs = await pool.query(`SELECT id, client_id, sender, content, attachment_data, is_read, created_at FROM messages WHERE client_id=$1 ORDER BY created_at ASC`, [c.id]);
             const unread = await pool.query(`SELECT COUNT(*) FROM messages WHERE client_id=$1 AND sender='client' AND is_read=false`, [c.id]);
             return {
                 client_id: c.id,
@@ -775,13 +777,36 @@ router.post('/payments/refund', authenticateAdmin, async (req, res) => {
 // ============================================
 // MESSAGES — envoi avec pièce jointe
 // ============================================
-router.post('/messages/:clientId/with-attachment', authenticateAdmin, async (req, res) => {
+router.post('/messages/:clientId/with-attachment', authenticateAdmin, upload.array('files', 5), async (req, res) => {
     try {
-        const content = req.body?.content || '(pièce jointe)';
+        const textContent = req.body?.content || '';
+        const files = req.files || [];
+
+        // Construire les pièces jointes en base64 (stockage direct en DB)
+        const attachments = files.map(f => ({
+            name: f.originalname,
+            type: f.mimetype,
+            size: f.size,
+            data: f.buffer.toString('base64')
+        }));
+
+        const fileNames = files.map(f => f.originalname).join(', ');
+        let msgContent = textContent;
+        if (fileNames) {
+            msgContent = (textContent ? textContent + '\n' : '') + '\uD83D\uDCCE ' + fileNames;
+        }
+        if (!msgContent) msgContent = '(piece jointe)';
+
+        // Stocker attachments JSON dans la colonne attachment_data
+        // (ajouter la colonne si elle n'existe pas)
+        await pool.query(`
+            ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_data JSONB DEFAULT NULL
+        `).catch(() => { }); // ignore si colonne existe déjà
+
         const result = await pool.query(
-            `INSERT INTO messages (client_id, sender, content, is_read, created_at)
-             VALUES ($1, 'vnk', $2, false, NOW()) RETURNING *`,
-            [req.params.clientId, content]
+            `INSERT INTO messages (client_id, sender, content, attachment_data, is_read, created_at)
+             VALUES ($1, 'vnk', $2, $3, false, NOW()) RETURNING *`,
+            [req.params.clientId, msgContent, attachments.length ? JSON.stringify(attachments) : null]
         );
         await pool.query(
             `UPDATE messages SET is_read=true WHERE client_id=$1 AND sender='client' AND is_read=false`,
@@ -789,6 +814,7 @@ router.post('/messages/:clientId/with-attachment', authenticateAdmin, async (req
         );
         res.status(201).json({ success: true, message: result.rows[0] });
     } catch (err) {
+        console.error('with-attachment error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
@@ -809,11 +835,11 @@ router.post('/contracts/:id/send-signature', authenticateAdmin, async (req, res)
         const contract = ctResult.rows[0];
 
         // Tenter HelloSign si clé API disponible
-        if (process.env.HELLOSIGN_API_KEY && contract.file_url) {
+        if (process.env.DROPBOXSIGN_API_KEY && contract.file_url) {
             try {
-                const hellosignService = require('../services/hellosign'); // Dropbox Sign (ex-HelloSign)
-                if (hellosignService && hellosignService.sendForSignature) {
-                    const result = await hellosignService.sendForSignature({
+                const dropboxSignService = require('../services/hellosign');
+                if (dropboxSignService && dropboxSignService.sendForSignature) {
+                    const result = await dropboxSignService.sendForSignature({
                         file_url: contract.file_url,
                         title: contract.title,
                         signer_email, signer_name,
