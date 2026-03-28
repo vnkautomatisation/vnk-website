@@ -2927,7 +2927,7 @@
             <td>${fmt(q.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(q.amount_ttc)}</td>
             <td><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></td>
             <td>${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</td>
-            <td><div class="td-actions"><button onclick="downloadPdf(\'/api/quotes/\' + q.id + \'/pdf\', q.quote_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button>${q.status === 'pending' ? `<button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
+            <td><div class="td-actions"><button onclick="downloadPdf(\'/api/quotes/\' + q.id + \'/pdf\', q.quote_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button>${q.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="acceptQuote(${q.id}, q.quote_number)">✓ Accepter</button><button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
         </tr>`).join('');
             else if (name === 'invoices' || name === 'payments') tbody.innerHTML = paged.map(inv => {
                 const ov = inv.status === 'unpaid' && new Date(inv.due_date) < new Date();
