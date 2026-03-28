@@ -2709,6 +2709,14 @@ img {
     display: none;
 }
 
+.portal-mobile-topbar {
+    display: none;
+}
+
+.portal-overlay {
+    display: none;
+}
+
 /* ---------- Login page ---------- */
 .portal-login-section {
     min-height: 100vh;

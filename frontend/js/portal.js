@@ -2,6 +2,14 @@
    VNK Automatisation Inc. - Portal JavaScript
    ============================================ */
 
+// ---------- Toggle sidebar mobile ----------
+function togglePortalSidebar() {
+    const sidebar = document.querySelector('.portal-sidebar');
+    const overlay = document.getElementById('portal-overlay');
+    if (sidebar) sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('open');
+}
+
 // ---------- Login ----------
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
@@ -51,20 +59,30 @@ document.addEventListener('DOMContentLoaded', () => {
 // ---------- Show dashboard ----------
 function showDashboard() {
     document.getElementById('login-section').style.display = 'none';
-    document.getElementById('dashboard-section').style.display = 'grid';
+    document.getElementById('dashboard-section').style.display = 'block';
 
     const user = JSON.parse(localStorage.getItem('vnk-user') || '{}');
 
-    // Sidebar user info
+    // Initiales
     const initials = (user.name || 'VNK').split(' ').map(n => n[0]).join('').substring(0, 3).toUpperCase();
-    document.getElementById('sidebar-avatar').textContent = initials;
-    document.getElementById('sidebar-name').textContent = user.name || '';
-    document.getElementById('sidebar-company').textContent = user.company || '';
+
+    // Sidebar desktop
+    const sidebarAvatar = document.getElementById('sidebar-avatar');
+    const sidebarName = document.getElementById('sidebar-name');
+    const sidebarCompany = document.getElementById('sidebar-company');
+    if (sidebarAvatar) sidebarAvatar.textContent = initials;
+    if (sidebarName) sidebarName.textContent = user.name || '';
+    if (sidebarCompany) sidebarCompany.textContent = user.company || '';
+
+    // Avatar mobile topbar
+    const mobileAvatar = document.getElementById('mobile-avatar');
+    if (mobileAvatar) mobileAvatar.textContent = initials.substring(0, 2);
 
     // Greeting
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
-    document.getElementById('dashboard-greeting').textContent = `${greeting}, ${(user.name || '').split(' ')[0]} !`;
+    const greetingEl = document.getElementById('dashboard-greeting');
+    if (greetingEl) greetingEl.textContent = `${greeting}, ${(user.name || '').split(' ')[0]} !`;
 
     loadAllData();
 }
@@ -85,12 +103,10 @@ async function loadAllData() {
             document.getElementById('stat-quotes').textContent = data.pendingQuotes || 0;
             document.getElementById('stat-invoices').textContent = data.pendingInvoices || 0;
 
-            // Badges
             if (data.pendingQuotes > 0) showBadge('badge-quotes', data.pendingQuotes);
             if (data.pendingInvoices > 0) showBadge('badge-invoices', data.pendingInvoices);
             if (data.activeMandates > 0) showBadge('badge-mandates', data.activeMandates);
 
-            // Activity
             renderActivity(data.recentActivity || []);
         }
 
@@ -149,6 +165,7 @@ async function loadAllData() {
 
 // ---------- Tab navigation ----------
 function showTab(tabName) {
+    // Changer le tab actif
     document.querySelectorAll('.portal-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.portal-nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(`tab-${tabName}`).classList.add('active');
@@ -157,6 +174,27 @@ function showTab(tabName) {
             btn.classList.add('active');
         }
     });
+
+    // Fermer la sidebar sur mobile
+    const sidebar = document.querySelector('.portal-sidebar');
+    const overlay = document.getElementById('portal-overlay');
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+
+    // Mettre à jour le titre mobile
+    const titles = {
+        dashboard: 'Tableau de bord',
+        mandates: 'Mes mandats',
+        quotes: 'Mes devis',
+        invoices: 'Mes factures',
+        documents: 'Mes documents',
+        messages: 'Messagerie'
+    };
+    const mobileTitle = document.getElementById('mobile-tab-title');
+    if (mobileTitle) mobileTitle.textContent = titles[tabName] || '';
+
+    // Scroll vers le haut sur mobile
+    window.scrollTo(0, 0);
 }
 
 // ---------- Badge helper ----------
@@ -315,7 +353,6 @@ function renderInvoices(invoices) {
 
     const unpaid = invoices.filter(i => i.status === 'unpaid');
     const paid = invoices.filter(i => i.status === 'paid');
-
     let html = '';
 
     if (unpaid.length) {
@@ -334,7 +371,7 @@ function renderInvoices(invoices) {
                             <span>Émise: ${new Date(inv.created_at).toLocaleDateString('fr-CA')}</span>
                             <span ${isOverdue ? 'style="color:var(--color-error);font-weight:600"' : ''}>Échéance: ${new Date(inv.due_date).toLocaleDateString('fr-CA')}</span>
                         </div>
-                        <div style="margin-top:0.4rem;display:flex;gap:0.75rem;font-size:0.78rem;color:var(--color-text-light)">
+                        <div style="margin-top:0.4rem;display:flex;gap:0.75rem;font-size:0.78rem;color:var(--color-text-light);flex-wrap:wrap">
                             <span>Sous-total: ${formatCurrency(inv.amount_ht)}</span>
                             <span>TPS: ${formatCurrency(inv.tps_amount)}</span>
                             <span>TVQ: ${formatCurrency(inv.tvq_amount)}</span>
@@ -405,15 +442,12 @@ function renderDocuments(documents) {
     };
 
     const typeLabels = {
-        pdf: 'Rapport PDF',
-        doc: 'Document Word',
-        docx: 'Document Word',
-        zip: 'Archive ZIP',
-        default: 'Document'
+        pdf: 'Rapport PDF', doc: 'Document Word',
+        docx: 'Document Word', zip: 'Archive ZIP', default: 'Document'
     };
 
     list.innerHTML = documents.map(doc => {
-        const ext = (doc.file_type || doc.file_name.split('.').pop() || 'default').toLowerCase();
+        const ext = (doc.file_type || (doc.file_name || '').split('.').pop() || 'default').toLowerCase();
         const icon = fileIcons[ext] || fileIcons.default;
         const typeLabel = typeLabels[ext] || typeLabels.default;
         const size = doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} KB` : '';
@@ -512,9 +546,7 @@ async function acceptQuote(quoteId) {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (res.ok) {
-            loadAllData();
-        }
+        if (res.ok) loadAllData();
     } catch (error) {
         console.error('Accept quote error:', error);
     }

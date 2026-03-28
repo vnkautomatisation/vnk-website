@@ -206,6 +206,22 @@
         <!-- Main content -->
         <main class="portal-main">
 
+            <!-- Mobile top bar -->
+            <div class="portal-mobile-topbar">
+                <button class="portal-hamburger" onclick="togglePortalSidebar()">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <line x1="3" y1="12" x2="21" y2="12" />
+                        <line x1="3" y1="18" x2="21" y2="18" />
+                    </svg>
+                </button>
+                <span class="portal-mobile-title" id="mobile-tab-title">Tableau de bord</span>
+                <div class="portal-mobile-avatar" id="mobile-avatar">JT</div>
+            </div>
+
+            <!-- Overlay -->
+            <div class="portal-overlay" id="portal-overlay" onclick="togglePortalSidebar()"></div>
+
             <!-- TAB: TABLEAU DE BORD -->
             <div class="portal-tab active" id="tab-dashboard">
                 <div class="portal-tab-header">
