@@ -43,6 +43,7 @@ const C = {
     email: 'yan.verone@vnk.ca',
     phone: '(819) 290-8686',
     address: 'Québec, QC, Canada',
+    addressFull: 'Québec, QC, Canada',
     tps: 'À compléter (Revenu Canada)',
     tvq: 'À compléter (Revenu Québec)',
     site: 'vnk-website-production.up.railway.app',
@@ -180,12 +181,11 @@ function taxBlock(doc, ht, tps, tvq, ttc, totalLabel) {
     const w = contentWidth(doc);
     const boxW = 210;
     const boxX = C.marginL + w - boxW;
-    const startY = doc.y;  // Y de départ = fin du tableau
-    let y = startY + 6;
+    let y = doc.y + 12;
 
     // Fond du bloc
-    doc.rect(boxX - 4, y - 4, boxW + 4, 62).fillColor(C.grayLight).fill();
-    doc.rect(boxX - 4, y - 4, boxW + 4, 62)
+    doc.rect(boxX - 4, y - 6, boxW + 4, 72).fillColor(C.grayLight).fill();
+    doc.rect(boxX - 4, y - 6, boxW + 4, 72)
         .lineWidth(0.5).strokeColor(C.border).strokeOpacity(1).stroke();
 
     const rows = [
@@ -198,11 +198,11 @@ function taxBlock(doc, ht, tps, tvq, ttc, totalLabel) {
             .text(l, boxX, y, { width: 100 });
         doc.fillColor(C.text).fontSize(8).font('Helvetica-Bold')
             .text(v, boxX + 100, y, { width: boxW - 104, align: 'right' });
-        y += 13;
+        y += 16;
     });
 
     // Ligne séparatrice
-    doc.moveTo(boxX, y - 3).lineTo(boxX + boxW, y - 3)
+    doc.moveTo(boxX, y - 4).lineTo(boxX + boxW, y - 4)
         .lineWidth(0.5).strokeColor(C.border).stroke();
 
     // Total final
@@ -213,8 +213,7 @@ function taxBlock(doc, ht, tps, tvq, ttc, totalLabel) {
     doc.fillColor(C.white).fontSize(11).font('Helvetica-Bold')
         .text(fmt(ttc), boxX + 100, y + 2, { width: boxW - 104, align: 'right' });
 
-    // doc.y = fin du bloc total + marge, jamais moins que startY
-    doc.y = y + 26 + 10;
+    doc.y = y + 40;
 }
 
 // Footer commun
@@ -534,25 +533,28 @@ async function generateContractPDF(res, contract, client, quote) {
 
     // ── PARTIES ──────────────────────────────
     const halfW = (cw - 12) / 2;
-    const infoH = 100;
-    const infoY = doc.y;  // capturer Y avant les deux blocs
+    const infoH = 116;
+    const infoY = doc.y;
 
     infoBox(doc, C.marginL, infoY, halfW, infoH, C.blue, 'PRESTATAIRE', [
         ['Société', C.name],
         ['NEQ', C.neq],
         ['Représenté', `${C.founder}, ${C.title}`],
+        ['Adresse', C.address],
         ['Courriel', C.email],
         ['Téléphone', C.phone],
     ]);
 
     infoBox(doc, C.marginL + halfW + 12, infoY, halfW, infoH, C.navy, 'CLIENT', [
         ['Nom', client.full_name],
-        ['Entreprise', client.company_name],
+        ['Entreprise', client.company_name || '—'],
+        ['Adresse', client.address || '—'],
+        ['Ville', `${client.city || ''}, ${client.province || 'QC'} ${client.postal_code || ''}`.trim()],
         ['Courriel', client.email],
-        ['Téléphone', client.phone],
+        ['Téléphone', client.phone || '—'],
     ]);
 
-    doc.y = infoY + infoH + 18;
+    doc.y = infoY + infoH + 14;
 
     // ── OBJET ────────────────────────────────
     sectionBar(doc, 'Objet du contrat');
@@ -578,27 +580,75 @@ async function generateContractPDF(res, contract, client, quote) {
 
     // ── CONDITIONS GÉNÉRALES ─────────────────
     sectionBar(doc, 'Conditions générales');
+
     const clauses = [
-        ['RÉMUNÉRATION', `Le Client s'engage à payer VNK Automatisation Inc. les montants convenus selon le devis annexé. Un acompte de 50 % est exigible à la signature du présent contrat, le solde est dû à la livraison des travaux.`],
-        ['DÉLAIS', `VNK Automatisation Inc. s'engage à fournir les services dans les délais convenus, sous réserve d'imprévus techniques ou de retards imputables au Client.`],
-        ['PROPRIÉTÉ INTELLECTUELLE', `Les livrables produits dans le cadre de ce contrat demeurent la propriété du Client après paiement complet. VNK Automatisation Inc. conserve le droit de référencer les travaux à des fins de portfolio, sans divulguer d'informations confidentielles.`],
-        ['CONFIDENTIALITÉ', `Les parties s'engagent mutuellement à ne pas divulguer à des tiers les informations confidentielles échangées dans le cadre de ce contrat. Un NDA distinct peut être signé sur demande du Client.`],
-        ['RESPONSABILITÉ', `La responsabilité de VNK Automatisation Inc. est limitée au montant du présent contrat. VNK n'est pas responsable des pertes indirectes, consécutives ou d'exploitation résultant de l'utilisation des livrables.`],
-        ['RÉSILIATION', `Chaque partie peut résilier ce contrat avec un préavis écrit de 30 jours. Les travaux réalisés jusqu'à la date effective de résiliation seront facturés au prorata du travail accompli.`],
-        ['DROIT APPLICABLE', `Ce contrat est régi exclusivement par les lois de la province de Québec et les lois fédérales du Canada qui s'y appliquent. Tout litige sera soumis aux tribunaux compétents du Québec.`],
+        ['RÉMUNÉRATION ET CONDITIONS DE PAIEMENT',
+            `Le Client s'engage à payer VNK Automatisation Inc. les montants convenus selon le devis annexé au présent contrat. Un acompte de 50 % du montant total (TTC) est exigible à la signature du présent contrat ; le solde est dû au plus tard 30 jours suivant la livraison des travaux ou l'émission de la facture finale. Tout retard de paiement au-delà de 30 jours entraîne des intérêts de retard au taux de 2 % par mois sur le solde impayé, calculés à compter de la date d'échéance. VNK Automatisation Inc. se réserve le droit de suspendre les travaux en cours en cas de non-paiement de l'acompte ou de tout versement échu, sans engager sa responsabilité pour les conséquences de cette suspension.`],
+
+        ['PÉRIMÈTRE DES SERVICES ET OBLIGATIONS DU CLIENT',
+            `Les services couverts par ce contrat sont strictement délimités par le devis annexé. Toute demande additionnelle fera l'objet d'un avenant écrit et signé par les deux parties. Le Client s'engage à : (a) fournir à VNK Automatisation Inc. un accès distant sécurisé et fonctionnel aux systèmes concernés, ainsi que tous les documents techniques nécessaires (schémas électriques, programmes PLC existants, manuels d'équipements) ; (b) désigner un interlocuteur technique disponible pour répondre aux questions et valider les interventions ; (c) informer VNK Automatisation Inc. de toute contrainte particulière liée à la sécurité, aux processus en cours ou aux fenêtres de maintenance disponibles ; (d) s'assurer que les systèmes cibles sont accessibles et en état permettant l'intervention. Tout délai ou surcoût résultant d'un manquement du Client à ces obligations sera imputé au Client.`],
+
+        ['DÉLAIS D\'EXÉCUTION',
+            `VNK Automatisation Inc. s'engage à fournir les services dans les délais convenus au devis, sous réserve : (a) d'imprévus techniques majeurs découverts lors de l'intervention et non prévisibles au moment de la signature ; (b) de retards imputables au Client (accès refusé, information manquante, validation tardive) ; (c) de cas de force majeure tels que définis à l'article 14 du présent contrat. En cas de dépassement de délai du fait exclusif de VNK Automatisation Inc., le Client devra le notifier par écrit. Les parties s'entendront alors sur un nouveau calendrier raisonnable avant tout recours.`],
+
+        ['SÉCURITÉ — INTERVENTIONS À DISTANCE ET SUR SITE',
+            `Les interventions à distance sur des systèmes de contrôle industriels (PLC, SCADA, HMI) présentent des risques inhérents pour la sécurité des personnes, des équipements et des processus. En conséquence : (a) Le Client est seul responsable de s'assurer que les systèmes de sécurité physiques (arrêts d'urgence, verrouillages, LOTO — Lockout/Tagout) sont correctement activés avant et pendant toute intervention sur des équipements en production ; (b) Toute modification de programme PLC sera testée hors ligne dans la mesure du possible, puis en mode manuel ou en simulation avant mise en production ; (c) Le Client s'engage à avoir du personnel qualifié sur site lors de toute intervention à distance sur des systèmes en production ou potentiellement dangereux ; (d) Pour les interventions physiques sur site, le technicien de VNK Automatisation Inc. se conformera aux règles de sécurité internes du Client et exige d'en être informé par écrit avant l'intervention ; (e) VNK Automatisation Inc. ne modifiera jamais les fonctions de sécurité homologuées (safety PLC, relais de sécurité, arrêts d'urgence) sans autorisation écrite explicite du Client et documentation préalable.`],
+
+        ['SAUVEGARDE ET INTÉGRITÉ DES PROGRAMMES',
+            `Avant toute modification, VNK Automatisation Inc. procédera à la sauvegarde complète des programmes PLC, HMI et SCADA existants. Une copie de cette sauvegarde sera remise au Client. En cas d'incident entraînant la perte ou la corruption du programme lors de l'intervention, VNK Automatisation Inc. s'engage à restaurer le programme à partir de la sauvegarde réalisée. Le Client reconnaît avoir la responsabilité de maintenir ses propres sauvegardes à jour indépendamment des interventions de VNK Automatisation Inc. VNK Automatisation Inc. ne saurait être tenu responsable de la perte de données préexistantes non sauvegardées par le Client.`],
+
+        ['ACCÈS DISTANT — CYBERSÉCURITÉ',
+            `L'accès distant aux systèmes industriels du Client sera effectué exclusivement via des canaux sécurisés (VPN, connexion chiffrée) convenus avec le Client. VNK Automatisation Inc. s'engage à : (a) n'utiliser les accès fournis que pour les besoins stricts du mandat ; (b) ne pas partager, transférer ou stocker les identifiants d'accès sur des supports non sécurisés ; (c) informer immédiatement le Client de tout incident de sécurité détecté lors de l'intervention ; (d) révoquer ou notifier le Client de révoquer les accès dès la fin du mandat. Le Client est responsable de mettre en place une segmentation réseau adéquate isolant les systèmes de contrôle industriels des réseaux corporatifs, conformément aux bonnes pratiques IEC 62443.`],
+
+        ['LIMITATION DE RESPONSABILITÉ',
+            `La responsabilité totale de VNK Automatisation Inc. au titre du présent contrat est expressément limitée au montant total facturé pour le mandat concerné. VNK Automatisation Inc. ne saurait en aucun cas être tenu responsable : (a) des pertes d'exploitation, arrêts de production, manque à gagner ou pertes de profits, même si informé de leur possibilité ; (b) des dommages indirects, consécutifs ou immatériels ; (c) des dommages résultant de modifications non autorisées apportées aux systèmes par le Client ou un tiers après livraison ; (d) des défaillances d'équipements ou de composants matériels préexistants ; (e) des conséquences d'une utilisation non conforme des livrables. Cette limitation de responsabilité s'applique dans toute la mesure permise par le droit québécois.`],
+
+        ['EXCLUSION DE RESPONSABILITÉ — SYSTÈMES DE SÉCURITÉ',
+            `VNK Automatisation Inc. ne pourra être tenu responsable de dommages corporels, matériels ou environnementaux résultant de : (a) la défaillance de systèmes de sécurité physiques (arrêts d'urgence, barrières immatérielles, relais de sécurité) qui n'ont pas fait l'objet du mandat ; (b) l'activation ou la désactivation par le Client de systèmes de sécurité en dehors des procédures convenues ; (c) l'utilisation des systèmes modifiés dans des conditions différentes de celles décrites dans le devis ; (d) tout manquement du Client aux règles de sécurité applicables (LSST, RSST, NFPA 70E, IEC 61508, ISO 13849). Le Client reconnaît que les systèmes PLC/SCADA/HMI contrôlant des équipements potentiellement dangereux nécessitent une validation complète par une personne compétente avant toute remise en service.`],
+
+        ['PROPRIÉTÉ INTELLECTUELLE ET LIVRABLES',
+            `Les programmes PLC, HMI, SCADA et toute documentation produits spécifiquement dans le cadre de ce contrat deviennent la propriété exclusive du Client après paiement intégral. Les méthodes, outils et savoir-faire génériques de VNK Automatisation Inc. demeurent sa propriété exclusive. VNK Automatisation Inc. conserve le droit de référencer l'existence du mandat (type de service, secteur d'activité) à des fins de portfolio ou de démarchage commercial, sans jamais divulguer d'informations techniques, commerciales ou confidentielles appartenant au Client.`],
+
+        ['CONFIDENTIALITÉ ET PROTECTION DES INFORMATIONS',
+            `Les parties s'engagent mutuellement à traiter comme strictement confidentiels tous les renseignements échangés dans le cadre de ce contrat, incluant sans s'y limiter : les programmes PLC, les schémas électriques, les procédés industriels, les informations commerciales et financières, ainsi que les données de production. Cette obligation de confidentialité survit à l'expiration ou à la résiliation du présent contrat pour une durée de cinq (5) ans. Un accord de non-divulgation (NDA) distinct peut être signé sur demande du Client pour les mandats impliquant des informations particulièrement sensibles.`],
+
+        ['GARANTIE ET RECTIFICATION',
+            `VNK Automatisation Inc. garantit que les livrables fournis sont conformes aux spécifications du devis et aux règles de l'art en matière d'automatisation industrielle, pour une période de 90 jours suivant la réception des travaux. Durant cette période, VNK Automatisation Inc. s'engage à corriger sans frais supplémentaires tout dysfonctionnement directement imputable à l'intervention effectuée. Cette garantie ne couvre pas : (a) les défaillances résultant de modifications apportées par le Client ou un tiers ; (b) l'usure normale des équipements matériels ; (c) les problèmes préexistants à l'intervention non signalés dans le rapport de livraison.`],
+
+        ['RAPPORT D\'INTERVENTION',
+            `À la conclusion de chaque mandat, VNK Automatisation Inc. remettra au Client un rapport d'intervention écrit détaillant : (a) les travaux réalisés et les modifications effectuées ; (b) les tests effectués et leurs résultats ; (c) l'état du système avant et après intervention ; (d) les recommandations pour la maintenance préventive ou les améliorations futures ; (e) une liste des sauvegardes réalisées. Ce rapport constitue le document officiel de réception des travaux. En l'absence d'objection écrite du Client dans les 10 jours ouvrables suivant la remise du rapport, les travaux sont réputés acceptés.`],
+
+        ['RÉSILIATION',
+            `Chaque partie peut résilier ce contrat avec un préavis écrit de 30 jours. En cas de résiliation par le Client, les travaux réalisés jusqu'à la date effective de résiliation seront facturés au prorata du temps et des ressources engagés, majorés des frais directs non récupérables engagés par VNK Automatisation Inc. En cas de résiliation pour faute grave et non rectifiée dans un délai de 15 jours suivant une mise en demeure écrite, la partie lésée peut résilier sans préavis. En aucun cas VNK Automatisation Inc. ne quittera un système en état instable ou dangereux lors d'une résiliation ; une phase de stabilisation minimale sera complétée avant la fin des travaux.`],
+
+        ['FORCE MAJEURE',
+            `Aucune des parties ne sera tenue responsable des retards ou de l'inexécution de ses obligations résultant de circonstances hors de son contrôle raisonnable, incluant notamment : catastrophes naturelles, pannes d'infrastructure Internet ou de réseau, cyberattaques de tiers, épidémies, grèves générales ou décisions gouvernementales. La partie affectée devra notifier l'autre dans les 48 heures et les parties s'entendront sur un délai de reprise raisonnable.`],
+
+        ['DROIT APPLICABLE ET RÈGLEMENT DES DIFFÉRENDS',
+            `Le présent contrat est régi exclusivement par les lois de la province de Québec et les lois fédérales du Canada applicables. En cas de différend, les parties s'engagent à tenter de résoudre le litige de bonne foi par voie de négociation dans un délai de 30 jours. À défaut de règlement amiable, le différend sera soumis aux tribunaux de droit commun compétents du Québec. Le présent contrat constitue l'intégralité de l'entente entre les parties et remplace tout accord verbal ou écrit antérieur portant sur le même objet.`],
     ];
 
-    clauses.forEach(([num, text], i) => {
-        const clauseY = doc.y;
+    clauses.forEach(([title, text], i) => {
+        // Estimer la hauteur nécessaire
+        const titleH = 14;
+        const textH = doc.heightOfString(text, { width: cw - 12, lineGap: 2 }) + 10;
+        const needed = titleH + textH + 8;
+        // Saut de page si pas assez d'espace (garder 54px pour footer)
+        if (doc.y + needed > doc.page.height - 54) {
+            doc.addPage();
+            doc.y = 36;
+        }
         doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
-            .text(`${i + 1}.  ${num}`, C.marginL, clauseY, { width: cw, continued: false });
+            .text(`${i + 1}.  ${title}`, C.marginL, doc.y, { width: cw });
         doc.y += 11;
         doc.fillColor(C.text).fontSize(7.5).font('Helvetica')
             .text(text, C.marginL + 12, doc.y, { width: cw - 12, lineGap: 2 });
-        doc.y += 12;
+        doc.y += textH + 6;
     });
 
-    doc.y += 6;
+    // Saut de page forcé avant signatures pour qu'elles soient propres
+    doc.addPage();
+    doc.y = 36;
 
     // ── SIGNATURES ───────────────────────────
     sectionBar(doc, 'Signatures');
