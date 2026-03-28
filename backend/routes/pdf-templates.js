@@ -93,11 +93,11 @@ function sectionBar(doc, label, accentColor) {
     accentColor = accentColor || C.blue;
     const w = contentWidth(doc);
     const y = doc.y;
-    doc.rect(C.marginL, y, w, 22).fillColor(C.grayLight).fill();
-    doc.rect(C.marginL, y, 3, 22).fillColor(accentColor).fill();
-    doc.fillColor(accentColor).fontSize(8).font('Helvetica-Bold')
-        .text(label.toUpperCase(), C.marginL + 10, y + 7, { width: w - 20, characterSpacing: 0.4 });
-    doc.y = y + 30;
+    doc.rect(C.marginL, y, w, 18).fillColor(C.grayLight).fill();
+    doc.rect(C.marginL, y, 3, 18).fillColor(accentColor).fill();
+    doc.fillColor(accentColor).fontSize(7.5).font('Helvetica-Bold')
+        .text(label.toUpperCase(), C.marginL + 10, y + 5, { width: w - 20, characterSpacing: 0.4 });
+    doc.y = y + 24;
 }
 
 // Ligne label / valeur dans un bloc info
@@ -180,11 +180,11 @@ function taxBlock(doc, ht, tps, tvq, ttc, totalLabel) {
     const w = contentWidth(doc);
     const boxW = 210;
     const boxX = C.marginL + w - boxW;
-    let y = doc.y + 12;
+    let y = doc.y + 6;
 
     // Fond du bloc
-    doc.rect(boxX - 4, y - 6, boxW + 4, 72).fillColor(C.grayLight).fill();
-    doc.rect(boxX - 4, y - 6, boxW + 4, 72)
+    doc.rect(boxX - 4, y - 6, boxW + 4, 62).fillColor(C.grayLight).fill();
+    doc.rect(boxX - 4, y - 6, boxW + 4, 62)
         .lineWidth(0.5).strokeColor(C.border).strokeOpacity(1).stroke();
 
     const rows = [
@@ -197,7 +197,7 @@ function taxBlock(doc, ht, tps, tvq, ttc, totalLabel) {
             .text(l, boxX, y, { width: 100 });
         doc.fillColor(C.text).fontSize(8).font('Helvetica-Bold')
             .text(v, boxX + 100, y, { width: boxW - 104, align: 'right' });
-        y += 16;
+        y += 13;
     });
 
     // Ligne séparatrice
@@ -212,7 +212,7 @@ function taxBlock(doc, ht, tps, tvq, ttc, totalLabel) {
     doc.fillColor(C.white).fontSize(11).font('Helvetica-Bold')
         .text(fmt(ttc), boxX + 100, y + 2, { width: boxW - 104, align: 'right' });
 
-    doc.y = y + 40;
+    doc.y = y + 26;
 }
 
 // Footer commun
@@ -283,7 +283,7 @@ async function generateQuotePDF(res, quote, client, lines) {
     // ── BLOCS INFO ───────────────────────────
     const cw = contentWidth(doc);
     const halfW = (cw - 12) / 2;
-    const infoH = 96;
+    const infoH = 108;
     const infoY = doc.y;  // capturer Y avant les deux blocs
 
     infoBox(doc, C.marginL, infoY, halfW, infoH, C.blueMid, 'CLIENT', [
@@ -302,17 +302,17 @@ async function generateQuotePDF(res, quote, client, lines) {
         ['Statut', 'En attente d\'approbation'],
     ]);
 
-    doc.y = infoY + infoH + 10;
+    doc.y = infoY + infoH + 8;
 
     // ── DESCRIPTION ──────────────────────────
     sectionBar(doc, 'Description des services');
-    doc.fillColor(C.text).fontSize(9).font('Helvetica-Bold')
+    doc.fillColor(C.text).fontSize(9.5).font('Helvetica-Bold')
         .text(quote.title, C.marginL, doc.y, { width: cw });
-    doc.y += 11;
+    doc.y += 9;
     if (quote.description) {
         doc.fillColor(C.gray).fontSize(8).font('Helvetica')
             .text(quote.description, C.marginL, doc.y, { width: cw, lineGap: 2 });
-        doc.y += 8;
+        doc.y += 6;
     }
     doc.y += 4;
 
@@ -337,43 +337,41 @@ async function generateQuotePDF(res, quote, client, lines) {
     ];
     conditions.forEach(c => {
         doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
-            .text(`•  ${c}`, C.marginL + 6, doc.y, { width: cw - 6, lineGap: 1 });
-        doc.y += 11;
+            .text(`•  ${c}`, C.marginL + 6, doc.y, { width: cw - 6, lineGap: 2 });
+        doc.y += 10;
     });
     doc.y += 3;
 
     // ── ACCEPTATION / SIGNATURE ───────────────
     sectionBar(doc, 'Acceptation');
-    doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
+    doc.fillColor(C.gray).fontSize(8).font('Helvetica')
         .text('En signant ci-dessous, le client accepte les termes et conditions de ce devis et autorise VNK Automatisation Inc. à procéder aux travaux décrits.',
-            C.marginL, doc.y, { width: cw, lineGap: 2 });
-    doc.y += 12;
+            C.marginL, doc.y, { width: cw, lineGap: 1 });
+    doc.y += 10;
 
     const sigY = doc.y;
-    const sigW = (cw - 16) / 2;
+    const sigW = (cw - 20) / 2;
 
-    // Bloc signature client
-    doc.rect(C.marginL, sigY, sigW, 50).fillColor(C.grayLight).fill();
-    doc.rect(C.marginL, sigY, 3, 50).fillColor(C.blue).fill();
-    doc.rect(C.marginL, sigY, sigW, 50).lineWidth(0.5).strokeColor(C.border).stroke();
+    // Signature client
+    doc.rect(C.marginL, sigY, sigW, 52).fillColor(C.grayLight).fill();
+    doc.rect(C.marginL, sigY, sigW, 52).lineWidth(0.5).strokeColor(C.border).stroke();
     doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
-        .text('SIGNATURE DU CLIENT', C.marginL + 10, sigY + 7);
-    doc.moveTo(C.marginL + 10, sigY + 36).lineTo(C.marginL + sigW - 10, sigY + 36)
+        .text('SIGNATURE DU CLIENT', C.marginL + 8, sigY + 8);
+    doc.moveTo(C.marginL + 8, sigY + 38).lineTo(C.marginL + sigW - 8, sigY + 38)
         .lineWidth(0.5).strokeColor(C.border).strokeOpacity(1).stroke();
     doc.fillColor(C.gray).fontSize(7).font('Helvetica')
-        .text(client.full_name || '', C.marginL + 10, sigY + 39);
+        .text(client.full_name || '', C.marginL + 8, sigY + 41);
 
-    // Bloc date
-    const dx = C.marginL + sigW + 16;
-    doc.rect(dx, sigY, sigW, 50).fillColor(C.grayLight).fill();
-    doc.rect(dx, sigY, 3, 50).fillColor(C.blue).fill();
-    doc.rect(dx, sigY, sigW, 50).lineWidth(0.5).strokeColor(C.border).stroke();
+    // Ligne date
+    const dx = C.marginL + sigW + 20;
+    doc.rect(dx, sigY, sigW, 52).fillColor(C.grayLight).fill();
+    doc.rect(dx, sigY, sigW, 52).lineWidth(0.5).strokeColor(C.border).stroke();
     doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
-        .text('DATE', dx + 10, sigY + 7);
-    doc.moveTo(dx + 10, sigY + 36).lineTo(dx + sigW - 10, sigY + 36)
+        .text('DATE', dx + 8, sigY + 8);
+    doc.moveTo(dx + 8, sigY + 38).lineTo(dx + sigW - 8, sigY + 38)
         .lineWidth(0.5).strokeColor(C.border).strokeOpacity(1).stroke();
 
-    doc.y = sigY + 50;
+    doc.y = sigY + 52;
 
     drawFooter(doc, quote.quote_number, C.navy);
     doc.end();
@@ -448,7 +446,7 @@ async function generateInvoicePDF(res, invoice, client) {
     const badgeLabel = isPaid ? 'PAYÉE' : 'EN ATTENTE';
     statusBadge(doc, rx + halfW - 100, infoY + 72, badgeLabel, badgeBg, badgeTxt);
 
-    doc.y = infoY + infoH + 18;
+    doc.y = infoY + infoH + 8;
 
     // ── TABLEAU ──────────────────────────────
     sectionBar(doc, 'Description', isPaid ? C.green : C.blue);
@@ -552,7 +550,7 @@ async function generateContractPDF(res, contract, client, quote) {
         ['Téléphone', client.phone],
     ]);
 
-    doc.y = infoY + infoH + 18;
+    doc.y = infoY + infoH + 8;
 
     // ── OBJET ────────────────────────────────
     sectionBar(doc, 'Objet du contrat');
