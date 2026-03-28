@@ -36,7 +36,8 @@ async function payInvoice(invoiceId, amount) {
         style: 'currency', currency: 'CAD'
     }).format(amount);
 
-    if (!confirm(`Confirmer le paiement de ${formatted} par carte de crédit ?`)) return;
+    const confirmed = await showConfirmPopup(`Confirmer le paiement de ${formatted} par carte de crédit ?`);
+    if (!confirmed) return;
 
     try {
         showPaymentMessage('Initialisation du paiement...', 'info');
@@ -168,14 +169,77 @@ function closePaymentModal() {
 function checkPaymentReturn() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('payment') === 'success') {
-        // Nettoyer l'URL
         window.history.replaceState({}, document.title, window.location.pathname);
-        // Afficher message succès et rafraîchir
         setTimeout(() => {
-            alert('Paiement réussi ! Votre facture a été marquée comme payée.');
+            showSuccessPopup('Paiement réussi !', 'Votre facture a été marquée comme payée. Merci !');
             if (typeof loadAllData === 'function') loadAllData();
         }, 500);
     }
+}
+
+function showSuccessPopup(title, message) {
+    const existing = document.getElementById('success-popup');
+    if (existing) existing.remove();
+
+    const popup = document.createElement('div');
+    popup.id = 'success-popup';
+    popup.style.cssText = `
+        position:fixed; inset:0; background:rgba(0,0,0,0.5);
+        display:flex; align-items:center; justify-content:center;
+        z-index:9999; padding:1rem;
+    `;
+    popup.innerHTML = `
+        <div style="background:white; border-radius:16px; padding:2rem; width:100%; max-width:420px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+            <div style="width:64px; height:64px; background:#27AE60; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1rem; font-size:2rem;">✓</div>
+            <h3 style="margin:0 0 0.5rem; font-size:1.3rem; color:#1B4F8A">${title}</h3>
+            <p style="color:#666; font-size:0.95rem; margin-bottom:1.5rem;">${message}</p>
+            <button onclick="document.getElementById('success-popup').remove()" 
+                style="padding:0.75rem 2rem; background:#1B4F8A; color:white; border:none; border-radius:8px; font-size:1rem; font-weight:600; cursor:pointer;">
+                OK
+            </button>
+        </div>
+    `;
+    document.body.appendChild(popup);
+}
+
+function showConfirmPopup(message) {
+    return new Promise((resolve) => {
+        const existing = document.getElementById('confirm-popup');
+        if (existing) existing.remove();
+
+        const popup = document.createElement('div');
+        popup.id = 'confirm-popup';
+        popup.style.cssText = `
+            position:fixed; inset:0; background:rgba(0,0,0,0.5);
+            display:flex; align-items:center; justify-content:center;
+            z-index:9999; padding:1rem;
+        `;
+        popup.innerHTML = `
+            <div style="background:white; border-radius:16px; padding:2rem; width:100%; max-width:400px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+                <div style="width:56px; height:56px; background:#EBF3FB; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1rem; font-size:1.5rem;">💳</div>
+                <h3 style="margin:0 0 0.75rem; font-size:1.1rem; color:#1B4F8A">Confirmer le paiement</h3>
+                <p style="color:#666; font-size:0.95rem; margin-bottom:1.5rem;">${message}</p>
+                <div style="display:flex; gap:0.75rem; justify-content:center;">
+                    <button id="confirm-cancel" style="padding:0.75rem 1.5rem; background:#f1f1f1; color:#444; border:none; border-radius:8px; font-size:0.95rem; font-weight:600; cursor:pointer;">
+                        Annuler
+                    </button>
+                    <button id="confirm-ok" style="padding:0.75rem 1.5rem; background:#1B4F8A; color:white; border:none; border-radius:8px; font-size:0.95rem; font-weight:600; cursor:pointer;">
+                        Confirmer
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(popup);
+
+        document.getElementById('confirm-ok').onclick = () => {
+            popup.remove();
+            resolve(true);
+        };
+        document.getElementById('confirm-cancel').onclick = () => {
+            popup.remove();
+            resolve(false);
+        };
+    });
 }
 
 // ---------- Initialisation ----------
