@@ -284,8 +284,9 @@ async function generateQuotePDF(res, quote, client, lines) {
     const cw = contentWidth(doc);
     const halfW = (cw - 12) / 2;
     const infoH = 108;
+    const infoY = doc.y;  // capturer Y avant les deux blocs
 
-    infoBox(doc, C.marginL, doc.y, halfW, infoH, C.blueMid, 'CLIENT', [
+    infoBox(doc, C.marginL, infoY, halfW, infoH, C.blueMid, 'CLIENT', [
         ['Nom', client.full_name],
         ['Entreprise', client.company_name],
         ['Courriel', client.email],
@@ -294,14 +295,14 @@ async function generateQuotePDF(res, quote, client, lines) {
     ]);
 
     const rx = C.marginL + halfW + 12;
-    infoBox(doc, rx, doc.y, halfW, infoH, C.blue, 'DÉTAILS DU DEVIS', [
+    infoBox(doc, rx, infoY, halfW, infoH, C.blue, 'DÉTAILS DU DEVIS', [
         ['Numéro', quote.quote_number],
         ['Date', dateCA(quote.created_at)],
         ['Valide jusqu\'au', quote.expiry_date ? dateCA(quote.expiry_date) : '30 jours'],
         ['Statut', 'En attente d\'approbation'],
     ]);
 
-    doc.y += infoH + 18;
+    doc.y = infoY + infoH + 18;
 
     // ── DESCRIPTION ──────────────────────────
     sectionBar(doc, 'Description des services');
@@ -421,8 +422,9 @@ async function generateInvoicePDF(res, invoice, client) {
     const cw = contentWidth(doc);
     const halfW = (cw - 12) / 2;
     const infoH = 122;
+    const infoY = doc.y;  // capturer Y avant les deux blocs
 
-    infoBox(doc, C.marginL, doc.y, halfW, infoH, C.blueMid, 'FACTURÉ À', [
+    infoBox(doc, C.marginL, infoY, halfW, infoH, C.blueMid, 'FACTURÉ À', [
         ['Nom', client.full_name],
         ['Entreprise', client.company_name],
         ['Courriel', client.email],
@@ -433,18 +435,18 @@ async function generateInvoicePDF(res, invoice, client) {
 
     // Bloc détails avec badge statut
     const rx = C.marginL + halfW + 12;
-    infoBox(doc, rx, doc.y, halfW, infoH, C.navy, 'DÉTAILS', [
+    infoBox(doc, rx, infoY, halfW, infoH, C.navy, 'DÉTAILS', [
         ['Numéro', invoice.invoice_number],
         ['Date émission', dateCA(invoice.created_at)],
         ['Date échéance', invoice.due_date ? dateCA(invoice.due_date) : '—'],
     ]);
-    // Badge statut dans le bloc droite
+    // Badge statut positionné dans le bloc droite
     const badgeBg = isPaid ? C.greenLight : C.amberLight;
     const badgeTxt = isPaid ? C.green : C.amber;
     const badgeLabel = isPaid ? 'PAYÉE' : 'EN ATTENTE';
-    statusBadge(doc, rx + halfW - 100, doc.y - (infoH - 26 - 3 * 15) - 10, badgeLabel, badgeBg, badgeTxt);
+    statusBadge(doc, rx + halfW - 100, infoY + 72, badgeLabel, badgeBg, badgeTxt);
 
-    doc.y += infoH + 18;
+    doc.y = infoY + infoH + 18;
 
     // ── TABLEAU ──────────────────────────────
     sectionBar(doc, 'Description', isPaid ? C.green : C.blue);
@@ -531,8 +533,9 @@ async function generateContractPDF(res, contract, client, quote) {
     // ── PARTIES ──────────────────────────────
     const halfW = (cw - 12) / 2;
     const infoH = 100;
+    const infoY = doc.y;  // capturer Y avant les deux blocs
 
-    infoBox(doc, C.marginL, doc.y, halfW, infoH, C.blue, 'PRESTATAIRE', [
+    infoBox(doc, C.marginL, infoY, halfW, infoH, C.blue, 'PRESTATAIRE', [
         ['Société', C.name],
         ['NEQ', C.neq],
         ['Représenté', `${C.founder}, ${C.title}`],
@@ -540,14 +543,14 @@ async function generateContractPDF(res, contract, client, quote) {
         ['Téléphone', C.phone],
     ]);
 
-    infoBox(doc, C.marginL + halfW + 12, doc.y, halfW, infoH, C.navy, 'CLIENT', [
+    infoBox(doc, C.marginL + halfW + 12, infoY, halfW, infoH, C.navy, 'CLIENT', [
         ['Nom', client.full_name],
         ['Entreprise', client.company_name],
         ['Courriel', client.email],
         ['Téléphone', client.phone],
     ]);
 
-    doc.y += infoH + 18;
+    doc.y = infoY + infoH + 18;
 
     // ── OBJET ────────────────────────────────
     sectionBar(doc, 'Objet du contrat');
