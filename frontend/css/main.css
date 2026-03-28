@@ -2705,6 +2705,10 @@ img {
     background: var(--color-bg);
 }
 
+.portal-mobile-footer {
+    display: none;
+}
+
 /* ---------- Login page ---------- */
 .portal-login-section {
     min-height: 100vh;
