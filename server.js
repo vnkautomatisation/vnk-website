@@ -38,9 +38,20 @@ app.use('/api/documents', require('./backend/routes/documents'));
 app.use('/api/contracts', require('./backend/routes/contracts'));
 app.use('/api/calendly', require('./backend/routes/calendly'));
 app.use('/api/admin', require('./backend/routes/admin'));
+
+// Routes admin — le dashboard préfixe avec /api/admin/
+app.use('/api/admin/quotes', require('./backend/routes/quotes'));
+app.use('/api/admin/invoices', require('./backend/routes/invoices'));
+app.use('/api/admin/clients', require('./backend/routes/clients'));
+app.use('/api/admin/mandates', require('./backend/routes/mandates'));
+app.use('/api/admin/messages', require('./backend/routes/messages'));
+app.use('/api/admin/documents', require('./backend/routes/documents'));
+app.use('/api/admin/contracts', require('./backend/routes/contracts'));
+app.use('/api/admin/payments', require('./backend/routes/payments'));
 // PDF download routes
 app.get('/api/quotes/:id/pdf', require('./backend/routes/pdf').downloadQuotePDF);
 app.get('/api/invoices/:id/pdf', require('./backend/routes/pdf').downloadInvoicePDF);
+app.get('/api/contracts/:id/pdf', require('./backend/routes/pdf').downloadContractPDF);
 
 // ---- Health check route ----
 app.get('/api/health', (req, res) => {
