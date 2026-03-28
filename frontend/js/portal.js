@@ -485,3 +485,77 @@ function togglePortalPw() {
             : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
     }
 }
+
+/* ============================================
+VNK — Badge messages flottant côté client
+À ajouter dans portal.js
+============================================ */
+
+// ---------- Polling messages automatique ----------
+// Appeler cette fonction dans portal.js après le login
+
+let messagePollingInterval = null;
+
+function startMessagePolling() {
+    // Vérifier toutes les 30 secondes
+    messagePollingInterval = setInterval(async () => {
+        try {
+            const token = localStorage.getItem('vnk-token');
+            if (!token) { stopMessagePolling(); return; }
+            const res = await fetch('/api/messages', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!data.success) return;
+            const unread = data.messages.filter(m => m.sender === 'vnk' && !m.is_read).length;
+            updateMessageBadge(unread);
+            // Mettre à jour le badge dans la sidebar
+            const badge = document.getElementById('badge-messages');
+            if (badge) { badge.textContent = unread; badge.style.display = unread ? 'inline' : 'none'; }
+        } catch (err) {
+            console.warn('Polling error:', err);
+        }
+    }, 30000);
+}
+
+function stopMessagePolling() {
+    if (messagePollingInterval) { clearInterval(messagePollingInterval); messagePollingInterval = null; }
+}
+
+function updateMessageBadge(count) {
+    // Badge flottant sur toutes les pages
+    let badge = document.getElementById('vnk-float-badge');
+    if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'vnk-float-badge';
+        badge.style.cssText = `
+            position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9000;
+            background: #1B4F8A; color: white; border-radius: 50px;
+            padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 700;
+            display: flex; align-items: center; gap: 0.5rem;
+            box-shadow: 0 4px 16px rgba(27,79,138,0.35); cursor: pointer;
+            transition: all 0.2s;
+        `;
+        badge.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span id="vnk-float-badge-count">1</span>
+        `;
+        badge.onclick = () => { showTab('messages'); badge.style.display = 'none'; };
+        document.body.appendChild(badge);
+    }
+    if (count > 0) {
+        document.getElementById('vnk-float-badge-count').textContent = count;
+        badge.style.display = 'flex';
+        // Notification sonore légère
+        try {
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.frequency.value = 520; gain.gain.value = 0.1;
+            osc.start(); osc.stop(ctx.currentTime + 0.15);
+        } catch { }
+    } else {
+        badge.style.display = 'none';
+    }
+}

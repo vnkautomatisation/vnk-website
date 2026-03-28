@@ -7,548 +7,2554 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        :root {
-            --primary: #1B4F8A; --primary-dark: #0F2D52; --secondary: #2E75B6;
-            --light-blue: #EBF3FA; --success: #27AE60; --warning: #E07820;
-            --error: #E74C3C; --text: #333; --text-light: #888;
-            --border: #E2E8F0; --bg: #F5F7FA; --white: #fff;
-            --shadow: 0 2px 8px rgba(0,0,0,0.08); --radius: 10px;
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
 
-        /* LOGIN */
-        .admin-login { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, var(--primary-dark) 0%, #1a3a5c 100%); }
-        .login-card { background:var(--white); border-radius:16px; padding:2.5rem; width:100%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
-        .login-logo { text-align:center; margin-bottom:2rem; }
-        .login-badge { display:inline-flex; align-items:center; gap:0.5rem; background:var(--light-blue); padding:0.4rem 0.9rem; border-radius:20px; font-size:0.75rem; font-weight:600; color:var(--primary); margin-top:0.75rem; }
-        .login-card h2 { font-size:1.2rem; font-weight:700; color:var(--text); margin-bottom:0.3rem; text-align:center; }
-        .login-card p { font-size:0.82rem; color:var(--text-light); text-align:center; margin-bottom:1.5rem; }
-        .form-group { margin-bottom:1rem; }
-        .form-label { display:block; font-size:0.82rem; font-weight:600; color:var(--text); margin-bottom:0.4rem; }
-        .form-input { width:100%; padding:0.72rem 0.9rem; border:1.5px solid var(--border); border-radius:8px; font-size:0.9rem; font-family:inherit; transition:border-color 0.2s; }
-        .form-input:focus { outline:none; border-color:var(--primary); }
-        .input-wrap { position:relative; }
-        .input-wrap .form-input { padding-right:2.8rem; }
-        .show-pw-btn { position:absolute; right:0.75rem; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-light); padding:0.2rem; display:flex; align-items:center; }
-        .show-pw-btn:hover { color:var(--primary); }
+        :root {
+            --primary: #1B4F8A;
+            --primary-dark: #0F2D52;
+            --secondary: #2E75B6;
+            --light-blue: #EBF3FA;
+            --success: #27AE60;
+            --warning: #E07820;
+            --error: #E74C3C;
+            --text: #333;
+            --text-light: #888;
+            --border: #E2E8F0;
+            --bg: #F5F7FA;
+            --white: #fff;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --radius: 10px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        /* LOGIN — DESIGN ORIGINAL CONSERVÉ */
+        .admin-login {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, #1a3a5c 100%);
+        }
+
+        .login-card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--light-blue);
+            padding: 0.4rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-top: 0.75rem;
+        }
+
+        .login-card h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.3rem;
+            text-align: center;
+        }
+
+        .login-card p {
+            font-size: 0.82rem;
+            color: var(--text-light);
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+            .input-wrap .form-input {
+                padding-right: 2.8rem;
+            }
+
+        .show-pw-btn {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-light);
+            padding: 0.2rem;
+            display: flex;
+            align-items: center;
+        }
+
+            .show-pw-btn:hover {
+                color: var(--primary);
+            }
+
+        /* FORMS */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.4rem;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.72rem 0.9rem;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+            background: var(--white);
+        }
+
+            .form-input:focus, .form-select:focus, .form-textarea:focus {
+                outline: none;
+                border-color: var(--primary);
+            }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-hint {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-top: 0.3rem;
+        }
 
         /* BUTTONS */
-        .btn { display:inline-flex; align-items:center; justify-content:center; gap:0.45rem; padding:0.68rem 1.15rem; border-radius:8px; font-size:0.875rem; font-weight:600; cursor:pointer; border:none; transition:all 0.2s; font-family:inherit; text-decoration:none; white-space:nowrap; }
-        .btn-primary { background:var(--primary); color:white; }
-        .btn-primary:hover { background:var(--primary-dark); }
-        .btn-success { background:var(--success); color:white; }
-        .btn-success:hover { opacity:0.9; }
-        .btn-warning { background:var(--warning); color:white; }
-        .btn-danger { background:var(--error); color:white; }
-        .btn-outline { background:white; color:var(--primary); border:1.5px solid var(--primary); }
-        .btn-outline:hover { background:var(--light-blue); }
-        .btn-ghost { background:none; color:var(--text-light); border:1.5px solid var(--border); }
-        .btn-ghost:hover { border-color:var(--primary); color:var(--primary); }
-        .btn-sm { padding:0.38rem 0.75rem; font-size:0.78rem; }
-        .btn-full { width:100%; }
-        .alert { padding:0.75rem 1rem; border-radius:8px; font-size:0.85rem; margin-top:1rem; }
-        .alert-error { background:#fef2f2; color:var(--error); border:1px solid #fecaca; }
-        .alert-success { background:#f0fdf4; color:var(--success); border:1px solid #bbf7d0; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.68rem 1.15rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            font-family: inherit;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+            .btn-primary:hover {
+                background: var(--primary-dark);
+            }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+            .btn-success:hover {
+                opacity: 0.9;
+            }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-outline {
+            background: white;
+            color: var(--primary);
+            border: 1.5px solid var(--primary);
+        }
+
+            .btn-outline:hover {
+                background: var(--light-blue);
+            }
+
+        .btn-ghost {
+            background: none;
+            color: var(--text-light);
+            border: 1.5px solid var(--border);
+        }
+
+            .btn-ghost:hover {
+                border-color: var(--primary);
+                color: var(--primary);
+            }
+
+        .btn-sm {
+            padding: 0.38rem 0.75rem;
+            font-size: 0.78rem;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .alert {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .alert-error {
+            background: #fef2f2;
+            color: var(--error);
+            border: 1px solid #fecaca;
+        }
 
         /* LAYOUT */
-        .admin-app { display:none; min-height:100vh; flex-direction:column; }
-        .admin-topbar { background:var(--primary-dark); color:white; padding:0 1.5rem; height:58px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
-        .topbar-left { display:flex; align-items:center; gap:1rem; }
-        .topbar-logo { display:flex; align-items:center; gap:0.75rem; }
-        .topbar-logo-text { font-size:1rem; font-weight:800; color:white; line-height:1; }
-        .topbar-logo-sub { font-size:0.68rem; color:#99BBDD; font-weight:400; letter-spacing:0.5px; }
-        .topbar-right { display:flex; align-items:center; gap:0.75rem; }
-        .topbar-user { font-size:0.82rem; color:#99BBDD; }
-        .topbar-avatar { width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.15); color:white; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800; }
-        .admin-layout { display:flex; flex:1; }
-        .admin-sidebar { width:235px; background:var(--white); border-right:1px solid var(--border); min-height:calc(100vh - 58px); position:sticky; top:58px; height:calc(100vh - 58px); overflow-y:auto; padding:0.75rem 0 1.5rem; flex-shrink:0; }
-        .sidebar-nav { display:flex; flex-direction:column; gap:1px; padding:0 0.75rem; }
-        .sidebar-item { display:flex; align-items:center; gap:0.7rem; padding:0.62rem 0.85rem; border-radius:8px; font-size:0.875rem; font-weight:500; color:var(--text); cursor:pointer; border:none; background:none; width:100%; text-align:left; transition:all 0.15s; position:relative; }
-        .sidebar-item:hover { background:var(--light-blue); color:var(--primary); }
-        .sidebar-item.active { background:var(--light-blue); color:var(--primary); font-weight:600; }
-        .sidebar-item svg { flex-shrink:0; opacity:0.6; }
-        .sidebar-item.active svg { opacity:1; }
-        .sidebar-section { font-size:0.68rem; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; padding:1rem 1.6rem 0.35rem; }
-        .sidebar-badge { margin-left:auto; font-size:0.68rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:10px; color:white; }
-        .admin-main { flex:1; padding:1.5rem 2rem; overflow-y:auto; min-width:0; }
+        .admin-app {
+            display: none;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+
+        .admin-topbar {
+            background: var(--primary-dark);
+            color: white;
+            padding: 0 1.5rem;
+            height: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .topbar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .topbar-logo-text {
+            font-size: 1rem;
+            font-weight: 800;
+            color: white;
+            line-height: 1;
+        }
+
+        .topbar-logo-sub {
+            font-size: 0.68rem;
+            color: #99BBDD;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .topbar-user {
+            font-size: 0.82rem;
+            color: #99BBDD;
+        }
+
+        .topbar-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 800;
+        }
+
+        .admin-layout {
+            display: flex;
+            flex: 1;
+        }
+
+        .admin-sidebar {
+            width: 235px;
+            background: var(--white);
+            border-right: 1px solid var(--border);
+            min-height: calc(100vh - 58px);
+            position: sticky;
+            top: 58px;
+            height: calc(100vh - 58px);
+            overflow-y: auto;
+            padding: 0.75rem 0 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            padding: 0 0.75rem;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            padding: 0.62rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text);
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            transition: all 0.15s;
+        }
+
+            .sidebar-item:hover {
+                background: var(--light-blue);
+                color: var(--primary);
+            }
+
+            .sidebar-item.active {
+                background: var(--light-blue);
+                color: var(--primary);
+                font-weight: 600;
+            }
+
+            .sidebar-item svg {
+                flex-shrink: 0;
+                opacity: 0.6;
+            }
+
+            .sidebar-item.active svg {
+                opacity: 1;
+            }
+
+        .sidebar-section {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 1rem 1.6rem 0.35rem;
+        }
+
+        .sidebar-badge {
+            margin-left: auto;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.1rem 0.45rem;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .admin-main {
+            flex: 1;
+            padding: 1.5rem 2rem;
+            overflow-y: auto;
+            min-width: 0;
+        }
 
         /* SECTIONS */
-        .admin-section { display:none; }
-        .admin-section.active { display:block; }
-        .section-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:1.5rem; gap:1rem; }
-        .section-title { font-size:1.35rem; font-weight:800; color:var(--primary); }
-        .section-subtitle { font-size:0.82rem; color:var(--text-light); margin-top:0.2rem; }
+        .admin-section {
+            display: none;
+        }
+
+            .admin-section.active {
+                display: block;
+            }
+
+        .section-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .section-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .section-subtitle {
+            font-size: 0.82rem;
+            color: var(--text-light);
+            margin-top: 0.2rem;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* SEARCH & FILTER TOOLBAR */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.85rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 180px;
+        }
+
+            .search-box input {
+                width: 100%;
+                padding: 0.55rem 0.9rem 0.55rem 2.2rem;
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                font-size: 0.85rem;
+                font-family: inherit;
+                background: var(--white);
+            }
+
+                .search-box input:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                }
+
+            .search-box svg {
+                position: absolute;
+                left: 0.65rem;
+                top: 50%;
+                transform: translateY(-50%);
+                pointer-events: none;
+                color: var(--text-light);
+            }
+
+        .filter-tabs {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .filter-tab {
+            padding: 0.35rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1.5px solid var(--border);
+            background: none;
+            color: var(--text-light);
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+
+            .filter-tab.active {
+                background: var(--primary);
+                color: white;
+                border-color: var(--primary);
+            }
+
+        .sort-select {
+            padding: 0.38rem 0.6rem;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-family: inherit;
+            color: var(--text);
+            background: var(--white);
+        }
 
         /* STATS */
-        .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.5rem; width:100%; }
-        .stat-card { background:var(--white); border-radius:var(--radius); padding:1.25rem; border:1px solid var(--border); display:flex; align-items:center; gap:1rem; transition:box-shadow 0.2s; }
-        .stat-card:hover { box-shadow:var(--shadow); }
-        .stat-icon { width:46px; height:46px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-        .stat-number { font-size:1.9rem; font-weight:800; color:var(--primary); line-height:1; }
-        .stat-label { font-size:0.75rem; color:var(--text-light); margin-top:3px; }
-        .stat-amount { font-size:0.82rem; font-weight:700; color:var(--warning); margin-top:2px; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4,1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: box-shadow 0.2s;
+        }
+
+            .stat-card:hover {
+                box-shadow: var(--shadow);
+            }
+
+        .stat-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .stat-number {
+            font-size: 1.9rem;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-top: 3px;
+        }
+
+        .stat-amount {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--warning);
+            margin-top: 2px;
+        }
 
         /* TABLES */
-        .table-wrap { background:var(--white); border-radius:var(--radius); border:1px solid var(--border); overflow:hidden; }
-        .table-header { padding:1rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; }
-        .table-title { font-size:0.95rem; font-weight:700; color:var(--primary); }
-        table { width:100%; border-collapse:collapse; }
-        th { background:var(--bg); padding:0.7rem 1rem; text-align:left; font-size:0.72rem; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:0.6px; border-bottom:1px solid var(--border); white-space:nowrap; }
-        td { padding:0.85rem 1rem; font-size:0.85rem; border-bottom:1px solid var(--border); vertical-align:middle; }
-        tr:last-child td { border-bottom:none; }
-        tr:hover td { background:#FAFBFC; }
-        .td-actions { display:flex; gap:0.4rem; flex-wrap:wrap; }
-        .badge { display:inline-flex; align-items:center; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.72rem; font-weight:600; white-space:nowrap; }
-        .badge-active, .badge-paid, .badge-accepted, .badge-completed { background:rgba(39,174,96,0.12); color:var(--success); }
-        .badge-pending, .badge-unpaid { background:rgba(224,120,32,0.12); color:var(--warning); }
-        .badge-overdue { background:rgba(231,76,60,0.12); color:var(--error); }
-        .badge-expired, .badge-declined, .badge-paused { background:rgba(136,136,136,0.12); color:#666; }
+        .table-wrap {
+            background: var(--white);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .table-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: var(--bg);
+            padding: 0.7rem 1rem;
+            text-align: left;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+        }
+
+            th:hover {
+                color: var(--primary);
+            }
+
+            th.sorted {
+                color: var(--primary);
+            }
+
+        td {
+            padding: 0.85rem 1rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: #FAFBFC;
+        }
+
+        .td-actions {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-active, .badge-paid, .badge-accepted, .badge-completed {
+            background: rgba(39,174,96,0.12);
+            color: var(--success);
+        }
+
+        .badge-pending, .badge-unpaid {
+            background: rgba(224,120,32,0.12);
+            color: var(--warning);
+        }
+
+        .badge-overdue {
+            background: rgba(231,76,60,0.12);
+            color: var(--error);
+        }
+
+        .badge-expired, .badge-declined, .badge-paused {
+            background: rgba(136,136,136,0.12);
+            color: #666;
+        }
+
+        /* PAGINATION */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1.25rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .page-btns {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .page-btn {
+            padding: 0.3rem 0.6rem;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.78rem;
+            cursor: pointer;
+            background: none;
+            font-family: inherit;
+            color: var(--text);
+        }
+
+            .page-btn.active {
+                background: var(--primary);
+                color: white;
+                border-color: var(--primary);
+            }
+
+            .page-btn:disabled {
+                opacity: 0.35;
+                cursor: not-allowed;
+            }
 
         /* MODAL */
-        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; padding:1rem; }
-        .modal-overlay.open { display:flex; }
-        .modal { background:var(--white); border-radius:14px; width:100%; max-width:580px; max-height:92vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.25); }
-        .modal-head { padding:1.25rem 1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--white); z-index:1; }
-        .modal-title { font-size:1rem; font-weight:700; color:var(--primary); }
-        .modal-close { background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-light); line-height:1; padding:0.2rem 0.4rem; border-radius:4px; }
-        .modal-close:hover { background:var(--bg); }
-        .modal-body { padding:1.5rem; }
-        .modal-footer { padding:1rem 1.5rem; border-top:1px solid var(--border); display:flex; gap:0.75rem; justify-content:flex-end; }
-        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
-        .form-select, .form-textarea { width:100%; padding:0.72rem 0.9rem; border:1.5px solid var(--border); border-radius:8px; font-size:0.9rem; font-family:inherit; }
-        .form-select:focus, .form-textarea:focus, .form-input:focus { outline:none; border-color:var(--primary); }
-        .form-textarea { resize:vertical; min-height:80px; }
-        .form-hint { font-size:0.75rem; color:var(--text-light); margin-top:0.3rem; }
-        .tax-preview { background:var(--bg); border-radius:8px; padding:0.85rem 1rem; margin-top:0.5rem; font-size:0.82rem; display:none; border:1px solid var(--border); }
-        .tax-line { display:flex; justify-content:space-between; padding:0.2rem 0; }
-        .tax-total { font-weight:700; color:var(--primary); border-top:1px solid var(--border); margin-top:0.4rem; padding-top:0.4rem; font-size:0.92rem; }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
 
-        /* CLIENT CARD */
-        .client-card { background:var(--white); border-radius:var(--radius); border:1px solid var(--border); padding:1.1rem 1.25rem; display:flex; align-items:center; gap:1rem; transition:all 0.15s; margin-bottom:0.6rem; }
-        .client-card:hover { border-color:var(--primary); box-shadow:var(--shadow); }
-        .client-avatar { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800; flex-shrink:0; }
-        .client-name { font-weight:700; color:var(--text); font-size:0.92rem; }
-        .client-company { font-size:0.8rem; color:var(--text-light); }
-        .client-meta { display:flex; gap:0.75rem; margin-top:0.25rem; font-size:0.75rem; color:var(--text-light); flex-wrap:wrap; }
-        .client-meta span::before { content:'·'; margin-right:0.75rem; }
-        .client-meta span:first-child::before { content:''; margin-right:0; }
+            .modal-overlay.open {
+                display: flex;
+            }
+
+        .modal {
+            background: var(--white);
+            border-radius: 14px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 92vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+
+        .modal-head {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            background: var(--white);
+            z-index: 1;
+        }
+
+        .modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
+            line-height: 1;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+        }
+
+            .modal-close:hover {
+                background: var(--bg);
+            }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        .tax-preview {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            margin-top: 0.5rem;
+            font-size: 0.82rem;
+            display: none;
+            border: 1px solid var(--border);
+        }
+
+        .tax-line {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.2rem 0;
+        }
+
+        .tax-total {
+            font-weight: 700;
+            color: var(--primary);
+            border-top: 1px solid var(--border);
+            margin-top: 0.4rem;
+            padding-top: 0.4rem;
+        }
+
+        /* CLIENT CARDS */
+        .client-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 1.1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.15s;
+            margin-bottom: 0.6rem;
+            cursor: pointer;
+        }
+
+            .client-card:hover {
+                border-color: var(--primary);
+                box-shadow: var(--shadow);
+            }
+
+        .client-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg,var(--primary),var(--secondary));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .client-name {
+            font-weight: 700;
+            color: var(--text);
+            font-size: 0.92rem;
+        }
+
+        .client-company {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .client-meta {
+            display: flex;
+            gap: 0.6rem;
+            margin-top: 0.25rem;
+            font-size: 0.75rem;
+            color: var(--text-light);
+            flex-wrap: wrap;
+        }
+
+        .client-pills {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            margin-top: 0.3rem;
+        }
+
+        .client-pill {
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 0.12rem 0.5rem;
+            border-radius: 10px;
+            background: var(--light-blue);
+            color: var(--primary);
+        }
+
+        /* CLIENT DETAIL PANEL */
+        .cdp-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            z-index: 500;
+        }
+
+            .cdp-overlay.open {
+                display: block;
+            }
+
+        .cdp-panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            height: 100vh;
+            width: 700px;
+            max-width: 96vw;
+            background: var(--white);
+            box-shadow: -6px 0 30px rgba(0,0,0,0.12);
+            z-index: 501;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.28s ease;
+        }
+
+            .cdp-panel.open {
+                transform: translateX(0);
+            }
+
+        .cdp-head {
+            padding: 1.25rem 1.5rem;
+            background: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .cdp-av {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.18);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.88rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .cdp-title {
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .cdp-sub {
+            color: #99BBDD;
+            font-size: 0.8rem;
+        }
+
+        .cdp-close {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.5);
+            font-size: 1.6rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .cdp-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            padding: 0 1.5rem;
+            background: var(--white);
+            overflow-x: auto;
+        }
+
+        .cdp-tab {
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-light);
+            cursor: pointer;
+            border-bottom: 2.5px solid transparent;
+            white-space: nowrap;
+            transition: all 0.15s;
+        }
+
+            .cdp-tab.active {
+                color: var(--primary);
+                border-bottom-color: var(--primary);
+            }
+
+        .cdp-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem 1.5rem;
+        }
+
+        .cdp-section {
+            display: none;
+        }
+
+            .cdp-section.active {
+                display: block;
+            }
+
+        .cdp-item {
+            padding: 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 0.65rem;
+        }
+
+        .cdp-item-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.25rem;
+        }
+
+        .cdp-item-title {
+            font-weight: 600;
+            font-size: 0.88rem;
+        }
+
+        .cdp-item-meta {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .info-item label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-light);
+            display: block;
+            margin-bottom: 0.2rem;
+        }
+
+        .info-item span {
+            font-size: 0.88rem;
+            color: var(--text);
+        }
+
+        .progress-bg {
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg,var(--primary),var(--secondary));
+            border-radius: 3px;
+        }
 
         /* MESSAGES */
-        .msg-client-block { background:var(--white); border-radius:var(--radius); border:1px solid var(--border); overflow:hidden; margin-bottom:0.75rem; }
-        .msg-client-header { padding:0.9rem 1.25rem; background:var(--bg); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; }
-        .msg-client-header:hover { background:var(--light-blue); }
-        .msg-client-name { font-weight:700; font-size:0.9rem; color:var(--primary); }
-        .msg-unread-badge { background:var(--error); color:white; font-size:0.68rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:10px; }
-        .msg-list { padding:1rem 1.25rem; display:flex; flex-direction:column; gap:0.85rem; max-height:350px; overflow-y:auto; }
-        .msg-row { display:flex; flex-direction:column; }
-        .msg-row-client { align-items:flex-start; }
-        .msg-row-vnk { align-items:flex-end; }
-        .msg-sender-label { font-size:0.7rem; color:var(--text-light); margin-bottom:0.15rem; font-weight:600; }
-        .msg-bubble { max-width:78%; padding:0.65rem 1rem; border-radius:10px; font-size:0.85rem; line-height:1.55; }
-        .msg-bubble-client { background:var(--light-blue); color:var(--text); border-bottom-left-radius:3px; }
-        .msg-bubble-vnk { background:var(--primary); color:white; border-bottom-right-radius:3px; }
-        .msg-time { font-size:0.68rem; color:var(--text-light); margin-top:0.2rem; }
-        .msg-compose { padding:1rem 1.25rem; border-top:1px solid var(--border); display:flex; gap:0.75rem; align-items:flex-end; }
-        .msg-compose textarea { flex:1; padding:0.65rem 0.9rem; border:1.5px solid var(--border); border-radius:8px; font-size:0.85rem; font-family:inherit; resize:none; }
-        .msg-compose textarea:focus { outline:none; border-color:var(--primary); }
+        .msg-client-block {
+            background: var(--white);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+        }
 
-        /* PROGRESS */
-        .progress-bar-bg { height:7px; background:var(--border); border-radius:4px; overflow:hidden; margin-bottom:0.25rem; }
-        .progress-bar-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--secondary)); border-radius:4px; transition:width 0.3s; }
-        input[type=range] { width:100%; accent-color:var(--primary); margin-top:0.5rem; }
+        .msg-client-header {
+            padding: 0.9rem 1.25rem;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
 
-        /* EMPTY STATE */
-        .empty-state { text-align:center; padding:3rem 1rem; color:var(--text-light); }
-        .empty-state svg { opacity:0.25; margin-bottom:1rem; }
-        .empty-state p { font-size:0.9rem; }
+            .msg-client-header:hover {
+                background: var(--light-blue);
+            }
+
+        .msg-client-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--primary);
+        }
+
+        .msg-unread-badge {
+            background: var(--error);
+            color: white;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+        }
+
+        .msg-list {
+            padding: 1rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .msg-row {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .msg-row-client {
+            align-items: flex-start;
+        }
+
+        .msg-row-vnk {
+            align-items: flex-end;
+        }
+
+        .msg-sender-label {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            margin-bottom: 0.12rem;
+            font-weight: 600;
+        }
+
+        .msg-bubble {
+            max-width: 78%;
+            padding: 0.65rem 1rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            line-height: 1.55;
+        }
+
+        .msg-bubble-client {
+            background: var(--light-blue);
+            color: var(--text);
+            border-bottom-left-radius: 3px;
+        }
+
+        .msg-bubble-vnk {
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 3px;
+        }
+
+        .msg-time {
+            font-size: 0.68rem;
+            color: var(--text-light);
+            margin-top: 0.2rem;
+        }
+
+        .msg-compose {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+
+            .msg-compose textarea {
+                flex: 1;
+                padding: 0.65rem 0.9rem;
+                border: 1.5px solid var(--border);
+                border-radius: 8px;
+                font-size: 0.85rem;
+                font-family: inherit;
+                resize: none;
+            }
+
+                .msg-compose textarea:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                }
+
+        /* PROGRESS RANGE */
+        .range-wrap {
+            margin-top: 0.5rem;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--primary);
+        }
+
+        .prog-bar-bg {
+            height: 7px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .prog-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg,var(--primary),var(--secondary));
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        /* FINANCE TABS */
+        .fin-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+            background: var(--bg);
+            padding: 0.35rem;
+            border-radius: 10px;
+            width: fit-content;
+        }
+
+        .fin-tab {
+            padding: 0.45rem 1.1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: var(--text-light);
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+
+            .fin-tab.active {
+                background: var(--white);
+                color: var(--primary);
+                box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            }
+
+        .fin-section {
+            display: none;
+        }
+
+            .fin-section.active {
+                display: block;
+            }
+
+        /* CHART MINI */
+        .chart-wrap {
+            background: var(--white);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .chart-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.5rem;
+            height: 120px;
+        }
+
+        .bar-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            gap: 0.3rem;
+        }
+
+        .bar {
+            width: 100%;
+            background: linear-gradient(180deg,var(--secondary),var(--primary));
+            border-radius: 4px 4px 0 0;
+            min-height: 4px;
+            transition: height 0.5s;
+        }
+
+        .bar-label {
+            font-size: 0.68rem;
+            color: var(--text-light);
+            text-align: center;
+        }
+
+        .bar-val {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-align: center;
+        }
+
+        .tax-box {
+            background: var(--light-blue);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            border: 1px solid rgba(27,79,138,0.12);
+            margin-bottom: 1rem;
+        }
+
+        .tax-box-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .tax-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid rgba(27,79,138,0.1);
+            font-size: 0.85rem;
+        }
+
+            .tax-row:last-child {
+                border-bottom: none;
+            }
+
+        .tax-row-total {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 0.95rem;
+        }
+
+        .top-clients-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .top-client-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.65rem;
+            background: var(--white);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .top-client-rank {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-size: 0.72rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .top-client-name {
+            flex: 1;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .top-client-amount {
+            font-weight: 700;
+            color: var(--success);
+            font-size: 0.85rem;
+        }
 
         /* TOAST */
-        .toast { position:fixed; bottom:1.5rem; right:1.5rem; padding:0.85rem 1.25rem; border-radius:10px; font-size:0.88rem; z-index:9999; display:none; box-shadow:0 8px 24px rgba(0,0,0,0.2); max-width:320px; }
-        .toast.show { display:block; animation:toastIn 0.3s ease; }
-        .toast-success { background:var(--success); color:white; }
-        .toast-error { background:var(--error); color:white; }
-        .toast-info { background:var(--primary-dark); color:white; }
-        @keyframes toastIn { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+        .toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            padding: 0.85rem 1.25rem;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            max-width: 320px;
+        }
 
-        /* SEARCH */
-        .search-box { position:relative; }
-        .search-box input { padding-left:2.2rem; width:220px; font-size:0.85rem; }
-        .search-box svg { position:absolute; left:0.65rem; top:50%; transform:translateY(-50%); pointer-events:none; }
+            .toast.show {
+                display: block;
+                animation: toastIn 0.3s ease;
+            }
 
-        /* TABS */
-        .mini-tabs { display:flex; gap:0.25rem; background:var(--bg); padding:0.25rem; border-radius:8px; margin-bottom:1rem; }
-        .mini-tab { padding:0.4rem 0.85rem; border-radius:6px; font-size:0.82rem; font-weight:600; cursor:pointer; border:none; background:none; color:var(--text-light); transition:all 0.15s; }
-        .mini-tab.active { background:var(--white); color:var(--primary); box-shadow:0 1px 4px rgba(0,0,0,0.1); }
+        .toast-success {
+            background: var(--success);
+            color: white;
+        }
 
-        @media (max-width:900px) { .stats-grid { grid-template-columns:1fr 1fr; } .admin-main { padding:1rem; } }
-        @media (max-width:600px) { .stats-grid { grid-template-columns:1fr; } .admin-sidebar { display:none; } .form-row { grid-template-columns:1fr; } }
+        .toast-error {
+            background: var(--error);
+            color: white;
+        }
+
+        .toast-info {
+            background: var(--primary-dark);
+            color: white;
+        }
+
+        @keyframes toastIn {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* CONFIRM */
+        .confirm-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+            .confirm-overlay.open {
+                display: flex;
+            }
+
+        .confirm-box {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 1.5rem;
+            max-width: 380px;
+            width: 100%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+        }
+
+        .confirm-title {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .confirm-text {
+            font-size: 0.88rem;
+            color: var(--text-light);
+            margin-bottom: 1.25rem;
+        }
+
+        .confirm-actions {
+            display: flex;
+            gap: 0.65rem;
+            justify-content: flex-end;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-light);
+        }
+
+            .empty-state svg {
+                opacity: 0.2;
+                margin-bottom: 0.75rem;
+            }
+
+        @media (max-width:900px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .admin-main {
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width:600px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-sidebar {
+                display: none;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
 
-<div class="toast" id="toast"></div>
+    <div class="toast" id="toast"></div>
+    <div class="confirm-overlay" id="confirm-overlay"><div class="confirm-box"><div class="confirm-title" id="confirm-title"></div><div class="confirm-text" id="confirm-text"></div><div class="confirm-actions"><button class="btn btn-ghost btn-sm" onclick="confirmResolve(false)">Annuler</button><button class="btn btn-danger btn-sm" id="confirm-ok-btn" onclick="confirmResolve(true)">Confirmer</button></div></div></div>
 
-<!-- LOGIN -->
-<div class="admin-login" id="admin-login">
-    <div class="login-card">
-        <div class="login-logo">
-            <svg width="60" height="60" viewBox="0 0 60 60">
-                <polygon points="30,3 54,16 54,44 30,57 6,44 6,16" fill="#1B4F8A" opacity="0.08"/>
-                <polygon points="30,3 54,16 54,44 30,57 6,44 6,16" fill="none" stroke="#1B4F8A" stroke-width="2.5"/>
-                <text x="30" y="36" text-anchor="middle" style="font-size:14px;font-weight:800;fill:#1B4F8A;font-family:sans-serif">VNK</text>
-            </svg>
-            <div style="margin-top:0.5rem;font-size:1.1rem;font-weight:800;color:var(--primary)">VNK Automatisation Inc.</div>
-            <div class="login-badge">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                Accès administrateur
+    <!-- CLIENT DETAIL PANEL -->
+    <div class="cdp-overlay" id="cdp-overlay" onclick="closeCdp()"></div>
+    <div class="cdp-panel" id="cdp-panel">
+        <div class="cdp-head">
+            <div class="cdp-av" id="cdp-av">--</div>
+            <div><div class="cdp-title" id="cdp-title">Client</div><div class="cdp-sub" id="cdp-sub"></div></div>
+            <button class="cdp-close" onclick="closeCdp()">×</button>
+        </div>
+        <div class="cdp-tabs">
+            <div class="cdp-tab active" onclick="showCdpTab('info')">Informations</div>
+            <div class="cdp-tab" onclick="showCdpTab('mandats')">Mandats</div>
+            <div class="cdp-tab" onclick="showCdpTab('devis')">Devis</div>
+            <div class="cdp-tab" onclick="showCdpTab('factures')">Factures</div>
+            <div class="cdp-tab" onclick="showCdpTab('messages')">Messages</div>
+        </div>
+        <div class="cdp-body">
+            <div class="cdp-section active" id="cdp-info"></div>
+            <div class="cdp-section" id="cdp-mandats"></div>
+            <div class="cdp-section" id="cdp-devis"></div>
+            <div class="cdp-section" id="cdp-factures"></div>
+            <div class="cdp-section" id="cdp-messages">
+                <div id="cdp-msg-list" style="display:flex;flex-direction:column;gap:0.65rem;max-height:380px;overflow-y:auto;margin-bottom:1rem"></div>
+                <div style="display:flex;gap:0.65rem">
+                    <textarea id="cdp-msg-input" rows="2" style="flex:1;padding:0.65rem 0.9rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:inherit;resize:none" placeholder="Écrire un message en tant que VNK..."></textarea>
+                    <button class="btn btn-primary btn-sm" onclick="sendCdpMsg()">Envoyer</button>
+                </div>
             </div>
         </div>
-        <h2>Connexion</h2>
-        <p>Tableau de bord de gestion VNK</p>
-        <form id="admin-login-form">
-            <div class="form-group">
-                <label class="form-label">Courriel</label>
-                <input type="email" class="form-input" id="admin-email" placeholder="admin@vnk.ca" required autocomplete="email">
+    </div>
+
+    <!-- LOGIN — DESIGN ORIGINAL -->
+    <div class="admin-login" id="admin-login">
+        <div class="login-card">
+            <div class="login-logo">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                    <polygon points="30,3 54,16 54,44 30,57 6,44 6,16" fill="#1B4F8A" opacity="0.08" />
+                    <polygon points="30,3 54,16 54,44 30,57 6,44 6,16" fill="none" stroke="#1B4F8A" stroke-width="2.5" />
+                    <text x="30" y="36" text-anchor="middle" style="font-size:14px;font-weight:800;fill:#1B4F8A;font-family:sans-serif">VNK</text>
+                </svg>
+                <div style="margin-top:0.5rem;font-size:1.1rem;font-weight:800;color:var(--primary)">VNK Automatisation Inc.</div>
+                <div class="login-badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                    Accès administrateur
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">Mot de passe</label>
-                <div class="input-wrap">
-                    <input type="password" class="form-input" id="admin-password" placeholder="••••••••" required autocomplete="current-password">
-                    <button type="button" class="show-pw-btn" onclick="togglePw('admin-password', this)" title="Afficher/masquer">
-                        <svg id="eye-admin" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <h2>Connexion</h2>
+            <p>Tableau de bord de gestion VNK</p>
+            <form id="admin-login-form">
+                <div class="form-group">
+                    <label class="form-label">Courriel</label>
+                    <input type="email" class="form-input" id="admin-email" placeholder="admin@vnk.ca" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mot de passe</label>
+                    <div class="input-wrap">
+                        <input type="password" class="form-input" id="admin-password" placeholder="••••••••" required>
+                        <button type="button" class="show-pw-btn" onclick="togglePw('admin-password',this)">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full" style="margin-top:0.75rem">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></svg>
+                    Accéder au tableau de bord
+                </button>
+                <div id="admin-login-error" class="alert alert-error" style="display:none"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ADMIN APP -->
+    <div class="admin-app" id="admin-app" style="display:flex;flex-direction:column">
+        <header class="admin-topbar">
+            <div class="topbar-left">
+                <svg width="32" height="32" viewBox="0 0 32 32"><polygon points="16,1 29,8 29,24 16,31 3,24 3,8" fill="rgba(255,255,255,0.1)" /><polygon points="16,1 29,8 29,24 16,31 3,24 3,8" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" /><text x="16" y="20" text-anchor="middle" style="font-size:8px;font-weight:800;fill:white;font-family:sans-serif">VNK</text></svg>
+                <div class="topbar-logo"><div><div class="topbar-logo-text">Automatisation Inc.</div><div class="topbar-logo-sub">VALUE · NETWORK · KNOWLEDGE</div></div></div>
+                <div style="height:24px;width:1px;background:rgba(255,255,255,0.2);margin:0 0.25rem"></div>
+                <div style="font-size:0.75rem;color:#99BBDD;font-weight:600">Admin</div>
+            </div>
+            <div class="topbar-right">
+                <span class="topbar-user">Yan Verone Kengne</span>
+                <div class="topbar-avatar">YV</div>
+                <button class="btn btn-sm" onclick="adminLogout()" style="background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                    Déconnexion
+                </button>
+            </div>
+        </header>
+
+        <div class="admin-layout">
+            <aside class="admin-sidebar">
+                <nav class="sidebar-nav">
+                    <div class="sidebar-section">Vue d'ensemble</div>
+                    <button class="sidebar-item active" onclick="showSection('dashboard')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
+                        Tableau de bord
                     </button>
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary btn-full" style="margin-top:0.75rem">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                Accéder au tableau de bord
-            </button>
-            <div id="admin-login-error" class="alert alert-error" style="display:none"></div>
-        </form>
-    </div>
-</div>
-
-<!-- ADMIN APP -->
-<div class="admin-app" id="admin-app" style="display:flex;flex-direction:column">
-
-    <header class="admin-topbar">
-        <div class="topbar-left">
-            <!-- Logo VNK dans la topbar -->
-            <svg width="32" height="32" viewBox="0 0 32 32">
-                <polygon points="16,1 29,8 29,24 16,31 3,24 3,8" fill="rgba(255,255,255,0.1)"/>
-                <polygon points="16,1 29,8 29,24 16,31 3,24 3,8" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/>
-                <text x="16" y="20" text-anchor="middle" style="font-size:8px;font-weight:800;fill:white;font-family:sans-serif">VNK</text>
-            </svg>
-            <div class="topbar-logo">
-                <div>
-                    <div class="topbar-logo-text">Automatisation Inc.</div>
-                    <div class="topbar-logo-sub">VALUE · NETWORK · KNOWLEDGE</div>
-                </div>
-            </div>
-            <div style="height:24px;width:1px;background:rgba(255,255,255,0.2);margin:0 0.25rem"></div>
-            <div style="font-size:0.75rem;color:#99BBDD;font-weight:600">Admin</div>
-        </div>
-        <div class="topbar-right">
-            <span class="topbar-user">Yan Verone Kengne</span>
-            <div class="topbar-avatar">YV</div>
-            <button class="btn btn-sm" onclick="adminLogout()" style="background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Déconnexion
-            </button>
-        </div>
-    </header>
-
-    <div class="admin-layout">
-        <aside class="admin-sidebar">
-            <nav class="sidebar-nav">
-                <div class="sidebar-section">Vue d'ensemble</div>
-                <button class="sidebar-item active" onclick="showSection('dashboard')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                    Tableau de bord
-                </button>
-                <div class="sidebar-section">Clients</div>
-                <button class="sidebar-item" onclick="showSection('clients')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    Clients
-                    <span class="sidebar-badge" id="badge-clients" style="background:var(--primary);display:none">0</span>
-                </button>
-                <div class="sidebar-section">Opérations</div>
-                <button class="sidebar-item" onclick="showSection('mandates')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                    Mandats
-                </button>
-                <button class="sidebar-item" onclick="showSection('quotes')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    Devis
-                    <span class="sidebar-badge" id="badge-quotes-admin" style="background:var(--warning);display:none">0</span>
-                </button>
-                <button class="sidebar-item" onclick="showSection('invoices')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                    Factures
-                    <span class="sidebar-badge" id="badge-invoices-admin" style="background:var(--error);display:none">0</span>
-                </button>
-                <div class="sidebar-section">Contenu</div>
-                <button class="sidebar-item" onclick="showSection('documents')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
-                    Documents
-                </button>
-                <button class="sidebar-item" onclick="showSection('messages')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    Messages
-                    <span class="sidebar-badge" id="badge-messages-admin" style="background:var(--error);display:none">0</span>
-                </button>
-                <div class="sidebar-section">Finance</div>
-                <button class="sidebar-item" onclick="showSection('payments')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    Paiements
-                </button>
-            </nav>
-        </aside>
-
-        <main class="admin-main">
-
-            <!-- DASHBOARD -->
-            <div class="admin-section active" id="section-dashboard">
-                <div class="section-header">
-                    <div><div class="section-title">Tableau de bord</div><div class="section-subtitle" id="dash-greeting">Bonjour, Yan Verone</div></div>
-                    <button class="btn btn-ghost btn-sm" onclick="loadAllAdmin()">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-4.36"/></svg>
-                        Actualiser
+                    <div class="sidebar-section">Clients</div>
+                    <button class="sidebar-item" onclick="showSection('clients')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                        Clients
+                        <span class="sidebar-badge" id="badge-clients" style="background:var(--primary);display:none">0</span>
                     </button>
-                </div>
-                <div class="stats-grid">
-                    <div class="stat-card"><div class="stat-icon" style="background:var(--primary)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div><div class="stat-number" id="d-clients">—</div><div class="stat-label">Clients actifs</div></div></div>
-                    <div class="stat-card"><div class="stat-icon" style="background:var(--secondary)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div><div><div class="stat-number" id="d-mandates">—</div><div class="stat-label">Mandats actifs</div></div></div>
-                    <div class="stat-card"><div class="stat-icon" style="background:var(--warning)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><div><div class="stat-number" id="d-unpaid">—</div><div class="stat-label">Factures non payées</div><div class="stat-amount" id="d-unpaid-amount"></div></div></div>
-                    <div class="stat-card"><div class="stat-icon" style="background:var(--success)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div><div class="stat-number" id="d-revenue">—</div><div class="stat-label">Revenu ce mois</div></div></div>
-                </div>
-                <div class="table-wrap"><div class="table-header"><div class="table-title">Activité récente</div></div><div id="admin-activity" style="padding:1rem 1.25rem"></div></div>
-            </div>
-
-            <!-- CLIENTS -->
-            <div class="admin-section" id="section-clients">
-                <div class="section-header">
-                    <div><div class="section-title">Clients</div><div class="section-subtitle">Gérez vos clients et leurs accès au portail</div></div>
-                    <button class="btn btn-primary" onclick="openModal('modal-new-client')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Nouveau client
+                    <div class="sidebar-section">Opérations</div>
+                    <button class="sidebar-item" onclick="showSection('mandates')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
+                        Mandats
                     </button>
-                </div>
-                <div id="clients-list"></div>
-            </div>
-
-            <!-- MANDATS -->
-            <div class="admin-section" id="section-mandates">
-                <div class="section-header">
-                    <div><div class="section-title">Mandats</div><div class="section-subtitle">Créer, suivre et mettre à jour la progression</div></div>
-                    <button class="btn btn-primary" onclick="openModal('modal-new-mandate')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Nouveau mandat
+                    <button class="sidebar-item" onclick="showSection('quotes')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                        Devis
+                        <span class="sidebar-badge" id="badge-quotes-admin" style="background:var(--warning);display:none">0</span>
                     </button>
-                </div>
-                <div class="table-wrap"><table><thead><tr><th>Client</th><th>Titre</th><th>Type</th><th>Statut</th><th>Progression</th><th>Début</th><th>Actions</th></tr></thead><tbody id="mandates-tbody"></tbody></table></div>
-            </div>
-
-            <!-- DEVIS -->
-            <div class="admin-section" id="section-quotes">
-                <div class="section-header">
-                    <div><div class="section-title">Devis</div><div class="section-subtitle">TPS et TVQ calculés automatiquement</div></div>
-                    <button class="btn btn-primary" onclick="openModal('modal-new-quote')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Nouveau devis
+                    <button class="sidebar-item" onclick="showSection('invoices')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                        Factures
+                        <span class="sidebar-badge" id="badge-invoices-admin" style="background:var(--error);display:none">0</span>
                     </button>
-                </div>
-                <div class="table-wrap"><table><thead><tr><th>Numéro</th><th>Client</th><th>Titre</th><th>HT</th><th>TTC</th><th>Statut</th><th>Expiration</th><th>Actions</th></tr></thead><tbody id="quotes-tbody"></tbody></table></div>
-            </div>
-
-            <!-- FACTURES -->
-            <div class="admin-section" id="section-invoices">
-                <div class="section-header">
-                    <div><div class="section-title">Factures</div><div class="section-subtitle">Créer des factures et confirmer les paiements</div></div>
-                    <button class="btn btn-primary" onclick="openModal('modal-new-invoice')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Nouvelle facture
+                    <div class="sidebar-section">Contenu</div>
+                    <button class="sidebar-item" onclick="showSection('documents')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>
+                        Documents
                     </button>
-                </div>
-                <div class="table-wrap"><table><thead><tr><th>Numéro</th><th>Client</th><th>Titre</th><th>HT</th><th>TTC</th><th>Statut</th><th>Échéance</th><th>Actions</th></tr></thead><tbody id="invoices-tbody"></tbody></table></div>
-            </div>
-
-            <!-- DOCUMENTS -->
-            <div class="admin-section" id="section-documents">
-                <div class="section-header">
-                    <div><div class="section-title">Documents</div><div class="section-subtitle">Déposer des livrables — rapports, fichiers, documentation</div></div>
-                    <button class="btn btn-primary" onclick="openModal('modal-new-document')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Déposer un document
+                    <button class="sidebar-item" onclick="showSection('messages')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                        Messages
+                        <span class="sidebar-badge" id="badge-messages-admin" style="background:var(--error);display:none">0</span>
                     </button>
+                    <div class="sidebar-section">Finance</div>
+                    <button class="sidebar-item" onclick="showSection('finance')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                        Finance
+                    </button>
+                </nav>
+            </aside>
+
+            <main class="admin-main">
+
+                <!-- DASHBOARD -->
+                <div class="admin-section active" id="section-dashboard">
+                    <div class="section-header">
+                        <div><div class="section-title">Tableau de bord</div><div class="section-subtitle" id="dash-greeting">Bonjour, Yan Verone</div></div>
+                        <button class="btn btn-ghost btn-sm" onclick="loadAllAdmin()">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg> Actualiser
+                        </button>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card"><div class="stat-icon" style="background:var(--primary)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg></div><div><div class="stat-number" id="d-clients">—</div><div class="stat-label">Clients actifs</div></div></div>
+                        <div class="stat-card"><div class="stat-icon" style="background:var(--secondary)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg></div><div><div class="stat-number" id="d-mandates">—</div><div class="stat-label">Mandats actifs</div></div></div>
+                        <div class="stat-card"><div class="stat-icon" style="background:var(--warning)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg></div><div><div class="stat-number" id="d-unpaid">—</div><div class="stat-label">Factures non payées</div><div class="stat-amount" id="d-unpaid-amount"></div></div></div>
+                        <div class="stat-card"><div class="stat-icon" style="background:var(--success)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg></div><div><div class="stat-number" id="d-revenue">—</div><div class="stat-label">Revenu ce mois</div></div></div>
+                    </div>
+                    <div class="table-wrap"><div class="table-header"><div class="table-title">Activité récente</div></div><div id="admin-activity" style="padding:1rem 1.25rem"></div></div>
                 </div>
-                <div class="table-wrap"><table><thead><tr><th>Client</th><th>Titre</th><th>Type</th><th>Mandat</th><th>Déposé le</th><th>Actions</th></tr></thead><tbody id="documents-tbody"></tbody></table></div>
-            </div>
 
-            <!-- MESSAGES -->
-            <div class="admin-section" id="section-messages">
-                <div class="section-header"><div><div class="section-title">Messagerie</div><div class="section-subtitle">Répondez aux messages de vos clients en tant que VNK</div></div></div>
-                <div id="messages-thread"></div>
-            </div>
-
-            <!-- PAIEMENTS -->
-            <div class="admin-section" id="section-payments">
-                <div class="section-header"><div><div class="section-title">Paiements</div><div class="section-subtitle">Vue financière complète</div></div></div>
-                <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
-                    <div class="stat-card"><div class="stat-icon" style="background:var(--success)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><div><div class="stat-number" id="p-total-paid">—</div><div class="stat-label">Total payé</div></div></div>
-                    <div class="stat-card"><div class="stat-icon" style="background:var(--warning)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div><div class="stat-number" id="p-total-unpaid">—</div><div class="stat-label">À recevoir</div></div></div>
-                    <div class="stat-card"><div class="stat-icon" style="background:var(--primary)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div><div class="stat-number" id="p-total-invoiced">—</div><div class="stat-label">Total facturé</div></div></div>
+                <!-- CLIENTS -->
+                <div class="admin-section" id="section-clients">
+                    <div class="section-header">
+                        <div><div class="section-title">Clients</div><div class="section-subtitle" id="clients-count-label">Gérez vos clients et leurs accès au portail</div></div>
+                        <button class="btn btn-primary" onclick="openModal('modal-new-client')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                            Nouveau client
+                        </button>
+                    </div>
+                    <div class="table-wrap" style="margin-bottom:1rem">
+                        <div class="toolbar">
+                            <div class="search-box">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                                <input type="text" id="clients-search" placeholder="Nom, entreprise, courriel..." oninput="filterClients()">
+                            </div>
+                            <div class="filter-tabs">
+                                <button class="filter-tab active" onclick="setClientFilter('all',this)">Tous</button>
+                                <button class="filter-tab" onclick="setClientFilter('active',this)">Actifs</button>
+                                <button class="filter-tab" onclick="setClientFilter('inactive',this)">Inactifs</button>
+                            </div>
+                            <select class="sort-select" onchange="sortClients(this.value)">
+                                <option value="name">Trier: Nom A→Z</option>
+                                <option value="company">Trier: Entreprise</option>
+                                <option value="recent">Trier: Plus récents</option>
+                                <option value="login">Trier: Dernière connexion</option>
+                            </select>
+                        </div>
+                        <div id="clients-grid" style="padding:0.75rem"></div>
+                        <div class="pagination" id="clients-pag" style="display:none"><span id="clients-pag-info"></span><div class="page-btns" id="clients-pag-btns"></div></div>
+                    </div>
                 </div>
-                <div class="table-wrap" style="margin-top:1.5rem"><table><thead><tr><th>Facture</th><th>Client</th><th>Montant HT</th><th>TTC</th><th>Statut</th><th>Échéance</th><th>Payée le</th><th>Actions</th></tr></thead><tbody id="payments-tbody"></tbody></table></div>
-            </div>
 
-        </main>
-    </div>
-</div>
-
-<!-- ===== MODALS ===== -->
-
-<!-- Nouveau client -->
-<div class="modal-overlay" id="modal-new-client">
-    <div class="modal">
-        <div class="modal-head"><span class="modal-title">Nouveau client</span><button class="modal-close" onclick="closeModal('modal-new-client')">×</button></div>
-        <div class="modal-body">
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Nom complet *</label><input type="text" class="form-input" id="nc-name" placeholder="Jean Tremblay"></div>
-                <div class="form-group"><label class="form-label">Entreprise</label><input type="text" class="form-input" id="nc-company" placeholder="Industries XYZ Inc."></div>
-            </div>
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Courriel *</label><input type="email" class="form-input" id="nc-email" placeholder="jean@entreprise.com"></div>
-                <div class="form-group"><label class="form-label">Téléphone</label><input type="tel" class="form-input" id="nc-phone" placeholder="418 000-0000"></div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Mot de passe temporaire *</label>
-                <div class="input-wrap">
-                    <input type="password" class="form-input" id="nc-password" placeholder="Min. 8 caractères">
-                    <button type="button" class="show-pw-btn" onclick="togglePw('nc-password', this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                <!-- MANDATS -->
+                <div class="admin-section" id="section-mandates">
+                    <div class="section-header">
+                        <div><div class="section-title">Mandats</div><div class="section-subtitle">Créer, suivre et mettre à jour la progression</div></div>
+                        <button class="btn btn-primary" onclick="openModal('modal-new-mandate')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                            Nouveau mandat
+                        </button>
+                    </div>
+                    <div class="table-wrap">
+                        <div class="toolbar">
+                            <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="mandates-search" placeholder="Rechercher un mandat..." oninput="filterTable('mandates')"></div>
+                            <div class="filter-tabs">
+                                <button class="filter-tab active" onclick="setFilter('mandates','all',this)">Tous</button>
+                                <button class="filter-tab" onclick="setFilter('mandates','active',this)">En cours</button>
+                                <button class="filter-tab" onclick="setFilter('mandates','completed',this)">Complétés</button>
+                                <button class="filter-tab" onclick="setFilter('mandates','paused',this)">En pause</button>
+                            </div>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable('mandates','client_name')">Client ↕</th>
+                                    <th onclick="sortTable('mandates','title')">Titre ↕</th>
+                                    <th>Type</th>
+                                    <th onclick="sortTable('mandates','status')">Statut ↕</th>
+                                    <th onclick="sortTable('mandates','progress')">Progression ↕</th>
+                                    <th onclick="sortTable('mandates','start_date')">Début ↕</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mandates-tbody"></tbody>
+                        </table>
+                        <div class="pagination" id="mandates-pag"><span id="mandates-pag-info"></span><div class="page-btns" id="mandates-pag-btns"></div></div>
+                    </div>
                 </div>
-                <div class="form-hint">Le client pourra changer son mot de passe dans le portail.</div>
-            </div>
-        </div>
-        <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-client')">Annuler</button><button class="btn btn-primary" onclick="createClient()">Créer le client</button></div>
-    </div>
-</div>
 
-<!-- Nouveau mandat -->
-<div class="modal-overlay" id="modal-new-mandate">
-    <div class="modal">
-        <div class="modal-head"><span class="modal-title">Nouveau mandat</span><button class="modal-close" onclick="closeModal('modal-new-mandate')">×</button></div>
-        <div class="modal-body">
-            <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nm-client"><option value="">Sélectionner un client</option></select></div>
-            <div class="form-group"><label class="form-label">Titre du mandat *</label><input type="text" class="form-input" id="nm-title" placeholder="Support PLC Siemens S7-1500 — Usine ABC"></div>
-            <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="nm-desc" placeholder="Détails du mandat..."></textarea></div>
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Type de service</label><select class="form-select" id="nm-type"><option value="plc-support">Support PLC</option><option value="audit">Audit technique</option><option value="documentation">Documentation</option><option value="refactoring">Refactorisation</option></select></div>
-                <div class="form-group"><label class="form-label">Statut</label><select class="form-select" id="nm-status"><option value="active">En cours</option><option value="pending">En attente</option><option value="paused">En pause</option></select></div>
-            </div>
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Date de début</label><input type="date" class="form-input" id="nm-start"></div>
-                <div class="form-group"><label class="form-label">Date de fin estimée</label><input type="date" class="form-input" id="nm-end"></div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Progression : <strong id="nm-progress-val">0</strong>%</label>
-                <input type="range" id="nm-progress" min="0" max="100" value="0" oninput="document.getElementById('nm-progress-val').textContent=this.value">
-                <div class="progress-bar-bg"><div class="progress-bar-fill" id="nm-progress-bar" style="width:0%"></div></div>
-            </div>
-            <div class="form-group"><label class="form-label">Note visible par le client</label><textarea class="form-textarea" id="nm-notes" placeholder="Intervention en cours — en attente de confirmation client..."></textarea></div>
-        </div>
-        <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-mandate')">Annuler</button><button class="btn btn-primary" onclick="createMandate()">Créer le mandat</button></div>
-    </div>
-</div>
-
-<!-- Modifier mandat -->
-<div class="modal-overlay" id="modal-edit-mandate">
-    <div class="modal">
-        <div class="modal-head"><span class="modal-title">Modifier le mandat</span><button class="modal-close" onclick="closeModal('modal-edit-mandate')">×</button></div>
-        <div class="modal-body">
-            <input type="hidden" id="em-id">
-            <div class="form-group"><label class="form-label">Statut</label><select class="form-select" id="em-status"><option value="active">En cours</option><option value="pending">En attente</option><option value="paused">En pause</option><option value="completed">Complété ✓</option></select></div>
-            <div class="form-group">
-                <label class="form-label">Progression : <strong id="em-progress-val">0</strong>%</label>
-                <input type="range" id="em-progress" min="0" max="100" value="0" oninput="document.getElementById('em-progress-val').textContent=this.value;document.getElementById('em-progress-bar').style.width=this.value+'%'">
-                <div class="progress-bar-bg" style="margin-top:0.5rem"><div class="progress-bar-fill" id="em-progress-bar" style="width:0%"></div></div>
-            </div>
-            <div class="form-group"><label class="form-label">Note visible par le client</label><textarea class="form-textarea" id="em-notes"></textarea></div>
-        </div>
-        <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-edit-mandate')">Annuler</button><button class="btn btn-primary" onclick="updateMandate()">Mettre à jour</button></div>
-    </div>
-</div>
-
-<!-- Nouveau devis -->
-<div class="modal-overlay" id="modal-new-quote">
-    <div class="modal">
-        <div class="modal-head"><span class="modal-title">Nouveau devis</span><button class="modal-close" onclick="closeModal('modal-new-quote')">×</button></div>
-        <div class="modal-body">
-            <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nq-client"><option value="">Sélectionner un client</option></select></div>
-            <div class="form-group"><label class="form-label">Titre *</label><input type="text" class="form-input" id="nq-title" placeholder="Audit technique automates Ligne 3"></div>
-            <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="nq-desc" placeholder="Détails du service..."></textarea></div>
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Montant HT (CAD) *</label><input type="number" class="form-input" id="nq-amount" placeholder="2000" step="0.01" oninput="calcTaxes('nq')"></div>
-                <div class="form-group"><label class="form-label">Validité (jours)</label><input type="number" class="form-input" id="nq-days" value="30" min="1"></div>
-            </div>
-            <div class="tax-preview" id="nq-tax-preview">
-                <div class="tax-line"><span>Sous-total HT</span><span id="nq-ht">0,00 $</span></div>
-                <div class="tax-line"><span>TPS (5%)</span><span id="nq-tps">0,00 $</span></div>
-                <div class="tax-line"><span>TVQ (9,975%)</span><span id="nq-tvq">0,00 $</span></div>
-                <div class="tax-line tax-total"><span>TOTAL TTC</span><span id="nq-ttc">0,00 $</span></div>
-            </div>
-        </div>
-        <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-quote')">Annuler</button><button class="btn btn-primary" onclick="createQuote()">Créer le devis</button></div>
-    </div>
-</div>
-
-<!-- Nouvelle facture -->
-<div class="modal-overlay" id="modal-new-invoice">
-    <div class="modal">
-        <div class="modal-head"><span class="modal-title">Nouvelle facture</span><button class="modal-close" onclick="closeModal('modal-new-invoice')">×</button></div>
-        <div class="modal-body">
-            <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="ni-client"><option value="">Sélectionner un client</option></select></div>
-            <div class="form-group"><label class="form-label">Titre *</label><input type="text" class="form-input" id="ni-title" placeholder="Support PLC — Mars 2026"></div>
-            <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="ni-desc" placeholder="Détails des services facturés..."></textarea></div>
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Montant HT (CAD) *</label><input type="number" class="form-input" id="ni-amount" placeholder="1500" step="0.01" oninput="calcTaxes('ni')"></div>
-                <div class="form-group"><label class="form-label">Délai de paiement (jours)</label><input type="number" class="form-input" id="ni-days" value="30" min="1"></div>
-            </div>
-            <div class="tax-preview" id="ni-tax-preview">
-                <div class="tax-line"><span>Sous-total HT</span><span id="ni-ht">0,00 $</span></div>
-                <div class="tax-line"><span>TPS (5%)</span><span id="ni-tps">0,00 $</span></div>
-                <div class="tax-line"><span>TVQ (9,975%)</span><span id="ni-tvq">0,00 $</span></div>
-                <div class="tax-line tax-total"><span>TOTAL TTC</span><span id="ni-ttc">0,00 $</span></div>
-            </div>
-        </div>
-        <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-invoice')">Annuler</button><button class="btn btn-primary" onclick="createInvoice()">Créer la facture</button></div>
-    </div>
-</div>
-
-<!-- Nouveau document -->
-<div class="modal-overlay" id="modal-new-document">
-    <div class="modal">
-        <div class="modal-head"><span class="modal-title">Déposer un document</span><button class="modal-close" onclick="closeModal('modal-new-document')">×</button></div>
-        <div class="modal-body">
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nd-client" onchange="loadClientMandates()"><option value="">Sélectionner</option></select></div>
-                <div class="form-group"><label class="form-label">Mandat associé</label><select class="form-select" id="nd-mandate"><option value="">Aucun</option></select></div>
-            </div>
-            <div class="form-group"><label class="form-label">Titre du document *</label><input type="text" class="form-input" id="nd-title" placeholder="Rapport d'intervention — Mars 2026"></div>
-            <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="nd-desc" rows="2"></textarea></div>
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Type</label>
-                    <select class="form-select" id="nd-type"><option value="pdf">PDF</option><option value="docx">Word (DOCX)</option><option value="zip">ZIP</option><option value="other">Autre</option></select>
+                <!-- DEVIS -->
+                <div class="admin-section" id="section-quotes">
+                    <div class="section-header">
+                        <div><div class="section-title">Devis</div><div class="section-subtitle">TPS et TVQ calculés automatiquement</div></div>
+                        <button class="btn btn-primary" onclick="openModal('modal-new-quote')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                            Nouveau devis
+                        </button>
+                    </div>
+                    <div class="table-wrap">
+                        <div class="toolbar">
+                            <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="quotes-search" placeholder="Rechercher un devis..." oninput="filterTable('quotes')"></div>
+                            <div class="filter-tabs">
+                                <button class="filter-tab active" onclick="setFilter('quotes','all',this)">Tous</button>
+                                <button class="filter-tab" onclick="setFilter('quotes','pending',this)">En attente</button>
+                                <button class="filter-tab" onclick="setFilter('quotes','accepted',this)">Acceptés</button>
+                                <button class="filter-tab" onclick="setFilter('quotes','expired',this)">Expirés</button>
+                            </div>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable('quotes','quote_number')">Numéro ↕</th>
+                                    <th onclick="sortTable('quotes','client_name')">Client ↕</th>
+                                    <th onclick="sortTable('quotes','title')">Titre ↕</th>
+                                    <th onclick="sortTable('quotes','amount_ht')">HT ↕</th>
+                                    <th onclick="sortTable('quotes','amount_ttc')">TTC ↕</th>
+                                    <th onclick="sortTable('quotes','status')">Statut ↕</th>
+                                    <th onclick="sortTable('quotes','expiry_date')">Expiration ↕</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quotes-tbody"></tbody>
+                        </table>
+                        <div class="pagination" id="quotes-pag"><span id="quotes-pag-info"></span><div class="page-btns" id="quotes-pag-btns"></div></div>
+                    </div>
                 </div>
-                <div class="form-group"><label class="form-label">Nom du fichier</label><input type="text" class="form-input" id="nd-filename" placeholder="rapport.pdf"></div>
-            </div>
-            <div class="form-group"><label class="form-label">URL du fichier *</label><input type="url" class="form-input" id="nd-url" placeholder="https://drive.google.com/..."><div class="form-hint">Google Drive, Dropbox, lien direct...</div></div>
-        </div>
-        <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-document')">Annuler</button><button class="btn btn-primary" onclick="createDocument()">Déposer</button></div>
-    </div>
-</div>
 
-<script src="js/admin.js"></script>
+                <!-- FACTURES -->
+                <div class="admin-section" id="section-invoices">
+                    <div class="section-header">
+                        <div><div class="section-title">Factures</div><div class="section-subtitle">Créer des factures et confirmer les paiements</div></div>
+                        <button class="btn btn-primary" onclick="openModal('modal-new-invoice')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                            Nouvelle facture
+                        </button>
+                    </div>
+                    <div class="table-wrap">
+                        <div class="toolbar">
+                            <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="invoices-search" placeholder="Rechercher une facture..." oninput="filterTable('invoices')"></div>
+                            <div class="filter-tabs">
+                                <button class="filter-tab active" onclick="setFilter('invoices','all',this)">Toutes</button>
+                                <button class="filter-tab" onclick="setFilter('invoices','unpaid',this)">Non payées</button>
+                                <button class="filter-tab" onclick="setFilter('invoices','overdue',this)">En retard</button>
+                                <button class="filter-tab" onclick="setFilter('invoices','paid',this)">Payées</button>
+                            </div>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable('invoices','invoice_number')">Numéro ↕</th>
+                                    <th onclick="sortTable('invoices','client_name')">Client ↕</th>
+                                    <th onclick="sortTable('invoices','title')">Titre ↕</th>
+                                    <th onclick="sortTable('invoices','amount_ht')">HT ↕</th>
+                                    <th onclick="sortTable('invoices','amount_ttc')">TTC ↕</th>
+                                    <th onclick="sortTable('invoices','status')">Statut ↕</th>
+                                    <th onclick="sortTable('invoices','due_date')">Échéance ↕</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoices-tbody"></tbody>
+                        </table>
+                        <div class="pagination" id="invoices-pag"><span id="invoices-pag-info"></span><div class="page-btns" id="invoices-pag-btns"></div></div>
+                    </div>
+                </div>
+
+                <!-- DOCUMENTS -->
+                <div class="admin-section" id="section-documents">
+                    <div class="section-header">
+                        <div><div class="section-title">Documents</div><div class="section-subtitle">Déposer des livrables — rapports, fichiers, documentation</div></div>
+                        <button class="btn btn-primary" onclick="openModal('modal-new-document')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                            Déposer un document
+                        </button>
+                    </div>
+                    <div class="table-wrap">
+                        <div class="toolbar">
+                            <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="documents-search" placeholder="Rechercher un document..." oninput="filterTable('documents')"></div>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable('documents','client_name')">Client ↕</th>
+                                    <th onclick="sortTable('documents','title')">Titre ↕</th>
+                                    <th>Type</th>
+                                    <th>Mandat</th>
+                                    <th onclick="sortTable('documents','created_at')">Déposé le ↕</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="documents-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- MESSAGES -->
+                <div class="admin-section" id="section-messages">
+                    <div class="section-header">
+                        <div><div class="section-title">Messagerie</div><div class="section-subtitle">Répondez aux messages de vos clients en tant que VNK</div></div>
+                        <button class="btn btn-primary" onclick="openModal('modal-new-conversation')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                            Nouvelle conversation
+                        </button>
+                    </div>
+                    <div class="toolbar" style="margin-bottom:1rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--white)">
+                        <div class="search-box" style="flex:1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="messages-search" placeholder="Rechercher un client..." oninput="filterMessages()"></div>
+                    </div>
+                    <div id="messages-thread"></div>
+                </div>
+
+                <!-- FINANCE -->
+                <div class="admin-section" id="section-finance">
+                    <div class="section-header"><div><div class="section-title">Finance</div><div class="section-subtitle">Paiements, statistiques et taxes</div></div></div>
+                    <div class="fin-tabs">
+                        <button class="fin-tab active" onclick="showFinTab('payments')">Paiements</button>
+                        <button class="fin-tab" onclick="showFinTab('stats')">Statistiques</button>
+                        <button class="fin-tab" onclick="showFinTab('taxes')">Taxes</button>
+                    </div>
+
+                    <!-- PAIEMENTS -->
+                    <div class="fin-section active" id="fin-payments">
+                        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+                            <div class="stat-card"><div class="stat-icon" style="background:var(--success)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg></div><div><div class="stat-number" id="p-total-paid">—</div><div class="stat-label">Total payé</div></div></div>
+                            <div class="stat-card"><div class="stat-icon" style="background:var(--warning)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg></div><div><div class="stat-number" id="p-total-unpaid">—</div><div class="stat-label">À recevoir</div></div></div>
+                            <div class="stat-card"><div class="stat-icon" style="background:var(--primary)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg></div><div><div class="stat-number" id="p-total-invoiced">—</div><div class="stat-label">Total facturé</div></div></div>
+                        </div>
+                        <div class="table-wrap" style="margin-top:1rem">
+                            <div class="toolbar">
+                                <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="payments-search" placeholder="Rechercher..." oninput="filterTable('payments')"></div>
+                                <div class="filter-tabs">
+                                    <button class="filter-tab active" onclick="setFilter('payments','all',this)">Toutes</button>
+                                    <button class="filter-tab" onclick="setFilter('payments','unpaid',this)">Non payées</button>
+                                    <button class="filter-tab" onclick="setFilter('payments','overdue',this)">En retard</button>
+                                    <button class="filter-tab" onclick="setFilter('payments','paid',this)">Payées</button>
+                                </div>
+                            </div>
+                            <table><thead><tr><th>Facture</th><th>Client</th><th>Montant HT</th><th>TTC</th><th>Statut</th><th>Échéance</th><th>Payée le</th><th>Actions</th></tr></thead><tbody id="payments-tbody"></tbody></table>
+                        </div>
+                    </div>
+
+                    <!-- STATISTIQUES -->
+                    <div class="fin-section" id="fin-stats">
+                        <div class="stats-grid">
+                            <div class="stat-card"><div class="stat-icon" style="background:var(--primary)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg></div><div><div class="stat-number" id="stat-week">—</div><div class="stat-label">Cette semaine</div></div></div>
+                            <div class="stat-card"><div class="stat-icon" style="background:var(--secondary)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg></div><div><div class="stat-number" id="stat-month">—</div><div class="stat-label">Ce mois</div></div></div>
+                            <div class="stat-card"><div class="stat-icon" style="background:var(--success)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg></div><div><div class="stat-number" id="stat-year">—</div><div class="stat-label">Cette année</div></div></div>
+                            <div class="stat-card"><div class="stat-icon" style="background:var(--warning)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg></div><div><div class="stat-number" id="stat-avg">—</div><div class="stat-label">Panier moyen</div></div></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                            <div class="chart-wrap">
+                                <div class="chart-title">Revenus des 6 derniers mois</div>
+                                <div class="bar-chart" id="revenue-chart"></div>
+                            </div>
+                            <div class="chart-wrap">
+                                <div class="chart-title">Top clients (revenus)</div>
+                                <div class="top-clients-list" id="top-clients-list"></div>
+                            </div>
+                        </div>
+                        <div class="chart-wrap" style="margin-top:1rem">
+                            <div class="chart-title">Services les plus vendus</div>
+                            <div id="services-breakdown" style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:0.5rem"></div>
+                        </div>
+                    </div>
+
+                    <!-- TAXES -->
+                    <div class="fin-section" id="fin-taxes">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+                            <div class="tax-box">
+                                <div class="tax-box-title">TPS (5%) — Collectée</div>
+                                <div class="tax-row"><span>Factures payées</span><span id="tps-paid">—</span></div>
+                                <div class="tax-row"><span>Factures en attente</span><span id="tps-pending">—</span></div>
+                                <div class="tax-row tax-row-total"><span>Total TPS accumulée</span><span id="tps-total">—</span></div>
+                            </div>
+                            <div class="tax-box">
+                                <div class="tax-box-title">TVQ (9,975%) — Collectée</div>
+                                <div class="tax-row"><span>Factures payées</span><span id="tvq-paid">—</span></div>
+                                <div class="tax-row"><span>Factures en attente</span><span id="tvq-pending">—</span></div>
+                                <div class="tax-row tax-row-total"><span>Total TVQ accumulée</span><span id="tvq-total">—</span></div>
+                            </div>
+                        </div>
+                        <div class="tax-box" style="background:var(--white)">
+                            <div class="tax-box-title">Récapitulatif fiscal</div>
+                            <div class="tax-row"><span>Total revenus HT (facturé)</span><span id="tax-ht-total">—</span></div>
+                            <div class="tax-row"><span>TPS totale collectée</span><span id="tax-tps-all">—</span></div>
+                            <div class="tax-row"><span>TVQ totale collectée</span><span id="tax-tvq-all">—</span></div>
+                            <div class="tax-row tax-row-total"><span>Total taxes à remettre</span><span id="tax-taxes-total">—</span></div>
+                            <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(224,120,32,0.06);border-radius:8px;font-size:0.78rem;color:var(--warning)">
+                                ⚠️ N° TPS : À compléter · N° TVQ : À compléter — Mettez à jour ces numéros dès réception de Revenu Canada et Revenu Québec.
+                            </div>
+                        </div>
+                        <div class="chart-wrap" style="margin-top:1rem">
+                            <div class="chart-title">Taxes collectées par mois</div>
+                            <div class="bar-chart" id="tax-chart"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div class="modal-overlay" id="modal-new-client">
+        <div class="modal">
+            <div class="modal-head"><span class="modal-title">Nouveau client</span><button class="modal-close" onclick="closeModal('modal-new-client')">×</button></div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Nom complet *</label><input type="text" class="form-input" id="nc-name" placeholder="Jean Tremblay"></div>
+                    <div class="form-group"><label class="form-label">Entreprise</label><input type="text" class="form-input" id="nc-company" placeholder="Industries XYZ Inc."></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Courriel *</label><input type="email" class="form-input" id="nc-email" placeholder="jean@entreprise.com"></div>
+                    <div class="form-group"><label class="form-label">Téléphone</label><input type="tel" class="form-input" id="nc-phone" placeholder="418 000-0000"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mot de passe temporaire *</label>
+                    <div class="input-wrap"><input type="password" class="form-input" id="nc-password" placeholder="Min. 8 caractères"><button type="button" class="show-pw-btn" onclick="togglePw('nc-password',this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg></button></div>
+                    <div class="form-hint">Le client pourra changer son mot de passe dans le portail.</div>
+                </div>
+                <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:0.5rem">
+                    <div style="font-size:0.82rem;font-weight:700;color:var(--primary);margin-bottom:0.75rem">Informations techniques et localisation</div>
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label">Adresse (lieu d'intervention)</label><input type="text" class="form-input" id="nc-address" placeholder="123 rue Industrielle"></div>
+                        <div class="form-group"><label class="form-label">Ville</label><input type="text" class="form-input" id="nc-city" placeholder="Québec"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label">Province</label><select class="form-select" id="nc-province"><option value="QC">Québec</option><option value="ON">Ontario</option><option value="BC">Colombie-Britannique</option><option value="AB">Alberta</option><option value="MB">Manitoba</option><option value="SK">Saskatchewan</option><option value="NS">Nouvelle-Écosse</option><option value="NB">Nouveau-Brunswick</option></select></div>
+                        <div class="form-group"><label class="form-label">Code postal</label><input type="text" class="form-input" id="nc-postal" placeholder="G1R 2C3"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Technologies / automates utilisés</label>
+                        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.4rem" id="nc-tech-checkboxes">
+                            <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.82rem;cursor:pointer;background:var(--bg);padding:0.3rem 0.6rem;border-radius:6px;border:1px solid var(--border)"><input type="checkbox" value="siemens"> Siemens</label>
+                            <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.82rem;cursor:pointer;background:var(--bg);padding:0.3rem 0.6rem;border-radius:6px;border:1px solid var(--border)"><input type="checkbox" value="rockwell"> Rockwell</label>
+                            <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.82rem;cursor:pointer;background:var(--bg);padding:0.3rem 0.6rem;border-radius:6px;border:1px solid var(--border)"><input type="checkbox" value="br"> B&R</label>
+                            <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.82rem;cursor:pointer;background:var(--bg);padding:0.3rem 0.6rem;border-radius:6px;border:1px solid var(--border)"><input type="checkbox" value="schneider"> Schneider</label>
+                            <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.82rem;cursor:pointer;background:var(--bg);padding:0.3rem 0.6rem;border-radius:6px;border:1px solid var(--border)"><input type="checkbox" value="mitsubishi"> Mitsubishi</label>
+                            <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.82rem;cursor:pointer;background:var(--bg);padding:0.3rem 0.6rem;border-radius:6px;border:1px solid var(--border)"><input type="checkbox" value="omron"> Omron</label>
+                        </div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Notes internes (non visibles par le client)</label><textarea class="form-textarea" id="nc-notes" placeholder="Client prioritaire, contacts supplémentaires, particularités..." rows="2"></textarea></div>
+                    <div class="form-group"><label class="form-label">Secteur industriel</label><select class="form-select" id="nc-sector"><option value="">Sélectionner</option><option>Agroalimentaire</option><option>Automobile</option><option>Pharmaceutique</option><option>Chimique</option><option>Pétrochimique</option><option>Papier/Bois</option><option>Métallurgie</option><option>Plastique/Caoutchouc</option><option>Énergie</option><option>Transport</option><option>Municipal</option><option>Autre</option></select></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-client')">Annuler</button><button class="btn btn-primary" onclick="createClient()">Créer le client</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-new-mandate">
+        <div class="modal">
+            <div class="modal-head"><span class="modal-title">Nouveau mandat</span><button class="modal-close" onclick="closeModal('modal-new-mandate')">×</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nm-client"><option value="">Sélectionner un client</option></select></div>
+                <div class="form-group"><label class="form-label">Titre du mandat *</label><input type="text" class="form-input" id="nm-title" placeholder="Support PLC Siemens S7-1500 — Usine ABC"></div>
+                <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="nm-desc"></textarea></div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Type</label><select class="form-select" id="nm-type"><option value="plc-support">Support PLC</option><option value="audit">Audit technique</option><option value="documentation">Documentation</option><option value="refactoring">Refactorisation</option></select></div>
+                    <div class="form-group"><label class="form-label">Statut</label><select class="form-select" id="nm-status"><option value="active">En cours</option><option value="pending">En attente</option><option value="paused">En pause</option></select></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Date de début</label><input type="date" class="form-input" id="nm-start"></div>
+                    <div class="form-group"><label class="form-label">Date de fin estimée</label><input type="date" class="form-input" id="nm-end"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Progression : <strong id="nm-progress-val">0</strong>%</label>
+                    <div class="range-wrap"><input type="range" id="nm-progress" min="0" max="100" value="0" oninput="document.getElementById('nm-progress-val').textContent=this.value;document.getElementById('nm-progress-bar').style.width=this.value+'%'"></div>
+                    <div class="prog-bar-bg"><div class="prog-bar-fill" id="nm-progress-bar" style="width:0%"></div></div>
+                </div>
+                <div class="form-group"><label class="form-label">Note visible par le client</label><textarea class="form-textarea" id="nm-notes" placeholder="Intervention en cours..."></textarea></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-mandate')">Annuler</button><button class="btn btn-primary" onclick="createMandate()">Créer le mandat</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-edit-mandate">
+        <div class="modal">
+            <div class="modal-head"><span class="modal-title">Modifier le mandat</span><button class="modal-close" onclick="closeModal('modal-edit-mandate')">×</button></div>
+            <div class="modal-body">
+                <input type="hidden" id="em-id">
+                <div class="form-group"><label class="form-label">Statut</label><select class="form-select" id="em-status"><option value="active">En cours</option><option value="pending">En attente</option><option value="paused">En pause</option><option value="completed">Complété ✓</option></select></div>
+                <div class="form-group">
+                    <label class="form-label">Progression : <strong id="em-progress-val">0</strong>%</label>
+                    <div class="range-wrap"><input type="range" id="em-progress" min="0" max="100" value="0" oninput="document.getElementById('em-progress-val').textContent=this.value;document.getElementById('em-progress-bar').style.width=this.value+'%'"></div>
+                    <div class="prog-bar-bg" style="margin-top:0.5rem"><div class="prog-bar-fill" id="em-progress-bar" style="width:0%"></div></div>
+                </div>
+                <div class="form-group"><label class="form-label">Note visible par le client</label><textarea class="form-textarea" id="em-notes"></textarea></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-edit-mandate')">Annuler</button><button class="btn btn-primary" onclick="updateMandate()">Mettre à jour</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-new-quote">
+        <div class="modal">
+            <div class="modal-head"><span class="modal-title">Nouveau devis</span><button class="modal-close" onclick="closeModal('modal-new-quote')">×</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nq-client"><option value="">Sélectionner un client</option></select></div>
+                <div class="form-group"><label class="form-label">Titre *</label><input type="text" class="form-input" id="nq-title" placeholder="Audit technique automates Ligne 3"></div>
+                <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="nq-desc"></textarea></div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Montant HT (CAD) *</label><input type="number" class="form-input" id="nq-amount" placeholder="2000" step="0.01" oninput="calcTaxes('nq')"></div>
+                    <div class="form-group"><label class="form-label">Validité (jours)</label><input type="number" class="form-input" id="nq-days" value="30" min="1"></div>
+                </div>
+                <div class="tax-preview" id="nq-tax-preview">
+                    <div class="tax-line"><span>Sous-total HT</span><span id="nq-ht">—</span></div>
+                    <div class="tax-line"><span>TPS (5%)</span><span id="nq-tps">—</span></div>
+                    <div class="tax-line"><span>TVQ (9,975%)</span><span id="nq-tvq">—</span></div>
+                    <div class="tax-line tax-total"><span>TOTAL TTC</span><span id="nq-ttc">—</span></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-quote')">Annuler</button><button class="btn btn-primary" onclick="createQuote()">Créer le devis</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-new-invoice">
+        <div class="modal">
+            <div class="modal-head"><span class="modal-title">Nouvelle facture</span><button class="modal-close" onclick="closeModal('modal-new-invoice')">×</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="ni-client"><option value="">Sélectionner un client</option></select></div>
+                <div class="form-group"><label class="form-label">Titre *</label><input type="text" class="form-input" id="ni-title" placeholder="Support PLC — Mars 2026"></div>
+                <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="ni-desc"></textarea></div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Montant HT (CAD) *</label><input type="number" class="form-input" id="ni-amount" placeholder="1500" step="0.01" oninput="calcTaxes('ni')"></div>
+                    <div class="form-group"><label class="form-label">Délai de paiement (jours)</label><input type="number" class="form-input" id="ni-days" value="30" min="1"></div>
+                </div>
+                <div class="tax-preview" id="ni-tax-preview">
+                    <div class="tax-line"><span>Sous-total HT</span><span id="ni-ht">—</span></div>
+                    <div class="tax-line"><span>TPS (5%)</span><span id="ni-tps">—</span></div>
+                    <div class="tax-line"><span>TVQ (9,975%)</span><span id="ni-tvq">—</span></div>
+                    <div class="tax-line tax-total"><span>TOTAL TTC</span><span id="ni-ttc">—</span></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-invoice')">Annuler</button><button class="btn btn-primary" onclick="createInvoice()">Créer la facture</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-new-document">
+        <div class="modal">
+            <div class="modal-head"><span class="modal-title">Déposer un document</span><button class="modal-close" onclick="closeModal('modal-new-document')">×</button></div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nd-client" onchange="loadClientMandates()"><option value="">Sélectionner</option></select></div>
+                    <div class="form-group"><label class="form-label">Mandat associé</label><select class="form-select" id="nd-mandate"><option value="">Aucun</option></select></div>
+                </div>
+                <div class="form-group"><label class="form-label">Titre du document *</label><input type="text" class="form-input" id="nd-title" placeholder="Rapport d'intervention — Mars 2026"></div>
+                <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="nd-desc" rows="2"></textarea></div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Type</label><select class="form-select" id="nd-type"><option value="pdf">PDF</option><option value="docx">Word (DOCX)</option><option value="zip">ZIP</option><option value="other">Autre</option></select></div>
+                    <div class="form-group"><label class="form-label">Nom du fichier</label><input type="text" class="form-input" id="nd-filename" placeholder="rapport.pdf"></div>
+                </div>
+                <div class="form-group"><label class="form-label">URL du fichier *</label><input type="url" class="form-input" id="nd-url" placeholder="https://drive.google.com/..."><div class="form-hint">Google Drive, Dropbox, OneDrive ou lien direct.</div></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-document')">Annuler</button><button class="btn btn-primary" onclick="createDocument()">Déposer</button></div>
+        </div>
+    </div>
+
+    <!-- Nouvelle conversation -->
+    <div class="modal-overlay" id="modal-new-conversation">
+        <div class="modal" style="max-width:420px">
+            <div class="modal-head"><span class="modal-title">Nouvelle conversation</span><button class="modal-close" onclick="closeModal('modal-new-conversation')">×</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="conv-client"><option value="">Sélectionner un client</option></select></div>
+                <div class="form-group"><label class="form-label">Premier message *</label><textarea class="form-textarea" id="conv-message" placeholder="Bonjour, je vous contacte au sujet de..." rows="4"></textarea></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-conversation')">Annuler</button><button class="btn btn-primary" onclick="startConversation()">Envoyer</button></div>
+        </div>
+    </div>
+
+    <script>
+        /* ============================================
+           VNK Admin — JavaScript Complet
+           Recherche, tri, pagination, fiche client, finance
+           ============================================ */
+
+        let adminToken = null;
+        let allClients = [], allMandates = [], allQuotes = [], allInvoices = [], allDocuments = [], allMessages = [], allPaymentsData = {};
+        let currentCdpClientId = null;
+        let confirmCb = null;
+        const PER_PAGE = 20;
+        const tState = {
+            mandates: { f: 'all', s: 'client_name', d: 1, p: 1 },
+            quotes: { f: 'all', s: 'quote_number', d: 1, p: 1 },
+            invoices: { f: 'all', s: 'invoice_number', d: 1, p: 1 },
+            documents: { f: 'all', s: 'created_at', d: -1, p: 1 },
+            payments: { f: 'all', s: 'invoice_number', d: 1, p: 1 }
+        };
+        let cF = 'all', cS = 'name', cSearch = '', cPage = 1;
+
+        // ---- AUTH ----
+        document.getElementById('admin-login-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const errEl = document.getElementById('admin-login-error');
+            errEl.style.display = 'none';
+            try {
+                const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: v('admin-email'), password: v('admin-password') }) });
+                const d = await r.json();
+                if (d.success && d.token) { adminToken = d.token; localStorage.setItem('vnk-admin-token', d.token); document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; loadAllAdmin(); }
+                else { errEl.textContent = d.message || 'Identifiants incorrects.'; errEl.style.display = 'block'; }
+            } catch { errEl.textContent = 'Erreur de connexion.'; errEl.style.display = 'block'; }
+        });
+
+        function adminLogout() { adminToken = null; localStorage.removeItem('vnk-admin-token'); document.getElementById('admin-login').style.display = 'flex'; document.getElementById('admin-app').style.display = 'none'; }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('vnk-admin-token');
+            if (saved) { adminToken = saved; document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; loadAllAdmin(); }
+            const h = new Date().getHours();
+            document.getElementById('dash-greeting').textContent = (h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir') + ', Yan Verone';
+        });
+
+        function authH() { return { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' }; }
+        async function api(path, method = 'GET', body = null) {
+            const opts = { method, headers: authH() };
+            if (body) opts.body = JSON.stringify(body);
+            const r = await fetch('/api/admin' + path, opts);
+            const d = await r.json();
+            if (!d.success && (d.message === 'Access denied.' || d.message === 'Invalid token.')) adminLogout();
+            return d;
+        }
+
+        // ---- LOAD ALL ----
+        async function loadAllAdmin() {
+            await Promise.all([loadDashboard(), loadClients(), loadMandates(), loadQuotes(), loadInvoices(), loadDocuments(), loadMessages(), loadPayments()]);
+        }
+
+        // ---- DASHBOARD ----
+        async function loadDashboard() {
+            const d = await api('/dashboard'); if (!d.success) return;
+            const s = d.stats;
+            set('d-clients', s.clients); set('d-mandates', s.activeMandates);
+            set('d-unpaid', s.unpaidInvoices); set('d-unpaid-amount', fmt(s.unpaidAmount));
+            set('d-revenue', fmt(s.monthRevenue));
+            const act = document.getElementById('admin-activity');
+            if (!d.activity?.length) { act.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:1.5rem;font-size:0.85rem">Aucune activité récente.</p>'; return; }
+            act.innerHTML = d.activity.map(a => `
+            <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">
+                <div style="width:7px;height:7px;border-radius:50%;background:${a.type === 'invoice' ? 'var(--warning)' : a.type === 'quote' ? 'var(--primary)' : 'var(--success)'};flex-shrink:0"></div>
+                <div style="flex:1"><div style="font-size:0.85rem;font-weight:600">${a.description}</div><div style="font-size:0.73rem;color:var(--text-light)">${a.client_name} · ${fmtDate(a.date)}</div></div>
+                ${a.amount ? `<div style="font-size:0.85rem;font-weight:700;color:var(--primary)">${fmt(a.amount)}</div>` : ''}
+            </div>`).join('');
+        }
+
+        // ---- CLIENTS ----
+        async function loadClients() {
+            const d = await api('/clients'); if (!d.success) return;
+            allClients = d.clients || [];
+            const b = document.getElementById('badge-clients'); b.textContent = allClients.length; b.style.display = allClients.length ? 'inline' : 'none';
+            document.getElementById('clients-count-label').textContent = allClients.length + ' client' + (allClients.length > 1 ? 's' : '');
+            populateClientSelects();
+            renderClients();
+        }
+
+        function populateClientSelects() {
+            ['nm-client', 'nq-client', 'ni-client', 'nd-client', 'conv-client'].forEach(id => {
+                const sel = document.getElementById(id); if (!sel) return;
+                const cur = sel.value;
+                sel.innerHTML = '<option value="">Sélectionner un client</option>' + allClients.map(c => `<option value="${c.id}">${c.full_name}${c.company_name ? ' — ' + c.company_name : ''}</option>`).join('');
+                if (cur) sel.value = cur;
+            });
+        }
+
+        function filterClients() { cSearch = document.getElementById('clients-search').value.toLowerCase(); cPage = 1; renderClients(); }
+        function setClientFilter(f, btn) { cF = f; cPage = 1; document.querySelectorAll('#section-clients .filter-tab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderClients(); }
+        function sortClients(s) { cS = s; renderClients(); }
+
+        function renderClients() {
+            let list = [...allClients];
+            if (cF === 'active') list = list.filter(c => c.is_active);
+            if (cF === 'inactive') list = list.filter(c => !c.is_active);
+            if (cSearch) list = list.filter(c => (c.full_name + ' ' + (c.company_name || '') + ' ' + c.email).toLowerCase().includes(cSearch));
+            if (cS === 'name') list.sort((a, b) => a.full_name.localeCompare(b.full_name));
+            if (cS === 'company') list.sort((a, b) => (a.company_name || '').localeCompare(b.company_name || ''));
+            if (cS === 'recent') list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            if (cS === 'login') list.sort((a, b) => new Date(b.last_login || 0) - new Date(a.last_login || 0));
+            const total = list.length, pages = Math.max(1, Math.ceil(total / PER_PAGE));
+            if (cPage > pages) cPage = 1;
+            const paged = list.slice((cPage - 1) * PER_PAGE, cPage * PER_PAGE);
+            const grid = document.getElementById('clients-grid');
+            const mCounts = {}, iCounts = {};
+            allMandates.forEach(m => { mCounts[m.client_id] = (mCounts[m.client_id] || 0) + 1; });
+            allInvoices.filter(i => i.status === 'unpaid').forEach(i => { iCounts[i.client_id] = (iCounts[i.client_id] || 0) + 1; });
+            if (!paged.length) { grid.innerHTML = '<div class="empty-state"><p>Aucun client trouvé.</p></div>'; return; }
+            grid.innerHTML = paged.map(c => {
+                const techs = c.technologies ? c.technologies.split(',').filter(Boolean) : [];
+                return `<div class="client-card" onclick="openCdp(${c.id})">
+                <div class="client-avatar">${initials(c.full_name)}</div>
+                <div style="flex:1;min-width:0">
+                    <div class="client-name">${c.full_name} <span class="badge ${c.is_active ? 'badge-active' : 'badge-expired'}" style="font-size:0.68rem;margin-left:0.3rem">${c.is_active ? 'Actif' : 'Inactif'}</span></div>
+                    <div class="client-company">${c.company_name || '—'}${c.sector ? ' · ' + c.sector : ''}</div>
+                    <div class="client-meta"><span>${c.email}</span>${c.phone ? '<span>' + c.phone + '</span>' : ''}${c.city ? '<span>' + c.city + (c.province ? ', ' + c.province : '') + '</span>' : ''}<span>Depuis ${fmtDate(c.created_at)}</span></div>
+                    ${techs.length ? `<div class="client-pills">${techs.map(t => `<span class="client-pill">${t.trim()}</span>`).join('')}</div>` : ''}
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;flex-shrink:0">
+                    ${mCounts[c.id] ? `<span style="font-size:0.75rem;color:var(--text-light)">${mCounts[c.id]} mandat${mCounts[c.id] > 1 ? 's' : ''}</span>` : ''}
+                    ${iCounts[c.id] ? `<span style="font-size:0.75rem;font-weight:700;color:var(--error)">${iCounts[c.id]} facture${iCounts[c.id] > 1 ? 's' : ''} impayée${iCounts[c.id] > 1 ? 's' : ''}</span>` : ''}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+            </div>`;
+            }).join('');
+            renderPag('clients', total, cPage, pages, p => { cPage = p; renderClients(); });
+        }
+
+        // ---- CLIENT DETAIL PANEL ----
+        async function openCdp(clientId) {
+            currentCdpClientId = clientId;
+            const c = allClients.find(x => x.id === clientId); if (!c) return;
+            set('cdp-av', initials(c.full_name));
+            set('cdp-title', c.full_name);
+            set('cdp-sub', (c.company_name || c.email) + (c.city ? ` · ${c.city}` : ''));
+            const techs = c.technologies ? c.technologies.split(',').filter(Boolean) : [];
+            document.getElementById('cdp-info').innerHTML = `
+            <div class="info-grid">
+                <div class="info-item"><label>Courriel</label><span>${c.email}</span></div>
+                <div class="info-item"><label>Téléphone</label><span>${c.phone || '—'}</span></div>
+                <div class="info-item"><label>Entreprise</label><span>${c.company_name || '—'}</span></div>
+                <div class="info-item"><label>Secteur</label><span>${c.sector || '—'}</span></div>
+                <div class="info-item"><label>Adresse</label><span>${c.address || '—'}${c.city ? ', ' + c.city : ''}</span></div>
+                <div class="info-item"><label>Province / Code postal</label><span>${c.province || '—'} ${c.postal_code || ''}</span></div>
+                <div class="info-item"><label>Statut</label><span class="badge ${c.is_active ? 'badge-active' : 'badge-expired'}">${c.is_active ? 'Actif' : 'Inactif'}</span></div>
+                <div class="info-item"><label>Dernière connexion</label><span>${c.last_login ? fmtDate(c.last_login) : 'Jamais'}</span></div>
+                <div class="info-item"><label>Client depuis</label><span>${fmtDate(c.created_at)}</span></div>
+            </div>
+            ${techs.length ? `<div style="margin-bottom:1rem"><div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-light);margin-bottom:0.4rem">Technologies utilisées</div><div style="display:flex;flex-wrap:wrap;gap:0.4rem">${techs.map(t => `<span class="client-pill">${t.trim()}</span>`).join('')}</div></div>` : ''}
+            ${c.internal_notes ? `<div style="background:rgba(224,120,32,0.06);border-radius:8px;padding:0.75rem;border-left:3px solid var(--warning)"><div style="font-size:0.72rem;font-weight:700;color:var(--warning);margin-bottom:0.3rem">NOTES INTERNES</div><div style="font-size:0.85rem">${c.internal_notes}</div></div>` : ''}
+            <div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap">
+                <button class="btn btn-primary btn-sm" onclick="prefill('nm-client',${c.id});openModal('modal-new-mandate');closeCdp()">+ Mandat</button>
+                <button class="btn btn-outline btn-sm" onclick="prefill('nq-client',${c.id});openModal('modal-new-quote');closeCdp()">+ Devis</button>
+                <button class="btn btn-outline btn-sm" onclick="prefill('ni-client',${c.id});openModal('modal-new-invoice');closeCdp()">+ Facture</button>
+                <button class="btn btn-ghost btn-sm" onclick="prefill('nd-client',${c.id});openModal('modal-new-document');closeCdp()">+ Document</button>
+                <button class="btn btn-ghost btn-sm" onclick="prefill('conv-client',${c.id});openModal('modal-new-conversation');closeCdp()">+ Message</button>
+            </div>`;
+            // Mandats
+            const cms = allMandates.filter(m => m.client_id === clientId);
+            document.getElementById('cdp-mandats').innerHTML = cms.length ? cms.map(m => `
+            <div class="cdp-item">
+                <div class="cdp-item-head"><div class="cdp-item-title">${m.title}</div><span class="badge badge-${m.status}">${statusLabel(m.status)}</span></div>
+                <div class="cdp-item-meta">${m.service_type || ''} · Début: ${m.start_date ? fmtDate(m.start_date) : '—'}</div>
+                <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem">
+                    <div class="progress-bg" style="flex:1"><div class="progress-fill" style="width:${m.progress || 0}%"></div></div>
+                    <span style="font-size:0.75rem;color:var(--text-light)">${m.progress || 0}%</span>
+                </div>
+                ${m.notes ? `<div style="font-size:0.78rem;color:var(--text-light);margin-top:0.4rem;font-style:italic">${m.notes}</div>` : ''}
+                <div style="margin-top:0.5rem"><button class="btn btn-sm btn-outline" onclick="openEditMandate(${m.id},'${m.status}',${m.progress || 0},\`${(m.notes || '').replace(/`/g, "'")}\`)">Modifier</button></div>
+            </div>`).join('') : '<div class="empty-state"><p>Aucun mandat.</p></div>';
+            // Devis
+            const cqs = allQuotes.filter(q => q.client_id === clientId);
+            document.getElementById('cdp-devis').innerHTML = cqs.length ? cqs.map(q => `
+            <div class="cdp-item">
+                <div class="cdp-item-head"><div class="cdp-item-title">${q.quote_number} — ${q.title}</div><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></div>
+                <div class="cdp-item-meta">${fmt(q.amount_ttc)} TTC · Exp: ${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</div>
+                <div style="margin-top:0.5rem;display:flex;gap:0.4rem">
+                    <a href="/api/quotes/${q.id}/pdf" target="_blank" class="btn btn-sm btn-outline">PDF</a>
+                    ${q.status === 'pending' ? `<button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}
+                </div>
+            </div>`).join('') : '<div class="empty-state"><p>Aucun devis.</p></div>';
+            // Factures
+            const cis = allInvoices.filter(i => i.client_id === clientId);
+            document.getElementById('cdp-factures').innerHTML = cis.length ? cis.map(i => {
+                const ov = i.status === 'unpaid' && new Date(i.due_date) < new Date();
+                return `<div class="cdp-item">
+                <div class="cdp-item-head"><div class="cdp-item-title">${i.invoice_number} — ${i.title}</div><span class="badge badge-${ov ? 'overdue' : i.status}">${ov ? 'En retard' : statusLabel(i.status)}</span></div>
+                <div class="cdp-item-meta">${fmt(i.amount_ttc)} TTC · Échéance: ${i.due_date ? fmtDate(i.due_date) : '—'}</div>
+                <div style="display:flex;gap:0.4rem;margin-top:0.5rem">
+                    <a href="/api/invoices/${i.id}/pdf" target="_blank" class="btn btn-sm btn-outline">PDF</a>
+                    ${i.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${i.id})">Marquer payée</button>` : ''}
+                </div>
+            </div>`;
+            }).join('') : '<div class="empty-state"><p>Aucune facture.</p></div>';
+            // Messages
+            await loadCdpMessages(clientId);
+            showCdpTab('info');
+            document.getElementById('cdp-overlay').classList.add('open');
+            document.getElementById('cdp-panel').classList.add('open');
+        }
+
+        async function loadCdpMessages(clientId) {
+            const d = await api('/messages'); if (!d.success) return;
+            const thread = (d.threads || []).find(t => t.client_id === clientId);
+            const msgs = thread?.messages || [];
+            const list = document.getElementById('cdp-msg-list');
+            list.innerHTML = msgs.length ? msgs.map(m => `
+            <div class="msg-row ${m.sender === 'client' ? 'msg-row-client' : 'msg-row-vnk'}">
+                <div class="msg-sender-label">${m.sender === 'client' ? 'Client' : 'VNK Automatisation'}</div>
+                <div class="msg-bubble ${m.sender === 'client' ? 'msg-bubble-client' : 'msg-bubble-vnk'}">${m.content}</div>
+                <div class="msg-time">${new Date(m.created_at).toLocaleString('fr-CA')}</div>
+            </div>`) : '<p style="color:var(--text-light);font-size:0.85rem;text-align:center;padding:1rem">Aucun message échangé.</p>';
+            setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+        }
+
+        async function sendCdpMsg() {
+            const input = document.getElementById('cdp-msg-input');
+            const content = input.value.trim(); if (!content || !currentCdpClientId) return;
+            const d = await api('/messages/' + currentCdpClientId, 'POST', { content });
+            if (d.success) { input.value = ''; loadCdpMessages(currentCdpClientId); loadMessages(); showToast('Message envoyé'); }
+        }
+
+        function closeCdp() { document.getElementById('cdp-overlay').classList.remove('open'); document.getElementById('cdp-panel').classList.remove('open'); currentCdpClientId = null; }
+        function showCdpTab(name) { document.querySelectorAll('.cdp-tab').forEach((t, i) => { t.classList.toggle('active', ['info', 'mandats', 'devis', 'factures', 'messages'][i] === name); }); document.querySelectorAll('.cdp-section').forEach(s => s.classList.remove('active')); document.getElementById('cdp-' + name).classList.add('active'); }
+
+        // ---- TABLE LOADS ----
+        async function loadMandates() { const d = await api('/mandates'); if (!d.success) return; allMandates = d.mandates || []; renderTable('mandates'); }
+        async function loadQuotes() { const d = await api('/quotes'); if (!d.success) return; allQuotes = d.quotes || []; const p = (d.quotes || []).filter(q => q.status === 'pending').length; const b = document.getElementById('badge-quotes-admin'); b.textContent = p; b.style.display = p ? 'inline' : 'none'; renderTable('quotes'); }
+        async function loadInvoices() { const d = await api('/invoices'); if (!d.success) return; allInvoices = d.invoices || []; const u = (d.invoices || []).filter(i => i.status === 'unpaid').length; const b = document.getElementById('badge-invoices-admin'); b.textContent = u; b.style.display = u ? 'inline' : 'none'; renderTable('invoices'); renderTable('payments'); }
+        async function loadDocuments() { const d = await api('/documents'); if (!d.success) return; allDocuments = d.documents || []; renderTable('documents'); }
+        async function loadPayments() {
+            const d = await api('/payments'); if (!d.success) return;
+            allPaymentsData = d;
+            set('p-total-paid', fmt(d.totalPaid)); set('p-total-unpaid', fmt(d.totalUnpaid)); set('p-total-invoiced', fmt(d.totalInvoiced));
+            renderFinanceStats(d);
+        }
+
+        // ---- RENDER TABLES ----
+        function renderTable(name) {
+            const s = tState[name];
+            let list = name === 'payments' ? [...allInvoices] : name === 'mandates' ? [...allMandates] : name === 'quotes' ? [...allQuotes] : name === 'invoices' ? [...allInvoices] : [...allDocuments];
+            const search = (document.getElementById(name + '-search')?.value || '').toLowerCase();
+            if (s.f !== 'all') {
+                if (s.f === 'overdue') list = list.filter(i => i.status === 'unpaid' && new Date(i.due_date) < new Date());
+                else list = list.filter(i => i.status === s.f);
+            }
+            if (search) list = list.filter(i => Object.values(i).join(' ').toLowerCase().includes(search));
+            list.sort((a, b) => { const va = a[s.s] || '', vb = b[s.s] || ''; return String(va).localeCompare(String(vb), undefined, { numeric: true }) * s.d; });
+            const total = list.length, pages = Math.max(1, Math.ceil(total / PER_PAGE));
+            if (s.p > pages) s.p = 1;
+            const paged = list.slice((s.p - 1) * PER_PAGE, s.p * PER_PAGE);
+            const tbody = document.getElementById(name + '-tbody');
+            const svc = { 'plc-support': 'Support PLC', 'audit': 'Audit', 'documentation': 'Documentation', 'refactoring': 'Refactorisation' };
+            const tl = { pdf: 'PDF', docx: 'Word', zip: 'ZIP', other: 'Fichier' };
+            if (!paged.length) { tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-light);padding:2.5rem">Aucun résultat.</td></tr>`; }
+            else if (name === 'mandates') tbody.innerHTML = paged.map(m => `<tr>
+            <td><strong>${m.client_name}</strong>${m.company_name ? `<br><span style="font-size:0.73rem;color:var(--text-light)">${m.company_name}</span>` : ''}</td>
+            <td>${m.title}${m.notes ? `<br><span style="font-size:0.73rem;color:var(--text-light);font-style:italic">${m.notes}</span>` : ''}</td>
+            <td>${svc[m.service_type] || m.service_type || '—'}</td>
+            <td><span class="badge badge-${m.status}">${statusLabel(m.status)}</span></td>
+            <td><div style="display:flex;align-items:center;gap:0.5rem"><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${m.progress || 0}%;background:linear-gradient(90deg,var(--primary),var(--secondary));border-radius:3px"></div></div><span style="font-size:0.73rem;color:var(--text-light)">${m.progress || 0}%</span></div></td>
+            <td>${m.start_date ? fmtDate(m.start_date) : '—'}</td>
+            <td><div class="td-actions"><button class="btn btn-sm btn-outline" onclick="openEditMandate(${m.id},'${m.status}',${m.progress || 0},\`${(m.notes || '').replace(/`/g, "'")}\`)">Modifier</button></div></td>
+        </tr>`).join('');
+            else if (name === 'quotes') tbody.innerHTML = paged.map(q => `<tr>
+            <td><strong>${q.quote_number}</strong></td><td>${q.client_name}</td><td>${q.title}</td>
+            <td>${fmt(q.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(q.amount_ttc)}</td>
+            <td><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></td>
+            <td>${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</td>
+            <td><div class="td-actions"><a href="/api/quotes/${q.id}/pdf" target="_blank" class="btn btn-sm btn-outline">PDF</a>${q.status === 'pending' ? `<button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
+        </tr>`).join('');
+            else if (name === 'invoices' || name === 'payments') tbody.innerHTML = paged.map(inv => {
+                const ov = inv.status === 'unpaid' && new Date(inv.due_date) < new Date(); return `<tr>
+            <td><strong>${inv.invoice_number}</strong></td><td>${inv.client_name}</td><td>${inv.title || ''}</td>
+            <td>${fmt(inv.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(inv.amount_ttc)}</td>
+            <td><span class="badge badge-${ov ? 'overdue' : inv.status}">${ov ? 'En retard' : statusLabel(inv.status)}</span></td>
+            <td>${inv.due_date ? fmtDate(inv.due_date) : '—'}</td>
+            <td>${inv.paid_at ? fmtDate(inv.paid_at) : '—'}</td>
+            <td><div class="td-actions"><a href="/api/invoices/${inv.id}/pdf" target="_blank" class="btn btn-sm btn-outline">PDF</a>${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">Payée</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</div></td>
+        </tr>`;
+            }).join('');
+            else if (name === 'documents') tbody.innerHTML = paged.map(d => `<tr>
+            <td>${d.client_name}</td><td><strong>${d.title}</strong>${d.description ? `<br><span style="font-size:0.73rem;color:var(--text-light)">${d.description}</span>` : ''}</td>
+            <td><span class="badge badge-active">${tl[d.file_type] || d.file_type}</span></td>
+            <td>${d.mandate_title || '—'}</td><td>${fmtDate(d.created_at)}</td>
+            <td><div class="td-actions">${d.file_url ? `<a href="${d.file_url}" target="_blank" class="btn btn-sm btn-outline">Voir</a>` : ''}<button class="btn btn-sm btn-danger" onclick="deleteDocument(${d.id})">Suppr.</button></div></td>
+        </tr>`).join('');
+            renderPag(name, total, s.p, pages, p => { s.p = p; renderTable(name); });
+        }
+
+        function filterTable(name) { tState[name].p = 1; renderTable(name); }
+        function setFilter(name, f, btn) { tState[name].f = f; tState[name].p = 1; btn.closest('.filter-tabs').querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderTable(name); }
+        function sortTable(name, col) { const s = tState[name]; s.d = s.s === col ? -s.d : 1; s.s = col; s.p = 1; renderTable(name); }
+
+        // ---- PAGINATION ----
+        function renderPag(name, total, page, pages, onPage) {
+            const info = document.getElementById(name + '-pag-info');
+            const btns = document.getElementById(name + '-pag-btns');
+            const pag = document.getElementById(name + '-pag');
+            if (!info || !btns || !pag) return;
+            pag.style.display = total ? 'flex' : 'none';
+            info.textContent = total ? `${Math.min((page - 1) * PER_PAGE + 1, total)}–${Math.min(page * PER_PAGE, total)} sur ${total}` : '';
+            if (pages <= 1) { btns.innerHTML = ''; return; }
+            let h = `<button class="page-btn" onclick="(${onPage})(${page - 1})" ${page <= 1 ? 'disabled' : ''}>←</button>`;
+            for (let p = 1; p <= pages; p++) {
+                if (p === 1 || p === pages || Math.abs(p - page) <= 1) h += `<button class="page-btn ${p === page ? 'active' : ''}" onclick="(${onPage})(${p})">${p}</button>`;
+                else if (Math.abs(p - page) === 2) h += `<span style="padding:0 0.2rem;color:var(--text-light)">…</span>`;
+            }
+            h += `<button class="page-btn" onclick="(${onPage})(${page + 1})" ${page >= pages ? 'disabled' : ''}>→</button>`;
+            btns.innerHTML = h;
+        }
+
+        // ---- MESSAGES ----
+        async function loadMessages() {
+            const d = await api('/messages'); if (!d.success) return;
+            allMessages = d.threads || [];
+            const unread = allMessages.reduce((s, t) => s + (t.unread_count || 0), 0);
+            const b = document.getElementById('badge-messages-admin'); b.textContent = unread; b.style.display = unread ? 'inline' : 'none';
+            filterMessages();
+        }
+        function filterMessages() {
+            const search = document.getElementById('messages-search')?.value.toLowerCase() || '';
+            const fil = allMessages.filter(t => !search || (t.client_name + ' ' + (t.company_name || '')).toLowerCase().includes(search));
+            const thread = document.getElementById('messages-thread');
+            if (!fil.length) { thread.innerHTML = '<div class="empty-state"><p>Aucun message.</p></div>'; return; }
+            thread.innerHTML = fil.map(t => `
+            <div class="msg-client-block">
+                <div class="msg-client-header" onclick="toggleMsg(${t.client_id})">
+                    <div class="msg-client-name">${t.client_name} <span style="font-weight:400;color:var(--text-light);font-size:0.8rem">— ${t.company_name || ''}</span></div>
+                    <div style="display:flex;align-items:center;gap:0.5rem">
+                        ${t.unread_count ? `<span class="msg-unread-badge">${t.unread_count} non lu${t.unread_count > 1 ? 's' : ''}</span>` : ''}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                </div>
+                <div id="msg-${t.client_id}" style="display:none">
+                    <div class="msg-list" id="mlist-${t.client_id}">
+                        ${(t.messages || []).map(m => `<div class="msg-row ${m.sender === 'client' ? 'msg-row-client' : 'msg-row-vnk'}"><div class="msg-sender-label">${m.sender === 'client' ? t.client_name : 'VNK'}</div><div class="msg-bubble ${m.sender === 'client' ? 'msg-bubble-client' : 'msg-bubble-vnk'}">${m.content}</div><div class="msg-time">${new Date(m.created_at).toLocaleString('fr-CA')}</div></div>`).join('')}
+                    </div>
+                    <div class="msg-compose">
+                        <textarea id="reply-${t.client_id}" rows="2" placeholder="Répondre en tant que VNK..."></textarea>
+                        <button class="btn btn-primary btn-sm" onclick="sendMsg(${t.client_id})">Envoyer</button>
+                    </div>
+                </div>
+            </div>`).join('');
+        }
+        function toggleMsg(id) { const el = document.getElementById('msg-' + id); el.style.display = el.style.display === 'none' ? 'block' : 'none'; if (el.style.display === 'block') { const l = document.getElementById('mlist-' + id); if (l) l.scrollTop = l.scrollHeight; } }
+        async function sendMsg(cid) { const input = document.getElementById('reply-' + cid); const content = input.value.trim(); if (!content) return; const d = await api('/messages/' + cid, 'POST', { content }); if (d.success) { input.value = ''; loadMessages(); showToast('Message envoyé'); } }
+        async function startConversation() {
+            const cid = document.getElementById('conv-client').value;
+            const content = document.getElementById('conv-message').value.trim();
+            if (!cid || !content) { alert('Client et message requis.'); return; }
+            const d = await api('/messages/' + cid, 'POST', { content });
+            if (d.success) { closeModal('modal-new-conversation'); document.getElementById('conv-message').value = ''; loadMessages(); showSection('messages'); showToast('Conversation démarrée !'); }
+            else alert(d.message);
+        }
+
+        // ---- FINANCE STATS ----
+        function showFinTab(name) {
+            document.querySelectorAll('.fin-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.fin-section').forEach(s => s.classList.remove('active'));
+            document.querySelector(`.fin-tab:nth-child(${name === 'payments' ? 1 : name === 'stats' ? 2 : 3})`).classList.add('active');
+            document.getElementById('fin-' + name).classList.add('active');
+        }
+
+        function renderFinanceStats(d) {
+            // Stats
+            const paid = allInvoices.filter(i => i.status === 'paid');
+            const now = new Date();
+            const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const yearStart = new Date(now.getFullYear(), 0, 1);
+            const weekTotal = paid.filter(i => new Date(i.paid_at) >= weekStart).reduce((s, i) => s + parseFloat(i.amount_ttc || 0), 0);
+            const monthTotal = paid.filter(i => new Date(i.paid_at) >= monthStart).reduce((s, i) => s + parseFloat(i.amount_ttc || 0), 0);
+            const yearTotal = paid.filter(i => new Date(i.paid_at) >= yearStart).reduce((s, i) => s + parseFloat(i.amount_ttc || 0), 0);
+            const avg = paid.length ? yearTotal / paid.length : 0;
+            set('stat-week', fmt(weekTotal)); set('stat-month', fmt(monthTotal)); set('stat-year', fmt(yearTotal)); set('stat-avg', fmt(avg));
+            // Bar chart — 6 derniers mois
+            const months = [];
+            for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ label: d.toLocaleDateString('fr-CA', { month: 'short' }), year: d.getFullYear(), month: d.getMonth(), total: 0 }); }
+            paid.forEach(inv => { const d = new Date(inv.paid_at); months.forEach(m => { if (d.getFullYear() === m.year && d.getMonth() === m.month) m.total += parseFloat(inv.amount_ttc || 0); }); });
+            const maxVal = Math.max(...months.map(m => m.total), 1);
+            const chart = document.getElementById('revenue-chart');
+            if (chart) chart.innerHTML = months.map(m => `<div class="bar-col"><div class="bar-val">${m.total > 0 ? fmt(m.total).replace('CA', '').trim() : ''}</div><div class="bar" style="height:${Math.max((m.total / maxVal) * 100, 2)}px"></div><div class="bar-label">${m.label}</div></div>`).join('');
+            // Top clients
+            const clientTotals = {};
+            paid.forEach(inv => { clientTotals[inv.client_name] = (clientTotals[inv.client_name] || 0) + parseFloat(inv.amount_ttc || 0); });
+            const topC = Object.entries(clientTotals).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            const topList = document.getElementById('top-clients-list');
+            if (topList) topList.innerHTML = topC.length ? topC.map(([name, total], i) => `<div class="top-client-row"><div class="top-client-rank">${i + 1}</div><div class="top-client-name">${name}</div><div class="top-client-amount">${fmt(total)}</div></div>`).join('') : '<p style="color:var(--text-light);font-size:0.85rem">Aucune donnée.</p>';
+            // Services
+            const svcTotals = {};
+            allInvoices.filter(i => i.status === 'paid').forEach(inv => {
+                const m = allMandates.find(m => m.client_id === inv.client_id);
+                const key = m ? ({ 'plc-support': 'Support PLC', 'audit': 'Audit', 'documentation': 'Documentation', 'refactoring': 'Refactorisation' }[m.service_type] || 'Autre') : 'Autre';
+                svcTotals[key] = (svcTotals[key] || 0) + parseFloat(inv.amount_ttc || 0);
+            });
+            const svcBreak = document.getElementById('services-breakdown');
+            const colors = ['var(--primary)', 'var(--secondary)', 'var(--success)', 'var(--warning)'];
+            if (svcBreak) svcBreak.innerHTML = Object.entries(svcTotals).map(([k, v], i) => `<div style="background:${colors[i % colors.length]};color:white;padding:0.65rem 1rem;border-radius:8px;font-size:0.82rem"><div style="font-weight:700;font-size:0.95rem">${fmt(v)}</div><div style="opacity:0.85">${k}</div></div>`).join('');
+            // Taxes
+            const tpsP = paid.reduce((s, i) => s + parseFloat(i.tps_amount || 0), 0);
+            const tvqP = paid.reduce((s, i) => s + parseFloat(i.tvq_amount || 0), 0);
+            const unpaid = allInvoices.filter(i => i.status === 'unpaid');
+            const tpsPend = unpaid.reduce((s, i) => s + parseFloat(i.tps_amount || 0), 0);
+            const tvqPend = unpaid.reduce((s, i) => s + parseFloat(i.tvq_amount || 0), 0);
+            const htAll = allInvoices.reduce((s, i) => s + parseFloat(i.amount_ht || 0), 0);
+            const tpsAll = allInvoices.reduce((s, i) => s + parseFloat(i.tps_amount || 0), 0);
+            const tvqAll = allInvoices.reduce((s, i) => s + parseFloat(i.tvq_amount || 0), 0);
+            set('tps-paid', fmt(tpsP)); set('tps-pending', fmt(tpsPend)); set('tps-total', fmt(tpsP + tpsPend));
+            set('tvq-paid', fmt(tvqP)); set('tvq-pending', fmt(tvqPend)); set('tvq-total', fmt(tvqP + tvqPend));
+            set('tax-ht-total', fmt(htAll)); set('tax-tps-all', fmt(tpsAll)); set('tax-tvq-all', fmt(tvqAll)); set('tax-taxes-total', fmt(tpsAll + tvqAll));
+            // Tax chart (6 mois)
+            const taxMonths = months.map(m => ({ ...m, tps: 0, tvq: 0 }));
+            allInvoices.forEach(inv => { const d = new Date(inv.created_at); taxMonths.forEach(m => { if (d.getFullYear() === m.year && d.getMonth() === m.month) { m.tps += parseFloat(inv.tps_amount || 0); m.tvq += parseFloat(inv.tvq_amount || 0); } }); });
+            const maxTax = Math.max(...taxMonths.map(m => m.tps + m.tvq), 1);
+            const taxChart = document.getElementById('tax-chart');
+            if (taxChart) taxChart.innerHTML = taxMonths.map(m => `<div class="bar-col"><div class="bar-val" style="font-size:0.65rem">${(m.tps + m.tvq) > 0 ? fmt(m.tps + m.tvq).replace('CA', '').trim() : ''}</div><div class="bar" style="height:${Math.max(((m.tps + m.tvq) / maxTax) * 100, 2)}px;background:linear-gradient(180deg,#8E44AD,var(--primary))"></div><div class="bar-label">${m.label}</div></div>`).join('');
+        }
+
+        // ---- ACTIONS ----
+        async function createClient() {
+            const techs = [...document.querySelectorAll('#nc-tech-checkboxes input:checked')].map(i => i.value).join(',');
+            const d = await api('/clients', 'POST', { full_name: v('nc-name'), email: v('nc-email'), password: v('nc-password'), company_name: v('nc-company'), phone: v('nc-phone'), address: v('nc-address'), city: v('nc-city'), province: v('nc-province'), postal_code: v('nc-postal'), sector: v('nc-sector'), technologies: techs, internal_notes: v('nc-notes') });
+            if (d.success) { closeModal('modal-new-client');['nc-name', 'nc-email', 'nc-password', 'nc-company', 'nc-phone', 'nc-address', 'nc-city', 'nc-postal', 'nc-notes'].forEach(id => document.getElementById(id).value = ''); document.querySelectorAll('#nc-tech-checkboxes input').forEach(cb => cb.checked = false); loadClients(); showToast('Client créé !'); } else alert(d.message);
+        }
+        async function createMandate() { const d = await api('/mandates', 'POST', { client_id: v('nm-client'), title: v('nm-title'), description: v('nm-desc'), service_type: v('nm-type'), status: v('nm-status'), progress: parseInt(v('nm-progress')), start_date: v('nm-start'), end_date: v('nm-end'), notes: v('nm-notes') }); if (d.success) { closeModal('modal-new-mandate'); loadMandates(); loadDashboard(); showToast('Mandat créé !'); } else alert(d.message); }
+        function openEditMandate(id, status, progress, notes) { document.getElementById('em-id').value = id; document.getElementById('em-status').value = status; document.getElementById('em-progress').value = progress; document.getElementById('em-progress-val').textContent = progress; document.getElementById('em-progress-bar').style.width = progress + '%'; document.getElementById('em-notes').value = notes; openModal('modal-edit-mandate'); }
+        async function updateMandate() { const id = document.getElementById('em-id').value; const d = await api('/mandates/' + id, 'PUT', { status: v('em-status'), progress: parseInt(v('em-progress')), notes: v('em-notes') }); if (d.success) { closeModal('modal-edit-mandate'); loadMandates(); loadDashboard(); showToast('Mandat mis à jour !'); } else alert(d.message); }
+        async function createQuote() { const d = await api('/quotes', 'POST', { client_id: v('nq-client'), title: v('nq-title'), description: v('nq-desc'), amount_ht: parseFloat(v('nq-amount')), expiry_days: parseInt(v('nq-days')) }); if (d.success) { closeModal('modal-new-quote'); loadQuotes(); loadDashboard(); showToast('Devis créé !'); } else alert(d.message); }
+        async function createInvoice() { const d = await api('/invoices', 'POST', { client_id: v('ni-client'), title: v('ni-title'), description: v('ni-desc'), amount_ht: parseFloat(v('ni-amount')), due_days: parseInt(v('ni-days')) }); if (d.success) { closeModal('modal-new-invoice'); loadInvoices(); loadDashboard(); loadPayments(); showToast('Facture créée !'); } else alert(d.message); }
+        async function createDocument() { const d = await api('/documents', 'POST', { client_id: v('nd-client'), mandate_id: v('nd-mandate') || null, title: v('nd-title'), description: v('nd-desc'), file_type: v('nd-type'), file_name: v('nd-filename'), file_url: v('nd-url') }); if (d.success) { closeModal('modal-new-document'); loadDocuments(); showToast('Document déposé !'); } else alert(d.message); }
+        async function markPaid(id) { const ok = await confirm2('Confirmer le paiement', 'Marquer cette facture comme payée (paiement manuel) ?'); if (!ok) return; const d = await api('/invoices/' + id + '/mark-paid', 'PUT'); if (d.success) { loadInvoices(); loadPayments(); loadDashboard(); showToast('Facture payée !'); } else alert(d.message); }
+        async function expireQuote(id) { const ok = await confirm2('Marquer expiré', 'Marquer ce devis comme expiré ?'); if (!ok) return; const d = await api('/quotes/' + id + '/expire', 'PUT'); if (d.success) { loadQuotes(); showToast('Devis expiré.'); } else { loadQuotes(); showToast('Devis expiré.'); } }
+        async function deleteDocument(id) { const ok = await confirm2('Supprimer', 'Supprimer ce document définitivement ?'); if (!ok) return; const d = await api('/documents/' + id, 'DELETE'); if (d.success) { loadDocuments(); showToast('Document supprimé.'); } }
+        async function loadClientMandates() { const cid = v('nd-client'); const sel = document.getElementById('nd-mandate'); sel.innerHTML = '<option value="">Aucun</option>'; if (!cid) return; const d = await api('/mandates?client_id=' + cid); if (d.success) d.mandates.forEach(m => { sel.innerHTML += `<option value="${m.id}">${m.title}</option>`; }); }
+
+        // ---- TAX CALC ----
+        function calcTaxes(p) { const ht = parseFloat(document.getElementById(p + '-amount').value) || 0; const tps = ht * 0.05; const tvq = ht * 0.09975; const ttc = ht + tps + tvq; document.getElementById(p + '-tax-preview').style.display = ht ? 'block' : 'none'; set(p + '-ht', fmt(ht)); set(p + '-tps', fmt(tps)); set(p + '-tvq', fmt(tvq)); set(p + '-ttc', fmt(ttc)); }
+
+        // ---- NAV ----
+        function showSection(name) { document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active')); document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active')); document.getElementById('section-' + name).classList.add('active'); document.querySelectorAll('.sidebar-item').forEach(b => { if (b.getAttribute('onclick') === `showSection('${name}')`) b.classList.add('active'); }); }
+
+        // ---- MODALS ----
+        function openModal(id) { document.getElementById(id).classList.add('open'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+        document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+        // ---- CONFIRM ----
+        function confirm2(title, text, okLabel = 'Confirmer') { return new Promise(resolve => { set('confirm-title', title); set('confirm-text', text); document.getElementById('confirm-ok-btn').textContent = okLabel; confirmCb = resolve; document.getElementById('confirm-overlay').classList.add('open'); }); }
+        function confirmResolve(val) { document.getElementById('confirm-overlay').classList.remove('open'); if (confirmCb) { confirmCb(val); confirmCb = null; } }
+
+        // ---- HELPERS ----
+        function v(id) { return document.getElementById(id)?.value || ''; }
+        function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+        function prefill(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+        function fmt(a) { return new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(a || 0); }
+        function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('fr-CA'); }
+        function initials(n) { return (n || '?').split(' ').map(x => x[0]).join('').substring(0, 2).toUpperCase(); }
+        function statusLabel(s) { return { active: 'En cours', pending: 'En attente', completed: 'Complété', paused: 'En pause', paid: 'Payée', unpaid: 'Non payée', accepted: 'Accepté', expired: 'Expiré', declined: 'Refusé', in_progress: 'En cours' }[s] || s; }
+        function togglePw(id, btn) { const inp = document.getElementById(id); inp.type = inp.type === 'password' ? 'text' : 'password'; }
+        function showToast(msg, type = 'info') { const t = document.getElementById('toast'); t.textContent = msg; t.className = `toast toast-${type} show`; setTimeout(() => t.classList.remove('show'), 3200); }
+    </script>
 </body>
 </html>

@@ -569,3 +569,64 @@ function showToast(msg, type = 'info') {
     clearTimeout(t._to);
     t._to = setTimeout(() => t.classList.remove('show'), 3200);
 }
+
+/* ============================================
+   VNK Admin — Code à intégrer dans admin.html
+   Polling automatique messages + badge flottant
+   ============================================ */
+
+// Dans le <script> de admin.html, ajouter ces fonctions:
+
+let adminPollingInterval = null;
+
+function startAdminPolling() {
+    adminPollingInterval = setInterval(async () => {
+        try {
+            const data = await api('/unread-count');
+            if (!data.success) return;
+            const count = data.count;
+            // Mettre à jour badge sidebar
+            const b = document.getElementById('badge-messages-admin');
+            if (b) { b.textContent = count; b.style.display = count ? 'inline' : 'none'; }
+            // Badge flottant
+            updateAdminFloatBadge(count);
+        } catch { }
+    }, 30000); // toutes les 30 secondes
+}
+
+function updateAdminFloatBadge(count) {
+    let badge = document.getElementById('admin-float-badge');
+    if (!badge && count > 0) {
+        badge = document.createElement('div');
+        badge.id = 'admin-float-badge';
+        badge.style.cssText = `
+            position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9000;
+            background: var(--error); color: white; border-radius: 50px;
+            padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 700;
+            display: flex; align-items: center; gap: 0.5rem;
+            box-shadow: 0 4px 16px rgba(231,76,60,0.35); cursor: pointer;
+            animation: pulse 2s infinite;
+        `;
+        badge.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span id="admin-float-count">1</span> nouveau${count > 1 ? 'x' : ''} message${count > 1 ? 's' : ''}
+        `;
+        badge.onclick = () => { showSection('messages'); badge.style.display = 'none'; };
+        // Ajouter animation pulse au style
+        const style = document.createElement('style');
+        style.textContent = '@keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.04);} }';
+        document.head.appendChild(style);
+        document.body.appendChild(badge);
+    }
+    if (badge) {
+        if (count > 0) {
+            const el = document.getElementById('admin-float-count');
+            if (el) el.textContent = count;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+// Appeler startAdminPolling() après loadAllAdmin() dans window.addEventListener('DOMContentLoaded')
