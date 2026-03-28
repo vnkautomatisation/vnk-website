@@ -1663,7 +1663,7 @@
     </div>
 
     <!-- ADMIN APP -->
-    <div class="admin-app" id="admin-app" style="display:flex;flex-direction:column">
+    <div class="admin-app" id="admin-app" style="display:none;flex-direction:column">
         <header class="admin-topbar">
             <div class="topbar-left">
                 <svg width="32" height="32" viewBox="0 0 32 32"><polygon points="16,1 29,8 29,24 16,31 3,24 3,8" fill="rgba(255,255,255,0.1)" /><polygon points="16,1 29,8 29,24 16,31 3,24 3,8" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" /><text x="16" y="20" text-anchor="middle" style="font-size:8px;font-weight:800;fill:white;font-family:sans-serif">VNK</text></svg>
@@ -1672,11 +1672,36 @@
                 <div style="font-size:0.75rem;color:#99BBDD;font-weight:600">Admin</div>
             </div>
             <div class="topbar-right">
-                <span class="topbar-user">Yan Verone Kengne</span>
-                <div class="topbar-avatar">YV</div>
+                <a href="https://vnk-website-production.up.railway.app" target="_blank" class="btn btn-sm" style="background:rgba(255,255,255,0.08);color:#99BBDD;border:1px solid rgba(255,255,255,0.15);text-decoration:none" title="Voir le site public">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+                    <span class="topbar-user">Site public</span>
+                </a>
+                <div style="position:relative">
+                    <div class="topbar-avatar" onclick="toggleAdminProfile()" style="cursor:pointer" title="Mon profil admin">YV</div>
+                    <div id="admin-profile-menu" style="display:none;position:fixed;top:62px;right:1.5rem;background:white;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.18);border:1px solid var(--border);min-width:220px;z-index:9999;padding:0.5rem 0">
+                        <div style="padding:0.85rem 1rem;border-bottom:1px solid var(--border)">
+                            <div style="font-weight:700;font-size:0.9rem;color:var(--text)">Yan Verone Kengne</div>
+                            <div style="font-size:0.75rem;color:var(--text-light);margin-top:2px">yan.verone@vnk.ca</div>
+                            <div style="font-size:0.72rem;color:var(--primary);font-weight:600;margin-top:2px">Administrateur VNK</div>
+                        </div>
+                        <button onclick="toggleAdminProfile();window.open('https://vnk-website-production.up.railway.app/portail','_blank')" style="width:100%;text-align:left;padding:0.6rem 1rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                            Mon portail client
+                        </button>
+                        <button onclick="toggleAdminProfile();window.open('https://vnk-website-production.up.railway.app','_blank')" style="width:100%;text-align:left;padding:0.6rem 1rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+                            Voir le site public
+                        </button>
+                        <div style="height:1px;background:var(--border);margin:0.3rem 0"></div>
+                        <button onclick="adminLogout()" style="width:100%;text-align:left;padding:0.6rem 1rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                            Déconnexion
+                        </button>
+                    </div>
+                </div>
                 <button class="btn btn-sm" onclick="adminLogout()" style="background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2)">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-                    Déconnexion
+                    <span class="topbar-user">Déconnexion</span>
                 </button>
             </div>
         </header>
@@ -2765,7 +2790,7 @@
             <div class="cdp-item">
                 <div class="cdp-item-head"><div class="cdp-item-title">${q.quote_number} — ${q.title}</div><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></div>
                 <div class="cdp-item-meta">${fmt(q.amount_ttc)} TTC · Exp: ${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</div>
-                <div style="margin-top:0.5rem"><a href="/api/quotes/${q.id}/pdf" target="_blank" class="btn btn-sm btn-outline">PDF</a></div>
+                <div style="margin-top:0.5rem"><button onclick="downloadPdf(\'/api/quotes/\' + q.id + \'/pdf\', q.quote_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button></div>
             </div>`).join('') : '<div class="empty-state"><p>Aucun devis.</p></div>';
             const cis = allInvoices.filter(i => i.client_id === clientId);
             document.getElementById('cdp-factures').innerHTML = cis.length ? cis.map(i => {
@@ -2774,7 +2799,7 @@
                 <div class="cdp-item-head"><div class="cdp-item-title">${i.invoice_number} — ${i.title}</div><span class="badge badge-${ov ? 'overdue' : i.status}">${ov ? 'En retard' : statusLabel(i.status)}</span></div>
                 <div class="cdp-item-meta">${fmt(i.amount_ttc)} TTC · Échéance: ${i.due_date ? fmtDate(i.due_date) : '—'}</div>
                 <div style="display:flex;gap:0.4rem;margin-top:0.5rem">
-                    <a href="/api/invoices/${i.id}/pdf" target="_blank" class="btn btn-sm btn-outline">PDF</a>
+                    <button onclick="downloadPdf(\'/api/invoices/\' + inv.id + \'/pdf\', inv.invoice_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button>
                     ${i.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${i.id})">Marquer payée</button>` : ''}
                 </div>
             </div>`;
@@ -2845,7 +2870,7 @@
             <td>${fmt(q.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(q.amount_ttc)}</td>
             <td><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></td>
             <td>${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</td>
-            <td><div class="td-actions"><a href="/api/quotes/${q.id}/pdf" target="_blank" class="btn btn-sm btn-outline">PDF</a>${q.status === 'pending' ? `<button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
+            <td><div class="td-actions"><button onclick="downloadPdf(\'/api/quotes/\' + q.id + \'/pdf\', q.quote_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button>${q.status === 'pending' ? `<button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
         </tr>`).join('');
             else if (name === 'invoices' || name === 'payments') tbody.innerHTML = paged.map(inv => {
                 const ov = inv.status === 'unpaid' && new Date(inv.due_date) < new Date();
@@ -2855,7 +2880,7 @@
                 <td><span class="badge badge-${ov ? 'overdue' : inv.status}">${ov ? 'En retard' : statusLabel(inv.status)}</span></td>
                 <td>${inv.due_date ? fmtDate(inv.due_date) : '—'}</td>
                 <td>${inv.paid_at ? fmtDate(inv.paid_at) : '—'}</td>
-                <td><div class="td-actions"><a href="/api/invoices/${inv.id}/pdf" target="_blank" class="btn btn-sm btn-outline">PDF</a>${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">Payée</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</div></td>
+                <td><div class="td-actions"><button onclick="downloadPdf(\'/api/invoices/\' + inv.id + \'/pdf\', inv.invoice_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button>${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">Payée</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</div></td>
             </tr>`;
             }).join('');
             else if (name === 'documents') tbody.innerHTML = paged.map(d => `<tr>
@@ -3165,12 +3190,25 @@
             <td><span class="badge ${bc[c.status] || 'badge-expired'}">${sl[c.status] || c.status}</span></td>
             <td>${fmtDate(c.created_at)}</td>
             <td style="color:var(--success)">${c.signed_at ? fmtDate(c.signed_at) : '—'}</td>
-            <td><div class="td-actions">
+            <td><div class="td-actions" style="position:relative">
                 ${c.file_url ? `<a href="${c.file_url}" target="_blank" class="btn btn-sm btn-outline">PDF</a>` : ''}
-                ${c.status !== 'signed' ? `<button class="btn btn-sm btn-primary" onclick="sendContractForSignature(${c.id})" title="Envoyer pour signature via HelloSign">✉ Signer</button>` : '<span style="color:var(--success);font-size:0.78rem;font-weight:600">✓ Signé</span>'}
-                <button class="btn btn-sm btn-ghost" onclick="viewContractHistory(${c.id})" title="Historique" style="padding:0.35rem 0.5rem">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                </button>
+                ${c.status !== 'signed' ? `<button class="btn btn-sm btn-primary" onclick="sendContractForSignature(${c.id})" title="Envoyer pour signature">✉ Signer</button>` : '<span style="color:var(--success);font-size:0.78rem;font-weight:600">✓ Signé</span>'}
+                <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleContractMenu(${c.id},this)" style="padding:0.35rem 0.5rem;font-size:1rem" title="Plus d'options">⋯</button>
+                <div id="cmenu-${c.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:180px;z-index:9999;padding:0.35rem 0">
+                    <div style="padding:0.3rem 0.75rem;font-size:0.68rem;font-weight:700;color:var(--text-light);text-transform:uppercase">Contrat ${c.contract_number}</div>
+                    <button onclick="closeContractMenus();openEditContract(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Modifier / Ajouter URL
+                    </button>
+                    ${c.status !== 'signed' ? `<button onclick="closeContractMenus();signContract(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--success)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Marquer comme signé
+                    </button>` : ''}
+                    <button onclick="closeContractMenus();viewContractHistory(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        Historique
+                    </button>
+                </div>
             </div></td>
         </tr>`).join('');
         }
@@ -3964,6 +4002,169 @@
             // Additional sync every 30s
             setInterval(syncMobileBadges, 30000);
         };
+
+
+        // ============================================
+        // PROFILE MENU (avatar YV)
+        // ============================================
+        function toggleAdminProfile() {
+            var menu = document.getElementById('admin-profile-menu');
+            if (!menu) return;
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+        document.addEventListener('click', function (e) {
+            try {
+                var menu = document.getElementById('admin-profile-menu');
+                if (menu && !e.target.closest('.topbar-avatar') && !e.target.closest('#admin-profile-menu')) {
+                    menu.style.display = 'none';
+                }
+            } catch (err) { }
+        });
+
+        // ============================================
+        // PDF DOWNLOAD WITH AUTH TOKEN
+        // ============================================
+        async function downloadPdf(path, filename) {
+            try {
+                const res = await fetch(path, {
+                    headers: { 'Authorization': 'Bearer ' + adminToken }
+                });
+                if (!res.ok) {
+                    const d = await res.json().catch(() => ({}));
+                    showToast('Erreur PDF: ' + (d.message || res.status), 'error');
+                    return;
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename || 'document.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                showToast('Erreur telechargement PDF', 'error');
+            }
+        }
+
+        // ============================================
+        // CONTRACT 3-DOT MENU
+        // ============================================
+        function toggleContractMenu(id, btn) {
+            var menu = document.getElementById('cmenu-' + id);
+            var wasOpen = menu && menu.style.display !== 'none';
+            closeContractMenus();
+            if (wasOpen) return;
+            if (!menu) return;
+            var rect = btn.getBoundingClientRect();
+            menu.style.position = 'fixed';
+            menu.style.top = (rect.bottom + 4) + 'px';
+            menu.style.right = (window.innerWidth - rect.right) + 'px';
+            menu.style.left = 'auto';
+            menu.style.display = 'block';
+        }
+        function closeContractMenus() {
+            document.querySelectorAll('[id^="cmenu-"]').forEach(function (m) { m.style.display = 'none'; });
+        }
+        document.addEventListener('click', function (e) {
+            try {
+                if (!e.target.closest('[id^="cmenu-"]') && !e.target.closest('[onclick*="toggleContractMenu"]')) {
+                    closeContractMenus();
+                }
+            } catch (err) { }
+        });
+
+        // ============================================
+        // EDIT CONTRACT MODAL (modifier + ajouter URL)
+        // ============================================
+        function openEditContract(id) {
+            var c = allContracts.find(function (x) { return x.id === id; });
+            if (!c) return;
+            var existing = document.getElementById('edit-contract-modal');
+            if (existing) existing.remove();
+
+            var overlay = document.createElement('div');
+            overlay.id = 'edit-contract-modal';
+            overlay.className = 'modal-overlay open';
+
+            var modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.maxWidth = '500px';
+
+            var head = document.createElement('div'); head.className = 'modal-head';
+            var ttl = document.createElement('span'); ttl.className = 'modal-title';
+            ttl.textContent = 'Modifier contrat — ' + c.contract_number;
+            var xBtn = document.createElement('button'); xBtn.className = 'modal-close';
+            xBtn.textContent = '×'; xBtn.onclick = function () { overlay.remove(); };
+            head.appendChild(ttl); head.appendChild(xBtn);
+
+            var body = document.createElement('div'); body.className = 'modal-body';
+
+            // Title
+            var g1 = document.createElement('div'); g1.className = 'form-group';
+            var l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Titre du contrat *';
+            var inp1 = document.createElement('input'); inp1.type = 'text'; inp1.className = 'form-input';
+            inp1.id = 'ec-title'; inp1.value = c.title || '';
+            g1.appendChild(l1); g1.appendChild(inp1);
+
+            // File URL
+            var g2 = document.createElement('div'); g2.className = 'form-group';
+            var l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'URL du fichier (Google Drive, PDF...)';
+            var inp2 = document.createElement('input'); inp2.type = 'url'; inp2.className = 'form-input';
+            inp2.id = 'ec-url'; inp2.value = c.file_url || '';
+            inp2.placeholder = 'https://drive.google.com/file/d/...';
+            g2.appendChild(l2); g2.appendChild(inp2);
+
+            // Content
+            var g3 = document.createElement('div'); g3.className = 'form-group';
+            var l3 = document.createElement('label'); l3.className = 'form-label'; l3.textContent = 'Contenu / clauses';
+            var ta = document.createElement('textarea'); ta.className = 'form-textarea';
+            ta.id = 'ec-content'; ta.rows = 4; ta.value = c.content || '';
+            g3.appendChild(l3); g3.appendChild(ta);
+
+            // Status
+            var g4 = document.createElement('div'); g4.className = 'form-group';
+            var l4 = document.createElement('label'); l4.className = 'form-label'; l4.textContent = 'Statut';
+            var sel = document.createElement('select'); sel.className = 'form-select'; sel.id = 'ec-status';
+            [['draft', 'Brouillon'], ['pending', 'En attente signature'], ['signed', 'Signé'], ['cancelled', 'Annulé']].forEach(function (o) {
+                var opt = document.createElement('option'); opt.value = o[0]; opt.textContent = o[1];
+                if (c.status === o[0]) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            g4.appendChild(l4); g4.appendChild(sel);
+
+            body.appendChild(g1); body.appendChild(g2); body.appendChild(g3); body.appendChild(g4);
+
+            var footer = document.createElement('div'); footer.className = 'modal-footer';
+            var cancelB = document.createElement('button'); cancelB.className = 'btn btn-ghost';
+            cancelB.textContent = 'Annuler'; cancelB.onclick = function () { overlay.remove(); };
+            var saveB = document.createElement('button'); saveB.className = 'btn btn-primary';
+            saveB.textContent = 'Enregistrer';
+            saveB.onclick = async function () {
+                var title = (document.getElementById('ec-title') || {}).value || '';
+                var fileUrl = (document.getElementById('ec-url') || {}).value || '';
+                var content2 = (document.getElementById('ec-content') || {}).value || '';
+                var status = (document.getElementById('ec-status') || {}).value || '';
+                if (!title.trim()) { showToast('Titre requis', 'error'); return; }
+                saveB.disabled = true; saveB.textContent = 'Enregistrement...';
+                var d = await api('/contracts/' + id, 'PUT', {
+                    title: title, file_url: fileUrl, content: content2, status: status
+                });
+                if (d.success) {
+                    overlay.remove(); loadContracts();
+                    showToast('Contrat mis a jour !', 'success');
+                } else {
+                    saveB.disabled = false; saveB.textContent = 'Enregistrer';
+                    showToast(d.message || 'Erreur', 'error');
+                }
+            };
+            footer.appendChild(cancelB); footer.appendChild(saveB);
+            modal.appendChild(head); modal.appendChild(body); modal.appendChild(footer);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+        }
 
     </script>
 </body>
