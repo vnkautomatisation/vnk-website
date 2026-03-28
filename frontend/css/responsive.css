@@ -1,35 +1,15 @@
 /* ============================================
-   VNK Automatisation Inc. - Responsive Styles
+   VNK Automatisation Inc. - Responsive CSS
+   Tablette: 768px - 1024px
+   Téléphone: < 768px
    ============================================ */
 
-/* ---------- Tablet — 1024px ---------- */
+/* ============================================
+   TABLETTE — 768px à 1024px
+   ============================================ */
 @media (max-width: 1024px) {
-    .services-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
 
-    .why-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .footer-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: var(--spacing-md);
-    }
-
-    .hero-title {
-        font-size: 2.5rem;
-    }
-}
-
-/* ---------- Mobile — 768px ---------- */
-@media (max-width: 768px) {
-    :root {
-        --spacing-xl: 3rem;
-        --spacing-lg: 2rem;
-    }
-
-    /* Navbar */
+    /* ---------- Navigation ---------- */
     .nav-links {
         display: none;
         position: fixed;
@@ -38,89 +18,657 @@
         right: 0;
         background: var(--color-white);
         flex-direction: column;
-        padding: var(--spacing-md);
+        padding: var(--spacing-sm);
         border-bottom: 1px solid var(--color-border);
         box-shadow: var(--shadow);
-        gap: var(--spacing-sm);
+        z-index: 999;
+        gap: 0.25rem;
     }
 
         .nav-links.open {
             display: flex;
         }
 
+    .nav-link {
+        padding: 0.75rem var(--spacing-sm);
+        border-bottom: none;
+        border-radius: var(--border-radius);
+    }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: var(--color-light-blue);
+            border-bottom: none;
+        }
+
+    .nav-portal {
+        margin-top: 0.25rem;
+    }
+
     .nav-toggle {
         display: block;
     }
 
-    /* Hero */
+    /* ---------- Hero ---------- */
     .hero-title {
-        font-size: 2rem;
+        font-size: 2.4rem;
     }
-
-    .hero-subtitle {
-        font-size: 1rem;
-    }
-
-    .hero-actions {
-        flex-direction: column;
-    }
-
-        .hero-actions .btn {
-            width: 100%;
-            text-align: center;
-        }
 
     .hero-stats {
         gap: var(--spacing-md);
     }
 
-    /* Services */
+    .stat-divider {
+        display: none;
+    }
+
+    /* ---------- Services grid ---------- */
     .services-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* ---------- Stats section ---------- */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stat-block {
+        border-right: none;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+        .stat-block:nth-child(2n) {
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat-block:nth-child(3),
+        .stat-block:nth-child(4) {
+            border-bottom: none;
+        }
+
+    /* ---------- Why VNK ---------- */
+    .why-layout {
         grid-template-columns: 1fr;
     }
 
-    /* Why */
+    .why-image img {
+        height: 300px;
+    }
+
     .why-grid {
         grid-template-columns: 1fr 1fr;
     }
 
-    /* Brands */
-    .brands-grid {
+    /* ---------- Testimonials ---------- */
+    .testimonials-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* ---------- Services page ---------- */
+    .service-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .service-detail-image img {
+        height: 250px;
+    }
+
+    /* ---------- Process steps ---------- */
+    .process-steps {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .process-step-block {
+        min-width: 160px;
+        max-width: 160px;
+    }
+
+    .process-arrow {
+        align-self: center;
+        margin-top: -1.5rem;
+    }
+
+    /* ---------- About page ---------- */
+    .founder-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .founder-visual {
+        position: static;
+    }
+
+    .founder-photo {
+        height: 280px;
+    }
+
+    .expertise-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .commitment-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* ---------- Contact page ---------- */
+    .contact-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* ---------- Page header ---------- */
+    .page-header-content h1 {
+        font-size: 2rem;
+    }
+
+    .page-header-nav {
+        flex-wrap: wrap;
+    }
+
+    /* ---------- Footer ---------- */
+    .footer-grid {
+        grid-template-columns: 1fr 1fr;
         gap: var(--spacing-md);
     }
 
-    /* Footer */
+    /* ---------- Portal LOGIN ---------- */
+    .portal-login-container {
+        grid-template-columns: 1fr;
+        max-width: 480px;
+    }
+
+    .portal-info {
+        display: none;
+    }
+
+    /* ---------- Portal DASHBOARD ---------- */
+    .portal-dashboard {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+    }
+
+    /* Sidebar devient barre horizontale */
+    .portal-sidebar {
+        position: static;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
+        padding: 0.5rem var(--spacing-sm);
+        overflow-x: auto;
+        overflow-y: visible;
+    }
+
+    .portal-sidebar-user {
+        display: none;
+    }
+
+    .portal-nav {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 0.25rem;
+        padding: 0;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .portal-nav-item {
+        flex-shrink: 0;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.78rem;
+        white-space: nowrap;
+        border-radius: var(--border-radius);
+    }
+
+        .portal-nav-item svg {
+            width: 14px;
+            height: 14px;
+        }
+
+    .portal-sidebar-footer {
+        display: none;
+    }
+
+    .portal-main {
+        padding: var(--spacing-sm);
+    }
+
+    .portal-stats-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .portal-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Footer actions mobile dans le portail */
+    .portal-mobile-footer {
+        display: flex;
+        justify-content: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md);
+        border-top: 1px solid var(--color-border);
+        margin-top: var(--spacing-md);
+    }
+
+    .portal-mobile-link {
+        font-size: 0.85rem;
+        color: var(--color-text-light);
+        background: none;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+        .portal-mobile-link:hover {
+            color: var(--color-primary);
+        }
+}
+
+/* ============================================
+   TÉLÉPHONE — moins de 768px
+   ============================================ */
+@media (max-width: 768px) {
+
+    /* ---------- Espacements généraux ---------- */
+    :root {
+        --spacing-xl: 3rem;
+        --spacing-lg: 2rem;
+    }
+
+    .container {
+        padding: 0 var(--spacing-sm);
+    }
+
+    /* ---------- Navigation ---------- */
+    .nav-container {
+        padding: 0 var(--spacing-sm);
+    }
+
+    .logo-text {
+        display: none;
+    }
+
+    /* ---------- Hero ---------- */
+    .hero-container {
+        padding: calc(var(--nav-height) + 2rem) var(--spacing-sm) 2rem;
+    }
+
+    .hero-title {
+        font-size: 1.9rem;
+    }
+
+    .hero-subtitle {
+        font-size: 0.95rem;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .btn-hero {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .hero-stats {
+        gap: var(--spacing-sm);
+        flex-wrap: wrap;
+    }
+
+    .stat-number {
+        font-size: 1.5rem;
+    }
+
+    /* ---------- Section headers ---------- */
+    .section-header h2 {
+        font-size: 1.5rem;
+    }
+
+    /* ---------- Brands ---------- */
+    .brands-grid {
+        gap: 0.5rem;
+        justify-content: center;
+    }
+
+    .brand-badge {
+        min-width: 90px;
+        padding: 0.6rem 0.75rem;
+    }
+
+    .brand-logo-svg {
+        width: 40px;
+        height: 26px;
+    }
+
+    /* ---------- Services preview ---------- */
+    .services-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* ---------- Stats section ---------- */
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .stat-big {
+        font-size: 2.2rem;
+    }
+
+    /* ---------- Why VNK ---------- */
+    .why-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .why-image img {
+        height: 220px;
+    }
+
+    /* ---------- Testimonials ---------- */
+    .testimonials-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* ---------- CTA ---------- */
+    .cta-actions {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+        .cta-actions .btn {
+            width: 100%;
+            max-width: 320px;
+            justify-content: center;
+        }
+
+    /* ---------- Footer ---------- */
     .footer-grid {
         grid-template-columns: 1fr;
         gap: var(--spacing-md);
     }
 
-    /* Section headers */
-    .section-header h2 {
+    .footer-bottom {
+        padding-top: var(--spacing-sm);
+    }
+
+    /* ---------- Page header ---------- */
+    .page-header {
+        padding: calc(var(--nav-height) + 1.5rem) 0 1.5rem;
+        min-height: 200px;
+    }
+
+    .page-header-content h1 {
         font-size: 1.6rem;
     }
 
-    .cta-content h2 {
-        font-size: 1.6rem;
-    }
-}
-
-/* ---------- Small Mobile — 480px ---------- */
-@media (max-width: 480px) {
-    .hero-title {
-        font-size: 1.7rem;
+    .page-header-content p {
+        font-size: 0.9rem;
     }
 
-    .hero-stats {
+    .page-header-nav {
+        gap: 0.4rem;
+    }
+
+    .page-header-link {
+        font-size: 0.78rem;
+        padding: 0.3rem 0.7rem;
+    }
+
+    /* ---------- Services page ---------- */
+    .service-detail {
+        padding: var(--spacing-lg) 0;
+    }
+
+    .service-detail-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+
+    .service-detail-icon-wrap {
+        width: 52px;
+        height: 52px;
+    }
+
+    .pricing-card {
+        position: static;
+    }
+
+    /* ---------- Process steps ---------- */
+    .process-steps {
         flex-direction: column;
-        gap: var(--spacing-sm);
+        align-items: center;
+        gap: 0;
     }
 
-    .why-grid {
+    .process-step-block {
+        min-width: 100%;
+        max-width: 100%;
+        text-align: left;
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm) 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+        .process-step-block:last-child {
+            border-bottom: none;
+        }
+
+    .process-step-number {
+        font-size: 1.5rem;
+        min-width: 40px;
+    }
+
+    .process-step-icon {
+        display: none;
+    }
+
+    .process-arrow {
+        display: none;
+    }
+
+    /* ---------- About page ---------- */
+    .founder-photo {
+        height: 220px;
+    }
+
+    .expertise-grid {
         grid-template-columns: 1fr;
     }
 
-    .container {
-        padding: 0 var(--spacing-sm);
+    .commitment-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .vnk-values {
+        gap: var(--spacing-xs);
+    }
+
+    /* ---------- Contact page ---------- */
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .contact-info-card,
+    .contact-process-card,
+    .contact-calendly-card {
+        padding: var(--spacing-sm);
+    }
+
+    /* ---------- Portal LOGIN ---------- */
+    .portal-login-card {
+        padding: var(--spacing-md);
+    }
+
+        .portal-login-card h2 {
+            font-size: 1.3rem;
+        }
+
+    /* ---------- Portal DASHBOARD ---------- */
+    .portal-tab-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.2rem;
+        margin-bottom: var(--spacing-sm);
+    }
+
+        .portal-tab-header h2 {
+            font-size: 1.2rem;
+        }
+
+    .portal-stats-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+
+    .portal-stat-card {
+        padding: 0.6rem;
+        gap: 0.5rem;
+    }
+
+    .portal-stat-number {
+        font-size: 1.4rem;
+    }
+
+    .portal-stat-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .portal-list-item {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .portal-item-actions {
+        align-items: flex-start;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        width: 100%;
+    }
+
+    .portal-item-amount {
+        font-size: 1rem;
+    }
+
+    .portal-messages-layout {
+        height: calc(100vh - 220px);
+    }
+
+    .portal-dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+
+    .portal-quick-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.4rem;
+    }
+}
+
+/* ============================================
+   PETIT TÉLÉPHONE — moins de 480px
+   ============================================ */
+@media (max-width: 480px) {
+
+    /* ---------- Hero ---------- */
+    .hero-title {
+        font-size: 1.6rem;
+    }
+
+    .hero-badge {
+        font-size: 0.78rem;
+    }
+
+    /* ---------- Brands ---------- */
+    .brands-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .brand-badge {
+        min-width: auto;
+        padding: 0.5rem;
+    }
+
+    .brand-sub {
+        display: none;
+    }
+
+    /* ---------- Stats ---------- */
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .stat-big {
+        font-size: 1.8rem;
+    }
+
+    /* ---------- Footer ---------- */
+    .footer-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* ---------- Commitment ---------- */
+    .commitment-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* ---------- Portal ---------- */
+    .portal-stats-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .portal-stat-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 0.5rem;
+    }
+
+    .portal-stat-icon {
+        width: 32px;
+        height: 32px;
+        margin: 0 auto;
+    }
+
+    .portal-quick-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .portal-nav-item span:not(.portal-nav-badge) {
+        display: none;
+    }
+
+    .portal-nav-item {
+        padding: 0.6rem;
+    }
+
+        .portal-nav-item svg {
+            width: 18px;
+            height: 18px;
+        }
+
+    .portal-item-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+        .portal-item-actions .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+    /* ---------- Page header ---------- */
+    .page-header-nav {
+        display: none;
+    }
+
+    /* ---------- CTA ---------- */
+    .cta-icon svg {
+        width: 28px;
+        height: 28px;
     }
 }
