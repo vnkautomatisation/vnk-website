@@ -69,7 +69,12 @@
                         <label class="form-label">Mot de passe</label>
                         <div class="form-input-wrap">
                             <svg class="form-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                            <input type="password" class="form-input form-input-icon-pad" id="login-password" required placeholder="••••••••">
+                            <div style="position:relative">
+                                <input type="password" class="form-input form-input-icon-pad" id="login-password" required placeholder="••••••••" style="padding-right:2.8rem">
+                                <button type="button" onclick="togglePortalPw()" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;display:flex;align-items:center;padding:0.2rem" title="Afficher/masquer">
+                                    <svg id="eye-portal" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="portal-form-options">
