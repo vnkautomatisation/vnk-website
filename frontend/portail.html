@@ -84,9 +84,9 @@
                     <div class="portal-form-options">
                         <label class="portal-remember">
                             <input type="checkbox" id="remember-me">
-                            <span>Se souvenir de moi</span>
+                            <span data-i18n="portal.login.remember">Se souvenir de moi</span>
                         </label>
-                        <a href="#" class="portal-forgot">Mot de passe oublié ?</a>
+                        <a href="#" class="portal-forgot" data-i18n="portal.login.forgot">Mot de passe oublié ?</a>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width:100%" id="login-btn">Se connecter</button>
                     <div id="login-error" class="alert alert-error" style="display:none; margin-top:1rem"></div>
@@ -158,6 +158,11 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
                     Factures
                     <span class="portal-nav-badge" id="badge-invoices" style="display:none">0</span>
+                </button>
+                <button class="portal-nav-item" onclick="showTab('contracts')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
+                    Contrats
+                    <span class="portal-nav-badge" id="badge-contracts" style="display:none">0</span>
                 </button>
                 <button class="portal-nav-item" onclick="showTab('documents')">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>
@@ -254,6 +259,14 @@
                 <div class="portal-tab-header"><h2>Mes factures</h2><span class="portal-tab-subtitle">Téléchargez et payez vos factures</span></div>
                 <div id="invoices-list" class="portal-list">
                     <div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg><p>Aucune facture disponible.</p></div>
+                </div>
+            </div>
+
+            <!-- TAB: CONTRATS -->
+            <div class="portal-tab" id="tab-contracts">
+                <div class="portal-tab-header"><h2>Mes contrats</h2><span class="portal-tab-subtitle">Consultez et signez vos contrats de service</span></div>
+                <div id="contracts-list" class="portal-list">
+                    <div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg><p>Aucun contrat disponible.</p></div>
                 </div>
             </div>
 
