@@ -1,9 +1,36 @@
 /* ============================================
-   VNK Admin - JavaScript
+   VNK Automatisation Inc. - Admin JavaScript
    ============================================ */
 
 let adminToken = null;
 let allClients = [];
+
+// ---------- Modal de confirmation personnalisé ----------
+function showConfirm(message, onConfirm, onCancel) {
+    const existing = document.getElementById('confirm-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'confirm-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    modal.innerHTML = `
+        <div style="background:white;border-radius:14px;padding:2rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;">
+            <div style="width:52px;height:52px;border-radius:50%;background:rgba(27,79,138,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <p style="font-size:0.95rem;color:#333;font-weight:500;margin-bottom:1.5rem;line-height:1.5">${message}</p>
+            <div style="display:flex;gap:0.75rem;justify-content:center;">
+                <button id="confirm-cancel" style="padding:0.65rem 1.5rem;border-radius:8px;border:1.5px solid #E2E8F0;background:white;color:#666;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Annuler</button>
+                <button id="confirm-ok" style="padding:0.65rem 1.5rem;border-radius:8px;border:none;background:#1B4F8A;color:white;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Confirmer</button>
+            </div>
+        </div>`;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('confirm-ok').onclick = () => { modal.remove(); if (onConfirm) onConfirm(); };
+    document.getElementById('confirm-cancel').onclick = () => { modal.remove(); if (onCancel) onCancel(); };
+    modal.onclick = (e) => { if (e.target === modal) { modal.remove(); if (onCancel) onCancel(); } };
+}
 
 // ---------- Show/hide password ----------
 function togglePw(inputId, btn) {
@@ -26,7 +53,10 @@ document.getElementById('admin-login-form').addEventListener('submit', async (e)
         const res = await fetch('/api/admin/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: document.getElementById('admin-email').value, password: document.getElementById('admin-password').value })
+            body: JSON.stringify({
+                email: document.getElementById('admin-email').value,
+                password: document.getElementById('admin-password').value
+            })
         });
         const data = await res.json();
         if (data.success && data.token) {
@@ -39,8 +69,13 @@ document.getElementById('admin-login-form').addEventListener('submit', async (e)
             errEl.textContent = data.message || 'Identifiants incorrects.';
             errEl.style.display = 'block';
         }
-    } catch { errEl.textContent = 'Erreur de connexion.'; errEl.style.display = 'block'; }
-    finally { btn.disabled = false; btn.textContent = 'Accéder au tableau de bord'; }
+    } catch {
+        errEl.textContent = 'Erreur de connexion.';
+        errEl.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Accéder au tableau de bord`;
+    }
 });
 
 function adminLogout() {
@@ -52,19 +87,28 @@ function adminLogout() {
 
 window.addEventListener('DOMContentLoaded', () => {
     const saved = localStorage.getItem('vnk-admin-token');
-    if (saved) { adminToken = saved; document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; loadAllAdmin(); }
+    if (saved) {
+        adminToken = saved;
+        document.getElementById('admin-login').style.display = 'none';
+        document.getElementById('admin-app').style.display = 'flex';
+        loadAllAdmin();
+    }
     const h = new Date().getHours();
     const g = h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
     document.getElementById('dash-greeting').textContent = `${g}, Yan Verone`;
 
-    // Progress slider sync
     document.getElementById('nm-progress').addEventListener('input', function () {
         document.getElementById('nm-progress-bar').style.width = this.value + '%';
+    });
+
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+        m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
     });
 });
 
 // ---------- API ----------
 function authH() { return { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' }; }
+
 async function api(path, method = 'GET', body = null) {
     const opts = { method, headers: authH() };
     if (body) opts.body = JSON.stringify(body);
@@ -75,7 +119,11 @@ async function api(path, method = 'GET', body = null) {
 }
 
 async function loadAllAdmin() {
-    await Promise.all([loadDashboard(), loadClients(), loadMandates(), loadQuotes(), loadInvoices(), loadDocuments(), loadMessages(), loadPayments()]);
+    await Promise.all([
+        loadDashboard(), loadClients(), loadMandates(),
+        loadQuotes(), loadInvoices(), loadDocuments(),
+        loadMessages(), loadPayments()
+    ]);
 }
 
 // ---------- Dashboard ----------
@@ -88,16 +136,20 @@ async function loadDashboard() {
     document.getElementById('d-unpaid').textContent = s.unpaidInvoices;
     document.getElementById('d-unpaid-amount').textContent = s.unpaidAmount > 0 ? fmt(s.unpaidAmount) : '';
     document.getElementById('d-revenue').textContent = fmt(s.monthRevenue);
+
     const act = document.getElementById('admin-activity');
-    if (!data.activity?.length) { act.innerHTML = '<p style="color:var(--text-light);font-size:0.85rem;padding:0.5rem 0">Aucune activité récente.</p>'; return; }
+    if (!data.activity?.length) {
+        act.innerHTML = '<p style="color:var(--text-light);font-size:0.85rem;padding:0.5rem 0">Aucune activité récente.</p>';
+        return;
+    }
     act.innerHTML = data.activity.map(a => `
-        <div style="display:flex;align-items:center;gap:0.85rem;padding:0.65rem 0;border-bottom:1px solid var(--border)">
-            <div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${a.type === 'invoice' ? 'var(--warning)' : a.type === 'quote' ? 'var(--primary)' : 'var(--success)'}"></div>
+        <div style="display:flex;align-items:center;gap:0.85rem;padding:0.7rem 0;border-bottom:1px solid var(--border)">
+            <div style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:${a.type === 'invoice' ? 'var(--warning)' : a.type === 'quote' ? 'var(--primary)' : 'var(--success)'}"></div>
             <div style="flex:1;min-width:0">
-                <div style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.description}</div>
+                <div style="font-size:0.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.description}</div>
                 <div style="font-size:0.75rem;color:var(--text-light)">${a.client_name} · ${new Date(a.date).toLocaleDateString('fr-CA')}</div>
             </div>
-            ${a.amount ? `<div style="font-size:0.85rem;font-weight:700;color:var(--primary);white-space:nowrap">${fmt(a.amount)}</div>` : ''}
+            ${a.amount ? `<div style="font-size:0.86rem;font-weight:700;color:var(--primary);white-space:nowrap">${fmt(a.amount)}</div>` : ''}
         </div>`).join('');
 }
 
@@ -107,27 +159,34 @@ async function loadClients() {
     if (!data.success) return;
     allClients = data.clients || [];
     const b = document.getElementById('badge-clients');
-    b.textContent = allClients.length; b.style.display = allClients.length ? 'inline' : 'none';
+    b.textContent = allClients.length;
+    b.style.display = allClients.length ? 'inline' : 'none';
+
     const list = document.getElementById('clients-list');
     if (!allClients.length) { list.innerHTML = '<div class="empty-state"><p>Aucun client.</p></div>'; return; }
     list.innerHTML = allClients.map(c => `
         <div class="client-card">
             <div class="client-avatar">${initials(c.full_name)}</div>
             <div style="flex:1">
-                <div class="client-name">${c.full_name} <span class="badge badge-${c.is_active ? 'active' : 'expired'}" style="margin-left:0.5rem">${c.is_active ? 'Actif' : 'Inactif'}</span></div>
+                <div class="client-name">${c.full_name}
+                    <span class="badge badge-${c.is_active ? 'active' : 'expired'}" style="margin-left:0.5rem">${c.is_active ? 'Actif' : 'Inactif'}</span>
+                </div>
                 <div class="client-company">${c.company_name || '—'}</div>
                 <div class="client-meta">
                     <span>${c.email}</span>
                     ${c.phone ? `<span>${c.phone}</span>` : ''}
                     <span>Depuis ${new Date(c.created_at).toLocaleDateString('fr-CA')}</span>
-                    ${c.last_login ? `<span>Dernière connexion : ${new Date(c.last_login).toLocaleDateString('fr-CA')}</span>` : ''}
+                    ${c.last_login ? `<span>Connexion : ${new Date(c.last_login).toLocaleDateString('fr-CA')}</span>` : ''}
                 </div>
             </div>
         </div>`).join('');
+
     ['nm-client', 'nq-client', 'ni-client', 'nd-client'].forEach(id => {
-        const sel = document.getElementById(id); if (!sel) return;
+        const sel = document.getElementById(id);
+        if (!sel) return;
         const cur = sel.value;
-        sel.innerHTML = '<option value="">Sélectionner un client</option>' + allClients.map(c => `<option value="${c.id}">${c.full_name}${c.company_name ? ' — ' + c.company_name : ''}</option>`).join('');
+        sel.innerHTML = '<option value="">Sélectionner un client</option>' +
+            allClients.map(c => `<option value="${c.id}">${c.full_name}${c.company_name ? ' — ' + c.company_name : ''}</option>`).join('');
         if (cur) sel.value = cur;
     });
 }
@@ -137,22 +196,29 @@ async function loadMandates() {
     const data = await api('/mandates');
     if (!data.success) return;
     const tbody = document.getElementById('mandates-tbody');
-    const svc = { 'plc-support': 'Support PLC', 'audit': 'Audit', 'documentation': 'Documentation', 'refactoring': 'Refactorisation' };
-    if (!data.mandates.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:2rem">Aucun mandat.</td></tr>'; return; }
+    const svc = { 'plc-support': 'Support PLC', audit: 'Audit', documentation: 'Documentation', refactoring: 'Refactorisation' };
+    if (!data.mandates.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:2rem">Aucun mandat.</td></tr>';
+        return;
+    }
     tbody.innerHTML = data.mandates.map(m => `
         <tr>
             <td><div style="font-weight:600">${m.client_name}</div><div style="font-size:0.75rem;color:var(--text-light)">${m.company_name || ''}</div></td>
             <td><div style="font-weight:600">${m.title}</div>${m.notes ? `<div style="font-size:0.75rem;color:var(--text-light);margin-top:2px">${m.notes.substring(0, 60)}${m.notes.length > 60 ? '…' : ''}</div>` : ''}</td>
             <td>${svc[m.service_type] || m.service_type || '—'}</td>
             <td><span class="badge badge-${m.status}">${statusLabel(m.status)}</span></td>
-            <td style="min-width:130px">
+            <td style="min-width:140px">
                 <div style="display:flex;align-items:center;gap:0.5rem">
-                    <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${m.progress || 0}%;background:linear-gradient(90deg,var(--primary),var(--secondary));border-radius:3px"></div></div>
-                    <span style="font-size:0.75rem;color:var(--text-light);min-width:28px">${m.progress || 0}%</span>
+                    <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+                        <div style="height:100%;width:${m.progress || 0}%;background:linear-gradient(90deg,var(--primary),var(--secondary));border-radius:3px"></div>
+                    </div>
+                    <span style="font-size:0.75rem;color:var(--text-light);min-width:30px">${m.progress || 0}%</span>
                 </div>
             </td>
             <td style="font-size:0.8rem;color:var(--text-light)">${m.start_date ? new Date(m.start_date).toLocaleDateString('fr-CA') : '—'}</td>
-            <td><div class="td-actions"><button class="btn btn-sm btn-outline" onclick="openEditMandate(${m.id},'${m.status}',${m.progress || 0},\`${(m.notes || '').replace(/`/g, "'")}\`)">Modifier</button></div></td>
+            <td><div class="td-actions">
+                <button class="btn btn-sm btn-outline" onclick="openEditMandate(${m.id},'${m.status}',${m.progress || 0},\`${(m.notes || '').replace(/`/g, "'")}\`)">Modifier</button>
+            </div></td>
         </tr>`).join('');
 }
 
@@ -161,9 +227,13 @@ async function loadQuotes() {
     const data = await api('/quotes');
     if (!data.success) return;
     const pending = (data.quotes || []).filter(q => q.status === 'pending').length;
-    const b = document.getElementById('badge-quotes-admin'); b.textContent = pending; b.style.display = pending ? 'inline' : 'none';
+    const b = document.getElementById('badge-quotes-admin');
+    b.textContent = pending; b.style.display = pending ? 'inline' : 'none';
     const tbody = document.getElementById('quotes-tbody');
-    if (!data.quotes.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun devis.</td></tr>'; return; }
+    if (!data.quotes.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun devis.</td></tr>';
+        return;
+    }
     tbody.innerHTML = data.quotes.map(q => `
         <tr>
             <td><strong>${q.quote_number}</strong></td>
@@ -173,7 +243,9 @@ async function loadQuotes() {
             <td style="font-weight:700;color:var(--primary)">${fmt(q.amount_ttc)}</td>
             <td><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></td>
             <td style="font-size:0.8rem;color:var(--text-light)">${q.expiry_date ? new Date(q.expiry_date).toLocaleDateString('fr-CA') : '—'}</td>
-            <td><div class="td-actions"><a href="/api/quotes/${q.id}/pdf" target="_blank" class="btn btn-sm btn-outline">PDF</a></div></td>
+            <td><div class="td-actions">
+                <a href="/api/quotes/${q.id}/pdf" target="_blank" class="btn btn-sm btn-outline">PDF</a>
+            </div></td>
         </tr>`).join('');
 }
 
@@ -182,9 +254,13 @@ async function loadInvoices() {
     const data = await api('/invoices');
     if (!data.success) return;
     const unpaid = (data.invoices || []).filter(i => i.status === 'unpaid').length;
-    const b = document.getElementById('badge-invoices-admin'); b.textContent = unpaid; b.style.display = unpaid ? 'inline' : 'none';
+    const b = document.getElementById('badge-invoices-admin');
+    b.textContent = unpaid; b.style.display = unpaid ? 'inline' : 'none';
     const tbody = document.getElementById('invoices-tbody');
-    if (!data.invoices.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucune facture.</td></tr>'; return; }
+    if (!data.invoices.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucune facture.</td></tr>';
+        return;
+    }
     tbody.innerHTML = data.invoices.map(inv => {
         const overdue = inv.status === 'unpaid' && new Date(inv.due_date) < new Date();
         return `<tr>
@@ -197,7 +273,7 @@ async function loadInvoices() {
             <td style="font-size:0.8rem;${overdue ? 'color:var(--error);font-weight:600' : ''}">${inv.due_date ? new Date(inv.due_date).toLocaleDateString('fr-CA') : '—'}</td>
             <td><div class="td-actions">
                 <a href="/api/invoices/${inv.id}/pdf" target="_blank" class="btn btn-sm btn-outline">PDF</a>
-                ${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">✓ Payée</button>` : ''}
+                ${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id}, '${inv.invoice_number}', '${fmt(inv.amount_ttc)}')">✓ Payée</button>` : ''}
             </div></td>
         </tr>`;
     }).join('');
@@ -209,7 +285,10 @@ async function loadDocuments() {
     if (!data.success) return;
     const tbody = document.getElementById('documents-tbody');
     const typeL = { pdf: 'PDF', docx: 'Word', zip: 'ZIP', other: 'Document' };
-    if (!data.documents.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-light);padding:2rem">Aucun document.</td></tr>'; return; }
+    if (!data.documents.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-light);padding:2rem">Aucun document.</td></tr>';
+        return;
+    }
     tbody.innerHTML = data.documents.map(d => `
         <tr>
             <td>${d.client_name}</td>
@@ -219,7 +298,7 @@ async function loadDocuments() {
             <td style="font-size:0.8rem;color:var(--text-light)">${new Date(d.created_at).toLocaleDateString('fr-CA')}</td>
             <td><div class="td-actions">
                 ${d.file_url ? `<a href="${d.file_url}" target="_blank" class="btn btn-sm btn-outline">Voir</a>` : ''}
-                <button class="btn btn-sm btn-danger" onclick="deleteDocument(${d.id})">Supprimer</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteDocument(${d.id}, '${d.title.replace(/'/g, "\\'")}')">Supprimer</button>
             </div></td>
         </tr>`).join('');
 }
@@ -229,14 +308,17 @@ async function loadMessages() {
     const data = await api('/messages');
     if (!data.success) return;
     const unread = (data.threads || []).reduce((s, t) => s + (t.unread_count || 0), 0);
-    const b = document.getElementById('badge-messages-admin'); b.textContent = unread; b.style.display = unread ? 'inline' : 'none';
+    const b = document.getElementById('badge-messages-admin');
+    b.textContent = unread; b.style.display = unread ? 'inline' : 'none';
     const thread = document.getElementById('messages-thread');
-    if (!data.threads?.length) { thread.innerHTML = '<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p>Aucun message.</p></div>'; return; }
+    if (!data.threads?.length) {
+        thread.innerHTML = '<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p>Aucun message.</p></div>';
+        return;
+    }
     thread.innerHTML = data.threads.map(t => `
         <div class="msg-client-block">
             <div class="msg-client-header" onclick="toggleMessages(${t.client_id})">
-                <div class="msg-client-name">
-                    ${t.client_name}
+                <div class="msg-client-name">${t.client_name}
                     <span style="font-weight:400;color:var(--text-light);font-size:0.8rem"> — ${t.company_name || ''}</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:0.6rem">
@@ -264,12 +346,16 @@ async function loadMessages() {
 function toggleMessages(id) {
     const el = document.getElementById('msg-' + id);
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
-    if (el.style.display === 'block') { const l = document.getElementById('msg-list-' + id); if (l) l.scrollTop = l.scrollHeight; }
+    if (el.style.display === 'block') {
+        const l = document.getElementById('msg-list-' + id);
+        if (l) l.scrollTop = l.scrollHeight;
+    }
 }
 
 async function sendAdminMessage(clientId) {
     const input = document.getElementById('reply-' + clientId);
-    const content = input.value.trim(); if (!content) return;
+    const content = input.value.trim();
+    if (!content) return;
     const data = await api('/messages/' + clientId, 'POST', { content });
     if (data.success) { input.value = ''; loadMessages(); showToast('Message envoyé', 'success'); }
     else showToast(data.message, 'error');
@@ -283,7 +369,10 @@ async function loadPayments() {
     document.getElementById('p-total-unpaid').textContent = fmt(data.totalUnpaid || 0);
     document.getElementById('p-total-invoiced').textContent = fmt(data.totalInvoiced || 0);
     const tbody = document.getElementById('payments-tbody');
-    if (!data.invoices?.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucune facture.</td></tr>'; return; }
+    if (!data.invoices?.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucune facture.</td></tr>';
+        return;
+    }
     tbody.innerHTML = data.invoices.map(inv => {
         const overdue = inv.status === 'unpaid' && new Date(inv.due_date) < new Date();
         return `<tr>
@@ -293,25 +382,49 @@ async function loadPayments() {
             <td style="font-weight:700;color:var(--primary)">${fmt(inv.amount_ttc)}</td>
             <td><span class="badge badge-${overdue ? 'overdue' : inv.status}">${overdue ? 'En retard' : statusLabel(inv.status)}</span></td>
             <td style="font-size:0.8rem">${inv.due_date ? new Date(inv.due_date).toLocaleDateString('fr-CA') : '—'}</td>
-            <td style="font-size:0.8rem;color:var(--success)">${inv.paid_at ? new Date(inv.paid_at).toLocaleDateString('fr-CA') : '—'}</td>
-            <td>${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">✓ Confirmer</button>` : `<span style="color:var(--success);font-size:0.8rem;font-weight:600">✓ Payée</span>`}</td>
+            <td style="font-size:0.8rem;color:var(--success);font-weight:600">${inv.paid_at ? new Date(inv.paid_at).toLocaleDateString('fr-CA') : '—'}</td>
+            <td>${inv.status === 'unpaid'
+                ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id}, '${inv.invoice_number}', '${fmt(inv.amount_ttc)}')">✓ Confirmer</button>`
+                : `<span style="color:var(--success);font-size:0.8rem;font-weight:600">✓ Payée</span>`
+            }</td>
         </tr>`;
     }).join('');
 }
 
-// ---------- Create / Update ----------
+// ---------- Actions ----------
 async function createClient() {
     const name = document.getElementById('nc-name').value.trim();
     const email = document.getElementById('nc-email').value.trim();
     const password = document.getElementById('nc-password').value;
     if (!name || !email || !password) { showToast('Remplissez les champs obligatoires', 'error'); return; }
-    const data = await api('/clients', 'POST', { full_name: name, email, password, company_name: document.getElementById('nc-company').value, phone: document.getElementById('nc-phone').value });
-    if (data.success) { closeModal('modal-new-client'); loadClients(); showToast('Client créé avec succès !', 'success');['nc-name', 'nc-company', 'nc-email', 'nc-phone', 'nc-password'].forEach(id => document.getElementById(id).value = ''); }
-    else showToast(data.message, 'error');
+    const data = await api('/clients', 'POST', {
+        full_name: name, email,
+        password, company_name: document.getElementById('nc-company').value,
+        phone: document.getElementById('nc-phone').value
+    });
+    if (data.success) {
+        closeModal('modal-new-client');
+        ['nc-name', 'nc-company', 'nc-email', 'nc-phone', 'nc-password'].forEach(id => document.getElementById(id).value = '');
+        loadClients();
+        showToast('Client créé avec succès !', 'success');
+    } else showToast(data.message, 'error');
 }
 
 async function createMandate() {
-    const data = await api('/mandates', 'POST', { client_id: document.getElementById('nm-client').value, title: document.getElementById('nm-title').value, description: document.getElementById('nm-desc').value, service_type: document.getElementById('nm-type').value, status: document.getElementById('nm-status').value, progress: parseInt(document.getElementById('nm-progress').value), start_date: document.getElementById('nm-start').value || null, end_date: document.getElementById('nm-end').value || null, notes: document.getElementById('nm-notes').value });
+    if (!document.getElementById('nm-client').value || !document.getElementById('nm-title').value) {
+        showToast('Client et titre requis', 'error'); return;
+    }
+    const data = await api('/mandates', 'POST', {
+        client_id: document.getElementById('nm-client').value,
+        title: document.getElementById('nm-title').value,
+        description: document.getElementById('nm-desc').value,
+        service_type: document.getElementById('nm-type').value,
+        status: document.getElementById('nm-status').value,
+        progress: parseInt(document.getElementById('nm-progress').value),
+        start_date: document.getElementById('nm-start').value || null,
+        end_date: document.getElementById('nm-end').value || null,
+        notes: document.getElementById('nm-notes').value
+    });
     if (data.success) { closeModal('modal-new-mandate'); loadMandates(); loadDashboard(); showToast('Mandat créé !', 'success'); }
     else showToast(data.message, 'error');
 }
@@ -327,23 +440,43 @@ function openEditMandate(id, status, progress, notes) {
 }
 
 async function updateMandate() {
-    const data = await api('/mandates/' + document.getElementById('em-id').value, 'PUT', { status: document.getElementById('em-status').value, progress: parseInt(document.getElementById('em-progress').value), notes: document.getElementById('em-notes').value });
+    const data = await api('/mandates/' + document.getElementById('em-id').value, 'PUT', {
+        status: document.getElementById('em-status').value,
+        progress: parseInt(document.getElementById('em-progress').value),
+        notes: document.getElementById('em-notes').value
+    });
     if (data.success) { closeModal('modal-edit-mandate'); loadMandates(); loadDashboard(); showToast('Mandat mis à jour !', 'success'); }
     else showToast(data.message, 'error');
 }
 
 async function createQuote() {
     const ht = parseFloat(document.getElementById('nq-amount').value);
-    if (!document.getElementById('nq-client').value || !document.getElementById('nq-title').value || !ht) { showToast('Remplissez les champs obligatoires', 'error'); return; }
-    const data = await api('/quotes', 'POST', { client_id: document.getElementById('nq-client').value, title: document.getElementById('nq-title').value, description: document.getElementById('nq-desc').value, amount_ht: ht, expiry_days: parseInt(document.getElementById('nq-days').value) });
+    if (!document.getElementById('nq-client').value || !document.getElementById('nq-title').value || !ht) {
+        showToast('Remplissez les champs obligatoires', 'error'); return;
+    }
+    const data = await api('/quotes', 'POST', {
+        client_id: document.getElementById('nq-client').value,
+        title: document.getElementById('nq-title').value,
+        description: document.getElementById('nq-desc').value,
+        amount_ht: ht,
+        expiry_days: parseInt(document.getElementById('nq-days').value)
+    });
     if (data.success) { closeModal('modal-new-quote'); loadQuotes(); loadDashboard(); showToast('Devis créé !', 'success'); }
     else showToast(data.message, 'error');
 }
 
 async function createInvoice() {
     const ht = parseFloat(document.getElementById('ni-amount').value);
-    if (!document.getElementById('ni-client').value || !document.getElementById('ni-title').value || !ht) { showToast('Remplissez les champs obligatoires', 'error'); return; }
-    const data = await api('/invoices', 'POST', { client_id: document.getElementById('ni-client').value, title: document.getElementById('ni-title').value, description: document.getElementById('ni-desc').value, amount_ht: ht, due_days: parseInt(document.getElementById('ni-days').value) });
+    if (!document.getElementById('ni-client').value || !document.getElementById('ni-title').value || !ht) {
+        showToast('Remplissez les champs obligatoires', 'error'); return;
+    }
+    const data = await api('/invoices', 'POST', {
+        client_id: document.getElementById('ni-client').value,
+        title: document.getElementById('ni-title').value,
+        description: document.getElementById('ni-desc').value,
+        amount_ht: ht,
+        due_days: parseInt(document.getElementById('ni-days').value)
+    });
     if (data.success) { closeModal('modal-new-invoice'); loadInvoices(); loadPayments(); loadDashboard(); showToast('Facture créée !', 'success'); }
     else showToast(data.message, 'error');
 }
@@ -362,22 +495,40 @@ async function createDocument() {
     const title = document.getElementById('nd-title').value.trim();
     const url = document.getElementById('nd-url').value.trim();
     if (!clientId || !title || !url) { showToast('Client, titre et URL requis', 'error'); return; }
-    const data = await api('/documents', 'POST', { client_id: clientId, mandate_id: document.getElementById('nd-mandate').value || null, title, description: document.getElementById('nd-desc').value, file_type: document.getElementById('nd-type').value, file_name: document.getElementById('nd-filename').value || title, file_url: url });
+    const data = await api('/documents', 'POST', {
+        client_id: clientId,
+        mandate_id: document.getElementById('nd-mandate').value || null,
+        title, description: document.getElementById('nd-desc').value,
+        file_type: document.getElementById('nd-type').value,
+        file_name: document.getElementById('nd-filename').value || title,
+        file_url: url
+    });
     if (data.success) { closeModal('modal-new-document'); loadDocuments(); showToast('Document déposé !', 'success'); }
     else showToast(data.message, 'error');
 }
 
-async function markPaid(id) {
-    if (!confirm('Confirmer le paiement manuel de cette facture ?')) return;
-    const data = await api('/invoices/' + id + '/mark-paid', 'PUT');
-    if (data.success) { loadInvoices(); loadPayments(); loadDashboard(); showToast('Facture marquée comme payée !', 'success'); }
-    else showToast(data.message, 'error');
+function markPaid(invoiceId, invoiceNumber, amount) {
+    showConfirm(
+        `Confirmer le paiement de la facture <strong>${invoiceNumber}</strong> pour un montant de <strong>${amount}</strong> ?`,
+        async () => {
+            const data = await api('/invoices/' + invoiceId + '/mark-paid', 'PUT');
+            if (data.success) {
+                loadInvoices(); loadPayments(); loadDashboard();
+                showToast('Facture marquée comme payée !', 'success');
+            } else showToast(data.message, 'error');
+        }
+    );
 }
 
-async function deleteDocument(id) {
-    if (!confirm('Supprimer ce document définitivement ?')) return;
-    const data = await api('/documents/' + id, 'DELETE');
-    if (data.success) { loadDocuments(); showToast('Document supprimé.', 'info'); }
+function deleteDocument(id, title) {
+    showConfirm(
+        `Supprimer définitivement le document <strong>${title}</strong> ?`,
+        async () => {
+            const data = await api('/documents/' + id, 'DELETE');
+            if (data.success) { loadDocuments(); showToast('Document supprimé.', 'info'); }
+            else showToast(data.message, 'error');
+        }
+    );
 }
 
 // ---------- Tax calculator ----------
@@ -404,15 +555,16 @@ function showSection(name) {
 // ---------- Modals ----------
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
 
 // ---------- Helpers ----------
 function fmt(v) { return new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(v || 0); }
 function initials(n) { return (n || '?').split(' ').map(x => x[0]).join('').substring(0, 2).toUpperCase(); }
-function statusLabel(s) { return { active: 'En cours', pending: 'En attente', completed: 'Complété', paused: 'En pause', paid: 'Payée', unpaid: 'Non payée', accepted: 'Accepté', expired: 'Expiré', declined: 'Refusé', overdue: 'En retard' }[s] || s; }
+function statusLabel(s) {
+    return { active: 'En cours', pending: 'En attente', completed: 'Complété', paused: 'En pause', paid: 'Payée', unpaid: 'Non payée', accepted: 'Accepté', expired: 'Expiré', declined: 'Refusé', overdue: 'En retard' }[s] || s;
+}
 function showToast(msg, type = 'info') {
     const t = document.getElementById('toast');
-    t.textContent = msg;
+    t.innerHTML = msg;
     t.className = `toast show toast-${type}`;
     clearTimeout(t._to);
     t._to = setTimeout(() => t.classList.remove('show'), 3200);
