@@ -1,5 +1,6 @@
 /* ============================================
    VNK Automatisation Inc. - Admin Routes
+   Version complète avec nouveaux champs clients
    ============================================ */
 
 const express = require('express');
@@ -33,7 +34,6 @@ router.post('/login', async (req, res) => {
         const { email, password } = req.body;
         if (!email || !password) return res.status(400).json({ success: false, message: 'Courriel et mot de passe requis.' });
 
-        // Admin credentials from env
         const adminEmail = process.env.ADMIN_EMAIL || 'admin@vnk.ca';
         const adminPassword = process.env.ADMIN_PASSWORD || 'VNKAdmin2026!';
 
@@ -41,10 +41,6 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Identifiants incorrects.' });
         }
 
-        const valid = await bcrypt.compare(password, await bcrypt.hash(adminPassword, 1))
-            .catch(() => password === adminPassword);
-
-        // Simple compare for now — replace with hashed version in prod
         if (password !== adminPassword) {
             return res.status(401).json({ success: false, message: 'Identifiants incorrects.' });
         }
@@ -67,13 +63,14 @@ router.post('/login', async (req, res) => {
 // ============================================
 router.get('/dashboard', authenticateAdmin, async (req, res) => {
     try {
-        const [clients, mandates, invoicesUnpaid, monthRevenue, activity] = await Promise.all([
+        const [clients, mandates, invoicesUnpaid, monthRevenue, pendingQuotes, activity] = await Promise.all([
             pool.query("SELECT COUNT(*) FROM clients WHERE is_active = true"),
             pool.query("SELECT COUNT(*) FROM mandates WHERE status IN ('active','in_progress')"),
             pool.query("SELECT COUNT(*), COALESCE(SUM(amount_ttc),0) as total FROM invoices WHERE status = 'unpaid'"),
             pool.query(`SELECT COALESCE(SUM(amount_ttc),0) as total FROM invoices 
                         WHERE status = 'paid' AND EXTRACT(MONTH FROM paid_at) = EXTRACT(MONTH FROM NOW())
                         AND EXTRACT(YEAR FROM paid_at) = EXTRACT(YEAR FROM NOW())`),
+            pool.query("SELECT COUNT(*) FROM quotes WHERE status = 'pending'"),
             pool.query(`
                 SELECT 'invoice' as type,
                     CONCAT('Facture ', i.invoice_number, ' — ', i.title) as description,
@@ -102,7 +99,8 @@ router.get('/dashboard', authenticateAdmin, async (req, res) => {
                 activeMandates: parseInt(mandates.rows[0].count),
                 unpaidInvoices: parseInt(invoicesUnpaid.rows[0].count),
                 unpaidAmount: parseFloat(invoicesUnpaid.rows[0].total),
-                monthRevenue: parseFloat(monthRevenue.rows[0].total)
+                monthRevenue: parseFloat(monthRevenue.rows[0].total),
+                pendingQuotes: parseInt(pendingQuotes.rows[0].count)
             },
             activity: activity.rows
         });
@@ -118,7 +116,10 @@ router.get('/dashboard', authenticateAdmin, async (req, res) => {
 router.get('/clients', authenticateAdmin, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT id, full_name, email, company_name, phone, is_active, last_login, created_at
+            `SELECT id, full_name, email, company_name, phone,
+                    address, city, province, postal_code,
+                    sector, technologies, internal_notes,
+                    is_active, last_login, created_at
              FROM clients ORDER BY created_at DESC`
         );
         res.json({ success: true, clients: result.rows });
@@ -129,16 +130,41 @@ router.get('/clients', authenticateAdmin, async (req, res) => {
 
 router.post('/clients', authenticateAdmin, async (req, res) => {
     try {
-        const { full_name, email, password, company_name, phone } = req.body;
-        if (!full_name || !email || !password) return res.status(400).json({ success: false, message: 'Champs requis manquants.' });
+        const {
+            full_name, email, password, company_name, phone,
+            address, city, province, postal_code,
+            sector, technologies, internal_notes
+        } = req.body;
+
+        if (!full_name || !email || !password) {
+            return res.status(400).json({ success: false, message: 'Champs requis manquants.' });
+        }
+
         const existing = await pool.query('SELECT id FROM clients WHERE email = $1', [email.toLowerCase().trim()]);
-        if (existing.rows.length) return res.status(409).json({ success: false, message: 'Ce courriel existe déjà.' });
+        if (existing.rows.length) {
+            return res.status(409).json({ success: false, message: 'Ce courriel existe déjà.' });
+        }
+
         const hash = await bcrypt.hash(password, 12);
+
         const result = await pool.query(
-            `INSERT INTO clients (full_name, email, password_hash, company_name, phone, is_active, created_at)
-             VALUES ($1, $2, $3, $4, $5, true, NOW()) RETURNING id, full_name, email, company_name`,
-            [full_name, email.toLowerCase().trim(), hash, company_name || null, phone || null]
+            `INSERT INTO clients (
+                full_name, email, password_hash, company_name, phone,
+                address, city, province, postal_code,
+                sector, technologies, internal_notes,
+                is_active, created_at
+             )
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,true,NOW())
+             RETURNING id, full_name, email, company_name`,
+            [
+                full_name, email.toLowerCase().trim(), hash,
+                company_name || null, phone || null,
+                address || null, city || null, province || 'QC',
+                postal_code || null, sector || null,
+                technologies || null, internal_notes || null
+            ]
         );
+
         res.status(201).json({ success: true, client: result.rows[0] });
     } catch (err) {
         console.error('Admin create client error:', err);
@@ -173,8 +199,8 @@ router.post('/mandates', authenticateAdmin, async (req, res) => {
         const result = await pool.query(
             `INSERT INTO mandates (client_id, title, description, service_type, status, progress, start_date, end_date, notes, created_at, updated_at)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),NOW()) RETURNING *`,
-            [client_id, title, description || null, service_type || 'plc-support', status || 'active', progress || 0,
-                start_date || null, end_date || null, notes || null]
+            [client_id, title, description || null, service_type || 'plc-support', status || 'active',
+                progress || 0, start_date || null, end_date || null, notes || null]
         );
         res.status(201).json({ success: true, mandate: result.rows[0] });
     } catch (err) {
@@ -237,6 +263,21 @@ router.post('/quotes', authenticateAdmin, async (req, res) => {
     }
 });
 
+// PUT /api/admin/quotes/:id/expire
+router.put('/quotes/:id/expire', authenticateAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `UPDATE quotes SET status='expired', updated_at=NOW()
+             WHERE id=$1 AND status='pending' RETURNING *`,
+            [req.params.id]
+        );
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Devis non trouvé ou déjà traité.' });
+        res.json({ success: true, quote: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
 // ============================================
 // INVOICES
 // ============================================
@@ -284,7 +325,6 @@ router.put('/invoices/:id/mark-paid', authenticateAdmin, async (req, res) => {
             [req.params.id]
         );
         if (!result.rows.length) return res.status(404).json({ success: false, message: 'Facture non trouvée.' });
-        // Enregistrer le paiement
         await pool.query(
             `INSERT INTO payments (invoice_id, amount, status, paid_at) VALUES ($1,$2,'completed',NOW())`,
             [req.params.id, result.rows[0].amount_ttc]
@@ -343,14 +383,17 @@ router.delete('/documents/:id', authenticateAdmin, async (req, res) => {
 // ============================================
 router.get('/messages', authenticateAdmin, async (req, res) => {
     try {
-        const clients = await pool.query(
+        // Récupérer TOUS les clients (pas seulement ceux qui ont des messages)
+        // pour permettre de démarrer une conversation
+        const allClients = await pool.query(
             `SELECT DISTINCT c.id, c.full_name, c.company_name
              FROM clients c
-             JOIN messages m ON m.client_id = c.id
+             LEFT JOIN messages m ON m.client_id = c.id
+             WHERE EXISTS (SELECT 1 FROM messages WHERE client_id = c.id)
              ORDER BY c.full_name`
         );
 
-        const threads = await Promise.all(clients.rows.map(async (c) => {
+        const threads = await Promise.all(allClients.rows.map(async (c) => {
             const msgs = await pool.query(
                 `SELECT * FROM messages WHERE client_id=$1 ORDER BY created_at ASC`,
                 [c.id]
@@ -383,7 +426,6 @@ router.post('/messages/:clientId', authenticateAdmin, async (req, res) => {
              VALUES ($1, 'vnk', $2, false, NOW()) RETURNING *`,
             [req.params.clientId, content.trim()]
         );
-        // Marquer les messages client comme lus
         await pool.query(
             `UPDATE messages SET is_read=true WHERE client_id=$1 AND sender='client' AND is_read=false`,
             [req.params.clientId]
