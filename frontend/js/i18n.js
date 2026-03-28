@@ -17,6 +17,7 @@ const translations = {
         'hero.title2': 'SCADA & HMI',
         'hero.title3': "pour l'industrie",
         'hero.subtitle': "Support technique à distance, audits, documentation et modernisation de systèmes automatisés pour les entreprises industrielles au Québec.",
+        'hero.slogan': 'Value. Network. Knowledge.',
         'hero.cta.primary': 'Réserver une consultation',
         'hero.cta.secondary': 'Voir les services →',
         'hero.stats.services': 'Services spécialisés',
@@ -31,6 +32,8 @@ const translations = {
         // Services
         'services.tag': 'Nos services',
         'services.title': 'Nos services',
+        'services.page_title': 'Solutions techniques pour votre industrie',
+        'services.page_subtitle': 'Chaque intervention est documentée, contractualisée et facturée de manière transparente.',
         'services.subtitle': 'Solutions techniques adaptées à vos besoins industriels',
         'services.includes': 'Ce qui est inclus',
         'services.brands': 'Automates supportés',
@@ -279,6 +282,7 @@ const translations = {
         'hero.title2': 'HMI Solutions',
         'hero.title3': 'for Industry',
         'hero.subtitle': 'Remote technical support, audits, documentation and modernization of automated systems for industrial companies in Quebec.',
+        'hero.slogan': 'Value. Network. Knowledge.',
         'hero.cta.primary': 'Book a Consultation',
         'hero.cta.secondary': 'View Services →',
         'hero.stats.services': 'Specialized Services',
@@ -293,6 +297,8 @@ const translations = {
         // Services
         'services.tag': 'Our services',
         'services.title': 'Our Services',
+        'services.page_title': 'Technical solutions for your industry',
+        'services.page_subtitle': 'Every intervention is documented, contracted and invoiced transparently.',
         'services.subtitle': 'Technical solutions tailored to your industrial needs',
         'services.includes': 'What is included',
         'services.brands': 'Supported PLCs',
