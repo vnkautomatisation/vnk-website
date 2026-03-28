@@ -182,9 +182,16 @@
 
     /* ---------- Portal DASHBOARD ---------- */
     .portal-dashboard {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
+        display: flex;
+        flex-direction: column;
+        min-height: calc(100vh - var(--nav-height));
     }
+    .portal-main {
+        flex: 1;
+        padding: var(--spacing-sm);
+        overflow-y: auto;
+    }
+
 
     /* Sidebar devient barre horizontale */
     .portal-sidebar {

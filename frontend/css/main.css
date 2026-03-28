@@ -2869,7 +2869,9 @@ img {
     grid-template-columns: 240px 1fr;
     min-height: calc(100vh - var(--nav-height));
     margin-top: var(--nav-height);
+    overflow: hidden;
 }
+
 
 /* ---------- Sidebar ---------- */
 .portal-sidebar {
