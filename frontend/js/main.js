@@ -44,14 +44,15 @@ document.addEventListener('click', (e) => {
 
 // ---------- Language toggle ----------
 function toggleLanguage() {
-    const currentLang = document.documentElement.lang;
+    const currentLang = localStorage.getItem('vnk-lang') || 'fr';
     const newLang = currentLang === 'fr' ? 'en' : 'fr';
-    document.documentElement.lang = newLang;
-    document.getElementById('lang-toggle').textContent = newLang === 'fr' ? 'EN' : 'FR';
+    const langToggle = document.getElementById('lang-toggle');
+    if (langToggle) {
+        langToggle.textContent = newLang === 'fr' ? 'EN' : 'FR';
+    }
     if (window.i18n) {
         window.i18n.setLanguage(newLang);
     }
-    localStorage.setItem('vnk-lang', newLang);
 }
 
 // ---------- Smooth scroll for anchor links ----------
@@ -77,13 +78,12 @@ document.querySelectorAll('.nav-link').forEach(link => {
 });
 
 // ---------- Load saved language on page load ----------
+// Note: i18n.js gère l'application des traductions via DOMContentLoaded
+// Ce bloc met uniquement à jour le bouton de langue
 document.addEventListener('DOMContentLoaded', () => {
     const savedLang = localStorage.getItem('vnk-lang') || 'fr';
-    if (savedLang !== 'fr') {
-        document.documentElement.lang = savedLang;
-        document.getElementById('lang-toggle').textContent = 'FR';
-        if (window.i18n) {
-            window.i18n.setLanguage(savedLang);
-        }
+    const langToggle = document.getElementById('lang-toggle');
+    if (langToggle) {
+        langToggle.textContent = savedLang === 'fr' ? 'EN' : 'FR';
     }
 });
