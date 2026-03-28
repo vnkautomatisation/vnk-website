@@ -18,24 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('vnk-token');
     if (token) showDashboard();
 
-    // Pré-remplir courriel sauvegardé
-    const savedEmail = localStorage.getItem('vnk-portal-email');
-    if (savedEmail) {
-        const emailEl = document.getElementById('login-email');
-        if (emailEl) { emailEl.value = savedEmail; const rem = document.getElementById('remember-me'); if (rem) rem.checked = true; }
-    }
-
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const loginBtn = document.getElementById('login-btn');
         const loginError = document.getElementById('login-error');
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
-        const remember = document.getElementById('remember-me')?.checked;
-
-        // Sauvegarder ou effacer le courriel
-        if (remember) { localStorage.setItem('vnk-portal-email', email); }
-        else { localStorage.removeItem('vnk-portal-email'); }
 
         loginBtn.disabled = true;
         loginBtn.textContent = 'Connexion...';
@@ -106,47 +94,54 @@ async function loadAllData() {
     if (!token) return;
 
     try {
-        const dashRes = await fetch('/api/clients/dashboard', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (dashRes.ok) {
-            const data = await dashRes.json();
-            document.getElementById('stat-mandates').textContent = data.activeMandates || 0;
-            document.getElementById('stat-quotes').textContent = data.pendingQuotes || 0;
-            document.getElementById('stat-invoices').textContent = data.pendingInvoices || 0;
-            if (data.pendingQuotes > 0) showBadge('badge-quotes', data.pendingQuotes);
-            if (data.pendingInvoices > 0) showBadge('badge-invoices', data.pendingInvoices);
-            if (data.activeMandates > 0) showBadge('badge-mandates', data.activeMandates);
-            renderActivity(data.recentActivity || []);
+        // Helper fetch avec gestion 401
+        const authFetch = async (url) => {
+            const r = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (r.status === 401 || r.status === 403) { logout(); return null; }
+            if (!r.ok) return null;
+            return r.json();
+        };
+
+        const [dash, quotes, invoices, messages, docs, mandates, contracts] = await Promise.all([
+            authFetch('/api/clients/dashboard'),
+            authFetch('/api/quotes'),
+            authFetch('/api/invoices'),
+            authFetch('/api/messages'),
+            authFetch('/api/documents'),
+            authFetch('/api/mandates'),
+            authFetch('/api/contracts'),
+        ]);
+
+        if (dash) {
+            document.getElementById('stat-mandates').textContent = dash.activeMandates || 0;
+            document.getElementById('stat-quotes').textContent = dash.pendingQuotes || 0;
+            document.getElementById('stat-invoices').textContent = dash.pendingInvoices || 0;
+            if (dash.pendingQuotes > 0) showBadge('badge-quotes', dash.pendingQuotes);
+            if (dash.pendingInvoices > 0) showBadge('badge-invoices', dash.pendingInvoices);
+            if (dash.activeMandates > 0) showBadge('badge-mandates', dash.activeMandates);
+            renderActivity(dash.recentActivity || []);
         }
-        // Charger le badge contrats
-        const contractsRes = await fetch('/api/contracts', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (contractsRes.ok) {
-            const cd = await contractsRes.json();
-            const pending = (cd.contracts || []).filter(c => c.status === 'pending_signature').length;
-            if (pending > 0) showBadge('badge-contracts', pending);
+
+        if (quotes) { window._allQuotes = quotes.quotes || []; renderQuotes(window._allQuotes); }
+        if (invoices) { window._allInvoices = invoices.invoices || []; renderInvoices(window._allInvoices); }
+        if (docs) renderDocuments(docs.documents || []);
+        if (mandates) renderMandates(mandates.mandates || []);
+        if (contracts) {
+            window._allContracts = contracts.contracts || [];
+            renderPortalContracts(window._allContracts);
+            const pendingC = window._allContracts.filter(c => c.status === 'pending_signature').length;
+            if (pendingC > 0) showBadge('badge-contracts', pendingC);
         }
-
-        const quotesRes = await fetch('/api/quotes', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (quotesRes.ok) { const data = await quotesRes.json(); renderQuotes(data.quotes || []); }
-
-        const invoicesRes = await fetch('/api/invoices', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (invoicesRes.ok) { const data = await invoicesRes.json(); renderInvoices(data.invoices || []); }
-
-        const messagesRes = await fetch('/api/messages', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (messagesRes.ok) {
-            const data = await messagesRes.json();
-            renderMessages(data.messages || []);
-            const unread = (data.messages || []).filter(m => !m.is_read && m.sender === 'vnk').length;
+        if (messages) {
+            renderMessages(messages.messages || []);
+            const unread = (messages.messages || []).filter(m => !m.is_read && m.sender === 'vnk').length;
             document.getElementById('stat-messages').textContent = unread;
             if (unread > 0) showBadge('badge-messages', unread);
         }
 
-        const docsRes = await fetch('/api/documents', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (docsRes.ok) { const data = await docsRes.json(); renderDocuments(data.documents || []); }
-
-        const mandatesRes = await fetch('/api/mandates', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (mandatesRes.ok) { const data = await mandatesRes.json(); renderMandates(data.mandates || []); }
+        // Charger profil
+        const user = JSON.parse(localStorage.getItem('vnk-user') || '{}');
+        renderProfile(user);
 
     } catch (error) {
         console.log('Data loading error:', error);
@@ -157,31 +152,121 @@ async function loadAllData() {
 function showTab(tabName) {
     document.querySelectorAll('.portal-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.portal-nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById(`tab-${tabName}`).classList.add('active');
+    const tab = document.getElementById(`tab-${tabName}`);
+    if (tab) tab.classList.add('active');
     document.querySelectorAll('.portal-nav-item').forEach(btn => {
         if (btn.getAttribute('onclick') === `showTab('${tabName}')`) btn.classList.add('active');
     });
-
-    // Fermer sidebar mobile
     const sidebar = document.querySelector('.portal-sidebar');
     const overlay = document.getElementById('portal-overlay');
     if (sidebar) sidebar.classList.remove('open');
     if (overlay) overlay.classList.remove('open');
-
-    // Titre mobile
     const titles = {
-        dashboard: 'Tableau de bord', mandates: 'Mes mandats',
+        profile: 'Mon profil', dashboard: 'Tableau de bord', mandates: 'Mes mandats',
         quotes: 'Mes devis', invoices: 'Mes factures',
-        contracts: 'Mes contrats',
-        documents: 'Mes documents', messages: 'Messagerie'
+        contracts: 'Mes contrats', documents: 'Mes documents', messages: 'Messagerie'
     };
     const mobileTitle = document.getElementById('mobile-tab-title');
     if (mobileTitle) mobileTitle.textContent = titles[tabName] || '';
-
-    // Charger les données si nécessaire
-    if (tabName === 'contracts') loadPortalContracts();
-
+    if (tabName === 'contracts' && !window._allContracts) loadPortalContracts();
     window.scrollTo(0, 0);
+}
+
+// ─── Profil client ────────────────────────────
+function renderProfile(user) {
+    const el = document.getElementById('profile-content');
+    if (!el) return;
+    el.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+            <div style="background:#F8FAFC;border-radius:10px;padding:1.25rem;border:1px solid #E2E8F0">
+                <h4 style="font-size:0.82rem;font-weight:700;color:#1B4F8A;letter-spacing:.05em;margin-bottom:1rem">INFORMATIONS PERSONNELLES</h4>
+                ${pRow('Nom complet', user.name || '—')}
+                ${pRow('Courriel', user.email || '—')}
+                ${pRow('Entreprise', user.company || '—')}
+            </div>
+            <div style="background:#F8FAFC;border-radius:10px;padding:1.25rem;border:1px solid #E2E8F0">
+                <h4 style="font-size:0.82rem;font-weight:700;color:#1B4F8A;letter-spacing:.05em;margin-bottom:1rem">COMPTE VNK</h4>
+                ${pRow('Portail', 'Actif')}
+                ${pRow('Membre depuis', user.created_at ? new Date(user.created_at).toLocaleDateString('fr-CA') : '2026')}
+                ${pRow('Langue', 'Français')}
+            </div>
+        </div>
+        <div style="margin-top:1rem;background:#EBF5FB;border-radius:10px;padding:1rem 1.25rem;border-left:3px solid #1B4F8A;font-size:0.82rem;color:#1B4F8A">
+            Pour modifier vos informations ou changer votre mot de passe, contactez VNK Automatisation Inc. à <strong>yan.verone@vnk.ca</strong>
+        </div>`;
+}
+function pRow(label, value) {
+    return `<div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:0.5px solid #E2E8F0;font-size:0.83rem">
+        <span style="color:#64748B">${label}</span><span style="font-weight:600;color:#1E293B">${value}</span></div>`;
+}
+
+// ─── Tri + recherche devis ────────────────────
+function filterQuotes() {
+    const search = (document.getElementById('quote-search')?.value || '').toLowerCase();
+    const status = document.getElementById('quote-filter')?.value || 'all';
+    let list = window._allQuotes || [];
+    if (status !== 'all') list = list.filter(q => q.status === status);
+    if (search) list = list.filter(q => (q.quote_number + ' ' + q.title).toLowerCase().includes(search));
+    renderQuotes(list);
+}
+
+// ─── Tri + recherche factures ─────────────────
+function filterInvoices() {
+    const search = (document.getElementById('invoice-search')?.value || '').toLowerCase();
+    const status = document.getElementById('invoice-filter')?.value || 'all';
+    let list = window._allInvoices || [];
+    if (status !== 'all') list = list.filter(i => i.status === status);
+    if (search) list = list.filter(i => (i.invoice_number + ' ' + i.title).toLowerCase().includes(search));
+    renderInvoices(list);
+}
+
+// ─── Contrats portail client ──────────────────
+async function loadPortalContracts() {
+    const token = localStorage.getItem('vnk-token');
+    try {
+        const res = await fetch('/api/contracts', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!res.ok) return;
+        const data = await res.json();
+        window._allContracts = data.contracts || [];
+        renderPortalContracts(window._allContracts);
+    } catch (e) { console.error('loadPortalContracts:', e); }
+}
+
+function renderPortalContracts(contracts) {
+    const list = document.getElementById('contracts-list');
+    if (!list) return;
+    if (!contracts.length) {
+        list.innerHTML = `<div class="portal-empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <p>Aucun contrat disponible.</p></div>`; return;
+    }
+    const sl = { draft: 'Brouillon', pending_signature: 'En attente de signature', viewed: 'Consulté', signed: 'Signé' };
+    const sc = { draft: '#94A3B8', pending_signature: '#D97706', viewed: '#2E86AB', signed: '#27AE60' };
+    list.innerHTML = contracts.map(c => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border:1px solid #E2E8F0;border-radius:10px;margin-bottom:0.75rem;background:white">
+            <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem">
+                    <strong style="font-size:0.9rem">${c.contract_number}</strong>
+                    <span style="background:${sc[c.status] || '#94A3B8'}22;color:${sc[c.status] || '#94A3B8'};font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">${sl[c.status] || c.status}</span>
+                </div>
+                <div style="font-size:0.85rem;color:#1E293B;margin-bottom:0.2rem">${c.title}</div>
+                <div style="font-size:0.75rem;color:#94A3B8">
+                    ${c.quote_number ? `Devis ${c.quote_number} · ` : ''}${new Date(c.created_at).toLocaleDateString('fr-CA')}
+                    ${c.signed_at ? ` · Signé le ${new Date(c.signed_at).toLocaleDateString('fr-CA')}` : ''}
+                </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.4rem;margin-left:1rem">
+                <a href="/api/contracts/${c.id}/pdf" target="_blank"
+                   style="display:flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;border:1.5px solid #1B4F8A;border-radius:6px;color:#1B4F8A;font-size:0.78rem;font-weight:600;text-decoration:none;white-space:nowrap">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Voir
+                </a>
+                ${c.status === 'signed' ? `<a href="/api/contracts/${c.id}/pdf" download style="display:flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;border:1.5px solid #27AE60;border-radius:6px;color:#27AE60;font-size:0.78rem;font-weight:600;text-decoration:none">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Télécharger
+                </a>` : ''}
+            </div>
+        </div>`).join('');
 }
 
 // ---------- Badge helper ----------
@@ -498,65 +583,14 @@ function logout() {
 
 function togglePortalPw() {
     const input = document.getElementById('login-password');
-    const btn = document.querySelector('button[onclick="togglePortalPw()"]');
+    const eye = document.getElementById('eye-portal');
     if (!input) return;
     const isHidden = input.type === 'password';
     input.type = isHidden ? 'text' : 'password';
-    if (btn) {
-        btn.innerHTML = isHidden
-            ? `<svg id="eye-portal" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
-            : `<svg id="eye-portal" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
-    }
-}
-
-// ─── Contrats portail client ───────────────────
-async function loadPortalContracts() {
-    const token = localStorage.getItem('vnk-token');
-    const list = document.getElementById('contracts-list');
-    if (!list) return;
-    try {
-        const res = await fetch('/api/contracts', { headers: { 'Authorization': `Bearer ${token}` } });
-        const data = await res.json();
-        if (!data.success || !data.contracts.length) {
-            list.innerHTML = `<div class="portal-empty-state">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                <p>Aucun contrat disponible.</p></div>`;
-            return;
-        }
-        const statusLabel = { draft: 'Brouillon', pending_signature: 'En attente de signature', viewed: 'Consulté', signed: 'Signé' };
-        const statusColor = { draft: '#94A3B8', pending_signature: '#D97706', viewed: '#2E86AB', signed: '#27AE60' };
-        list.innerHTML = data.contracts.map(c => {
-            const sl = statusLabel[c.status] || c.status;
-            const sc = statusColor[c.status] || '#94A3B8';
-            const date = new Date(c.created_at).toLocaleDateString('fr-CA');
-            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border:1px solid #E2E8F0;border-radius:10px;margin-bottom:0.75rem;background:white">
-                <div style="flex:1">
-                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.25rem">
-                        <strong style="font-size:0.9rem">${c.contract_number}</strong>
-                        <span style="background:${sc}22;color:${sc};font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">${sl}</span>
-                    </div>
-                    <div style="font-size:0.85rem;color:#1E293B;margin-bottom:0.2rem">${c.title}</div>
-                    <div style="font-size:0.75rem;color:#94A3B8">
-                        ${c.quote_number ? `Devis ${c.quote_number} · ` : ''}${date}
-                        ${c.signed_at ? ` · Signé le ${new Date(c.signed_at).toLocaleDateString('fr-CA')}` : ''}
-                    </div>
-                </div>
-                <a href="/api/contracts/${c.id}/pdf" target="_blank" 
-                   style="display:flex;align-items:center;gap:6px;padding:0.5rem 1rem;border:1.5px solid #1B4F8A;border-radius:7px;color:#1B4F8A;font-size:0.82rem;font-weight:600;text-decoration:none;white-space:nowrap;margin-left:1rem"
-                   onmouseover="this.style.background='#1B4F8A';this.style.color='white'" 
-                   onmouseout="this.style.background='transparent';this.style.color='#1B4F8A'">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    Voir le contrat
-                </a>
-            </div>`;
-        }).join('');
-        // Badge
-        const pending = data.contracts.filter(c => c.status === 'pending_signature').length;
-        const badge = document.getElementById('badge-contracts');
-        if (badge) { badge.style.display = pending ? 'inline-block' : 'none'; badge.textContent = pending; }
-    } catch (e) {
-        console.error('loadPortalContracts error:', e);
-        list.innerHTML = '<p class="portal-empty">Erreur de chargement.</p>';
+    if (eye) {
+        eye.innerHTML = isHidden
+            ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+            : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
     }
 }
 
