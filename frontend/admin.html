@@ -1367,7 +1367,7 @@
                 opacity: 0.2;
                 margin-bottom: 0.75rem;
             }
-
+        /* ===== RESPONSIVE MOBILE ===== */
         @media (max-width:900px) {
             .stats-grid {
                 grid-template-columns: 1fr 1fr;
@@ -1379,16 +1379,201 @@
         }
 
         @media (max-width:600px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
             .admin-sidebar {
                 display: none;
             }
 
+            .admin-main {
+                padding: 0.75rem;
+                padding-bottom: 5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.6rem;
+                margin-bottom: 1rem;
+            }
+
+            .stat-card {
+                padding: 0.85rem 0.9rem;
+                gap: 0.75rem;
+            }
+
+            .stat-icon {
+                width: 38px;
+                height: 38px;
+                border-radius: 10px;
+                flex-shrink: 0;
+            }
+
+                .stat-icon svg {
+                    width: 17px;
+                    height: 17px;
+                }
+
+            .stat-number {
+                font-size: 1.4rem;
+            }
+
+            .stat-label {
+                font-size: 0.7rem;
+            }
+
             .form-row {
                 grid-template-columns: 1fr;
+            }
+
+            .section-title {
+                font-size: 1.1rem;
+            }
+
+            .section-header {
+                margin-bottom: 0.85rem;
+            }
+
+            .table-wrap {
+                overflow-x: auto;
+            }
+
+            table {
+                min-width: 600px;
+            }
+
+            .modal {
+                max-height: 95vh;
+                border-radius: 12px 12px 0 0;
+            }
+
+            .modal-overlay {
+                align-items: flex-end;
+                padding: 0;
+            }
+
+            .client-card {
+                padding: 0.85rem 1rem;
+            }
+
+            .client-avatar {
+                width: 38px;
+                height: 38px;
+                font-size: 0.72rem;
+            }
+
+            .admin-topbar {
+                padding: 0 1rem;
+            }
+
+            .topbar-user {
+                display: none;
+            }
+        }
+
+        /* ===== BOTTOM NAV MOBILE ===== */
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--white);
+            border-top: 1px solid var(--border);
+            z-index: 200;
+            padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom));
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+        }
+
+        .mobile-nav-inner {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .mobile-nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+            padding: 0.4rem 0.6rem;
+            border: none;
+            background: none;
+            color: var(--text-light);
+            font-size: 0.62rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            position: relative;
+            min-width: 52px;
+            border-radius: 8px;
+            transition: all 0.15s;
+        }
+
+            .mobile-nav-btn.active {
+                color: var(--primary);
+            }
+
+            .mobile-nav-btn svg {
+                width: 20px;
+                height: 20px;
+            }
+
+        .mobile-nav-badge {
+            position: absolute;
+            top: 0;
+            right: 4px;
+            background: var(--error);
+            color: white;
+            font-size: 0.58rem;
+            font-weight: 800;
+            padding: 0.1rem 0.3rem;
+            border-radius: 8px;
+            min-width: 14px;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        @media (max-width:600px) {
+            .mobile-bottom-nav {
+                display: block;
+            }
+
+            .section-actions {
+                flex-wrap: wrap;
+            }
+
+            .section-header {
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+
+            .fin-tabs {
+                flex-wrap: wrap;
+            }
+
+            .filter-tabs {
+                flex-wrap: wrap;
+                gap: 0.2rem;
+            }
+
+            .stat-amount {
+                font-size: 0.72rem;
+            }
+
+            .td-actions {
+                flex-wrap: wrap;
+                gap: 0.3rem;
+            }
+
+                .td-actions .btn-sm {
+                    font-size: 0.72rem;
+                    padding: 0.3rem 0.55rem;
+                }
+
+            .msg-client-header {
+                padding: 0.75rem 1rem;
+            }
+
+            .topbar-logo-sub {
+                display: none;
             }
         }
     </style>
@@ -3637,6 +3822,71 @@
         }
 
         // transactions chargées depuis showSection (intégré directement)
+
+
+        // ============================================
+        // MOBILE BOTTOM NAVIGATION
+        // ============================================
+        function mobileNav(section, btn) {
+            if (section === 'more') {
+                openMoreDrawer();
+                return;
+            }
+            showSection(section);
+            // Update mobile nav active state
+            document.querySelectorAll('.mobile-nav-btn').forEach(function (b) {
+                b.classList.remove('active');
+            });
+            if (btn) btn.classList.add('active');
+            // Scroll to top
+            window.scrollTo(0, 0);
+            var main = document.querySelector('.admin-main');
+            if (main) main.scrollTop = 0;
+        }
+
+        function openMoreDrawer() {
+            document.getElementById('mobile-more-drawer').style.display = 'block';
+            document.getElementById('mobile-more-overlay').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMoreDrawer() {
+            document.getElementById('mobile-more-drawer').style.display = 'none';
+            document.getElementById('mobile-more-overlay').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        // Sync mobile badges with desktop badges
+        function syncMobileBadges() {
+            var mappings = [
+                ['badge-clients', 'mob-badge-clients'],
+                ['badge-invoices-admin', 'mob-badge-invoices'],
+                ['badge-messages-admin', 'mob-badge-messages']
+            ];
+            mappings.forEach(function (m) {
+                var src = document.getElementById(m[0]);
+                var dst = document.getElementById(m[1]);
+                if (src && dst) {
+                    dst.textContent = src.textContent;
+                    dst.style.display = (src.style.display !== 'none' && src.textContent !== '0') ? 'inline' : 'none';
+                }
+            });
+        }
+
+        // Hook into loadAllAdmin to sync badges after load
+        var _origLoadAll = loadAllAdmin;
+        loadAllAdmin = async function () {
+            await _origLoadAll();
+            syncMobileBadges();
+        };
+
+        // Also sync during polling
+        var _origPoll = startAdminPolling;
+        startAdminPolling = function () {
+            _origPoll();
+            // Additional sync every 30s
+            setInterval(syncMobileBadges, 30000);
+        };
 
     </script>
 </body>
