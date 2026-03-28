@@ -2453,11 +2453,21 @@
                 </div>
                 <div class="form-group"><label class="form-label">Titre du document *</label><input type="text" class="form-input" id="nd-title" placeholder="Rapport d'intervention — Mars 2026"></div>
                 <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="nd-desc" rows="2"></textarea></div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">Type</label><select class="form-select" id="nd-type"><option value="pdf">PDF</option><option value="docx">Word (DOCX)</option><option value="zip">ZIP</option><option value="other">Autre</option></select></div>
-                    <div class="form-group"><label class="form-label">Nom du fichier</label><input type="text" class="form-input" id="nd-filename" placeholder="rapport.pdf"></div>
+                <div class="form-group">
+                    <label class="form-label">Fichier *</label>
+                    <div id="doc-drop-zone" onclick="document.getElementById('nd-file-input').click()" style="border:2px dashed var(--border);border-radius:10px;padding:1.25rem;text-align:center;cursor:pointer;transition:all 0.15s;background:var(--bg)" onmouseenter="this.style.borderColor='var(--primary)';this.style.background='var(--light-blue)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='var(--bg)'">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text-light)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:0.4rem"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+                        <div id="doc-file-label" style="font-size:0.83rem;color:var(--text-light);font-weight:500">Cliquer pour sélectionner un fichier</div>
+                        <div style="font-size:0.72rem;color:var(--text-light);margin-top:0.2rem">PDF, DOCX, XLSX, ZIP, PNG — max 10 MB</div>
+                        <input type="file" id="nd-file-input" accept=".pdf,.docx,.xlsx,.zip,.txt,.png,.jpg,.jpeg" style="display:none" onchange="onDocFileSelect(this)">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.75rem;margin:0.65rem 0">
+                        <div style="flex:1;height:1px;background:var(--border)"></div>
+                        <span style="font-size:0.72rem;color:var(--text-light)">ou entrer une URL</span>
+                        <div style="flex:1;height:1px;background:var(--border)"></div>
+                    </div>
+                    <input type="url" class="form-input" id="nd-url" placeholder="https://drive.google.com/..." style="font-size:0.83rem">
                 </div>
-                <div class="form-group"><label class="form-label">URL du fichier *</label><input type="url" class="form-input" id="nd-url" placeholder="https://drive.google.com/..."><div class="form-hint">Google Drive, Dropbox, OneDrive ou lien direct.</div></div>
             </div>
             <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-document')">Annuler</button><button class="btn btn-primary" onclick="createDocument()">Déposer</button></div>
         </div>
@@ -2948,7 +2958,9 @@
             <td>${fmt(q.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(q.amount_ttc)}</td>
             <td><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></td>
             <td>${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</td>
-            <td><div class="td-actions"><button onclick="downloadPdf(\'/api/admin/quotes/\' + q.id + \'/pdf\', q.quote_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button>${q.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="acceptQuote(${q.id}, q.quote_number)">✓ Accepter</button><button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
+            <td><div class="td-actions"><button onclick="downloadPdf(\'/api/admin/quotes/\' + q.id + \'/pdf\', q.quote_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button><button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.5rem" onclick="openEditQuote(${q.id})" title="Modifier">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>${q.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="acceptQuote(${q.id}, q.quote_number)">✓ Accepter</button><button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
         </tr>`).join('');
             else if (name === 'invoices' || name === 'payments') tbody.innerHTML = paged.map(inv => {
                 const ov = inv.status === 'unpaid' && new Date(inv.due_date) < new Date();
@@ -2958,7 +2970,7 @@
                 <td><span class="badge badge-${ov ? 'overdue' : inv.status}">${ov ? 'En retard' : statusLabel(inv.status)}</span></td>
                 <td>${inv.due_date ? fmtDate(inv.due_date) : '—'}</td>
                 <td>${inv.paid_at ? fmtDate(inv.paid_at) : '—'}</td>
-                <td><div class="td-actions"><button onclick="downloadPdf(\'/api/admin/invoices/\' + inv.id + \'/pdf\', inv.invoice_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button>${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">Payée</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</div></td>
+                <td><div class="td-actions"><button onclick="downloadPdf(\'/api/admin/invoices/\' + inv.id + \'/pdf\', inv.invoice_number + \'.pdf\')" class="btn btn-sm btn-outline">PDF</button><button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.45rem" onclick="openEditInvoice(${inv.id})" title="Modifier"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">Payée</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</div></td>
             </tr>`;
             }).join('');
             else if (name === 'documents') tbody.innerHTML = paged.map(d => `<tr>
@@ -3139,7 +3151,7 @@
                     var uploaded = false;
                     try {
                         var fd = new FormData();
-                        fd.append('content', text || '(pièce jointe)');
+                        fd.append('content', text || ' ');
                         Array.from(files).forEach(function (f) { fd.append('files', f); });
                         var r = await fetch('/api/admin/messages/' + cid + '/with-attachment', {
                             method: 'POST', headers: { 'Authorization': 'Bearer ' + adminToken }, body: fd
@@ -3155,7 +3167,7 @@
                         showToast('Message + fichier envoyés !', 'success');
                     } else {
                         // Fallback: mention filename in message
-                        var msgContent = (text ? text + '\n' : '') + '\uD83D\uDCCE ' + fileNames;
+                        var msgContent = (text ? text + '\n' : '') + (fileNames ? '\uD83D\uDCCE ' + fileNames : '');
                         var d2 = await api('/messages/' + cid, 'POST', { content: msgContent });
                         if (input) input.value = '';
                         if (fileInput) fileInput.value = '';
@@ -3480,7 +3492,7 @@
             <td>${e.vendor || '—'}</td><td style="font-weight:700">${fmt(e.amount)}</td>
             <td style="color:var(--success);font-weight:600">${fmt(e.tps_paid)}</td>
             <td style="color:var(--success);font-weight:600">${fmt(e.tvq_paid)}</td>
-            <td><div class="td-actions">${e.receipt_url ? `<a href="${e.receipt_url}" target="_blank" class="btn btn-sm btn-outline">Reçu</a>` : ''}<button class="btn btn-sm btn-danger" onclick="deleteExpense(${e.id})">Suppr.</button></div></td>
+            <td><div class="td-actions">${e.receipt_url ? `<a href="${e.receipt_url}" target="_blank" class="btn btn-sm btn-outline">Reçu</a>` : ''}<button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.45rem" onclick="openEditExpense(${e.id})" title="Modifier"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-sm btn-danger" onclick="deleteExpense(${e.id})">Suppr.</button></div></td>
         </tr>`).join('');
         }
         async function createExpense() { const d = await api('/expenses', 'POST', { title: v('nex-title'), category: v('nex-category'), amount: parseFloat(v('nex-amount')), tps_paid: parseFloat(v('nex-tps')) || 0, tvq_paid: parseFloat(v('nex-tvq')) || 0, vendor: v('nex-vendor'), receipt_url: v('nex-receipt'), expense_date: v('nex-date'), notes: v('nex-notes') }); if (d.success) { closeModal('modal-new-expense'); loadExpenses(); showToast('Dépense enregistrée !', 'success'); } else showToast(d.message, 'error'); }
@@ -4341,6 +4353,299 @@
             overlay.appendChild(modal);
             document.body.appendChild(overlay);
             overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+        }
+
+
+        // ============================================
+        // DOCUMENT FILE UPLOAD
+        // ============================================
+        function onDocFileSelect(input) {
+            var file = input.files[0];
+            if (!file) return;
+            var label = document.getElementById('doc-file-label');
+            if (label) label.textContent = file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB)';
+            // Auto-fill title if empty
+            var titleEl = document.getElementById('nd-title');
+            if (titleEl && !titleEl.value) titleEl.value = file.name.replace(/\.[^.]+$/, '');
+            // Auto-detect type
+            var ext = file.name.split('.').pop().toLowerCase();
+            var typeEl = document.getElementById('nd-type');
+            if (typeEl) {
+                var typeMap = { pdf: 'pdf', docx: 'docx', doc: 'docx', xlsx: 'other', zip: 'zip', png: 'other', jpg: 'other', jpeg: 'other' };
+                typeEl.value = typeMap[ext] || 'other';
+            }
+            // Store file ref
+            window._docPendingFile = file;
+        }
+
+        async function createDocument() {
+            var clientId = v('nd-client');
+            var title = v('nd-title');
+            if (!clientId || !title) { showToast('Client et titre requis', 'error'); return; }
+            var url = v('nd-url') || '';
+            var file = window._docPendingFile;
+
+            // If file selected, upload as base64
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = async function (e) {
+                    var b64 = e.target.result.split(',')[1];
+                    var d = await api('/documents', 'POST', {
+                        client_id: clientId,
+                        mandate_id: v('nd-mandate') || null,
+                        title: title,
+                        description: v('nd-desc'),
+                        file_type: file.name.split('.').pop().toLowerCase(),
+                        file_name: file.name,
+                        file_url: url || null,
+                        file_data: b64,
+                        file_size: file.size
+                    });
+                    if (d.success) {
+                        closeModal('modal-new-document');
+                        window._docPendingFile = null;
+                        loadDocuments();
+                        showToast('Document depose !', 'success');
+                    } else showToast(d.message, 'error');
+                };
+                reader.readAsDataURL(file);
+            } else if (url) {
+                var d = await api('/documents', 'POST', {
+                    client_id: clientId,
+                    mandate_id: v('nd-mandate') || null,
+                    title: title,
+                    description: v('nd-desc'),
+                    file_type: v('nd-type') || 'other',
+                    file_name: title,
+                    file_url: url,
+                    file_size: null
+                });
+                if (d.success) { closeModal('modal-new-document'); loadDocuments(); showToast('Document depose !', 'success'); }
+                else showToast(d.message, 'error');
+            } else {
+                showToast('Selectionner un fichier ou entrer une URL', 'error');
+            }
+        }
+
+        // ============================================
+        // EDIT QUOTE MODAL
+        // ============================================
+        function openEditQuote(id) {
+            var q = allQuotes.find(function (x) { return x.id === id; });
+            if (!q) return;
+            var existing = document.getElementById('edit-quote-modal');
+            if (existing) existing.remove();
+            var overlay = document.createElement('div');
+            overlay.id = 'edit-quote-modal';
+            overlay.className = 'modal-overlay open';
+            var modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.maxWidth = '520px';
+            var head = document.createElement('div'); head.className = 'modal-head';
+            var ttl = document.createElement('span'); ttl.className = 'modal-title';
+            ttl.textContent = 'Modifier devis — ' + q.quote_number;
+            var xBtn = document.createElement('button'); xBtn.className = 'modal-close';
+            xBtn.textContent = 'x'; xBtn.onclick = function () { overlay.remove(); };
+            head.appendChild(ttl); head.appendChild(xBtn);
+            var body = document.createElement('div'); body.className = 'modal-body';
+
+            var fields = [
+                { id: 'eq-title', label: 'Titre *', type: 'text', val: q.title },
+                { id: 'eq-desc', label: 'Description', type: 'textarea', val: q.description || '' },
+                { id: 'eq-amount-ht', label: 'Montant HT (CAD) *', type: 'number', val: q.amount_ht, step: '0.01' },
+                { id: 'eq-expiry', label: 'Date expiration', type: 'date', val: q.expiry_date ? q.expiry_date.substring(0, 10) : '' },
+            ];
+            fields.forEach(function (f) {
+                var g = document.createElement('div'); g.className = 'form-group';
+                var l = document.createElement('label'); l.className = 'form-label'; l.textContent = f.label;
+                var inp;
+                if (f.type === 'textarea') {
+                    inp = document.createElement('textarea'); inp.className = 'form-textarea'; inp.rows = 3;
+                    inp.value = f.val;
+                } else {
+                    inp = document.createElement('input'); inp.type = f.type; inp.className = 'form-input';
+                    inp.value = f.val;
+                    if (f.step) inp.step = f.step;
+                }
+                inp.id = f.id;
+                if (f.id === 'eq-amount-ht') {
+                    inp.oninput = function () {
+                        var ht = parseFloat(this.value) || 0;
+                        var tps = ht * 0.05, tvq = ht * 0.09975;
+                        var preview = document.getElementById('eq-tax-preview');
+                        if (preview) preview.textContent = 'TPS: ' + fmt(tps) + ' | TVQ: ' + fmt(tvq) + ' | TTC: ' + fmt(ht + tps + tvq);
+                    };
+                }
+                g.appendChild(l); g.appendChild(inp);
+                if (f.id === 'eq-amount-ht') {
+                    var prev = document.createElement('div');
+                    prev.id = 'eq-tax-preview';
+                    prev.style.cssText = 'font-size:0.78rem;color:var(--primary);margin-top:0.3rem;font-weight:600';
+                    var ht = parseFloat(q.amount_ht) || 0, tps = ht * 0.05, tvq = ht * 0.09975;
+                    prev.textContent = 'TPS: ' + fmt(tps) + ' | TVQ: ' + fmt(tvq) + ' | TTC: ' + fmt(ht + tps + tvq);
+                    g.appendChild(prev);
+                }
+                body.appendChild(g);
+            });
+            // Status
+            var gs = document.createElement('div'); gs.className = 'form-group';
+            var ls = document.createElement('label'); ls.className = 'form-label'; ls.textContent = 'Statut';
+            var sel = document.createElement('select'); sel.className = 'form-select'; sel.id = 'eq-status';
+            [['pending', 'En attente'], ['accepted', 'Accepte'], ['expired', 'Expire'], ['declined', 'Refuse']].forEach(function (o) {
+                var opt = document.createElement('option'); opt.value = o[0]; opt.textContent = o[1];
+                if (q.status === o[0]) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            gs.appendChild(ls); gs.appendChild(sel); body.appendChild(gs);
+
+            var footer = document.createElement('div'); footer.className = 'modal-footer';
+            var cancelB = document.createElement('button'); cancelB.className = 'btn btn-ghost';
+            cancelB.textContent = 'Annuler'; cancelB.onclick = function () { overlay.remove(); };
+            var saveB = document.createElement('button'); saveB.className = 'btn btn-primary';
+            saveB.textContent = 'Enregistrer';
+            saveB.onclick = async function () {
+                var ht = parseFloat(document.getElementById('eq-amount-ht').value) || 0;
+                var tps = Math.round(ht * 0.05 * 100) / 100;
+                var tvq = Math.round(ht * 0.09975 * 100) / 100;
+                var ttc = ht + tps + tvq;
+                saveB.disabled = true; saveB.textContent = 'Enregistrement...';
+                var d = await api('/quotes/' + id, 'PUT', {
+                    title: (document.getElementById('eq-title') || {}).value,
+                    description: (document.getElementById('eq-desc') || {}).value,
+                    amount_ht: ht, tps_amount: tps, tvq_amount: tvq, amount_ttc: ttc,
+                    expiry_date: (document.getElementById('eq-expiry') || {}).value || null,
+                    status: (document.getElementById('eq-status') || {}).value
+                });
+                if (d.success) { overlay.remove(); loadQuotes(); showToast('Devis mis a jour !', 'success'); }
+                else { saveB.disabled = false; saveB.textContent = 'Enregistrer'; showToast(d.message || 'Erreur', 'error'); }
+            };
+            footer.appendChild(cancelB); footer.appendChild(saveB);
+            modal.appendChild(head); modal.appendChild(body); modal.appendChild(footer);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+        }
+
+        // ============================================
+        // EDIT INVOICE MODAL
+        // ============================================
+        function openEditInvoice(id) {
+            var inv = allInvoices.find(function (x) { return x.id === id; });
+            if (!inv) return;
+            var existing = document.getElementById('edit-invoice-modal');
+            if (existing) existing.remove();
+            var overlay = document.createElement('div');
+            overlay.id = 'edit-invoice-modal';
+            overlay.className = 'modal-overlay open';
+            var modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.maxWidth = '520px';
+            var head = document.createElement('div'); head.className = 'modal-head';
+            var ttl = document.createElement('span'); ttl.className = 'modal-title';
+            ttl.textContent = 'Modifier facture — ' + inv.invoice_number;
+            var xBtn = document.createElement('button'); xBtn.className = 'modal-close';
+            xBtn.textContent = 'x'; xBtn.onclick = function () { overlay.remove(); };
+            head.appendChild(ttl); head.appendChild(xBtn);
+            var body = document.createElement('div'); body.className = 'modal-body';
+
+            var fields2 = [
+                { id: 'ei-title', label: 'Titre *', type: 'text', val: inv.title },
+                { id: 'ei-desc', label: 'Description', type: 'textarea', val: inv.description || '' },
+                { id: 'ei-amount-ht', label: 'Montant HT (CAD)', type: 'number', val: inv.amount_ht, step: '0.01' },
+                { id: 'ei-due', label: 'Date echeance', type: 'date', val: inv.due_date ? inv.due_date.substring(0, 10) : '' },
+            ];
+            fields2.forEach(function (f) {
+                var g = document.createElement('div'); g.className = 'form-group';
+                var l = document.createElement('label'); l.className = 'form-label'; l.textContent = f.label;
+                var inp;
+                if (f.type === 'textarea') {
+                    inp = document.createElement('textarea'); inp.className = 'form-textarea'; inp.rows = 2; inp.value = f.val;
+                } else {
+                    inp = document.createElement('input'); inp.type = f.type; inp.className = 'form-input'; inp.value = f.val;
+                    if (f.step) inp.step = f.step;
+                }
+                inp.id = f.id;
+                g.appendChild(l); g.appendChild(inp); body.appendChild(g);
+            });
+            var gs2 = document.createElement('div'); gs2.className = 'form-group';
+            var ls2 = document.createElement('label'); ls2.className = 'form-label'; ls2.textContent = 'Statut';
+            var sel2 = document.createElement('select'); sel2.className = 'form-select'; sel2.id = 'ei-status';
+            [['unpaid', 'Non payee'], ['paid', 'Payee'], ['overdue', 'En retard'], ['cancelled', 'Annulee']].forEach(function (o) {
+                var opt = document.createElement('option'); opt.value = o[0]; opt.textContent = o[1];
+                if (inv.status === o[0]) opt.selected = true;
+                sel2.appendChild(opt);
+            });
+            gs2.appendChild(ls2); gs2.appendChild(sel2); body.appendChild(gs2);
+
+            var footer = document.createElement('div'); footer.className = 'modal-footer';
+            var cancelB = document.createElement('button'); cancelB.className = 'btn btn-ghost';
+            cancelB.textContent = 'Annuler'; cancelB.onclick = function () { overlay.remove(); };
+            var saveB = document.createElement('button'); saveB.className = 'btn btn-primary';
+            saveB.textContent = 'Enregistrer';
+            saveB.onclick = async function () {
+                var ht = parseFloat(document.getElementById('ei-amount-ht').value) || 0;
+                var tps = Math.round(ht * 0.05 * 100) / 100;
+                var tvq = Math.round(ht * 0.09975 * 100) / 100;
+                var ttc = ht + tps + tvq;
+                saveB.disabled = true; saveB.textContent = 'Enregistrement...';
+                var d = await api('/invoices/' + id, 'PUT', {
+                    title: (document.getElementById('ei-title') || {}).value,
+                    description: (document.getElementById('ei-desc') || {}).value,
+                    amount_ht: ht, tps_amount: tps, tvq_amount: tvq, amount_ttc: ttc,
+                    due_date: (document.getElementById('ei-due') || {}).value || null,
+                    status: (document.getElementById('ei-status') || {}).value
+                });
+                if (d.success) { overlay.remove(); loadInvoices(); loadPayments(); showToast('Facture mise a jour !', 'success'); }
+                else { saveB.disabled = false; saveB.textContent = 'Enregistrer'; showToast(d.message || 'Erreur', 'error'); }
+            };
+            footer.appendChild(cancelB); footer.appendChild(saveB);
+            modal.appendChild(head); modal.appendChild(body); modal.appendChild(footer);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+        }
+
+        // ============================================
+        // EDIT EXPENSE MODAL
+        // ============================================
+        function openEditExpense(id) {
+            var e = allExpenses.find(function (x) { return x.id === id; });
+            if (!e) return;
+            var existing = document.getElementById('edit-expense-modal');
+            if (existing) existing.remove();
+            var overlay = document.createElement('div');
+            overlay.id = 'edit-expense-modal';
+            overlay.className = 'modal-overlay open';
+            var modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxWidth = '480px';
+            var head = document.createElement('div'); head.className = 'modal-head';
+            var ttl = document.createElement('span'); ttl.className = 'modal-title'; ttl.textContent = 'Modifier depense';
+            var xBtn = document.createElement('button'); xBtn.className = 'modal-close'; xBtn.textContent = 'x';
+            xBtn.onclick = function () { overlay.remove(); };
+            head.appendChild(ttl); head.appendChild(xBtn);
+            var body = document.createElement('div'); body.className = 'modal-body';
+            body.innerHTML = '<div class="form-row"><div class="form-group"><label class="form-label">Date *</label><input type="date" class="form-input" id="ee-date" value="' + (e.expense_date || '').substring(0, 10) + '"></div><div class="form-group"><label class="form-label">Montant HT *</label><input type="number" class="form-input" id="ee-amount" value="' + e.amount + '" step="0.01"></div></div><div class="form-group"><label class="form-label">Titre *</label><input type="text" class="form-input" id="ee-title" value="' + (e.title || '') + '"></div><div class="form-group"><label class="form-label">Fournisseur</label><input type="text" class="form-input" id="ee-vendor" value="' + (e.vendor || '') + '"></div><div class="form-row"><div class="form-group"><label class="form-label">TPS payee</label><input type="number" class="form-input" id="ee-tps" value="' + (e.tps_paid || 0) + '" step="0.01"></div><div class="form-group"><label class="form-label">TVQ payee</label><input type="number" class="form-input" id="ee-tvq" value="' + (e.tvq_paid || 0) + '" step="0.01"></div></div><div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="ee-notes" rows="2">' + (e.notes || '') + '</textarea></div>';
+            var footer = document.createElement('div'); footer.className = 'modal-footer';
+            var cancelB = document.createElement('button'); cancelB.className = 'btn btn-ghost'; cancelB.textContent = 'Annuler'; cancelB.onclick = function () { overlay.remove(); };
+            var saveB = document.createElement('button'); saveB.className = 'btn btn-primary'; saveB.textContent = 'Enregistrer';
+            saveB.onclick = async function () {
+                saveB.disabled = true;
+                var d = await api('/expenses/' + id, 'PUT', {
+                    title: (document.getElementById('ee-title') || {}).value,
+                    amount: parseFloat((document.getElementById('ee-amount') || {}).value || 0),
+                    tps_paid: parseFloat((document.getElementById('ee-tps') || {}).value || 0),
+                    tvq_paid: parseFloat((document.getElementById('ee-tvq') || {}).value || 0),
+                    vendor: (document.getElementById('ee-vendor') || {}).value,
+                    expense_date: (document.getElementById('ee-date') || {}).value,
+                    notes: (document.getElementById('ee-notes') || {}).value
+                });
+                if (d.success) { overlay.remove(); loadExpenses(); showToast('Depense mise a jour !', 'success'); }
+                else { saveB.disabled = false; showToast(d.message || 'Erreur', 'error'); }
+            };
+            footer.appendChild(cancelB); footer.appendChild(saveB);
+            modal.appendChild(head); modal.appendChild(body); modal.appendChild(footer);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', function (ee) { if (ee.target === overlay) overlay.remove(); });
         }
 
     </script>
