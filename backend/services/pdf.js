@@ -114,33 +114,52 @@ async function generateInvoicePDF(invoiceData) {
 
 // ---------- Helper: Add Header ----------
 function addHeader(doc, documentType, documentNumber) {
-    // Background header rectangle
+    // Fond header
     doc.rect(0, 0, doc.page.width, 120).fill(COLORS.darkBg);
 
-    // Company name
-    doc.fontSize(28).fillColor(COLORS.white).font('Helvetica-Bold')
-        .text('VNK', 50, 30, { continued: true })
-        .font('Helvetica').fontSize(14).fillColor('#99BBDD')
-        .text(' Automatisation Inc.');
+    // Logo hexagone VNK dessiné en PDFKit
+    const hx = 55, hy = 25, hr = 22;
+    const hexPoints = [];
+    for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 180) * (60 * i - 30);
+        hexPoints.push([hx + hr * Math.cos(angle), hy + hr * Math.sin(angle)]);
+    }
+    // Hexagone rempli semi-transparent
+    doc.save()
+        .moveTo(hexPoints[0][0], hexPoints[0][1]);
+    for (let i = 1; i < 6; i++) doc.lineTo(hexPoints[i][0], hexPoints[i][1]);
+    doc.closePath().fillOpacity(0.15).fill(COLORS.white);
+    doc.restore();
+    // Hexagone contour
+    doc.save()
+        .moveTo(hexPoints[0][0], hexPoints[0][1]);
+    for (let i = 1; i < 6; i++) doc.lineTo(hexPoints[i][0], hexPoints[i][1]);
+    doc.closePath().lineWidth(1.5).strokeOpacity(1).stroke(COLORS.white);
+    doc.restore();
+    // VNK texte dans hexagone
+    doc.fontSize(10).fillColor(COLORS.white).font('Helvetica-Bold')
+        .text('VNK', hx - 12, hy - 6, { width: 24, align: 'center' });
 
-    doc.fontSize(9).fillColor('#8899AA')
-        .text('Value. Network. Knowledge.', 50, 65);
+    // Nom entreprise à droite du logo
+    doc.fontSize(16).fillColor(COLORS.white).font('Helvetica-Bold')
+        .text('Automatisation Inc.', 85, 30);
+    doc.fontSize(8).fillColor('#99BBDD').font('Helvetica')
+        .text('VALUE · NETWORK · KNOWLEDGE', 85, 50);
 
-    doc.fontSize(9).fillColor('#8899AA')
-        .text('NEQ : 1181943359', 50, 80)
-        .text('vnkautomatisation@gmail.com', 50, 93)
-        .text('Québec, QC, Canada', 50, 106);
+    // Infos entreprise
+    doc.fontSize(8).fillColor('#8899AA')
+        .text('NEQ : 1181943359', 50, 72)
+        .text('vnkautomatisation@gmail.com', 50, 83)
+        .text('Québec, QC, Canada', 50, 94);
 
-    // Document type and number
+    // Type de document et numéro à droite
     doc.fontSize(22).fillColor(COLORS.white).font('Helvetica-Bold')
-        .text(documentType, doc.page.width - 200, 35, { align: 'right', width: 150 });
-
+        .text(documentType, doc.page.width - 200, 30, { align: 'right', width: 150 });
     doc.fontSize(11).fillColor('#99BBDD').font('Helvetica')
-        .text(documentNumber, doc.page.width - 200, 62, { align: 'right', width: 150 });
-
+        .text(documentNumber, doc.page.width - 200, 57, { align: 'right', width: 150 });
     const today = new Date().toLocaleDateString('fr-CA');
     doc.fontSize(9).fillColor('#8899AA')
-        .text(`Date : ${today}`, doc.page.width - 200, 80, { align: 'right', width: 150 });
+        .text(`Date : ${today}`, doc.page.width - 200, 74, { align: 'right', width: 150 });
 
     doc.y = 140;
     doc.font('Helvetica');
