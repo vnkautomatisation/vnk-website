@@ -1619,6 +1619,32 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
                         Finance
                     </button>
+                    <div class="sidebar-section">Juridique</div>
+                    <button class="sidebar-item" onclick="showSection('contracts')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                        Contrats
+                        <span class="sidebar-badge" id="badge-contracts" style="background:var(--secondary);display:none">0</span>
+                    </button>
+                    <button class="sidebar-item" onclick="showSection('disputes')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                        Litiges
+                        <span class="sidebar-badge" id="badge-disputes" style="background:var(--error);display:none">0</span>
+                    </button>
+                    <button class="sidebar-item" onclick="showSection('refunds')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-3.82" /></svg>
+                        Remboursements
+                    </button>
+                    <div class="sidebar-section">Comptabilité</div>
+                    <button class="sidebar-item" onclick="showSection('expenses')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                        Dépenses
+                    </button>
+                    <button class="sidebar-item" onclick="showSection('taxdecl')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+                        Déclarations
+                        <span class="sidebar-badge" id="badge-taxdecl" style="background:var(--warning);display:none">0</span>
+                    </button>
+
                 </nav>
             </aside>
 
@@ -1916,6 +1942,148 @@
                         </div>
                     </div>
 
+
+                    <!-- CONTRATS -->
+                    <div class="admin-section" id="section-contracts">
+                        <div class="section-header">
+                            <div><div class="section-title">Contrats</div><div class="section-subtitle">Gérer les contrats clients et leur signature</div></div>
+                            <button class="btn btn-primary" onclick="openModal('modal-new-contract')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                Nouveau contrat
+                            </button>
+                        </div>
+                        <div class="table-wrap">
+                            <div class="toolbar">
+                                <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="contracts-search" placeholder="Rechercher un contrat..." oninput="filterContracts()"></div>
+                                <div class="filter-tabs">
+                                    <button class="filter-tab active" onclick="setContractFilter('all',this)">Tous</button>
+                                    <button class="filter-tab" onclick="setContractFilter('draft',this)">Brouillons</button>
+                                    <button class="filter-tab" onclick="setContractFilter('signed',this)">Signés</button>
+                                    <button class="filter-tab" onclick="setContractFilter('pending',this)">En attente</button>
+                                </div>
+                            </div>
+                            <table><thead><tr><th>Numéro</th><th>Client</th><th>Titre</th><th>Mandat/Devis</th><th>Statut</th><th>Créé le</th><th>Signé le</th><th>Actions</th></tr></thead><tbody id="contracts-tbody"></tbody></table>
+                            <div class="pagination" id="contracts-pag" style="display:none"><span id="contracts-pag-info"></span><div class="page-btns" id="contracts-pag-btns"></div></div>
+                        </div>
+                    </div>
+
+                    <!-- LITIGES -->
+                    <div class="admin-section" id="section-disputes">
+                        <div class="section-header">
+                            <div><div class="section-title">Litiges</div><div class="section-subtitle">Gérer les litiges et désaccords avec les clients</div></div>
+                            <button class="btn btn-primary" onclick="openModal('modal-new-dispute')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                Nouveau litige
+                            </button>
+                        </div>
+                        <div class="table-wrap">
+                            <div class="toolbar">
+                                <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="disputes-search" placeholder="Rechercher un litige..." oninput="filterDisputes()"></div>
+                                <div class="filter-tabs">
+                                    <button class="filter-tab active" onclick="setDisputeFilter('all',this)">Tous</button>
+                                    <button class="filter-tab" onclick="setDisputeFilter('open',this)">Ouverts</button>
+                                    <button class="filter-tab" onclick="setDisputeFilter('in_progress',this)">En cours</button>
+                                    <button class="filter-tab" onclick="setDisputeFilter('resolved',this)">Résolus</button>
+                                </div>
+                            </div>
+                            <table><thead><tr><th>Client</th><th>Titre</th><th>Priorité</th><th>Statut</th><th>Facture</th><th>Ouvert le</th><th>Résolu le</th><th>Actions</th></tr></thead><tbody id="disputes-tbody"></tbody></table>
+                        </div>
+                    </div>
+
+                    <!-- REMBOURSEMENTS -->
+                    <div class="admin-section" id="section-refunds">
+                        <div class="section-header">
+                            <div><div class="section-title">Remboursements</div><div class="section-subtitle">Gérer les notes de crédit et remboursements clients</div></div>
+                            <button class="btn btn-primary" onclick="openModal('modal-new-refund')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                Nouveau remboursement
+                            </button>
+                        </div>
+                        <div class="table-wrap">
+                            <table><thead><tr><th>Numéro</th><th>Client</th><th>Raison</th><th>Montant HT</th><th>Total TTC</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead><tbody id="refunds-tbody"></tbody></table>
+                        </div>
+                    </div>
+
+                    <!-- DÉPENSES -->
+                    <div class="admin-section" id="section-expenses">
+                        <div class="section-header">
+                            <div><div class="section-title">Dépenses professionnelles</div><div class="section-subtitle">Suivre vos dépenses pour la déclaration d'impôts</div></div>
+                            <button class="btn btn-primary" onclick="openModal('modal-new-expense')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                Nouvelle dépense
+                            </button>
+                        </div>
+                        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1rem">
+                            <div class="stat-card"><div class="stat-icon" style="background:var(--error)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg></div><div><div class="stat-number" id="exp-total">—</div><div class="stat-label">Total dépenses</div></div></div>
+                            <div class="stat-card"><div class="stat-icon" style="background:var(--warning)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg></div><div><div class="stat-number" id="exp-tps">—</div><div class="stat-label">TPS payée (réclamable)</div></div></div>
+                            <div class="stat-card"><div class="stat-icon" style="background:var(--secondary)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg></div><div><div class="stat-number" id="exp-tvq">—</div><div class="stat-label">TVQ payée (réclamable)</div></div></div>
+                        </div>
+                        <div class="table-wrap">
+                            <div class="toolbar">
+                                <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="expenses-search" placeholder="Rechercher une dépense..." oninput="filterExpenses()"></div>
+                                <select class="sort-select" onchange="filterExpenses(this.value)" id="exp-year-filter">
+                                    <option value="">Toutes les années</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2025">2025</option>
+                                </select>
+                            </div>
+                            <table><thead><tr><th>Date</th><th>Titre</th><th>Catégorie</th><th>Fournisseur</th><th>Montant HT</th><th>TPS payée</th><th>TVQ payée</th><th>Actions</th></tr></thead><tbody id="expenses-tbody"></tbody></table>
+                        </div>
+                    </div>
+
+                    <!-- DÉCLARATIONS FISCALES -->
+                    <div class="admin-section" id="section-taxdecl">
+                        <div class="section-header">
+                            <div><div class="section-title">Déclarations fiscales</div><div class="section-subtitle">TPS/TVQ trimestrielle et déclaration annuelle d'impôts</div></div>
+                            <button class="btn btn-primary" onclick="openModal('modal-new-taxdecl')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                Nouvelle déclaration
+                            </button>
+                        </div>
+
+                        <!-- Résumé annuel -->
+                        <div style="background:var(--white);border-radius:var(--radius);border:1px solid var(--border);padding:1.25rem;margin-bottom:1rem">
+                            <div style="font-size:0.92rem;font-weight:700;color:var(--primary);margin-bottom:1rem">Résumé annuel <span id="taxdecl-year">2026</span></div>
+                            <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+                                <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:0.3rem">
+                                    <div style="font-size:0.75rem;color:var(--text-light);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Revenus bruts HT</div>
+                                    <div class="stat-number" id="td-ht" style="font-size:1.3rem">—</div>
+                                </div>
+                                <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:0.3rem">
+                                    <div style="font-size:0.75rem;color:var(--text-light);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">TPS collectée</div>
+                                    <div class="stat-number" id="td-tps" style="font-size:1.3rem">—</div>
+                                </div>
+                                <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:0.3rem">
+                                    <div style="font-size:0.75rem;color:var(--text-light);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">TVQ collectée</div>
+                                    <div class="stat-number" id="td-tvq" style="font-size:1.3rem">—</div>
+                                </div>
+                                <div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:0.3rem;border:2px solid var(--primary)">
+                                    <div style="font-size:0.75rem;color:var(--primary);font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Total taxes à remettre</div>
+                                    <div class="stat-number" id="td-total" style="font-size:1.3rem">—</div>
+                                </div>
+                            </div>
+                            <div style="margin-top:1rem;padding:0.75rem 1rem;background:rgba(39,174,96,0.06);border-radius:8px;border-left:3px solid var(--success);font-size:0.82rem">
+                                <strong>Dépenses déductibles :</strong> Total <span id="td-expenses">—</span> | TPS réclamable : <span id="td-exp-tps">—</span> | TVQ réclamable : <span id="td-exp-tvq">—</span>
+                            </div>
+                            <div style="margin-top:0.75rem;padding:0.75rem 1rem;background:rgba(224,120,32,0.06);border-radius:8px;border-left:3px solid var(--warning);font-size:0.78rem;color:var(--warning)">
+                                ⚠️ <strong>N° TPS :</strong> À compléter (Revenu Canada) · <strong>N° TVQ :</strong> À compléter (Revenu Québec) · Ce résumé est informatif — consultez un comptable pour votre déclaration officielle.
+                            </div>
+                        </div>
+
+                        <!-- Sommaire trimestriel -->
+                        <div style="background:var(--white);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;margin-bottom:1rem">
+                            <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);font-size:0.92rem;font-weight:700;color:var(--primary)">Sommaire trimestriel automatique</div>
+                            <table><thead><tr><th>Période</th><th>Revenus HT</th><th>TPS collectée</th><th>TVQ collectée</th><th>Total taxes</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="taxdecl-quarters-tbody"></tbody></table>
+                        </div>
+
+                        <!-- Déclarations enregistrées -->
+                        <div class="table-wrap">
+                            <div class="table-header"><div class="table-title">Déclarations enregistrées</div></div>
+                            <table><thead><tr><th>Période</th><th>Type</th><th>Revenus HT</th><th>TPS</th><th>TVQ</th><th>Total taxes</th><th>Statut</th><th>Soumise le</th><th>Actions</th></tr></thead><tbody id="taxdecl-tbody"></tbody></table>
+                        </div>
+                    </div>
+
+
                 </div>
 
             </main>
@@ -2087,6 +2255,149 @@
             <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-conversation')">Annuler</button><button class="btn btn-primary" onclick="startConversation()">Envoyer</button></div>
         </div>
     </div>
+
+    <!-- Modal Nouveau contrat -->
+    <div class="modal-overlay" id="modal-new-contract">
+        <div class="modal">
+            <div class="modal-head"><span class="modal-title">Nouveau contrat</span><button class="modal-close" onclick="closeModal('modal-new-contract')">×</button></div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nct-client"><option value="">Sélectionner</option></select></div>
+                    <div class="form-group"><label class="form-label">Mandat associé</label><select class="form-select" id="nct-mandate"><option value="">Aucun</option></select></div>
+                </div>
+                <div class="form-group"><label class="form-label">Devis associé</label><select class="form-select" id="nct-quote"><option value="">Aucun</option></select></div>
+                <div class="form-group"><label class="form-label">Titre du contrat *</label><input type="text" class="form-input" id="nct-title" placeholder="Contrat de service — Support PLC"></div>
+                <div class="form-group"><label class="form-label">Contenu / clauses principales</label><textarea class="form-textarea" id="nct-content" rows="5" placeholder="Décrivez les termes principaux du contrat..."></textarea></div>
+                <div class="form-group"><label class="form-label">URL du fichier contrat (PDF/DOCX)</label><input type="url" class="form-input" id="nct-url" placeholder="https://drive.google.com/..."><div class="form-hint">Lien vers le document signable sur Google Drive, DocuSign, etc.</div></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-contract')">Annuler</button><button class="btn btn-primary" onclick="createContract()">Créer le contrat</button></div>
+        </div>
+    </div>
+
+    <!-- Modal Nouveau litige -->
+    <div class="modal-overlay" id="modal-new-dispute">
+        <div class="modal">
+            <div class="modal-head"><span class="modal-title">Nouveau litige</span><button class="modal-close" onclick="closeModal('modal-new-dispute')">×</button></div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nd2-client"><option value="">Sélectionner</option></select></div>
+                    <div class="form-group"><label class="form-label">Priorité</label><select class="form-select" id="nd2-priority"><option value="low">Faible</option><option value="medium" selected>Moyenne</option><option value="high">Élevée</option></select></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Facture concernée</label><select class="form-select" id="nd2-invoice"><option value="">Aucune</option></select></div>
+                    <div class="form-group"><label class="form-label">Mandat concerné</label><select class="form-select" id="nd2-mandate"><option value="">Aucun</option></select></div>
+                </div>
+                <div class="form-group"><label class="form-label">Titre du litige *</label><input type="text" class="form-input" id="nd2-title" placeholder="Désaccord sur les heures facturées"></div>
+                <div class="form-group"><label class="form-label">Description *</label><textarea class="form-textarea" id="nd2-desc" rows="4" placeholder="Décrivez le litige en détail..."></textarea></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-dispute')">Annuler</button><button class="btn btn-primary" onclick="createDispute()">Ouvrir le litige</button></div>
+        </div>
+    </div>
+
+    <!-- Modal Résoudre litige -->
+    <div class="modal-overlay" id="modal-resolve-dispute">
+        <div class="modal" style="max-width:480px">
+            <div class="modal-head"><span class="modal-title">Résoudre le litige</span><button class="modal-close" onclick="closeModal('modal-resolve-dispute')">×</button></div>
+            <div class="modal-body">
+                <input type="hidden" id="rd-id">
+                <div class="form-group"><label class="form-label">Statut</label><select class="form-select" id="rd-status"><option value="in_progress">En cours de traitement</option><option value="resolved">Résolu</option><option value="closed">Fermé sans résolution</option></select></div>
+                <div class="form-group"><label class="form-label">Résolution / Notes</label><textarea class="form-textarea" id="rd-resolution" rows="4" placeholder="Décrivez comment le litige a été résolu..."></textarea></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-resolve-dispute')">Annuler</button><button class="btn btn-success" onclick="resolveDispute()">Mettre à jour</button></div>
+        </div>
+    </div>
+
+    <!-- Modal Nouveau remboursement -->
+    <div class="modal-overlay" id="modal-new-refund">
+        <div class="modal">
+            <div class="modal-head"><span class="modal-title">Nouveau remboursement / Note de crédit</span><button class="modal-close" onclick="closeModal('modal-new-refund')">×</button></div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nr-client"><option value="">Sélectionner</option></select></div>
+                    <div class="form-group"><label class="form-label">Facture concernée</label><select class="form-select" id="nr-invoice"><option value="">Aucune</option></select></div>
+                </div>
+                <div class="form-group"><label class="form-label">Raison du remboursement *</label><textarea class="form-textarea" id="nr-reason" rows="3" placeholder="Service non rendu, erreur de facturation, insatisfaction client..."></textarea></div>
+                <div class="form-group"><label class="form-label">Montant HT à rembourser (CAD) *</label><input type="number" class="form-input" id="nr-amount" placeholder="500" step="0.01" oninput="calcRefundTaxes()"></div>
+                <div class="tax-preview" id="nr-tax-preview" style="display:none">
+                    <div class="tax-line"><span>Sous-total HT</span><span id="nr-ht">—</span></div>
+                    <div class="tax-line"><span>TPS (5%) à rembourser</span><span id="nr-tps">—</span></div>
+                    <div class="tax-line"><span>TVQ (9,975%) à rembourser</span><span id="nr-tvq">—</span></div>
+                    <div class="tax-line tax-total"><span>TOTAL remboursement TTC</span><span id="nr-ttc">—</span></div>
+                </div>
+                <div class="form-group" style="margin-top:1rem"><label class="form-label">Notes internes</label><textarea class="form-textarea" id="nr-notes" rows="2"></textarea></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-refund')">Annuler</button><button class="btn btn-primary" onclick="createRefund()">Créer le remboursement</button></div>
+        </div>
+    </div>
+
+    <!-- Modal Nouvelle dépense -->
+    <div class="modal-overlay" id="modal-new-expense">
+        <div class="modal">
+            <div class="modal-head"><span class="modal-title">Nouvelle dépense professionnelle</span><button class="modal-close" onclick="closeModal('modal-new-expense')">×</button></div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Date de la dépense *</label><input type="date" class="form-input" id="nex-date"></div>
+                    <div class="form-group">
+                        <label class="form-label">Catégorie</label>
+                        <select class="form-select" id="nex-category">
+                            <option value="logiciel">Logiciels / Licences</option>
+                            <option value="materiel">Matériel informatique</option>
+                            <option value="telecom">Télécommunications</option>
+                            <option value="formation">Formation / Certification</option>
+                            <option value="marketing">Marketing / Publicité</option>
+                            <option value="transport">Transport / Déplacement</option>
+                            <option value="bureau">Fournitures de bureau</option>
+                            <option value="comptable">Services comptables / légaux</option>
+                            <option value="assurance">Assurance</option>
+                            <option value="autre">Autre</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group"><label class="form-label">Description *</label><input type="text" class="form-input" id="nex-title" placeholder="Abonnement TIA Portal, renouvellement licence..."></div>
+                <div class="form-group"><label class="form-label">Fournisseur</label><input type="text" class="form-input" id="nex-vendor" placeholder="Siemens, Microsoft, Bell..."></div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Montant HT (CAD) *</label><input type="number" class="form-input" id="nex-amount" step="0.01" placeholder="299.99"></div>
+                    <div class="form-group"><label class="form-label">TPS payée</label><input type="number" class="form-input" id="nex-tps" step="0.01" placeholder="15.00"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">TVQ payée</label><input type="number" class="form-input" id="nex-tvq" step="0.01" placeholder="29.92"></div>
+                    <div class="form-group"><label class="form-label">URL reçu / facture</label><input type="url" class="form-input" id="nex-receipt" placeholder="https://drive.google.com/..."></div>
+                </div>
+                <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="nex-notes" rows="2"></textarea></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-expense')">Annuler</button><button class="btn btn-primary" onclick="createExpense()">Enregistrer la dépense</button></div>
+        </div>
+    </div>
+
+    <!-- Modal Nouvelle déclaration -->
+    <div class="modal-overlay" id="modal-new-taxdecl">
+        <div class="modal" style="max-width:500px">
+            <div class="modal-head"><span class="modal-title">Nouvelle déclaration fiscale</span><button class="modal-close" onclick="closeModal('modal-new-taxdecl')">×</button></div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Type de déclaration</label>
+                        <select class="form-select" id="ntd-type">
+                            <option value="quarterly">Trimestrielle TPS/TVQ</option>
+                            <option value="annual">Annuelle impôts</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label class="form-label">Libellé de la période *</label><input type="text" class="form-input" id="ntd-label" placeholder="T1 2026 (Jan–Mar)"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Date de début *</label><input type="date" class="form-input" id="ntd-start"></div>
+                    <div class="form-group"><label class="form-label">Date de fin *</label><input type="date" class="form-input" id="ntd-end"></div>
+                </div>
+                <div class="form-group"><label class="form-label">Notes / Ajustements</label><textarea class="form-textarea" id="ntd-notes" rows="3" placeholder="Crédits de taxe, ajustements manuels..."></textarea></div>
+                <div style="background:var(--light-blue);border-radius:8px;padding:0.85rem;font-size:0.82rem;color:var(--primary);margin-top:0.5rem">
+                    💡 Les montants seront calculés automatiquement à partir de vos factures payées sur la période.
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-taxdecl')">Annuler</button><button class="btn btn-primary" onclick="createTaxDecl()">Créer la déclaration</button></div>
+        </div>
+    </div>
+
+
 
     <script>
         /* ============================================
@@ -2555,6 +2866,303 @@
         function statusLabel(s) { return { active: 'En cours', pending: 'En attente', completed: 'Complété', paused: 'En pause', paid: 'Payée', unpaid: 'Non payée', accepted: 'Accepté', expired: 'Expiré', declined: 'Refusé', in_progress: 'En cours' }[s] || s; }
         function togglePw(id, btn) { const inp = document.getElementById(id); inp.type = inp.type === 'password' ? 'text' : 'password'; }
         function showToast(msg, type = 'info') { const t = document.getElementById('toast'); t.textContent = msg; t.className = `toast toast-${type} show`; setTimeout(() => t.classList.remove('show'), 3200); }
+
+
+        // ============================================
+        // PHASE 2 — Contrats, Litiges, Remboursements,
+        // Dépenses, Déclarations fiscales, Polling
+        // ============================================
+
+        let allContracts = [], allDisputes = [], allRefunds = [], allExpenses = [], allTaxDecls = [];
+        let contractFilter = 'all', disputeFilter = 'all';
+        let adminPollingInterval = null;
+
+        // ---- Polling automatique messages ----
+        function startAdminPolling() {
+            adminPollingInterval = setInterval(async () => {
+                try {
+                    const d = await api('/unread-count');
+                    if (!d.success) return;
+                    const count = d.count;
+                    const b = document.getElementById('badge-messages-admin');
+                    if (b) { b.textContent = count; b.style.display = count ? 'inline' : 'none'; }
+                    updateAdminFloatBadge(count);
+                } catch { }
+            }, 30000);
+        }
+
+        function updateAdminFloatBadge(count) {
+            let badge = document.getElementById('admin-float-badge');
+            if (!badge && count > 0) {
+                badge = document.createElement('div');
+                badge.id = 'admin-float-badge';
+                badge.style.cssText = 'position:fixed;bottom:5rem;right:1.5rem;z-index:8000;background:var(--error);color:white;border-radius:50px;padding:0.6rem 1rem;font-size:0.82rem;font-weight:700;display:flex;align-items:center;gap:0.5rem;box-shadow:0 4px 16px rgba(231,76,60,0.35);cursor:pointer;animation:pulse 2s infinite;';
+                badge.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span id="admin-float-count">' + count + '</span> nouveau' + (count > 1 ? 'x' : '') + ' message' + (count > 1 ? 's' : '');
+                badge.onclick = () => { showSection('messages'); badge.style.display = 'none'; };
+                if (!document.getElementById('pulse-style')) { const s = document.createElement('style'); s.id = 'pulse-style'; s.textContent = '@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.04);}}'; document.head.appendChild(s); }
+                document.body.appendChild(badge);
+            }
+            if (badge) {
+                if (count > 0) { const el = document.getElementById('admin-float-count'); if (el) el.textContent = count; badge.style.display = 'flex'; }
+                else badge.style.display = 'none';
+            }
+        }
+
+        // Démarrer polling après login
+        const origLoadAll = loadAllAdmin;
+        async function loadAllAdmin() {
+            await Promise.all([loadDashboard(), loadClients(), loadMandates(), loadQuotes(), loadInvoices(), loadDocuments(), loadMessages(), loadPayments(), loadContracts(), loadDisputes(), loadRefunds(), loadExpenses(), loadTaxDecls()]);
+            if (!adminPollingInterval) startAdminPolling();
+        }
+
+        // ---- Populate selects phase 2 ----
+        const origPopulate = populateClientSelects;
+        function populateClientSelects() {
+            origPopulate();
+            ['nct-client', 'nd2-client', 'nr-client'].forEach(id => {
+                const sel = document.getElementById(id); if (!sel) return;
+                const cur = sel.value;
+                sel.innerHTML = '<option value="">Sélectionner un client</option>' + allClients.map(c => `<option value="${c.id}">${c.full_name}${c.company_name ? ' — ' + c.company_name : ''}</option>`).join('');
+                if (cur) sel.value = cur;
+            });
+            // Remplir sélect quotes pour contrats
+            const qsel = document.getElementById('nct-quote');
+            if (qsel) qsel.innerHTML = '<option value="">Aucun</option>' + allQuotes.map(q => `<option value="${q.id}">${q.quote_number} — ${q.title}</option>`).join('');
+            // Remplir sélect invoices pour litiges/remboursements
+            ['nd2-invoice', 'nr-invoice'].forEach(id => {
+                const sel = document.getElementById(id); if (!sel) return;
+                sel.innerHTML = '<option value="">Aucune</option>' + allInvoices.map(i => `<option value="${i.id}">${i.invoice_number} — ${i.client_name} (${fmt(i.amount_ttc)})</option>`).join('');
+            });
+            ['nd2-mandate', 'nct-mandate'].forEach(id => {
+                const sel = document.getElementById(id); if (!sel) return;
+                sel.innerHTML = '<option value="">Aucun</option>' + allMandates.map(m => `<option value="${m.id}">${m.title}</option>`).join('');
+            });
+        }
+
+        // ---- CONTRATS ----
+        async function loadContracts() {
+            const d = await api('/contracts').catch(() => ({ success: false }));
+            if (!d.success) return;
+            allContracts = d.contracts || [];
+            const pending = allContracts.filter(c => c.status === 'draft' || c.status === 'pending').length;
+            const b = document.getElementById('badge-contracts'); if (b) { b.textContent = pending; b.style.display = pending ? 'inline' : 'none'; }
+            renderContracts();
+        }
+        function filterContracts() { renderContracts(); }
+        function setContractFilter(f, btn) { contractFilter = f; btn.closest('.filter-tabs').querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderContracts(); }
+        function renderContracts() {
+            const search = (document.getElementById('contracts-search')?.value || '').toLowerCase();
+            let list = [...allContracts];
+            if (contractFilter !== 'all') list = list.filter(c => c.status === contractFilter);
+            if (search) list = list.filter(c => (c.client_name + ' ' + c.title + ' ' + c.contract_number).toLowerCase().includes(search));
+            const tbody = document.getElementById('contracts-tbody');
+            const sl = { draft: 'Brouillon', pending: 'En attente signature', signed: 'Signé', cancelled: 'Annulé' };
+            const bc = { draft: 'badge-expired', pending: 'badge-pending', signed: 'badge-paid', cancelled: 'badge-overdue' };
+            if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun contrat.</td></tr>'; return; }
+            tbody.innerHTML = list.map(c => `<tr>
+                    <td><strong>${c.contract_number}</strong></td>
+                    <td>${c.client_name}<br><span style="font-size:0.73rem;color:var(--text-light)">${c.company_name || ''}</span></td>
+                    <td>${c.title}</td>
+                    <td>${c.mandate_title || c.quote_number || '—'}</td>
+                    <td><span class="badge ${bc[c.status] || 'badge-expired'}">${sl[c.status] || c.status}</span></td>
+                    <td>${fmtDate(c.created_at)}</td>
+                    <td>${c.signed_at ? fmtDate(c.signed_at) : '—'}</td>
+                    <td><div class="td-actions">
+                        ${c.file_url ? `<a href="${c.file_url}" target="_blank" class="btn btn-sm btn-outline">Voir</a>` : ''}
+                        ${c.status !== 'signed' ? `<button class="btn btn-sm btn-success" onclick="signContract(${c.id})">Marquer signé</button>` : ''}
+                    </div></td>
+                </tr>`).join('');
+        }
+        async function createContract() {
+            const d = await api('/contracts', 'POST', { client_id: v('nct-client'), mandate_id: v('nct-mandate') || null, quote_id: v('nct-quote') || null, title: v('nct-title'), content: v('nct-content'), file_url: v('nct-url') });
+            if (d.success) { closeModal('modal-new-contract'); loadContracts(); showToast('Contrat créé !'); } else alert(d.message);
+        }
+        async function signContract(id) { const ok = await confirm2('Marquer signé', 'Confirmer que ce contrat a été signé ?', 'Confirmer'); if (!ok) return; const d = await api('/contracts/' + id + '/sign', 'PUT'); if (d.success) { loadContracts(); showToast('Contrat marqué signé !', 'success'); } else alert(d.message); }
+
+        // ---- LITIGES ----
+        async function loadDisputes() {
+            const d = await api('/disputes').catch(() => ({ success: false }));
+            if (!d.success) return;
+            allDisputes = d.disputes || [];
+            const open = allDisputes.filter(d => d.status === 'open' || d.status === 'in_progress').length;
+            const b = document.getElementById('badge-disputes'); if (b) { b.textContent = open; b.style.display = open ? 'inline' : 'none'; }
+            renderDisputes();
+        }
+        function filterDisputes() { renderDisputes(); }
+        function setDisputeFilter(f, btn) { disputeFilter = f; btn.closest('.filter-tabs').querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderDisputes(); }
+        function renderDisputes() {
+            const search = (document.getElementById('disputes-search')?.value || '').toLowerCase();
+            let list = [...allDisputes];
+            if (disputeFilter !== 'all') list = list.filter(d => d.status === disputeFilter);
+            if (search) list = list.filter(d => (d.client_name + ' ' + d.title).toLowerCase().includes(search));
+            const tbody = document.getElementById('disputes-tbody');
+            const pColors = { low: 'var(--success)', medium: 'var(--warning)', high: 'var(--error)' };
+            const pLabels = { low: 'Faible', medium: 'Moyenne', high: 'Élevée' };
+            const sColors = { open: 'badge-overdue', in_progress: 'badge-pending', resolved: 'badge-paid', closed: 'badge-expired' };
+            const sLabels = { open: 'Ouvert', in_progress: 'En cours', resolved: 'Résolu', closed: 'Fermé' };
+            if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun litige.</td></tr>'; return; }
+            tbody.innerHTML = list.map(d => `<tr>
+                    <td><strong>${d.client_name}</strong><br><span style="font-size:0.73rem;color:var(--text-light)">${d.company_name || ''}</span></td>
+                    <td>${d.title}${d.resolution ? `<br><span style="font-size:0.73rem;color:var(--text-light);font-style:italic">${d.resolution}</span>` : ''}</td>
+                    <td><span style="font-size:0.72rem;font-weight:700;color:${pColors[d.priority] || 'var(--text-light)'}">${pLabels[d.priority] || d.priority}</span></td>
+                    <td><span class="badge ${sColors[d.status] || 'badge-expired'}">${sLabels[d.status] || d.status}</span></td>
+                    <td>${d.invoice_number || '—'}</td>
+                    <td>${fmtDate(d.opened_at)}</td>
+                    <td>${d.resolved_at ? fmtDate(d.resolved_at) : '—'}</td>
+                    <td><div class="td-actions">
+                        ${d.status !== 'resolved' && d.status !== 'closed' ? `<button class="btn btn-sm btn-outline" onclick="openResolveDispute(${d.id})">Traiter</button>` : ''}
+                    </div></td>
+                </tr>`).join('');
+        }
+        async function createDispute() {
+            const d = await api('/disputes', 'POST', { client_id: v('nd2-client'), invoice_id: v('nd2-invoice') || null, mandate_id: v('nd2-mandate') || null, title: v('nd2-title'), description: v('nd2-desc'), priority: v('nd2-priority') });
+            if (d.success) { closeModal('modal-new-dispute'); loadDisputes(); showToast('Litige ouvert !', 'error'); } else alert(d.message);
+        }
+        function openResolveDispute(id) { document.getElementById('rd-id').value = id; openModal('modal-resolve-dispute'); }
+        async function resolveDispute() { const id = v('rd-id'); const d = await api('/disputes/' + id, 'PUT', { status: v('rd-status'), resolution: v('rd-resolution') }); if (d.success) { closeModal('modal-resolve-dispute'); loadDisputes(); showToast('Litige mis à jour !'); } else alert(d.message); }
+
+        // ---- REMBOURSEMENTS ----
+        async function loadRefunds() {
+            const d = await api('/refunds').catch(() => ({ success: false }));
+            if (!d.success) return;
+            allRefunds = d.refunds || [];
+            renderRefunds();
+        }
+        function renderRefunds() {
+            const tbody = document.getElementById('refunds-tbody');
+            const sl = { pending: 'En attente', processed: 'Traité', cancelled: 'Annulé' };
+            const bc = { pending: 'badge-pending', processed: 'badge-paid', cancelled: 'badge-overdue' };
+            if (!allRefunds.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun remboursement.</td></tr>'; return; }
+            tbody.innerHTML = allRefunds.map(r => `<tr>
+                    <td><strong>${r.refund_number}</strong></td>
+                    <td>${r.client_name}</td>
+                    <td style="font-size:0.82rem">${r.reason}</td>
+                    <td>${fmt(r.amount)}</td>
+                    <td style="font-weight:700;color:var(--error)">${fmt(r.total_amount)}</td>
+                    <td><span class="badge ${bc[r.status] || 'badge-expired'}">${sl[r.status] || r.status}</span></td>
+                    <td>${fmtDate(r.created_at)}</td>
+                    <td><div class="td-actions">
+                        ${r.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="processRefund(${r.id})">Confirmer</button>` : ''}
+                    </div></td>
+                </tr>`).join('');
+        }
+        function calcRefundTaxes() { const ht = parseFloat(document.getElementById('nr-amount').value) || 0; const tps = ht * 0.05; const tvq = ht * 0.09975; const ttc = ht + tps + tvq; document.getElementById('nr-tax-preview').style.display = ht ? 'block' : 'none'; set('nr-ht', fmt(ht)); set('nr-tps', fmt(tps)); set('nr-tvq', fmt(tvq)); set('nr-ttc', fmt(ttc)); }
+        async function createRefund() { const d = await api('/refunds', 'POST', { client_id: v('nr-client'), invoice_id: v('nr-invoice') || null, reason: v('nr-reason'), amount: parseFloat(v('nr-amount')), notes: v('nr-notes') }); if (d.success) { closeModal('modal-new-refund'); loadRefunds(); showToast('Remboursement créé !'); } else alert(d.message); }
+        async function processRefund(id) { const ok = await confirm2('Confirmer remboursement', 'Marquer ce remboursement comme traité ?'); if (!ok) return; const d = await api('/refunds/' + id + '/process', 'PUT'); if (d.success) { loadRefunds(); showToast('Remboursement confirmé !', 'success'); } else alert(d.message); }
+
+        // ---- DÉPENSES ----
+        async function loadExpenses() {
+            const d = await api('/expenses').catch(() => ({ success: false }));
+            if (!d.success) return;
+            allExpenses = d.expenses || [];
+            const t = d.totals || {};
+            set('exp-total', fmt(t.total_ht)); set('exp-tps', fmt(t.total_tps)); set('exp-tvq', fmt(t.total_tvq));
+            renderExpenses();
+        }
+        function filterExpenses() { renderExpenses(); }
+        function renderExpenses() {
+            const search = (document.getElementById('expenses-search')?.value || '').toLowerCase();
+            const year = document.getElementById('exp-year-filter')?.value || '';
+            let list = [...allExpenses];
+            if (search) list = list.filter(e => (e.title + ' ' + (e.vendor || '') + ' ' + (e.category || '')).toLowerCase().includes(search));
+            if (year) list = list.filter(e => e.expense_date && e.expense_date.startsWith(year));
+            const tbody = document.getElementById('expenses-tbody');
+            const catLabels = { logiciel: 'Logiciels', materiel: 'Matériel', telecom: 'Télécom', formation: 'Formation', marketing: 'Marketing', transport: 'Transport', bureau: 'Bureau', comptable: 'Comptable/Légal', assurance: 'Assurance', autre: 'Autre' };
+            if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucune dépense.</td></tr>'; return; }
+            tbody.innerHTML = list.map(e => `<tr>
+                    <td>${fmtDate(e.expense_date)}</td>
+                    <td><strong>${e.title}</strong></td>
+                    <td><span class="badge badge-active" style="background:rgba(46,117,182,0.1);color:var(--secondary)">${catLabels[e.category] || e.category || '—'}</span></td>
+                    <td>${e.vendor || '—'}</td>
+                    <td style="font-weight:700">${fmt(e.amount)}</td>
+                    <td style="color:var(--success)">${fmt(e.tps_paid)}</td>
+                    <td style="color:var(--success)">${fmt(e.tvq_paid)}</td>
+                    <td><div class="td-actions">
+                        ${e.receipt_url ? `<a href="${e.receipt_url}" target="_blank" class="btn btn-sm btn-outline">Reçu</a>` : ''}
+                        <button class="btn btn-sm btn-danger" onclick="deleteExpense(${e.id})">Suppr.</button>
+                    </div></td>
+                </tr>`).join('');
+        }
+        async function createExpense() { const d = await api('/expenses', 'POST', { title: v('nex-title'), category: v('nex-category'), amount: parseFloat(v('nex-amount')), tps_paid: parseFloat(v('nex-tps')) || 0, tvq_paid: parseFloat(v('nex-tvq')) || 0, vendor: v('nex-vendor'), receipt_url: v('nex-receipt'), expense_date: v('nex-date'), notes: v('nex-notes') }); if (d.success) { closeModal('modal-new-expense'); loadExpenses(); showToast('Dépense enregistrée !'); } else alert(d.message); }
+        async function deleteExpense(id) { const ok = await confirm2('Supprimer', 'Supprimer cette dépense ?'); if (!ok) return; const d = await api('/expenses/' + id, 'DELETE'); if (d.success) { loadExpenses(); showToast('Dépense supprimée.'); } }
+
+        // ---- DÉCLARATIONS FISCALES ----
+        async function loadTaxDecls() {
+            const d = await api('/tax-declarations').catch(() => ({ success: false }));
+            if (!d.success) return;
+            allTaxDecls = d.declarations || [];
+            renderTaxDecls();
+            renderTaxDeclSummary(d.quarterSummary || []);
+        }
+
+        function renderTaxDeclSummary(quarters) {
+            // Résumé annuel courant
+            const year = new Date().getFullYear();
+            set('taxdecl-year', year);
+            const yearInvoices = allInvoices.filter(i => i.status === 'paid' && new Date(i.paid_at).getFullYear() === year);
+            const ht = yearInvoices.reduce((s, i) => s + parseFloat(i.amount_ht || 0), 0);
+            const tps = yearInvoices.reduce((s, i) => s + parseFloat(i.tps_amount || 0), 0);
+            const tvq = yearInvoices.reduce((s, i) => s + parseFloat(i.tvq_amount || 0), 0);
+            set('td-ht', fmt(ht)); set('td-tps', fmt(tps)); set('td-tvq', fmt(tvq)); set('td-total', fmt(tps + tvq));
+            // Dépenses de l'année
+            const yearExp = allExpenses.filter(e => e.expense_date && e.expense_date.startsWith(year.toString()));
+            const expTotal = yearExp.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+            const expTps = yearExp.reduce((s, e) => s + parseFloat(e.tps_paid || 0), 0);
+            const expTvq = yearExp.reduce((s, e) => s + parseFloat(e.tvq_paid || 0), 0);
+            set('td-expenses', fmt(expTotal)); set('td-exp-tps', fmt(expTps)); set('td-exp-tvq', fmt(expTvq));
+            // Sommaire trimestriel
+            const qNames = ['T1 (Jan–Mar)', 'T2 (Avr–Jun)', 'T3 (Jul–Sep)', 'T4 (Oct–Déc)'];
+            const qData = [{ q: 1, ht: 0, tps: 0, tvq: 0 }, { q: 2, ht: 0, tps: 0, tvq: 0 }, { q: 3, ht: 0, tps: 0, tvq: 0 }, { q: 4, ht: 0, tps: 0, tvq: 0 }];
+            yearInvoices.forEach(inv => {
+                const q = Math.ceil((new Date(inv.paid_at).getMonth() + 1) / 3) - 1;
+                qData[q].ht += parseFloat(inv.amount_ht || 0);
+                qData[q].tps += parseFloat(inv.tps_amount || 0);
+                qData[q].tvq += parseFloat(inv.tvq_amount || 0);
+            });
+            const tbody = document.getElementById('taxdecl-quarters-tbody');
+            if (tbody) tbody.innerHTML = qData.map((q, i) => `<tr>
+                    <td><strong>${year} — ${qNames[i]}</strong></td>
+                    <td>${fmt(q.ht)}</td>
+                    <td style="color:var(--primary);font-weight:700">${fmt(q.tps)}</td>
+                    <td style="color:var(--primary);font-weight:700">${fmt(q.tvq)}</td>
+                    <td style="color:var(--primary);font-weight:800">${fmt(q.tps + q.tvq)}</td>
+                    <td>${q.ht > 0 ? '<span class="badge badge-active">Données disponibles</span>' : '<span class="badge badge-expired">Aucune donnée</span>'}</td>
+                    <td>${q.ht > 0 ? `<button class="btn btn-sm btn-outline" onclick="quickCreateDecl(${year},${q.q},'${qNames[i]}',${q.ht.toFixed(2)},${q.tps.toFixed(2)},${q.tvq.toFixed(2)})">Enregistrer</button>` : '—'}</td>
+                </tr>`).join('');
+        }
+
+        async function quickCreateDecl(year, quarter, label, ht, tps, tvq) {
+            const starts = ['01-01', '04-01', '07-01', '10-01'];
+            const ends = ['03-31', '06-30', '09-30', '12-31'];
+            const start = `${year}-${starts[quarter - 1]}`;
+            const end = `${year}-${ends[quarter - 1]}`;
+            const d = await api('/tax-declarations', 'POST', { period_type: 'quarterly', period_label: `T${quarter} ${year} — ${label}`, period_start: start, period_end: end, notes: '' });
+            if (d.success) { loadTaxDecls(); showToast(`Déclaration T${quarter} ${year} enregistrée !`); } else alert(d.message);
+        }
+
+        function renderTaxDecls() {
+            const tbody = document.getElementById('taxdecl-tbody');
+            const sl = { draft: 'Brouillon', submitted: 'Soumise', filed: 'Déposée' };
+            const bc = { draft: 'badge-expired', submitted: 'badge-pending', filed: 'badge-paid' };
+            if (!allTaxDecls.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-light);padding:2rem">Aucune déclaration enregistrée.</td></tr>'; return; }
+            tbody.innerHTML = allTaxDecls.map(d => `<tr>
+                    <td>${d.period_label}</td>
+                    <td>${d.period_type === 'quarterly' ? 'Trimestrielle' : 'Annuelle'}</td>
+                    <td>${fmt(d.total_revenue_ht)}</td>
+                    <td style="color:var(--primary);font-weight:700">${fmt(d.total_tps)}</td>
+                    <td style="color:var(--primary);font-weight:700">${fmt(d.total_tvq)}</td>
+                    <td style="color:var(--primary);font-weight:800">${fmt(d.total_taxes)}</td>
+                    <td><span class="badge ${bc[d.status] || 'badge-expired'}">${sl[d.status] || d.status}</span></td>
+                    <td>${d.submitted_at ? fmtDate(d.submitted_at) : '—'}</td>
+                    <td><div class="td-actions">
+                        ${d.status === 'draft' ? `<button class="btn btn-sm btn-success" onclick="submitDecl(${d.id})">Soumettre</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}
+                    </div></td>
+                </tr>`).join('');
+        }
+        async function createTaxDecl() { const d = await api('/tax-declarations', 'POST', { period_type: v('ntd-type'), period_label: v('ntd-label'), period_start: v('ntd-start'), period_end: v('ntd-end'), notes: v('ntd-notes') }); if (d.success) { closeModal('modal-new-taxdecl'); loadTaxDecls(); showToast('Déclaration créée !'); } else alert(d.message); }
+        async function submitDecl(id) { const ok = await confirm2('Soumettre la déclaration', 'Marquer cette déclaration comme soumise à Revenu Canada/Québec ?', 'Soumettre'); if (!ok) return; const d = await api('/tax-declarations/' + id + '/submit', 'PUT'); if (d.success) { loadTaxDecls(); showToast('Déclaration soumise !', 'success'); } else alert(d.message); }
+
+
     </script>
 </body>
 </html>
