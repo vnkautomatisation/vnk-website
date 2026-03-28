@@ -14,7 +14,6 @@
 </head>
 <body>
 
-    <!-- NAVIGATION -->
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="nav-logo">
@@ -40,7 +39,6 @@
         </div>
     </nav>
 
-    <!-- HERO SECTION -->
     <section class="hero" id="hero">
         <div class="hero-bg-image">
             <img src="images/hero-bg.jpg" alt="Automatisation industrielle" id="hero-img">
@@ -63,12 +61,8 @@
                     de systèmes automatisés pour les entreprises industrielles au Québec.
                 </p>
                 <div class="hero-actions animate-fade-up delay-3">
-                    <a href="contact.html" class="btn btn-primary btn-hero" data-i18n="hero.cta.primary">
-                        Réserver une consultation gratuite
-                    </a>
-                    <a href="services.html" class="btn btn-secondary btn-hero" data-i18n="hero.cta.secondary">
-                        Voir les services →
-                    </a>
+                    <a href="contact.html" class="btn btn-primary btn-hero" data-i18n="hero.cta.primary">Réserver une consultation gratuite</a>
+                    <a href="services.html" class="btn btn-secondary btn-hero" data-i18n="hero.cta.secondary">Voir les services →</a>
                 </div>
                 <div class="hero-stats animate-fade-up delay-4">
                     <div class="stat">
@@ -89,16 +83,11 @@
                 </div>
             </div>
         </div>
-        <div class="hero-scroll-indicator">
-            <span></span>
-        </div>
+        <div class="hero-scroll-indicator"><span></span></div>
     </section>
 
-    <!-- BRANDS SECTION -->
     <section class="brands" id="brands">
         <div class="brands-grid">
-
-            <!-- Siemens -->
             <div class="brand-badge brand-siemens">
                 <svg class="brand-logo-svg" width="48" height="32" viewBox="0 0 48 32">
                     <rect width="48" height="32" rx="4" fill="#009999" opacity="0.1" />
@@ -109,8 +98,6 @@
                 <span class="brand-name">Siemens</span>
                 <span class="brand-sub">WinCC · Step 7</span>
             </div>
-
-            <!-- Rockwell -->
             <div class="brand-badge brand-rockwell">
                 <svg class="brand-logo-svg" width="48" height="32" viewBox="0 0 48 32">
                     <rect width="48" height="32" rx="4" fill="#CC0000" opacity="0.08" />
@@ -122,8 +109,6 @@
                 <span class="brand-name">Rockwell</span>
                 <span class="brand-sub">ControlLogix · Studio 5000</span>
             </div>
-
-            <!-- B&R -->
             <div class="brand-badge brand-br">
                 <svg class="brand-logo-svg" width="48" height="32" viewBox="0 0 48 32">
                     <rect width="48" height="32" rx="4" fill="#FF6600" opacity="0.08" />
@@ -136,8 +121,6 @@
                 <span class="brand-name">B&R Automation</span>
                 <span class="brand-sub">Automation Studio · X20</span>
             </div>
-
-            <!-- Schneider -->
             <div class="brand-badge brand-schneider">
                 <svg class="brand-logo-svg" width="48" height="32" viewBox="0 0 48 32">
                     <rect width="48" height="32" rx="4" fill="#3DCD58" opacity="0.08" />
@@ -149,41 +132,32 @@
                 <span class="brand-name">Schneider Electric</span>
                 <span class="brand-sub">Modicon · EcoStruxure</span>
             </div>
-
-            <!-- Autres -->
             <div class="brand-badge brand-other">
                 <svg class="brand-logo-svg" width="48" height="32" viewBox="0 0 48 32">
                     <rect width="48" height="32" rx="4" fill="#888888" opacity="0.08" />
                     <circle cx="24" cy="16" r="8" fill="none" stroke="#888888" stroke-width="1.5" stroke-dasharray="3 2" />
                     <text x="24" y="20" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#888888;font-family:sans-serif">+</text>
                 </svg>
-                <span class="brand-name">Autres marques</span>
-                <span class="brand-sub">Sur demande</span>
+                <span class="brand-name" data-i18n="brands.other">Autres marques</span>
+                <span class="brand-sub" data-i18n="brands.on_request">Sur demande</span>
             </div>
-
         </div>
     </section>
 
-    <!-- SERVICES SECTION -->
     <section class="services-preview" id="services">
         <div class="container">
             <div class="section-header">
-                <div class="section-tag">Nos services</div>
+                <div class="section-tag" data-i18n="services.tag">Nos services</div>
                 <h2 data-i18n="services.title">Solutions techniques pour votre industrie</h2>
                 <p data-i18n="services.subtitle">Chaque service est livré avec un rapport écrit, un contrat signé et une facturation transparente.</p>
             </div>
             <div class="services-grid">
-
                 <div class="service-card animate-on-scroll">
                     <div class="service-card-image">
                         <img src="images/plc-support.jpg" alt="Support PLC à distance" loading="lazy">
                         <div class="service-card-overlay"></div>
                         <div class="service-card-icon">
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="3" />
-                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
-                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 8.46a5 5 0 0 0 0 7.07" />
-                            </svg>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 8.46a5 5 0 0 0 0 7.07" /></svg>
                         </div>
                     </div>
                     <div class="service-card-body">
@@ -200,26 +174,20 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="service-card animate-on-scroll delay-1">
                     <div class="service-card-image">
                         <img src="images/audit.jpg" alt="Audit technique automatisation" loading="lazy">
                         <div class="service-card-overlay"></div>
                         <div class="service-card-icon">
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="11" cy="11" r="8" />
-                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                                <line x1="11" y1="8" x2="11" y2="14" />
-                                <line x1="8" y1="11" x2="14" y2="11" />
-                            </svg>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" /></svg>
                         </div>
                     </div>
                     <div class="service-card-body">
                         <h3 data-i18n="services.audit.title">Audit technique</h3>
                         <p data-i18n="services.audit.desc">Évaluation complète de votre système — risques, performance et plan d'action concret.</p>
                         <div class="service-tags">
-                            <span class="service-tag">Analyse code</span>
-                            <span class="service-tag">Rapport détaillé</span>
+                            <span class="service-tag" data-i18n="services.tag.code">Analyse code</span>
+                            <span class="service-tag" data-i18n="services.tag.report">Rapport détaillé</span>
                         </div>
                         <div class="service-footer">
                             <span class="service-price" data-i18n="services.audit.price">1 500–4 000 CAD</span>
@@ -227,26 +195,20 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="service-card animate-on-scroll delay-2">
                     <div class="service-card-image">
                         <img src="images/documentation.jpg" alt="Documentation industrielle" loading="lazy">
                         <div class="service-card-overlay"></div>
                         <div class="service-card-icon">
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                <polyline points="14 2 14 8 20 8" />
-                                <line x1="16" y1="13" x2="8" y2="13" />
-                                <line x1="16" y1="17" x2="8" y2="17" />
-                            </svg>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
                         </div>
                     </div>
                     <div class="service-card-body">
                         <h3 data-i18n="services.doc.title">Documentation industrielle</h3>
                         <p data-i18n="services.doc.desc">Procédures opérateur, maintenance et dépannage — rédigées pour votre équipe.</p>
                         <div class="service-tags">
-                            <span class="service-tag">Opérateur</span>
-                            <span class="service-tag">Maintenance</span>
+                            <span class="service-tag" data-i18n="services.tag.operator">Opérateur</span>
+                            <span class="service-tag" data-i18n="services.tag.maintenance">Maintenance</span>
                         </div>
                         <div class="service-footer">
                             <span class="service-price" data-i18n="services.doc.price">800–5 000 CAD</span>
@@ -254,15 +216,12 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="service-card animate-on-scroll delay-3">
                     <div class="service-card-image">
                         <img src="images/refactoring.jpg" alt="Refactorisation PLC" loading="lazy">
                         <div class="service-card-overlay"></div>
                         <div class="service-card-icon">
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                            </svg>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>
                         </div>
                     </div>
                     <div class="service-card-body">
@@ -270,7 +229,7 @@
                         <p data-i18n="services.refactor.desc">Modernisation de code legacy — fiabilité améliorée, dette technique éliminée.</p>
                         <div class="service-tags">
                             <span class="service-tag">IEC 61131-3</span>
-                            <span class="service-tag">Legacy code</span>
+                            <span class="service-tag" data-i18n="services.tag.legacy">Legacy code</span>
                         </div>
                         <div class="service-footer">
                             <span class="service-price" data-i18n="services.refactor.price">3 000–50 000 CAD</span>
@@ -278,7 +237,6 @@
                         </div>
                     </div>
                 </div>
-
             </div>
             <div class="section-cta">
                 <a href="services.html" class="btn btn-outline" data-i18n="services.all">Voir tous les services et tarifs</a>
@@ -286,34 +244,32 @@
         </div>
     </section>
 
-    <!-- STATS SECTION -->
     <section class="stats-section">
         <div class="container">
             <div class="stats-grid">
                 <div class="stat-block animate-on-scroll">
                     <span class="stat-big counter" data-target="120">0</span>
                     <span class="stat-big-suffix"> CAD/h</span>
-                    <p>Taux horaire de départ — support PLC</p>
+                    <p data-i18n="stats.plc_rate">Taux horaire de départ — support PLC</p>
                 </div>
                 <div class="stat-block animate-on-scroll delay-1">
                     <span class="stat-big">24h</span>
-                    <p>Temps de réponse maximum</p>
+                    <p data-i18n="stats.response">Temps de réponse maximum</p>
                 </div>
                 <div class="stat-block animate-on-scroll delay-2">
                     <span class="stat-big counter" data-target="100">0</span>
                     <span class="stat-big-suffix">%</span>
-                    <p>Intervention documentée avec rapport écrit</p>
+                    <p data-i18n="stats.documented">Intervention documentée avec rapport écrit</p>
                 </div>
                 <div class="stat-block animate-on-scroll delay-3">
                     <span class="stat-big counter" data-target="5">0</span>
                     <span class="stat-big-suffix">+</span>
-                    <p>Marques d'automates supportées</p>
+                    <p data-i18n="stats.brands">Marques d'automates supportées</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- WHY VNK SECTION -->
     <section class="why-vnk" id="why">
         <div class="container">
             <div class="why-layout">
@@ -321,28 +277,22 @@
                     <img src="images/about-hero.jpg" alt="Expert en automatisation industrielle" loading="lazy">
                     <div class="why-image-badge">
                         <span class="why-badge-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                         </span>
                         <div>
-                            <strong>Société par actions</strong>
-                            <span>Constituée au Québec — mars 2026</span>
+                            <strong data-i18n="why.badge.title">Société par actions</strong>
+                            <span data-i18n="why.badge.sub">Constituée au Québec — mars 2026</span>
                         </div>
                     </div>
                 </div>
                 <div class="why-content">
-                    <div class="section-tag">Pourquoi VNK ?</div>
+                    <div class="section-tag" data-i18n="why.tag">Pourquoi VNK ?</div>
                     <h2 data-i18n="why.title">Une expertise technique ciblée, pas un service généraliste</h2>
-                    <p class="why-intro">VNK Automatisation Inc. est une entreprise de services industriels spécialisée exclusivement en automatisation — PLC, SCADA, HMI. Pas de généraliste, pas de compromis sur la qualité technique.</p>
+                    <p class="why-intro" data-i18n="why.intro">VNK Automatisation Inc. est une entreprise de services industriels spécialisée exclusivement en automatisation — PLC, SCADA, HMI. Pas de généraliste, pas de compromis sur la qualité technique.</p>
                     <div class="why-grid">
                         <div class="why-card animate-on-scroll">
                             <div class="why-icon-box">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="12" y1="8" x2="12" y2="12" />
-                                    <line x1="12" y1="16" x2="12.01" y2="16" />
-                                </svg>
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                             </div>
                             <div>
                                 <h4 data-i18n="why.specialized.title">Spécialisé</h4>
@@ -351,9 +301,7 @@
                         </div>
                         <div class="why-card animate-on-scroll delay-1">
                             <div class="why-icon-box">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                                </svg>
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
                             </div>
                             <div>
                                 <h4 data-i18n="why.remote.title">À distance</h4>
@@ -362,12 +310,7 @@
                         </div>
                         <div class="why-card animate-on-scroll delay-2">
                             <div class="why-icon-box">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                    <polyline points="14 2 14 8 20 8" />
-                                    <line x1="16" y1="13" x2="8" y2="13" />
-                                    <line x1="16" y1="17" x2="8" y2="17" />
-                                </svg>
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
                             </div>
                             <div>
                                 <h4 data-i18n="why.documented.title">Documenté</h4>
@@ -376,12 +319,7 @@
                         </div>
                         <div class="why-card animate-on-scroll delay-3">
                             <div class="why-icon-box">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                    <circle cx="9" cy="7" r="4" />
-                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                </svg>
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                             </div>
                             <div>
                                 <h4 data-i18n="why.structured.title">Structuré</h4>
@@ -389,101 +327,84 @@
                             </div>
                         </div>
                     </div>
-                    <a href="a-propos.html" class="btn btn-primary" style="margin-top:1.5rem">En savoir plus sur VNK →</a>
+                    <a href="a-propos.html" class="btn btn-primary" style="margin-top:1.5rem" data-i18n="why.learn_more">En savoir plus sur VNK →</a>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- TESTIMONIALS SECTION -->
     <section class="testimonials" id="testimonials">
         <div class="container">
             <div class="section-header">
-                <div class="section-tag">Témoignages</div>
-                <h2>Ce que disent nos clients</h2>
+                <div class="section-tag" data-i18n="testimonials.tag">Témoignages</div>
+                <h2 data-i18n="testimonials.title">Ce que disent nos clients</h2>
             </div>
             <div class="testimonials-grid">
                 <div class="testimonial-card testimonial-placeholder animate-on-scroll">
                     <div class="testimonial-stars">★★★★★</div>
-                    <p class="testimonial-text">"Intervention rapide et professionnelle. Le rapport d'intervention était clair et complet. Je recommande VNK pour tout projet d'automatisation."</p>
+                    <p class="testimonial-text" data-i18n="testimonials.1.text">"Intervention rapide et professionnelle. Le rapport d'intervention était clair et complet. Je recommande VNK pour tout projet d'automatisation."</p>
                     <div class="testimonial-author">
                         <div class="testimonial-avatar">JT</div>
                         <div>
-                            <strong>Jean Tremblay</strong>
-                            <span>Responsable maintenance — Industries XYZ Inc.</span>
+                            <strong data-i18n="testimonials.1.name">Jean Tremblay</strong>
+                            <span data-i18n="testimonials.1.role">Responsable maintenance — Industries XYZ Inc.</span>
                         </div>
                     </div>
                     <div class="testimonial-coming-soon">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px">
-                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                            <line x1="12" y1="9" x2="12" y2="13" />
-                            <line x1="12" y1="17" x2="12.01" y2="17" />
-                        </svg>
-                        Témoignage à venir — lancement officiel 2027
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                        <span data-i18n="testimonials.coming_soon">Témoignage à venir — lancement officiel 2027</span>
                     </div>
                 </div>
                 <div class="testimonial-card testimonial-placeholder animate-on-scroll delay-1">
                     <div class="testimonial-stars">★★★★★</div>
-                    <p class="testimonial-text">"L'audit technique a révélé des risques que nous n'avions pas identifiés. Le plan d'action était précis et actionnable. Très bon travail."</p>
+                    <p class="testimonial-text" data-i18n="testimonials.2.text">"L'audit technique a révélé des risques que nous n'avions pas identifiés. Le plan d'action était précis et actionnable. Très bon travail."</p>
                     <div class="testimonial-author">
                         <div class="testimonial-avatar">ML</div>
                         <div>
-                            <strong>Marc Lavoie</strong>
-                            <span>Directeur technique — PME Manufacturière</span>
+                            <strong data-i18n="testimonials.2.name">Marc Lavoie</strong>
+                            <span data-i18n="testimonials.2.role">Directeur technique — PME Manufacturière</span>
                         </div>
                     </div>
                     <div class="testimonial-coming-soon">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px">
-                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                            <line x1="12" y1="9" x2="12" y2="13" />
-                            <line x1="12" y1="17" x2="12.01" y2="17" />
-                        </svg>
-                        Témoignage à venir — lancement officiel 2027
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                        <span data-i18n="testimonials.coming_soon">Témoignage à venir — lancement officiel 2027</span>
                     </div>
                 </div>
                 <div class="testimonial-card testimonial-placeholder animate-on-scroll delay-2">
                     <div class="testimonial-stars">★★★★★</div>
-                    <p class="testimonial-text">"La documentation produite par VNK a permis à notre équipe de maintenance de travailler de manière autonome. Excellent investissement."</p>
+                    <p class="testimonial-text" data-i18n="testimonials.3.text">"La documentation produite par VNK a permis à notre équipe de maintenance de travailler de manière autonome. Excellent investissement."</p>
                     <div class="testimonial-author">
                         <div class="testimonial-avatar">SP</div>
                         <div>
-                            <strong>Sophie Parent</strong>
-                            <span>Chef de projet — Intégrateur Québec</span>
+                            <strong data-i18n="testimonials.3.name">Sophie Parent</strong>
+                            <span data-i18n="testimonials.3.role">Chef de projet — Intégrateur Québec</span>
                         </div>
                     </div>
                     <div class="testimonial-coming-soon">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px">
-                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                            <line x1="12" y1="9" x2="12" y2="13" />
-                            <line x1="12" y1="17" x2="12.01" y2="17" />
-                        </svg>
-                        Témoignage à venir — lancement officiel 2027
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                        <span data-i18n="testimonials.coming_soon">Témoignage à venir — lancement officiel 2027</span>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- CTA SECTION -->
     <section class="cta-section">
         <div class="container">
             <div class="cta-content">
                 <div class="cta-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                    </svg>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
                 </div>
                 <h2 data-i18n="cta.title">Prêt à optimiser votre système ?</h2>
                 <p data-i18n="cta.subtitle">Consultation gratuite de 30 minutes — sans engagement. Décrivez votre situation et on évalue ensemble.</p>
                 <div class="cta-actions">
                     <a href="contact.html" class="btn btn-primary btn-large" data-i18n="cta.button">Réserver maintenant</a>
-                    <a href="services.html" class="btn btn-secondary btn-large">Voir les tarifs</a>
+                    <a href="services.html" class="btn btn-secondary btn-large" data-i18n="cta.view_prices">Voir les tarifs</a>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- FOOTER -->
     <footer class="footer">
         <div class="container">
             <div class="footer-grid">
@@ -497,7 +418,7 @@
                             <text x="48" y="33" style="font-size:7.5px;fill:rgba(255,255,255,0.6);font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text>
                         </svg>
                     </div>
-                    <p class="footer-desc">Services d'automatisation industrielle B2B — Québec, Canada.</p>
+                    <p class="footer-desc" data-i18n="footer.desc">Services d'automatisation industrielle B2B — Québec, Canada.</p>
                 </div>
                 <div class="footer-links">
                     <h4 data-i18n="footer.services">Services</h4>
