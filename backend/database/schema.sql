@@ -139,3 +139,19 @@ CREATE INDEX IF NOT EXISTS idx_quotes_client ON quotes(client_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id);
 CREATE INDEX IF NOT EXISTS idx_mandates_client ON mandates(client_id);
 CREATE INDEX IF NOT EXISTS idx_messages_client ON messages(client_id);
+
+ALTER TABLE mandates ADD COLUMN IF NOT EXISTS progress INTEGER DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS documents (
+  id SERIAL PRIMARY KEY,
+  client_id INTEGER REFERENCES clients(id) ON DELETE CASCADE,
+  mandate_id INTEGER REFERENCES mandates(id) ON DELETE SET NULL,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  file_type VARCHAR(50),
+  file_name VARCHAR(255) NOT NULL,
+  file_url TEXT,
+  file_size INTEGER,
+  uploaded_by VARCHAR(50) DEFAULT 'vnk',
+  created_at TIMESTAMP DEFAULT NOW()
+);

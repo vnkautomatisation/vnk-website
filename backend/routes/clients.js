@@ -35,15 +35,30 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
 
         // Get recent activity
         const activity = await pool.query(
-            `SELECT 'mandate' as type, title as description, updated_at as date 
-       FROM mandates WHERE client_id = $1
-       UNION ALL
-       SELECT 'quote' as type, CONCAT('Quote #', quote_number) as description, created_at as date
-       FROM quotes WHERE client_id = $1
-       UNION ALL
-       SELECT 'invoice' as type, CONCAT('Invoice #', invoice_number) as description, created_at as date
-       FROM invoices WHERE client_id = $1
-       ORDER BY date DESC LIMIT 10`,
+            `SELECT 
+        'invoice' as type,
+        CONCAT('Facture ', invoice_number, ' — ', title) as description,
+        amount_ttc as amount,
+        status,
+        created_at as date
+    FROM invoices WHERE client_id = $1
+    UNION ALL
+    SELECT 
+        'quote' as type,
+        CONCAT('Devis ', quote_number, ' — ', title) as description,
+        amount_ttc as amount,
+        status,
+        created_at as date
+    FROM quotes WHERE client_id = $1
+    UNION ALL
+    SELECT 
+        'mandate' as type,
+        CONCAT('Mandat : ', title) as description,
+        NULL as amount,
+        status,
+        updated_at as date
+    FROM mandates WHERE client_id = $1
+    ORDER BY date DESC LIMIT 10`,
             [clientId]
         );
 

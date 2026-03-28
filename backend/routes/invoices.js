@@ -11,12 +11,12 @@ const { authenticateToken } = require('../middleware/auth');
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT id, invoice_number, title, amount_ht,
-              tps_amount, tvq_amount, amount_ttc,
-              status, due_date, paid_at, created_at
-       FROM invoices
-       WHERE client_id = $1
-       ORDER BY created_at DESC`,
+            `SELECT id, invoice_number, title, description, amount_ht,
+  tps_amount, tvq_amount, amount_ttc,
+  status, due_date, paid_at, created_at
+FROM invoices
+WHERE client_id = $1
+ORDER BY created_at DESC`,
             [req.user.id]
         );
 
