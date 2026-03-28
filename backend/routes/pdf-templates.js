@@ -223,7 +223,7 @@ function drawFooter(doc, docNumber, bgColor) {
     doc.rect(0, y, w, 44).fillColor(bgColor).fill();
     // Ligne déco
     doc.rect(0, y, w, 2).fillColor(C.blueMid).fillOpacity(0.5).fill().fillOpacity(1);
-    doc.fillColor('#8AAABB').fillOpacity(1).fontSize(7).font('Helvetica')
+    doc.fillColor('#AABBCC').fontSize(7).font('Helvetica')
         .text(`${C.name}  ·  ${C.site}  ·  ${C.email}  ·  ${C.phone}`,
             C.marginL, y + 10, { width: w - 80, align: 'center' })
         .text(`${docNumber}  ·  Généré le ${dateCA(new Date())}  ·  Document confidentiel`,
@@ -262,24 +262,22 @@ async function generateQuotePDF(res, quote, client, lines) {
     // Nom + slogan + contact
     doc.fillColor(C.white).fontSize(15).font('Helvetica-Bold')
         .text(C.name, 96, 26);
-    doc.fillColor('#B8D0E8').fillOpacity(1).fontSize(7.5).font('Helvetica')
+    doc.fillColor(C.white).fontSize(7.5).font('Helvetica')
         .text('VALUE · NETWORK · KNOWLEDGE', 97, 44, { characterSpacing: 1.2 });
-    doc.fillColor('#A0BDD4').fillOpacity(1).fontSize(7).font('Helvetica')
+    doc.fillColor('#B8CDD8').fontSize(7).font('Helvetica')
         .text(`NEQ : ${C.neq}  ·  ${C.email}  ·  ${C.phone}`, 97, 57);
 
     // Badge document (droite)
     const bx = w - 148, by = 18, bw = 120, bh = 64;
-    doc.rect(bx, by, bw, bh).fillColor('#2A6090').fillOpacity(1).fill();
-    doc.fillOpacity(1);
-    doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor('#4A7FA8').strokeOpacity(1).stroke();
-    doc.fillOpacity(1).fillColor(C.white).fontSize(10).font('Helvetica-Bold')
+    doc.rect(bx, by, bw, bh).fillColor('#2A6BA8').fill();
+    doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor('#5A8FBF').strokeOpacity(1).stroke();
+    doc.fillColor(C.white).fontSize(10).font('Helvetica-Bold')
         .text('DEVIS', bx, by + 10, { width: bw, align: 'center', characterSpacing: 2 });
-    doc.fillColor('#DCF0FF').fillOpacity(1).fontSize(9).font('Helvetica')
+    doc.fillColor(C.white).fontSize(9).font('Helvetica')
         .text(quote.quote_number, bx, by + 27, { width: bw, align: 'center' });
-    doc.fillColor('#A8C8E0').fillOpacity(1).fontSize(7.5)
+    doc.fillColor('#B8CDD8').fontSize(7.5)
         .text(dateCA(quote.created_at), bx, by + 44, { width: bw, align: 'center' });
 
-    doc.fillOpacity(1);
     doc.y = 116;
 
     // ── BLOCS INFO ───────────────────────────
@@ -329,8 +327,6 @@ async function generateQuotePDF(res, quote, client, lines) {
     taxBlock(doc, quote.amount_ht, quote.tps_amount, quote.tvq_amount, quote.amount_ttc, 'TOTAL DU DEVIS');
 
     // ── CONDITIONS ───────────────────────────
-    // Saut de page si pas assez d'espace
-    if (doc.y + 100 > doc.page.height - 88) { doc.addPage(); doc.y = 40; }
     sectionBar(doc, 'Conditions de paiement');
     const conditions = [
         'Acompte de 50 % à la signature du contrat.',
@@ -341,17 +337,14 @@ async function generateQuotePDF(res, quote, client, lines) {
     ];
     conditions.forEach(c => {
         doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
-            .text(`•  ${c}`, C.marginL + 6, doc.y, { width: cw - 6, lineGap: 2 });
-        doc.y += 13;
+            .text(`•  ${c}`, C.marginL + 6, doc.y, { width: cw - 6, lineGap: 1 });
+        doc.y += 11;
     });
-    doc.y += 6;
+    doc.y += 4;
 
     // ── ACCEPTATION / SIGNATURE ───────────────
-    // Saut de page si pas assez d'espace (besoin: ~120px)
-    const neededSig = 120;
-    const footerH = 44;
-    const pageBot = doc.page.height - footerH - 10;
-    if (doc.y + neededSig > pageBot) {
+    // Saut de page si moins de 130px disponibles avant footer
+    if (doc.y + 130 > doc.page.height - 54) {
         doc.addPage();
         doc.y = 40;
     }
@@ -359,34 +352,34 @@ async function generateQuotePDF(res, quote, client, lines) {
     sectionBar(doc, 'Acceptation');
     doc.fillColor(C.gray).fontSize(8).font('Helvetica')
         .text('En signant ci-dessous, le client accepte les termes et conditions de ce devis et autorise VNK Automatisation Inc. à procéder aux travaux décrits.',
-            C.marginL, doc.y, { width: cw, lineGap: 3 });
-    doc.y += 20;
+            C.marginL, doc.y, { width: cw, lineGap: 2 });
+    doc.y += 14;
 
     const sigY = doc.y;
-    const sigW = (cw - 20) / 2;
+    const sigW = (cw - 16) / 2;
 
     // Bloc signature client
-    doc.rect(C.marginL, sigY, sigW, 58).fillColor(C.grayLight).fill();
-    doc.rect(C.marginL, sigY, 3, 58).fillColor(C.blue).fill();
-    doc.rect(C.marginL, sigY, sigW, 58).lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.rect(C.marginL, sigY, sigW, 56).fillColor(C.grayLight).fill();
+    doc.rect(C.marginL, sigY, 3, 56).fillColor(C.blue).fill();
+    doc.rect(C.marginL, sigY, sigW, 56).lineWidth(0.5).strokeColor(C.border).stroke();
     doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
         .text('SIGNATURE DU CLIENT', C.marginL + 10, sigY + 8);
-    doc.moveTo(C.marginL + 10, sigY + 42).lineTo(C.marginL + sigW - 10, sigY + 42)
+    doc.moveTo(C.marginL + 10, sigY + 40).lineTo(C.marginL + sigW - 10, sigY + 40)
         .lineWidth(0.5).strokeColor(C.border).strokeOpacity(1).stroke();
     doc.fillColor(C.gray).fontSize(7).font('Helvetica')
-        .text(client.full_name || '', C.marginL + 10, sigY + 46);
+        .text(client.full_name || '', C.marginL + 10, sigY + 44);
 
     // Bloc date
-    const dx = C.marginL + sigW + 20;
-    doc.rect(dx, sigY, sigW, 58).fillColor(C.grayLight).fill();
-    doc.rect(dx, sigY, 3, 58).fillColor(C.blue).fill();
-    doc.rect(dx, sigY, sigW, 58).lineWidth(0.5).strokeColor(C.border).stroke();
+    const dx = C.marginL + sigW + 16;
+    doc.rect(dx, sigY, sigW, 56).fillColor(C.grayLight).fill();
+    doc.rect(dx, sigY, 3, 56).fillColor(C.blue).fill();
+    doc.rect(dx, sigY, sigW, 56).lineWidth(0.5).strokeColor(C.border).stroke();
     doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
         .text('DATE', dx + 10, sigY + 8);
-    doc.moveTo(dx + 10, sigY + 42).lineTo(dx + sigW - 10, sigY + 42)
+    doc.moveTo(dx + 10, sigY + 40).lineTo(dx + sigW - 10, sigY + 40)
         .lineWidth(0.5).strokeColor(C.border).strokeOpacity(1).stroke();
 
-    doc.y = sigY + 58;
+    doc.y = sigY + 56;
 
     drawFooter(doc, quote.quote_number, C.navy);
     doc.end();
@@ -415,24 +408,22 @@ async function generateInvoicePDF(res, invoice, client) {
 
     doc.fillColor(C.white).fontSize(15).font('Helvetica-Bold')
         .text(C.name, 96, 26);
-    doc.fillColor('#B8D0E8').fillOpacity(1).fontSize(7.5).font('Helvetica')
+    doc.fillColor(C.white).fontSize(7.5).font('Helvetica')
         .text('VALUE · NETWORK · KNOWLEDGE', 97, 44, { characterSpacing: 1.2 });
-    doc.fillColor(C.white).fillOpacity(0.55).fontSize(7)
+    doc.fillColor('#B8CDD8').fontSize(7)
         .text(`NEQ : ${C.neq}  ·  ${C.email}  ·  ${C.phone}`, 97, 57);
 
     // Badge FACTURE
     const bx = w - 148, by = 18, bw = 120, bh = 64;
-    doc.rect(bx, by, bw, bh).fillColor('#1A3A60').fillOpacity(1).fill();
-    doc.fillOpacity(1);
-    doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor(C.white).strokeOpacity(0.25).stroke();
-    doc.fillOpacity(1).fillColor(C.white).fontSize(10).font('Helvetica-Bold')
+    doc.rect(bx, by, bw, bh).fillColor('#1A4570').fill();
+    doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor('#3A6590').strokeOpacity(1).stroke();
+    doc.fillColor(C.white).fontSize(10).font('Helvetica-Bold')
         .text('FACTURE', bx, by + 10, { width: bw, align: 'center', characterSpacing: 2 });
-    doc.fillColor('#DCF0FF').fillOpacity(1).fontSize(9).font('Helvetica')
+    doc.fillColor(C.white).fontSize(9).font('Helvetica')
         .text(invoice.invoice_number, bx, by + 27, { width: bw, align: 'center' });
-    doc.fillColor('#A8C8E0').fillOpacity(1).fontSize(7.5)
+    doc.fillColor('#B8CDD8').fontSize(7.5)
         .text(dateCA(invoice.created_at), bx, by + 44, { width: bw, align: 'center' });
 
-    doc.fillOpacity(1);
     doc.y = 116;
 
     // ── BLOCS INFO ───────────────────────────
@@ -531,18 +522,18 @@ async function generateContractPDF(res, contract, client, quote) {
     // Côté gauche — prestataire
     doc.fillColor(C.white).fontSize(12).font('Helvetica-Bold')
         .text(C.name, 18, 24, { width: w / 2 - 40 });
-    doc.fillColor('#B8D0E8').fillOpacity(1).fontSize(7.5).font('Helvetica')
+    doc.fillColor(C.white).fontSize(7.5).font('Helvetica')
         .text('VALUE · NETWORK · KNOWLEDGE', 18, 40, { characterSpacing: 0.8 });
-    doc.fillColor('#A0BDD4').fillOpacity(1).fontSize(7)
+    doc.fillColor('#B8CDD8').fontSize(7)
         .text(`NEQ : ${C.neq}`, 18, 54)
         .text(`${C.email}  ·  ${C.phone}`, 18, 65);
 
     // Côté droit — type document
-    doc.fillOpacity(1).fillColor(C.white).fontSize(10).font('Helvetica-Bold')
+    doc.fillColor(C.white).fontSize(10).font('Helvetica-Bold')
         .text('CONTRAT DE SERVICE', w / 2 + 32, 24, { width: w / 2 - 50 });
-    doc.fillColor('#DCF0FF').fillOpacity(1).fontSize(9).font('Helvetica')
+    doc.fillColor(C.white).fontSize(9).font('Helvetica')
         .text(contract.contract_number, w / 2 + 32, 42, { width: w / 2 - 50 });
-    doc.fillColor('#A8C8E0').fillOpacity(1).fontSize(7.5)
+    doc.fillColor('#B8CDD8').fontSize(7.5)
         .text(dateCA(contract.created_at), w / 2 + 32, 57, { width: w / 2 - 50 });
 
     doc.y = 116;
