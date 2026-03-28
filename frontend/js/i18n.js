@@ -4,14 +4,11 @@
 
 const translations = {
     fr: {
-        // Navigation
         'nav.home': 'Accueil',
         'nav.services': 'Services',
         'nav.about': 'À propos',
         'nav.contact': 'Contact',
         'nav.portal': 'Portail client',
-
-        // Hero
         'hero.badge': "Services d'automatisation industrielle",
         'hero.title1': 'Solutions PLC,',
         'hero.title2': 'SCADA & HMI',
@@ -22,8 +19,6 @@ const translations = {
         'hero.stats.services': 'Services spécialisés',
         'hero.stats.brands': "Marques d'automates",
         'hero.stats.market': 'Marché industriel',
-
-        // Services page
         'services.title': 'Nos services',
         'services.subtitle': 'Solutions techniques adaptées à vos besoins industriels',
         'services.includes': 'Ce qui est inclus',
@@ -32,7 +27,6 @@ const translations = {
         'services.cta': 'Demander un devis',
         'services.learn_more': 'En savoir plus →',
         'services.all': 'Voir tous les services',
-
         'services.plc.title': 'Support PLC à distance',
         'services.plc.desc': "Diagnostic et résolution rapide de pannes sur vos automates Siemens, Rockwell, B&R et Schneider.",
         'services.plc.price': '120–150 CAD/h',
@@ -47,21 +41,19 @@ const translations = {
         'services.plc.monthly': 'Forfait mensuel standard',
         'services.plc.priority': 'Forfait mensuel prioritaire',
         'services.plc.priority_note': 'Temps de réponse garanti',
-
         'services.audit.title': 'Audit technique',
         'services.audit.desc': "Évaluation complète de votre système d'automatisation — risques, performance et recommandations.",
         'services.audit.price': '1 500–4 000 CAD',
         'services.audit.inc1': 'Analyse complète du code PLC existant',
         'services.audit.inc2': 'Évaluation de la documentation disponible',
         'services.audit.inc3': 'Identification des risques et points de défaillance',
-        'services.audit.inc4': 'Rapport d\'audit structuré avec priorités',
+        'services.audit.inc4': "Rapport d'audit structuré avec priorités",
         'services.audit.inc5': "Plan d'action recommandé",
         'services.audit.inc6': 'Présentation des résultats à votre équipe',
         'services.audit.small': 'Audit standard',
         'services.audit.small_note': 'Système simple — 1 à 2 automates',
         'services.audit.full': 'Audit complet',
         'services.audit.full_note': 'Système complexe — multiple automates',
-
         'services.doc.title': 'Documentation industrielle',
         'services.doc.desc': "Création de procédures opérateur, maintenance, dépannage et documentation complète du code PLC.",
         'services.doc.price': '800–5 000 CAD',
@@ -73,7 +65,6 @@ const translations = {
         'services.doc.inc6': 'Format Word, PDF et en ligne selon besoin',
         'services.doc.basic': 'Documentation de base',
         'services.doc.complete': 'Documentation complète',
-
         'services.refactor.title': 'Refactorisation PLC',
         'services.refactor.desc': "Modernisation et restructuration de code legacy — amélioration de la fiabilité et de la maintenabilité.",
         'services.refactor.price': '3 000–50 000 CAD',
@@ -86,11 +77,7 @@ const translations = {
         'services.refactor.small': 'Refactorisation partielle',
         'services.refactor.full': 'Refactorisation complète',
         'services.refactor.new': 'Nouvelle implémentation',
-
-        // Brands
         'brands.title': 'Automates supportés',
-
-        // Why VNK
         'why.title': 'Pourquoi VNK ?',
         'why.specialized.title': 'Spécialisé',
         'why.specialized.desc': "Focus exclusif sur l'automatisation industrielle.",
@@ -100,19 +87,13 @@ const translations = {
         'why.documented.desc': "Chaque intervention est documentée — rapport écrit systématique.",
         'why.structured.title': 'Structuré',
         'why.structured.desc': "Contrat, devis et facturation professionnels à chaque mandat.",
-
-        // CTA
         'cta.title': 'Prêt à optimiser votre système ?',
         'cta.subtitle': 'Réservez une consultation gratuite de 30 minutes pour discuter de vos besoins.',
         'cta.button': 'Réserver maintenant',
-
-        // Footer
         'footer.services': 'Services',
         'footer.company': 'Entreprise',
         'footer.contact': 'Contact',
         'footer.copyright': '© 2026 VNK Automatisation Inc. Tous droits réservés.',
-
-        // About page
         'about.title': 'À propos de VNK',
         'about.subtitle': 'Value. Network. Knowledge.',
         'about.founder.title': 'Yan Verone Kengne',
@@ -138,8 +119,6 @@ const translations = {
         'about.commitment.confidential_desc': 'NDA disponible sur demande. Vos données et procédés industriels restent confidentiels.',
         'about.commitment.responsive': 'Réactivité',
         'about.commitment.responsive_desc': "Intervention à distance sans délai de déplacement. Réponse rapide quand votre production est en jeu.",
-
-        // Contact page
         'contact.title': 'Contactez-nous',
         'contact.subtitle': 'Consultation gratuite de 30 minutes — sans engagement',
         'contact.form.title': 'Envoyez-nous un message',
@@ -163,8 +142,6 @@ const translations = {
         'contact.info.company': 'Entreprise',
         'contact.calendly.title': 'Réserver directement',
         'contact.calendly.desc': 'Choisissez un créneau pour une consultation gratuite de 30 minutes.',
-        'contact.calendly.btn': 'Ouvrir le calendrier →',
-        'contact.calendly.note': 'Lien Calendly disponible au lancement officiel',
         'contact.process.title': 'Notre processus',
         'contact.process.step1': 'Message ou réservation',
         'contact.process.step1_desc': 'Décrivez votre besoin via le formulaire ou Calendly',
@@ -173,9 +150,7 @@ const translations = {
         'contact.process.step3': 'Devis formel',
         'contact.process.step3_desc': 'Proposition détaillée avec périmètre, délais et tarifs',
         'contact.process.step4': 'Contrat et démarrage',
-        'contact.process.step4_desc': 'Signature électronique et début de l\'intervention',
-
-        // Portal
+        'contact.process.step4_desc': "Signature électronique et début de l'intervention",
         'portal.login.title': 'Connexion au portail',
         'portal.login.subtitle': 'Accédez à vos mandats, devis et factures',
         'portal.login.email': 'Courriel',
@@ -195,7 +170,7 @@ const translations = {
         'portal.dashboard.no_activity': 'Aucune activité récente',
         'portal.info.title': 'Votre espace client',
         'portal.info.mandates': 'Mandats en cours',
-        'portal.info.mandates_desc': 'Suivez l\'avancement de vos projets en temps réel',
+        'portal.info.mandates_desc': "Suivez l'avancement de vos projets en temps réel",
         'portal.info.quotes': 'Devis et contrats',
         'portal.info.quotes_desc': 'Consultez, acceptez et signez en ligne',
         'portal.info.invoices': 'Factures',
@@ -206,14 +181,11 @@ const translations = {
     },
 
     en: {
-        // Navigation
         'nav.home': 'Home',
         'nav.services': 'Services',
         'nav.about': 'About',
         'nav.contact': 'Contact',
         'nav.portal': 'Client Portal',
-
-        // Hero
         'hero.badge': 'Industrial Automation Services',
         'hero.title1': 'PLC, SCADA &',
         'hero.title2': 'HMI Solutions',
@@ -224,8 +196,6 @@ const translations = {
         'hero.stats.services': 'Specialized Services',
         'hero.stats.brands': 'PLC Brands',
         'hero.stats.market': 'B2B Market',
-
-        // Services page
         'services.title': 'Our Services',
         'services.subtitle': 'Technical solutions tailored to your industrial needs',
         'services.includes': 'What is included',
@@ -234,7 +204,6 @@ const translations = {
         'services.cta': 'Request a Quote',
         'services.learn_more': 'Learn more →',
         'services.all': 'View all services',
-
         'services.plc.title': 'Remote PLC Support',
         'services.plc.desc': 'Fast diagnosis and troubleshooting for Siemens, Rockwell, B&R and Schneider controllers.',
         'services.plc.price': '$120–150 CAD/h',
@@ -249,7 +218,6 @@ const translations = {
         'services.plc.monthly': 'Standard monthly plan',
         'services.plc.priority': 'Priority monthly plan',
         'services.plc.priority_note': 'Guaranteed response time',
-
         'services.audit.title': 'Technical Audit',
         'services.audit.desc': 'Complete assessment of your automation system — risks, performance and recommendations.',
         'services.audit.price': '$1,500–4,000 CAD',
@@ -263,7 +231,6 @@ const translations = {
         'services.audit.small_note': 'Simple system — 1 to 2 PLCs',
         'services.audit.full': 'Complete audit',
         'services.audit.full_note': 'Complex system — multiple PLCs',
-
         'services.doc.title': 'Industrial Documentation',
         'services.doc.desc': 'Creation of operator procedures, maintenance, troubleshooting and complete PLC code documentation.',
         'services.doc.price': '$800–5,000 CAD',
@@ -275,7 +242,6 @@ const translations = {
         'services.doc.inc6': 'Word, PDF and online format as needed',
         'services.doc.basic': 'Basic documentation',
         'services.doc.complete': 'Complete documentation',
-
         'services.refactor.title': 'PLC Refactoring',
         'services.refactor.desc': 'Modernization and restructuring of legacy code — improved reliability and maintainability.',
         'services.refactor.price': '$3,000–50,000 CAD',
@@ -288,11 +254,7 @@ const translations = {
         'services.refactor.small': 'Partial refactoring',
         'services.refactor.full': 'Complete refactoring',
         'services.refactor.new': 'New implementation',
-
-        // Brands
         'brands.title': 'Supported PLCs',
-
-        // Why VNK
         'why.title': 'Why VNK?',
         'why.specialized.title': 'Specialized',
         'why.specialized.desc': 'Exclusive focus on industrial automation.',
@@ -302,19 +264,13 @@ const translations = {
         'why.documented.desc': 'Every intervention is documented — systematic written report.',
         'why.structured.title': 'Structured',
         'why.structured.desc': 'Professional contract, quote and invoicing for every mandate.',
-
-        // CTA
         'cta.title': 'Ready to optimize your system?',
         'cta.subtitle': 'Book a free 30-minute consultation to discuss your needs.',
         'cta.button': 'Book Now',
-
-        // Footer
         'footer.services': 'Services',
         'footer.company': 'Company',
         'footer.contact': 'Contact',
         'footer.copyright': '© 2026 VNK Automatisation Inc. All rights reserved.',
-
-        // About page
         'about.title': 'About VNK',
         'about.subtitle': 'Value. Network. Knowledge.',
         'about.founder.title': 'Yan Verone Kengne',
@@ -340,8 +296,6 @@ const translations = {
         'about.commitment.confidential_desc': 'NDA available on request. Your data and industrial processes remain confidential.',
         'about.commitment.responsive': 'Responsiveness',
         'about.commitment.responsive_desc': 'Remote intervention without travel delays. Fast response when your production is at stake.',
-
-        // Contact page
         'contact.title': 'Contact Us',
         'contact.subtitle': 'Free 30-minute consultation — no commitment',
         'contact.form.title': 'Send us a message',
@@ -365,8 +319,6 @@ const translations = {
         'contact.info.company': 'Company',
         'contact.calendly.title': 'Book directly',
         'contact.calendly.desc': 'Choose a time slot for a free 30-minute consultation.',
-        'contact.calendly.btn': 'Open calendar →',
-        'contact.calendly.note': 'Calendly link available at official launch',
         'contact.process.title': 'Our process',
         'contact.process.step1': 'Message or booking',
         'contact.process.step1_desc': 'Describe your need via the form or Calendly',
@@ -376,8 +328,6 @@ const translations = {
         'contact.process.step3_desc': 'Detailed proposal with scope, deadlines and rates',
         'contact.process.step4': 'Contract and start',
         'contact.process.step4_desc': 'Electronic signature and start of intervention',
-
-        // Portal
         'portal.login.title': 'Portal Login',
         'portal.login.subtitle': 'Access your mandates, quotes and invoices',
         'portal.login.email': 'Email',
@@ -427,7 +377,11 @@ window.i18n = {
             const key = el.getAttribute('data-i18n');
             const translation = this.t(key);
             if (translation) {
-                el.textContent = translation;
+                if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                    el.placeholder = translation;
+                } else {
+                    el.textContent = translation;
+                }
             }
         });
         document.documentElement.lang = this.currentLang;
