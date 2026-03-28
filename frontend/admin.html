@@ -2427,7 +2427,10 @@
             try {
                 const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: v('admin-email'), password: v('admin-password') }) });
                 const d = await r.json();
-                if (d.success && d.token) { adminToken = d.token; localStorage.setItem('vnk-admin-token', d.token); document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; loadAllAdmin(); }
+                if (d.success && d.token) {
+                    adminToken = d.token; localStorage.setItem('vnk-admin-token', d.token); document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; loadAllAdmin();
+                    startAdminPolling();
+                }
                 else { errEl.textContent = d.message || 'Identifiants incorrects.'; errEl.style.display = 'block'; }
             } catch { errEl.textContent = 'Erreur de connexion.'; errEl.style.display = 'block'; }
         });
@@ -2436,7 +2439,11 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             const saved = localStorage.getItem('vnk-admin-token');
-            if (saved) { adminToken = saved; document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; loadAllAdmin(); }
+            if (saved) {
+                adminToken = saved; document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; loadAllAdmin();
+                startAdminPolling();
+            }
+
             const h = new Date().getHours();
             document.getElementById('dash-greeting').textContent = (h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir') + ', Yan Verone';
         });
