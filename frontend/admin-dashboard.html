@@ -4107,6 +4107,10 @@
                     return;
                 }
                 const blob = await res.blob();
+                if (!blob || blob.size < 100) {
+                    showToast('PDF vide — verifier la configuration backend', 'error');
+                    return;
+                }
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -4114,7 +4118,8 @@
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                // Delay revoke so browser can read the blob before it's released
+                setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
             } catch (e) {
                 showToast('Erreur telechargement PDF', 'error');
             }
