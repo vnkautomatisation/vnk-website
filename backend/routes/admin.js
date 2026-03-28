@@ -579,14 +579,28 @@ router.get('/documents', authenticateAdmin, async (req, res) => {
 
 router.post('/documents', authenticateAdmin, async (req, res) => {
     try {
-        const { client_id, mandate_id, title, description, file_type, file_name, file_url, file_size } = req.body;
-        if (!client_id || !title || !file_name) return res.status(400).json({ success: false, message: 'Champs requis manquants.' });
+        const { client_id, mandate_id, title, description, file_type, file_name, file_url, file_data, file_size } = req.body;
+        if (!client_id || !title) return res.status(400).json({ success: false, message: 'client_id et title requis.' });
+        let finalUrl = file_url || null;
+        // If base64 data provided (direct upload), store as data URL
+        if (file_data && !finalUrl) {
+            const mimes = {
+                pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', zip: 'application/zip'
+            };
+            const ext = (file_type || 'other').toLowerCase();
+            finalUrl = 'data:' + (mimes[ext] || 'application/octet-stream') + ';base64,' + file_data;
+        }
         const result = await pool.query(
-            `INSERT INTO documents (client_id,mandate_id,title,description,file_type,file_name,file_url,file_size,uploaded_by,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'vnk',NOW()) RETURNING *`,
-            [client_id, mandate_id || null, title, description || null, file_type || 'pdf', file_name, file_url || null, file_size || null]
+            `INSERT INTO documents (client_id, mandate_id, title, description, file_type, file_name, file_url, file_size, created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING *`,
+            [client_id, mandate_id || null, title, description || null, file_type || 'other',
+                file_name || title, finalUrl, file_size || null]
         );
         res.status(201).json({ success: true, document: result.rows[0] });
     } catch (err) {
+        console.error('POST document error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
@@ -1010,5 +1024,66 @@ router.get('/contracts/:id/pdf', authenticateAdmin, async (req, res) => {
     }
 });
 
+
+// ============================================
+// QUOTES — Modifier un devis
+// ============================================
+router.put('/quotes/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const { title, description, amount_ht, tps_amount, tvq_amount, amount_ttc, expiry_date, status } = req.body;
+        const result = await pool.query(
+            `UPDATE quotes SET title=$1, description=$2, amount_ht=$3, tps_amount=$4, tvq_amount=$5,
+             amount_ttc=$6, expiry_date=$7, status=$8 WHERE id=$9 RETURNING *`,
+            [title, description || null, amount_ht, tps_amount, tvq_amount, amount_ttc,
+                expiry_date || null, status || 'pending', req.params.id]
+        );
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Devis non trouve.' });
+        res.json({ success: true, quote: result.rows[0] });
+    } catch (err) {
+        console.error('PUT quote:', err);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// ============================================
+// INVOICES — Modifier une facture
+// ============================================
+router.put('/invoices/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const { title, description, amount_ht, tps_amount, tvq_amount, amount_ttc, due_date, status } = req.body;
+        const result = await pool.query(
+            `UPDATE invoices SET title=$1, description=$2, amount_ht=$3, tps_amount=$4, tvq_amount=$5,
+             amount_ttc=$6, due_date=$7, status=$8,
+             paid_at=CASE WHEN $8='paid' AND paid_at IS NULL THEN NOW() ELSE paid_at END
+             WHERE id=$9 RETURNING *`,
+            [title, description || null, amount_ht, tps_amount, tvq_amount, amount_ttc,
+                due_date || null, status || 'unpaid', req.params.id]
+        );
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Facture non trouvee.' });
+        res.json({ success: true, invoice: result.rows[0] });
+    } catch (err) {
+        console.error('PUT invoice:', err);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// ============================================
+// EXPENSES — Modifier une depense
+// ============================================
+router.put('/expenses/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const { title, amount, tps_paid, tvq_paid, vendor, expense_date, notes } = req.body;
+        const result = await pool.query(
+            `UPDATE expenses SET title=$1, amount=$2, tps_paid=$3, tvq_paid=$4, vendor=$5, expense_date=$6, notes=$7
+             WHERE id=$8 RETURNING *`,
+            [title, amount, tps_paid || 0, tvq_paid || 0, vendor || null, expense_date, notes || null, req.params.id]
+        );
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Depense non trouvee.' });
+        res.json({ success: true, expense: result.rows[0] });
+    } catch (err) {
+        console.error('PUT expense:', err);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
 
 module.exports = router;
