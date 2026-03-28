@@ -3,35 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Portail client VNK Automatisation Inc. - Accès sécurisé à vos mandats, devis et factures">
     <title>Portail client | VNK Automatisation Inc.</title>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://js.stripe.com/v3/"></script>
 </head>
-<body>
+<body class="portal-body">
 
     <!-- NAVIGATION -->
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="nav-logo">
-                <svg width="200" height="40" viewBox="0 0 200 40">
-                    <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#1B4F8A" opacity="0.08" />
-                    <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#1B4F8A" stroke-width="1.8" />
-                    <text x="20" y="25" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#1B4F8A;font-family:sans-serif">VNK</text>
-                    <text x="46" y="18" style="font-size:13px;font-weight:700;fill:var(--color-text-primary);font-family:sans-serif">Automatisation Inc.</text>
-                    <text x="46" y="32" style="font-size:7px;fill:var(--color-text-secondary);font-family:sans-serif;letter-spacing:1px">VALUE · NETWORK · KNOWLEDGE</text>
+                <svg width="220" height="42" viewBox="0 0 220 42">
+                    <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="#1B4F8A" opacity="0.08" />
+                    <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="none" stroke="#1B4F8A" stroke-width="2" />
+                    <text x="21" y="26" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#1B4F8A;font-family:sans-serif">VNK</text>
+                    <text x="48" y="18" style="font-size:13px;font-weight:700;fill:#333;font-family:sans-serif">Automatisation Inc.</text>
+                    <text x="48" y="33" style="font-size:7.5px;fill:#888;font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text>
                 </svg>
             </div>
             <ul class="nav-links" id="nav-links">
-                <li><a href="index.html" class="nav-link" data-i18n="nav.home">Accueil</a></li>
-                <li><a href="services.html" class="nav-link" data-i18n="nav.services">Services</a></li>
-                <li><a href="a-propos.html" class="nav-link" data-i18n="nav.about">À propos</a></li>
-                <li><a href="contact.html" class="nav-link" data-i18n="nav.contact">Contact</a></li>
-                <li><a href="portail.html" class="nav-link nav-portal active" data-i18n="nav.portal">Portail client</a></li>
+                <li><a href="index.html" class="nav-link">Accueil</a></li>
+                <li><a href="services.html" class="nav-link">Services</a></li>
+                <li><a href="a-propos.html" class="nav-link">À propos</a></li>
+                <li><a href="contact.html" class="nav-link">Contact</a></li>
+                <li><a href="portail.html" class="nav-link nav-portal active">Portail client</a></li>
             </ul>
             <div class="nav-actions">
                 <button class="lang-toggle" id="lang-toggle" onclick="toggleLanguage()">EN</button>
@@ -40,172 +39,344 @@
         </div>
     </nav>
 
-    <!-- LOGIN SECTION -->
-    <section class="portal-login-section">
+    <!-- LOGIN VIEW -->
+    <section class="portal-login-section" id="login-section">
         <div class="portal-login-container">
+
             <div class="portal-login-card">
-
-                <!-- Logo -->
                 <div class="portal-logo">
-                    <span class="logo-vnk">VNK</span>
-                    <span class="logo-text">Automatisation Inc.</span>
+                    <svg width="220" height="42" viewBox="0 0 220 42">
+                        <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="#1B4F8A" opacity="0.08" />
+                        <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="none" stroke="#1B4F8A" stroke-width="2" />
+                        <text x="21" y="26" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#1B4F8A;font-family:sans-serif">VNK</text>
+                        <text x="48" y="18" style="font-size:13px;font-weight:700;fill:#333;font-family:sans-serif">Automatisation Inc.</text>
+                        <text x="48" y="33" style="font-size:7.5px;fill:#888;font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text>
+                    </svg>
                 </div>
 
-                <!-- Login Form -->
-                <div id="login-view">
-                    <h2 data-i18n="portal.login.title">Connexion au portail</h2>
-                    <p data-i18n="portal.login.subtitle">Accédez à vos mandats, devis et factures</p>
+                <h2>Connexion au portail</h2>
+                <p class="portal-login-subtitle">Accédez à vos mandats, devis et factures</p>
 
-                    <form id="login-form" class="portal-form">
-                        <div class="form-group">
-                            <label class="form-label" data-i18n="portal.login.email">Courriel</label>
-                            <input type="email" class="form-input" id="login-email" required placeholder="votre@courriel.com">
+                <form id="login-form" class="portal-form">
+                    <div class="form-group">
+                        <label class="form-label">Courriel</label>
+                        <div class="form-input-wrap">
+                            <svg class="form-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>
+                            <input type="email" class="form-input form-input-icon-pad" id="login-email" required placeholder="votre@courriel.com">
                         </div>
-                        <div class="form-group">
-                            <label class="form-label" data-i18n="portal.login.password">Mot de passe</label>
-                            <input type="password" class="form-input" id="login-password" required placeholder="••••••••">
-                        </div>
-                        <div class="portal-form-options">
-                            <label class="portal-remember">
-                                <input type="checkbox" id="remember-me">
-                                <span data-i18n="portal.login.remember">Se souvenir de moi</span>
-                            </label>
-                            <a href="#" class="portal-forgot" data-i18n="portal.login.forgot">Mot de passe oublié ?</a>
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="width:100%" id="login-btn">
-                            <span data-i18n="portal.login.submit">Se connecter</span>
-                        </button>
-                        <div id="login-error" class="alert alert-error" style="display:none; margin-top:1rem"></div>
-                    </form>
-
-                    <div class="portal-no-account">
-                        <p data-i18n="portal.login.no_account">Pas encore de compte ?</p>
-                        <p data-i18n="portal.login.contact_us">Contactez-nous pour démarrer un mandat.</p>
-                        <a href="contact.html" class="btn btn-outline" style="width:100%; margin-top:0.5rem" data-i18n="portal.login.contact_btn">Nous contacter</a>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Mot de passe</label>
+                        <div class="form-input-wrap">
+                            <svg class="form-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                            <input type="password" class="form-input form-input-icon-pad" id="login-password" required placeholder="••••••••">
+                        </div>
+                    </div>
+                    <div class="portal-form-options">
+                        <label class="portal-remember">
+                            <input type="checkbox" id="remember-me">
+                            <span>Se souvenir de moi</span>
+                        </label>
+                        <a href="#" class="portal-forgot">Mot de passe oublié ?</a>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%" id="login-btn">
+                        Se connecter
+                    </button>
+                    <div id="login-error" class="alert alert-error" style="display:none; margin-top:1rem"></div>
+                </form>
+
+                <div class="portal-no-account">
+                    <p>Pas encore de compte ?</p>
+                    <p>Contactez-nous pour démarrer un mandat.</p>
+                    <a href="contact.html" class="btn btn-outline" style="width:100%; margin-top:0.5rem">Nous contacter</a>
                 </div>
-
-                <!-- Dashboard (shown after login) -->
-                <div id="dashboard-view" style="display:none;">
-                    <div class="dashboard-header">
-                        <h2 data-i18n="portal.dashboard.title">Tableau de bord</h2>
-                        <button class="btn btn-outline" onclick="logout()" data-i18n="portal.dashboard.logout">Déconnexion</button>
-                    </div>
-
-                    <div class="dashboard-stats">
-                        <div class="dashboard-stat">
-                            <span class="stat-number" id="active-mandates">0</span>
-                            <span class="stat-label" data-i18n="portal.dashboard.mandates">Mandats actifs</span>
-                        </div>
-                        <div class="dashboard-stat">
-                            <span class="stat-number" id="pending-quotes">0</span>
-                            <span class="stat-label" data-i18n="portal.dashboard.quotes">Devis en attente</span>
-                        </div>
-                        <div class="dashboard-stat">
-                            <span class="stat-number" id="pending-invoices">0</span>
-                            <span class="stat-label" data-i18n="portal.dashboard.invoices">Factures à payer</span>
-                        </div>
-                    </div>
-
-                    <div class="dashboard-sections">
-                        <div class="dashboard-section">
-                            <h3 data-i18n="portal.dashboard.recent">Activité récente</h3>
-                            <div id="activity-list" class="activity-list">
-                                <p class="no-activity" data-i18n="portal.dashboard.no_activity">Aucune activité récente</p>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Calendly in portal -->
-                    <div class="dashboard-section" style="margin-top:1rem;">
-                        <h3>Réserver une consultation</h3>
-                        <a href="https://calendly.com/vnkautomatisation/consultation-30min"
-                           target="_blank"
-                           class="btn btn-outline"
-                           style="width:100%; margin-top:0.5rem;">
-                            📅 Réserver un créneau →
-                        </a>
-                    </div>
-                </div>
-
             </div>
 
-            <!-- Portal Info -->
             <div class="portal-info">
-                <h3 data-i18n="portal.info.title">Votre espace client</h3>
+                <h3>Votre espace client sécurisé</h3>
                 <div class="portal-feature">
-                    <span class="portal-feature-icon">📊</span>
+                    <div class="portal-feature-icon-wrap">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
+                    </div>
                     <div>
-                        <strong data-i18n="portal.info.mandates">Mandats en cours</strong>
-                        <p data-i18n="portal.info.mandates_desc">Suivez l'avancement de vos projets en temps réel</p>
+                        <strong>Mandats en cours</strong>
+                        <p>Suivez l'avancement de vos projets et accédez aux livrables en temps réel.</p>
                     </div>
                 </div>
                 <div class="portal-feature">
-                    <span class="portal-feature-icon">📄</span>
+                    <div class="portal-feature-icon-wrap">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /></svg>
+                    </div>
                     <div>
-                        <strong data-i18n="portal.info.quotes">Devis et contrats</strong>
-                        <p data-i18n="portal.info.quotes_desc">Consultez, acceptez et signez en ligne</p>
+                        <strong>Devis et contrats</strong>
+                        <p>Consultez, acceptez et signez vos devis directement en ligne.</p>
                     </div>
                 </div>
                 <div class="portal-feature">
-                    <span class="portal-feature-icon">💳</span>
+                    <div class="portal-feature-icon-wrap">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                    </div>
                     <div>
-                        <strong data-i18n="portal.info.invoices">Factures</strong>
-                        <p data-i18n="portal.info.invoices_desc">Téléchargez et payez vos factures en ligne</p>
+                        <strong>Factures en ligne</strong>
+                        <p>Téléchargez et payez vos factures de manière sécurisée.</p>
                     </div>
                 </div>
                 <div class="portal-feature">
-                    <span class="portal-feature-icon">💬</span>
+                    <div class="portal-feature-icon-wrap">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                    </div>
                     <div>
-                        <strong data-i18n="portal.info.messages">Messagerie</strong>
-                        <p data-i18n="portal.info.messages_desc">Communiquez directement avec votre technicien</p>
+                        <strong>Messagerie sécurisée</strong>
+                        <p>Communiquez directement avec votre technicien VNK.</p>
+                    </div>
+                </div>
+                <div class="portal-feature">
+                    <div class="portal-feature-icon-wrap">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>
+                    </div>
+                    <div>
+                        <strong>Documents et livrables</strong>
+                        <p>Accédez à tous vos rapports, documentation et fichiers livrés.</p>
                     </div>
                 </div>
                 <div class="portal-coming-soon">
-                    <p data-i18n="portal.info.coming_soon">⚠️ Portail complet disponible au lancement officiel du site — automne 2026</p>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                    Portail complet disponible au lancement officiel — automne 2026
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- FOOTER -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <div class="footer-logo">
-                        <svg width="200" height="42" viewBox="0 0 200 42">
-                            <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="white" opacity="0.15" />
-                            <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="none" stroke="white" stroke-width="1.8" />
-                            <text x="21" y="26" text-anchor="middle" style="font-size:11px;font-weight:800;fill:white;font-family:sans-serif">VNK</text>
-                            <text x="48" y="18" style="font-size:13px;font-weight:700;fill:white;font-family:sans-serif">Automatisation Inc.</text>
-                            <text x="48" y="33" style="font-size:7.5px;fill:rgba(255,255,255,0.6);font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text>
-                        </svg>
-                    </div>
-                </div>
-                <div class="footer-links">
-                    <h4 data-i18n="footer.services">Services</h4>
-                    <ul>
-                        <li><a href="services.html#plc">Support PLC</a></li>
-                        <li><a href="services.html#audit">Audit technique</a></li>
-                        <li><a href="services.html#documentation">Documentation</a></li>
-                        <li><a href="services.html#refactoring">Refactorisation</a></li>
-                    </ul>
-                </div>
-                <div class="footer-links">
-                    <h4 data-i18n="footer.company">Entreprise</h4>
-                    <ul>
-                        <li><a href="a-propos.html">À propos</a></li>
-                        <li><a href="contact.html">Contact</a></li>
-                    </ul>
-                </div>
-                <div class="footer-contact">
-                    <h4 data-i18n="footer.contact">Contact</h4>
-                    <p>vnkautomatisation@gmail.com</p>
-                    <p>Québec, QC, Canada</p>
+    <!-- DASHBOARD VIEW -->
+    <section class="portal-dashboard" id="dashboard-section" style="display:none">
+
+        <!-- Sidebar -->
+        <aside class="portal-sidebar">
+            <div class="portal-sidebar-user" id="sidebar-user">
+                <div class="portal-sidebar-avatar" id="sidebar-avatar">--</div>
+                <div>
+                    <strong id="sidebar-name">Chargement...</strong>
+                    <span id="sidebar-company"></span>
                 </div>
             </div>
+
+            <nav class="portal-nav">
+                <button class="portal-nav-item active" onclick="showTab('dashboard')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
+                    Tableau de bord
+                </button>
+                <button class="portal-nav-item" onclick="showTab('mandates')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
+                    Mandats
+                    <span class="portal-nav-badge" id="badge-mandates" style="display:none">0</span>
+                </button>
+                <button class="portal-nav-item" onclick="showTab('quotes')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                    Devis
+                    <span class="portal-nav-badge" id="badge-quotes" style="display:none">0</span>
+                </button>
+                <button class="portal-nav-item" onclick="showTab('invoices')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                    Factures
+                    <span class="portal-nav-badge" id="badge-invoices" style="display:none">0</span>
+                </button>
+                <button class="portal-nav-item" onclick="showTab('documents')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>
+                    Documents
+                </button>
+                <button class="portal-nav-item" onclick="showTab('messages')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                    Messages
+                    <span class="portal-nav-badge" id="badge-messages" style="display:none">0</span>
+                </button>
+            </nav>
+
+            <div class="portal-sidebar-footer">
+                <a href="contact.html" class="portal-sidebar-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                    Nous contacter
+                </a>
+                <button class="portal-sidebar-link" onclick="logout()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                    Déconnexion
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <main class="portal-main">
+
+            <!-- TAB: TABLEAU DE BORD -->
+            <div class="portal-tab active" id="tab-dashboard">
+                <div class="portal-tab-header">
+                    <h2>Tableau de bord</h2>
+                    <span class="portal-tab-subtitle" id="dashboard-greeting">Bonjour</span>
+                </div>
+
+                <div class="portal-stats-row">
+                    <div class="portal-stat-card">
+                        <div class="portal-stat-icon portal-stat-icon-blue">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
+                        </div>
+                        <div>
+                            <span class="portal-stat-number" id="stat-mandates">0</span>
+                            <span class="portal-stat-label">Mandats actifs</span>
+                        </div>
+                    </div>
+                    <div class="portal-stat-card">
+                        <div class="portal-stat-icon portal-stat-icon-amber">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                        </div>
+                        <div>
+                            <span class="portal-stat-number" id="stat-quotes">0</span>
+                            <span class="portal-stat-label">Devis en attente</span>
+                        </div>
+                    </div>
+                    <div class="portal-stat-card">
+                        <div class="portal-stat-icon portal-stat-icon-red">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                        </div>
+                        <div>
+                            <span class="portal-stat-number" id="stat-invoices">0</span>
+                            <span class="portal-stat-label">Factures à payer</span>
+                        </div>
+                    </div>
+                    <div class="portal-stat-card">
+                        <div class="portal-stat-icon portal-stat-icon-green">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                        </div>
+                        <div>
+                            <span class="portal-stat-number" id="stat-messages">0</span>
+                            <span class="portal-stat-label">Messages non lus</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="portal-dashboard-grid">
+                    <div class="portal-card">
+                        <div class="portal-card-header">
+                            <h3>Activité récente</h3>
+                        </div>
+                        <div id="activity-list" class="portal-activity-list">
+                            <p class="portal-empty">Aucune activité récente.</p>
+                        </div>
+                    </div>
+                    <div class="portal-card">
+                        <div class="portal-card-header">
+                            <h3>Actions rapides</h3>
+                        </div>
+                        <div class="portal-quick-actions">
+                            <button class="portal-quick-btn" onclick="showTab('quotes')">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                                Voir les devis
+                            </button>
+                            <button class="portal-quick-btn" onclick="showTab('invoices')">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                                Payer une facture
+                            </button>
+                            <button class="portal-quick-btn" onclick="showTab('messages')">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                                Envoyer un message
+                            </button>
+                            <button class="portal-quick-btn" onclick="showTab('documents')">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>
+                                Mes documents
+                            </button>
+                            <a href="https://calendly.com/vnkautomatisation/consultation-30min" target="_blank" class="portal-quick-btn">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                                Réserver un appel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: MANDATS -->
+            <div class="portal-tab" id="tab-mandates">
+                <div class="portal-tab-header">
+                    <h2>Mes mandats</h2>
+                    <span class="portal-tab-subtitle">Suivi de vos projets en cours</span>
+                </div>
+                <div id="mandates-list" class="portal-list">
+                    <div class="portal-empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
+                        <p>Aucun mandat actif pour l'instant.</p>
+                        <a href="contact.html" class="btn btn-outline btn-sm">Démarrer un projet</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: DEVIS -->
+            <div class="portal-tab" id="tab-quotes">
+                <div class="portal-tab-header">
+                    <h2>Mes devis</h2>
+                    <span class="portal-tab-subtitle">Consultez et acceptez vos devis</span>
+                </div>
+                <div id="quotes-list" class="portal-list">
+                    <div class="portal-empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                        <p>Aucun devis en attente.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: FACTURES -->
+            <div class="portal-tab" id="tab-invoices">
+                <div class="portal-tab-header">
+                    <h2>Mes factures</h2>
+                    <span class="portal-tab-subtitle">Téléchargez et payez vos factures</span>
+                </div>
+                <div id="invoices-list" class="portal-list">
+                    <div class="portal-empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                        <p>Aucune facture disponible.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: DOCUMENTS -->
+            <div class="portal-tab" id="tab-documents">
+                <div class="portal-tab-header">
+                    <h2>Mes documents</h2>
+                    <span class="portal-tab-subtitle">Rapports, documentation et livrables déposés par VNK</span>
+                </div>
+                <div id="documents-list" class="portal-list">
+                    <div class="portal-empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>
+                        <p>Aucun document disponible pour l'instant.</p>
+                        <p style="font-size:0.8rem; color:var(--color-text-light)">Les rapports et livrables apparaîtront ici une fois votre mandat démarré.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: MESSAGES -->
+            <div class="portal-tab" id="tab-messages">
+                <div class="portal-tab-header">
+                    <h2>Messagerie</h2>
+                    <span class="portal-tab-subtitle">Communication directe avec VNK Automatisation</span>
+                </div>
+                <div class="portal-messages-layout">
+                    <div class="portal-messages-list" id="messages-list">
+                        <p class="portal-empty">Aucun message.</p>
+                    </div>
+                    <div class="portal-message-compose">
+                        <textarea class="form-textarea" id="message-input" rows="3" placeholder="Écrivez votre message..."></textarea>
+                        <button class="btn btn-primary" onclick="sendMessage()" style="margin-top:0.5rem; width:100%">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:6px"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                            Envoyer
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer" id="portal-footer" style="display:none">
+        <div class="container">
             <div class="footer-bottom">
-                <p data-i18n="footer.copyright">© 2026 VNK Automatisation Inc. Tous droits réservés.</p>
+                <p>© 2026 VNK Automatisation Inc. Tous droits réservés.</p>
             </div>
         </div>
     </footer>

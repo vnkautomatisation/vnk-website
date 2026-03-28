@@ -2,27 +2,23 @@
    VNK Automatisation Inc. - Portal JavaScript
    ============================================ */
 
-// ---------- Login form handler ----------
+// ---------- Login ----------
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     if (!loginForm) return;
 
-    // Check if already logged in
     const token = localStorage.getItem('vnk-token');
-    if (token) {
-        showDashboard();
-    }
+    if (token) showDashboard();
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-
         const loginBtn = document.getElementById('login-btn');
         const loginError = document.getElementById('login-error');
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
 
         loginBtn.disabled = true;
-        loginBtn.innerHTML = '<span>Connexion...</span>';
+        loginBtn.textContent = 'Connexion...';
         loginError.style.display = 'none';
 
         try {
@@ -43,151 +39,494 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginError.style.display = 'block';
             }
         } catch (error) {
-            // Dev mode fallback
-            loginError.textContent = 'Backend en développement. Portail disponible au lancement officiel.';
+            loginError.textContent = 'Erreur de connexion. Veuillez réessayer.';
             loginError.style.display = 'block';
         } finally {
             loginBtn.disabled = false;
-            loginBtn.innerHTML = '<span>Se connecter</span>';
+            loginBtn.textContent = 'Se connecter';
         }
     });
 });
 
 // ---------- Show dashboard ----------
 function showDashboard() {
-    document.getElementById('login-view').style.display = 'none';
-    document.getElementById('dashboard-view').style.display = 'block';
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('dashboard-section').style.display = 'grid';
 
     const user = JSON.parse(localStorage.getItem('vnk-user') || '{}');
-    loadDashboardData();
+
+    // Sidebar user info
+    const initials = (user.name || 'VNK').split(' ').map(n => n[0]).join('').substring(0, 3).toUpperCase();
+    document.getElementById('sidebar-avatar').textContent = initials;
+    document.getElementById('sidebar-name').textContent = user.name || '';
+    document.getElementById('sidebar-company').textContent = user.company || '';
+
+    // Greeting
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
+    document.getElementById('dashboard-greeting').textContent = `${greeting}, ${(user.name || '').split(' ')[0]} !`;
+
+    loadAllData();
 }
 
-// ---------- Load dashboard data ----------
-async function loadDashboardData() {
+// ---------- Load all data ----------
+async function loadAllData() {
     const token = localStorage.getItem('vnk-token');
     if (!token) return;
 
     try {
-        // Load dashboard stats
-        const dashResponse = await fetch('/api/clients/dashboard', {
+        // Dashboard stats
+        const dashRes = await fetch('/api/clients/dashboard', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
+        if (dashRes.ok) {
+            const data = await dashRes.json();
+            document.getElementById('stat-mandates').textContent = data.activeMandates || 0;
+            document.getElementById('stat-quotes').textContent = data.pendingQuotes || 0;
+            document.getElementById('stat-invoices').textContent = data.pendingInvoices || 0;
 
-        if (dashResponse.ok) {
-            const data = await dashResponse.json();
-            document.getElementById('active-mandates').textContent = data.activeMandates || 0;
-            document.getElementById('pending-quotes').textContent = data.pendingQuotes || 0;
-            document.getElementById('pending-invoices').textContent = data.pendingInvoices || 0;
+            // Badges
+            if (data.pendingQuotes > 0) showBadge('badge-quotes', data.pendingQuotes);
+            if (data.pendingInvoices > 0) showBadge('badge-invoices', data.pendingInvoices);
+            if (data.activeMandates > 0) showBadge('badge-mandates', data.activeMandates);
+
+            // Activity
+            renderActivity(data.recentActivity || []);
         }
 
-        // Load invoices
-        const invoicesResponse = await fetch('/api/invoices', {
+        // Quotes
+        const quotesRes = await fetch('/api/quotes', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-
-        if (invoicesResponse.ok) {
-            const invoiceData = await invoicesResponse.json();
-            renderInvoices(invoiceData.invoices);
+        if (quotesRes.ok) {
+            const data = await quotesRes.json();
+            renderQuotes(data.quotes || []);
         }
 
-        // Load quotes
-        const quotesResponse = await fetch('/api/quotes', {
+        // Invoices
+        const invoicesRes = await fetch('/api/invoices', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
+        if (invoicesRes.ok) {
+            const data = await invoicesRes.json();
+            renderInvoices(data.invoices || []);
+        }
 
-        if (quotesResponse.ok) {
-            const quoteData = await quotesResponse.json();
-            renderQuotes(quoteData.quotes);
+        // Messages
+        const messagesRes = await fetch('/api/messages', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (messagesRes.ok) {
+            const data = await messagesRes.json();
+            renderMessages(data.messages || []);
+            const unread = (data.messages || []).filter(m => !m.is_read && m.sender === 'vnk').length;
+            document.getElementById('stat-messages').textContent = unread;
+            if (unread > 0) showBadge('badge-messages', unread);
+        }
+
+        // Documents
+        const docsRes = await fetch('/api/documents', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (docsRes.ok) {
+            const data = await docsRes.json();
+            renderDocuments(data.documents || []);
+        }
+
+        // Mandates
+        const mandatesRes = await fetch('/api/mandates', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (mandatesRes.ok) {
+            const data = await mandatesRes.json();
+            renderMandates(data.mandates || []);
         }
 
     } catch (error) {
-        console.log('Dashboard data not available yet — backend in development');
+        console.log('Data loading error:', error);
     }
+}
+
+// ---------- Tab navigation ----------
+function showTab(tabName) {
+    document.querySelectorAll('.portal-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.portal-nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+    document.querySelectorAll('.portal-nav-item').forEach(btn => {
+        if (btn.getAttribute('onclick') === `showTab('${tabName}')`) {
+            btn.classList.add('active');
+        }
+    });
+}
+
+// ---------- Badge helper ----------
+function showBadge(id, count) {
+    const badge = document.getElementById(id);
+    if (badge) {
+        badge.style.display = 'inline-block';
+        badge.textContent = count;
+    }
+}
+
+// ---------- Render Activity ----------
+function renderActivity(activities) {
+    const list = document.getElementById('activity-list');
+    if (!activities.length) {
+        list.innerHTML = '<p class="portal-empty">Aucune activité récente.</p>';
+        return;
+    }
+
+    const icons = {
+        invoice: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+        quote: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+        mandate: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+        document: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>'
+    };
+
+    list.innerHTML = activities.map(a => `
+        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--color-border)">
+            <div style="color:var(--color-primary)">${icons[a.type] || icons.mandate}</div>
+            <div style="flex:1">
+                <div style="font-size:0.85rem;font-weight:600;color:var(--color-text)">${a.description}</div>
+                <div style="font-size:0.75rem;color:var(--color-text-light)">${new Date(a.date).toLocaleDateString('fr-CA')}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ---------- Render Mandates ----------
+function renderMandates(mandates) {
+    const list = document.getElementById('mandates-list');
+    if (!mandates.length) {
+        list.innerHTML = `
+            <div class="portal-empty-state">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                <p>Aucun mandat actif pour l'instant.</p>
+                <a href="contact.html" class="btn btn-outline btn-sm">Démarrer un projet</a>
+            </div>`;
+        return;
+    }
+
+    const statusLabels = {
+        'active': 'En cours',
+        'pending': 'En attente',
+        'completed': 'Complété',
+        'paused': 'En pause'
+    };
+
+    const serviceLabels = {
+        'plc-support': 'Support PLC',
+        'audit': 'Audit technique',
+        'documentation': 'Documentation',
+        'refactoring': 'Refactorisation'
+    };
+
+    list.innerHTML = mandates.map(m => `
+        <div class="portal-list-item">
+            <div style="flex:1">
+                <div class="portal-item-title">${m.title}</div>
+                <div class="portal-item-desc">${m.description || ''}</div>
+                <div class="portal-item-meta">
+                    ${m.service_type ? `<span style="background:var(--color-light-blue);color:var(--color-primary);padding:0.15rem 0.5rem;border-radius:10px;font-size:0.72rem;font-weight:600">${serviceLabels[m.service_type] || m.service_type}</span>` : ''}
+                    <span>Début: ${new Date(m.start_date || m.created_at).toLocaleDateString('fr-CA')}</span>
+                    ${m.end_date ? `<span>Fin prévue: ${new Date(m.end_date).toLocaleDateString('fr-CA')}</span>` : ''}
+                </div>
+                <div class="portal-progress">
+                    <div class="portal-progress-label">
+                        <span>Progression</span>
+                        <span>${m.progress || 0}%</span>
+                    </div>
+                    <div class="portal-progress-bar">
+                        <div class="portal-progress-fill" style="width:${m.progress || 0}%"></div>
+                    </div>
+                </div>
+                ${m.notes ? `
+                    <div style="margin-top:0.75rem;padding:0.6rem 0.75rem;background:var(--color-light-blue);border-radius:6px;font-size:0.82rem;color:var(--color-primary);border-left:3px solid var(--color-primary)">
+                        <strong>Note de VNK :</strong> ${m.notes}
+                    </div>` : ''}
+            </div>
+            <div class="portal-item-actions">
+                <span class="portal-status portal-status-${m.status}">${statusLabels[m.status] || m.status}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ---------- Render Quotes ----------
+function renderQuotes(quotes) {
+    const list = document.getElementById('quotes-list');
+    if (!quotes.length) {
+        list.innerHTML = `
+            <div class="portal-empty-state">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <p>Aucun devis disponible.</p>
+            </div>`;
+        return;
+    }
+
+    const statusLabels = { pending: 'En attente', accepted: 'Accepté', expired: 'Expiré' };
+    const statusClass = { pending: 'pending', accepted: 'accepted', expired: 'expired' };
+
+    list.innerHTML = quotes.map(q => `
+        <div class="portal-list-item">
+            <div style="flex:1">
+                <div class="portal-item-title">${q.quote_number} — ${q.title}</div>
+                <div class="portal-item-desc">${q.description || ''}</div>
+                <div class="portal-item-meta">
+                    <span>Émis: ${new Date(q.created_at).toLocaleDateString('fr-CA')}</span>
+                    <span>Expire: ${new Date(q.expiry_date).toLocaleDateString('fr-CA')}</span>
+                </div>
+                <div style="margin-top:0.5rem;display:flex;gap:0.75rem;font-size:0.8rem;color:var(--color-text-light)">
+                    <span>Sous-total: ${formatCurrency(q.amount_ht)}</span>
+                    <span>TPS: ${formatCurrency(q.tps_amount)}</span>
+                    <span>TVQ: ${formatCurrency(q.tvq_amount)}</span>
+                </div>
+            </div>
+            <div class="portal-item-actions">
+                <span class="portal-item-amount">${formatCurrency(q.amount_ttc)}</span>
+                <span class="portal-status portal-status-${statusClass[q.status] || 'pending'}">${statusLabels[q.status] || q.status}</span>
+                <div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;justify-content:flex-end">
+                    <button class="btn btn-outline btn-sm" onclick="downloadPDF('quotes', ${q.id}, '${q.quote_number}')">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:3px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        PDF
+                    </button>
+                    ${q.status === 'pending' ? `
+                        <button class="btn btn-primary btn-sm" onclick="acceptQuote(${q.id})">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>
+                            Accepter
+                        </button>` : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
 }
 
 // ---------- Render Invoices ----------
 function renderInvoices(invoices) {
-    const activityList = document.getElementById('activity-list');
-
-    if (!invoices || invoices.length === 0) {
-        activityList.innerHTML = '<p class="no-activity">No invoices yet.</p>';
+    const list = document.getElementById('invoices-list');
+    if (!invoices.length) {
+        list.innerHTML = `
+            <div class="portal-empty-state">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                <p>Aucune facture disponible.</p>
+            </div>`;
         return;
     }
 
-    const unpaidInvoices = invoices.filter(inv => inv.status === 'unpaid');
-    const paidInvoices = invoices.filter(inv => inv.status === 'paid');
+    const unpaid = invoices.filter(i => i.status === 'unpaid');
+    const paid = invoices.filter(i => i.status === 'paid');
 
     let html = '';
 
-    if (unpaidInvoices.length > 0) {
-        html += '<h4 style="color:var(--color-primary); margin-bottom:0.5rem;">Unpaid Invoices</h4>';
-        unpaidInvoices.forEach(invoice => {
-            html += `
-        <div class="activity-item" style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem; background:var(--color-white); border-radius:var(--border-radius); margin-bottom:0.5rem; border:1px solid var(--color-border);">
-          <div>
-            <strong style="color:var(--color-primary)">${invoice.invoice_number}</strong>
-            <p style="font-size:0.85rem; color:var(--color-text-light); margin:0">${invoice.title}</p>
-            <p style="font-size:0.8rem; color:var(--color-text-light); margin:0">Due: ${new Date(invoice.due_date).toLocaleDateString('fr-CA')}</p>
-          </div>
-          <div style="text-align:right;">
-           <strong style="color:var(--color-primary); display:block">${formatCurrency(invoice.amount_ttc)}</strong>
-            <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
-              <button 
-                class="btn btn-primary" 
-                style="font-size:0.8rem; padding:0.4rem 0.75rem"
-                onclick="payInvoice(${invoice.id}, ${invoice.amount_ttc})">
-                Pay Now
-              </button>
-              <button 
-                class="btn btn-outline" 
-                style="font-size:0.8rem; padding:0.4rem 0.75rem"
-                onclick="downloadPDF('invoices', ${invoice.id}, '${invoice.invoice_number}')">
-                PDF
-              </button>
+    if (unpaid.length) {
+        html += `<div style="margin-bottom:0.75rem;font-size:0.82rem;font-weight:700;color:var(--color-error);text-transform:uppercase;letter-spacing:0.5px">${unpaid.length} facture${unpaid.length > 1 ? 's' : ''} non payée${unpaid.length > 1 ? 's' : ''}</div>`;
+        html += unpaid.map(inv => {
+            const isOverdue = new Date(inv.due_date) < new Date();
+            const statusClass = isOverdue ? 'unpaid' : 'pending';
+            const statusLabel = isOverdue ? 'En retard' : 'Non payée';
+            const borderColor = isOverdue ? 'var(--color-error)' : '#E07820';
+            return `
+                <div class="portal-list-item" style="border-left:3px solid ${borderColor}">
+                    <div style="flex:1">
+                        <div class="portal-item-title">${inv.invoice_number} — ${inv.title}</div>
+                        <div class="portal-item-desc">${inv.description || ''}</div>
+                        <div class="portal-item-meta">
+                            <span>Émise: ${new Date(inv.created_at).toLocaleDateString('fr-CA')}</span>
+                            <span ${isOverdue ? 'style="color:var(--color-error);font-weight:600"' : ''}>Échéance: ${new Date(inv.due_date).toLocaleDateString('fr-CA')}</span>
+                        </div>
+                        <div style="margin-top:0.4rem;display:flex;gap:0.75rem;font-size:0.78rem;color:var(--color-text-light)">
+                            <span>Sous-total: ${formatCurrency(inv.amount_ht)}</span>
+                            <span>TPS: ${formatCurrency(inv.tps_amount)}</span>
+                            <span>TVQ: ${formatCurrency(inv.tvq_amount)}</span>
+                        </div>
+                    </div>
+                    <div class="portal-item-actions">
+                        <span class="portal-item-amount">${formatCurrency(inv.amount_ttc)}</span>
+                        <span class="portal-status portal-status-${statusClass}">${statusLabel}</span>
+                        <div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;justify-content:flex-end">
+                            <button class="btn btn-outline btn-sm" onclick="downloadPDF('invoices', ${inv.id}, '${inv.invoice_number}')">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:3px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                PDF
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="payInvoice(${inv.id}, ${inv.amount_ttc})">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:3px"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                                Payer
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    if (paid.length) {
+        html += `<div style="margin-top:1.5rem;margin-bottom:0.75rem;font-size:0.82rem;font-weight:700;color:var(--color-success);text-transform:uppercase;letter-spacing:0.5px">Factures payées (${paid.length})</div>`;
+        html += paid.map(inv => `
+            <div class="portal-list-item" style="border-left:3px solid var(--color-success);opacity:0.85">
+                <div style="flex:1">
+                    <div class="portal-item-title">${inv.invoice_number} — ${inv.title}</div>
+                    <div class="portal-item-meta">
+                        <span>Payée: ${inv.paid_at ? new Date(inv.paid_at).toLocaleDateString('fr-CA') : '--'}</span>
+                    </div>
+                </div>
+                <div class="portal-item-actions">
+                    <span class="portal-item-amount">${formatCurrency(inv.amount_ttc)}</span>
+                    <span class="portal-status portal-status-paid">Payée</span>
+                    <button class="btn btn-outline btn-sm" onclick="downloadPDF('invoices', ${inv.id}, '${inv.invoice_number}')" style="margin-top:0.5rem">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:3px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        PDF
+                    </button>
+                </div>
             </div>
-          </div>
-        </div>
-      `;
-        });
+        `).join('');
     }
 
-    if (paidInvoices.length > 0) {
-        html += '<h4 style="color:var(--color-success); margin-bottom:0.5rem; margin-top:1rem;">Paid Invoices</h4>';
-        paidInvoices.forEach(invoice => {
-            html += `
-        <div class="activity-item" style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem; background:rgba(39,174,96,0.05); border-radius:var(--border-radius); margin-bottom:0.5rem; border:1px solid rgba(39,174,96,0.2);">
-          <div>
-            <strong style="color:var(--color-success)">${invoice.invoice_number}</strong>
-            <p style="font-size:0.85rem; color:var(--color-text-light); margin:0">${invoice.title}</p>
-          </div>
-          <div style="text-align:right;">
-            <strong style="color:var(--color-success)">${formatCurrency(invoice.amount_ttc)}</strong>
-            <span style="display:block; font-size:0.75rem; color:var(--color-success)">✓ Paid</span>
-            <span style="display:block; font-size:0.75rem; color:var(--color-success)">✓ Paid</span>
-            <button
-              class="btn btn-outline"
-              style="font-size:0.8rem; padding:0.4rem 0.75rem; margin-top:0.25rem"
-              onclick="downloadPDF('invoices', ${invoice.id}, '${invoice.invoice_number}')">
-              PDF
-            </button>
-          </div>
-        </div>
-      `;
-        });
+    list.innerHTML = html;
+}
+
+// ---------- Render Documents ----------
+function renderDocuments(documents) {
+    const list = document.getElementById('documents-list');
+    if (!documents.length) {
+        list.innerHTML = `
+            <div class="portal-empty-state">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                <p>Aucun document disponible pour l'instant.</p>
+                <p style="font-size:0.8rem;color:var(--color-text-light)">Les rapports et livrables apparaîtront ici une fois votre mandat démarré.</p>
+            </div>`;
+        return;
     }
 
-    activityList.innerHTML = html;
+    const fileIcons = {
+        pdf: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E74C3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+        doc: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2E75B6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+        docx: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2E75B6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+        zip: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
+        default: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>'
+    };
+
+    const typeLabels = {
+        pdf: 'Rapport PDF',
+        doc: 'Document Word',
+        docx: 'Document Word',
+        zip: 'Archive ZIP',
+        default: 'Document'
+    };
+
+    list.innerHTML = documents.map(doc => {
+        const ext = (doc.file_type || doc.file_name.split('.').pop() || 'default').toLowerCase();
+        const icon = fileIcons[ext] || fileIcons.default;
+        const typeLabel = typeLabels[ext] || typeLabels.default;
+        const size = doc.file_size ? `${(doc.file_size / 1024).toFixed(0)} KB` : '';
+        return `
+            <div class="portal-list-item">
+                <div style="display:flex;align-items:center;gap:0.75rem;flex:1">
+                    <div style="flex-shrink:0">${icon}</div>
+                    <div>
+                        <div class="portal-item-title">${doc.title}</div>
+                        <div class="portal-item-desc">${doc.description || ''}</div>
+                        <div class="portal-item-meta">
+                            <span style="background:var(--color-light-blue);color:var(--color-primary);padding:0.15rem 0.5rem;border-radius:10px;font-size:0.72rem;font-weight:600">${typeLabel}</span>
+                            ${doc.mandate_title ? `<span>Mandat: ${doc.mandate_title}</span>` : ''}
+                            <span>${new Date(doc.created_at).toLocaleDateString('fr-CA')}</span>
+                            ${size ? `<span>${size}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="portal-item-actions">
+                    ${doc.file_url ? `
+                        <a href="${doc.file_url}" target="_blank" class="btn btn-primary btn-sm">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:3px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Télécharger
+                        </a>` : '<span style="font-size:0.78rem;color:var(--color-text-light)">Bientôt disponible</span>'}
+                </div>
+            </div>`;
+    }).join('');
+}
+
+// ---------- Render Messages ----------
+function renderMessages(messages) {
+    const list = document.getElementById('messages-list');
+    if (!messages.length) {
+        list.innerHTML = '<p class="portal-empty">Aucun message. Envoyez votre premier message ci-dessous.</p>';
+        return;
+    }
+
+    list.innerHTML = messages.map(m => `
+        <div style="display:flex;flex-direction:column;align-items:${m.sender === 'client' ? 'flex-end' : 'flex-start'}">
+            <div style="font-size:0.72rem;color:var(--color-text-light);margin-bottom:0.2rem">
+                ${m.sender === 'client' ? 'Vous' : 'VNK Automatisation'}
+            </div>
+            <div class="portal-message-bubble portal-message-${m.sender === 'client' ? 'client' : 'vnk'}">
+                ${m.content}
+            </div>
+            <div class="portal-message-time">${new Date(m.created_at).toLocaleString('fr-CA')}</div>
+        </div>
+    `).join('');
+
+    list.scrollTop = list.scrollHeight;
+}
+
+// ---------- Send message ----------
+async function sendMessage() {
+    const input = document.getElementById('message-input');
+    const content = input.value.trim();
+    if (!content) return;
+
+    const token = localStorage.getItem('vnk-token');
+    const sendBtn = document.querySelector('.portal-message-compose .btn');
+    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Envoi...'; }
+
+    try {
+        const res = await fetch('/api/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ content })
+        });
+
+        if (res.ok) {
+            input.value = '';
+            const messagesRes = await fetch('/api/messages', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (messagesRes.ok) {
+                const data = await messagesRes.json();
+                renderMessages(data.messages || []);
+            }
+        }
+    } catch (error) {
+        console.error('Send message error:', error);
+    } finally {
+        if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Envoyer'; }
+    }
+}
+
+// ---------- Accept quote ----------
+async function acceptQuote(quoteId) {
+    const token = localStorage.getItem('vnk-token');
+    if (!confirm('Voulez-vous accepter ce devis ? Un contrat vous sera envoyé pour signature.')) return;
+    try {
+        const res = await fetch(`/api/quotes/${quoteId}/accept`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            loadAllData();
+        }
+    } catch (error) {
+        console.error('Accept quote error:', error);
+    }
 }
 
 // ---------- Download PDF ----------
 async function downloadPDF(type, id, number) {
     const token = localStorage.getItem('vnk-token');
-
     try {
         const response = await fetch(`/api/${type}/${id}/pdf`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-
         if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -204,20 +543,18 @@ async function downloadPDF(type, id, number) {
     }
 }
 
-// ---------- Render Quotes ----------
-function renderQuotes(quotes) {
-    const pendingQuotes = quotes ? quotes.filter(q => q.status === 'pending') : [];
-
-    const pendingEl = document.getElementById('pending-quotes');
-    if (pendingEl) {
-        pendingEl.textContent = pendingQuotes.length;
-    }
+// ---------- Currency helper ----------
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('fr-CA', {
+        style: 'currency',
+        currency: 'CAD'
+    }).format(amount);
 }
 
 // ---------- Logout ----------
 function logout() {
     localStorage.removeItem('vnk-token');
     localStorage.removeItem('vnk-user');
-    document.getElementById('login-view').style.display = 'block';
-    document.getElementById('dashboard-view').style.display = 'none';
+    document.getElementById('login-section').style.display = 'flex';
+    document.getElementById('dashboard-section').style.display = 'none';
 }
