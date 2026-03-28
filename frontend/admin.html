@@ -1728,7 +1728,7 @@
                                 <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;flex-shrink:0">YV</div>
                                 <div>
                                     <div style="font-weight:700;font-size:0.95rem">Yan Verone Kengne</div>
-                                    <div style="font-size:0.72rem;opacity:0.85;margin-top:1px">yan.verone@vnk.ca</div>
+                                    <div style="font-size:0.72rem;opacity:0.85;margin-top:1px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="59203837772f3c2b36373c192f3732773a38">[email&#160;protected]</a></div>
                                     <div style="font-size:0.68rem;opacity:0.75;margin-top:2px">NEQ : 1181943359</div>
                                 </div>
                             </div>
@@ -2591,6 +2591,7 @@
 
 
     <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
     <script>
         let adminToken = null;
         let allClients = [], allMandates = [], allQuotes = [], allInvoices = [], allDocuments = [], allMessages = [], allPaymentsData = {};
@@ -2610,6 +2611,26 @@
         let adminPollingInterval = null;
 
         // AUTH
+        function v(id) { return document.getElementById(id)?.value || ''; }
+        function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+        function prefill(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+        function fmt(a) { return new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(a || 0); }
+        function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('fr-CA'); }
+        function initials(n) { return (n || '?').split(' ').map(x => x[0]).join('').substring(0, 2).toUpperCase(); }
+        function statusLabel(s) { return { active: 'En cours', pending: 'En attente', completed: 'Complété', paused: 'En pause', paid: 'Payée', unpaid: 'Non payée', accepted: 'Accepté', expired: 'Expiré', declined: 'Refusé', in_progress: 'En cours', open: 'Ouvert', resolved: 'Résolu', closed: 'Fermé' }[s] || s; }
+        function togglePw(id, btn) {
+            var inp = document.getElementById(id);
+            if (!inp) return;
+            var isHidden = inp.type === 'password';
+            inp.type = isHidden ? 'text' : 'password';
+            if (btn) {
+                btn.innerHTML = isHidden
+                    ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+                    : '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+            }
+        }
+        function showToast(msg, type = 'info') { const t = document.getElementById('toast'); if (!t) return; t.innerHTML = msg; t.className = `toast show toast-${type}`; clearTimeout(t._to); t._to = setTimeout(() => t.classList.remove('show'), 3200); }
+
         document.getElementById('admin-login-form').addEventListener('submit', async e => {
             e.preventDefault();
             const errEl = document.getElementById('admin-login-error');
@@ -3569,25 +3590,7 @@
         function confirmResolve(val) { document.getElementById('confirm-overlay').classList.remove('open'); if (confirmCb) { confirmCb(val); confirmCb = null; } }
 
         // HELPERS
-        function v(id) { return document.getElementById(id)?.value || ''; }
-        function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
-        function prefill(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
-        function fmt(a) { return new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(a || 0); }
-        function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('fr-CA'); }
-        function initials(n) { return (n || '?').split(' ').map(x => x[0]).join('').substring(0, 2).toUpperCase(); }
-        function statusLabel(s) { return { active: 'En cours', pending: 'En attente', completed: 'Complété', paused: 'En pause', paid: 'Payée', unpaid: 'Non payée', accepted: 'Accepté', expired: 'Expiré', declined: 'Refusé', in_progress: 'En cours', open: 'Ouvert', resolved: 'Résolu', closed: 'Fermé' }[s] || s; }
-        function togglePw(id, btn) {
-            var inp = document.getElementById(id);
-            if (!inp) return;
-            var isHidden = inp.type === 'password';
-            inp.type = isHidden ? 'text' : 'password';
-            if (btn) {
-                btn.innerHTML = isHidden
-                    ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
-                    : '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-            }
-        }
-        function showToast(msg, type = 'info') { const t = document.getElementById('toast'); if (!t) return; t.innerHTML = msg; t.className = `toast show toast-${type}`; clearTimeout(t._to); t._to = setTimeout(() => t.classList.remove('show'), 3200); }
+
 
 
         // ============================================
@@ -4217,4 +4220,32 @@
                 }
             };
             footer.appendChild(cancelB); footer.appendChild(saveB);
-            modal.appendChild(head); modal.appendChild(body);
+            modal.appendChild(head); modal.appendChild(body); modal.appendChild(footer);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+        }
+
+        // ============================================
+        // ACCEPTER DEVIS → CONTRAT AUTOMATIQUE
+        // ============================================
+        async function acceptQuote(id, num) {
+            const ok = await confirm2('Accepter le devis', 'Accepter le devis ' + num + ' et generer un contrat automatiquement ?', 'Accepter');
+            if (!ok) return;
+            var d = await api('/quotes/' + id + '/accept', 'PUT');
+            if (d.success) {
+                loadQuotes(); loadContracts(); loadDashboard();
+                if (d.signature_sent) {
+                    showToast('Devis accepte ! Contrat ' + d.contract_number + ' envoye pour signature.', 'success');
+                } else {
+                    showToast('Devis accepte ! Contrat ' + d.contract_number + ' cree.', 'success');
+                    setTimeout(function () { showSection('contracts'); }, 1500);
+                }
+            } else {
+                showToast(d.message || 'Erreur', 'error');
+            }
+        }
+
+    </script>
+</body>
+</html>
