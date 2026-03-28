@@ -1626,7 +1626,7 @@
                                 <option value="login">Trier: Dernière connexion</option>
                             </select>
                         </div>
-                        <div id="clients-grid" style="padding:0.75rem"></div>
+                        <div id="clients-grid" style="padding:0.75rem;position:relative"></div>
                         <div class="pagination" id="clients-pag" style="display:none"><span id="clients-pag-info"></span><div class="page-btns" id="clients-pag-btns"></div></div>
                     </div>
                 </div>
@@ -2458,12 +2458,9 @@
                 <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;flex-shrink:0">
                     ${mCounts[c.id] ? `<span style="font-size:0.75rem;color:var(--text-light)">${mCounts[c.id]} mandat${mCounts[c.id] > 1 ? 's' : ''}</span>` : ''}
                     ${iCounts[c.id] ? `<span style="font-size:0.75rem;font-weight:700;color:var(--error)">${iCounts[c.id]} impayée${iCounts[c.id] > 1 ? 's' : ''}</span>` : ''}
-                    <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();archiveClient(${c.id},'${c.full_name.replace(/'/g, "\\'")}',${isActive(c)})" title="${isActive(c) ? 'Archiver' : 'Réactiver'}" style="font-size:0.7rem;padding:0.25rem 0.5rem;margin-top:0.2rem">
-                        ${isActive(c) ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg> Archiver' : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.82"/></svg> Réactiver'}
-                    </button>
                     <div style="position:relative">
                         <button class="btn btn-ghost btn-sm" style="padding:0.3rem 0.5rem;font-size:1rem;line-height:1" onclick="event.stopPropagation();toggleClientMenu(${c.id},this)" title="Actions rapides">⋯</button>
-                        <div id="client-menu-${c.id}" style="display:none;position:absolute;right:0;top:100%;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:170px;z-index:200;padding:0.35rem 0">
+                        <div id="client-menu-${c.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.2);border:1px solid var(--border);min-width:190px;z-index:9999;padding:0.35rem 0">
                             <div style="padding:0.3rem 0.75rem;font-size:0.68rem;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px">Actions rapides</div>
                             <button onclick="event.stopPropagation();closeAllClientMenus();prefill('nq-client',${c.id});openModal('modal-new-quote')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -2761,56 +2758,63 @@
         }
 
         async function sendMsg(cid) {
-            const input = document.getElementById('reply-' + cid);
-            const fileInput = document.getElementById('attach-' + cid);
-            const text = input.value.trim();
-            const files = fileInput ? fileInput.files : null;
-            if (!text && (!files || !files.length)) return;
-            const sendBtn = input ? input.closest('div[style*="padding"]').querySelector('.btn-primary') : null;
+            var input = document.getElementById('reply-' + cid);
+            var fileInput = document.getElementById('attach-' + cid);
+            var text = input ? input.value.trim() : '';
+            var files = fileInput ? fileInput.files : null;
+            var hasFiles = files && files.length > 0;
+            if (!text && !hasFiles) return;
+            var sendBtn = null;
+            try { sendBtn = input ? input.closest('div').querySelector('.btn-primary') : null; } catch (e) { }
             if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '...'; }
             try {
-                // If files attached, upload them first via FormData
-                if (files && files.length > 0) {
-                    const fd = new FormData();
-                    fd.append('content', text || '(pièce jointe)');
-                    Array.from(files).forEach(function (f) { fd.append('files', f); });
-                    const r = await fetch('/api/admin/messages/' + cid + '/with-attachment', {
-                        method: 'POST',
-                        headers: { 'Authorization': 'Bearer ' + adminToken },
-                        body: fd
-                    });
-                    const d = await r.json();
-                    if (d.success) {
-                        input.value = '';
+                if (hasFiles) {
+                    var fileNames = Array.from(files).map(function (f) { return f.name; }).join(', ');
+                    // Try upload route first
+                    var uploaded = false;
+                    try {
+                        var fd = new FormData();
+                        fd.append('content', text || '(pièce jointe)');
+                        Array.from(files).forEach(function (f) { fd.append('files', f); });
+                        var r = await fetch('/api/admin/messages/' + cid + '/with-attachment', {
+                            method: 'POST', headers: { 'Authorization': 'Bearer ' + adminToken }, body: fd
+                        });
+                        if (r.ok) { var d = await r.json(); if (d.success) uploaded = true; }
+                    } catch (e) { }
+                    if (uploaded) {
+                        if (input) input.value = '';
                         if (fileInput) fileInput.value = '';
                         var prev = document.getElementById('attach-preview-' + cid);
                         if (prev) prev.innerHTML = '';
                         await loadMessages();
-                        showToast('Message envoyé !', 'success');
+                        showToast('Message + fichier envoyés !', 'success');
                     } else {
-                        // Fallback: send as text with filename mention
-                        const fileNames = Array.from(files).map(function (f) { return f.name; }).join(', ');
-                        const d2 = await api('/messages/' + cid, 'POST', { content: (text ? text + '\n' : '') + '📎 ' + fileNames });
-                        if (d2.success) {
-                            input.value = '';
-                            if (fileInput) fileInput.value = '';
-                            var prev = document.getElementById('attach-preview-' + cid);
-                            if (prev) prev.innerHTML = '';
-                            await loadMessages();
-                            showToast('Message envoyé (fichier en lien à ajouter manuellement)', 'info');
-                        }
+                        // Fallback: mention filename in message
+                        var msgContent = (text ? text + '\n' : '') + '\uD83D\uDCCE ' + fileNames;
+                        var d2 = await api('/messages/' + cid, 'POST', { content: msgContent });
+                        if (input) input.value = '';
+                        if (fileInput) fileInput.value = '';
+                        var prev2 = document.getElementById('attach-preview-' + cid);
+                        if (prev2) prev2.innerHTML = '';
+                        await loadMessages();
+                        if (d2.success) showToast('Message envoyé (' + fileNames + ')', 'info');
+                        else showToast('Erreur: ' + (d2.message || ''), 'error');
                     }
                 } else {
-                    const d = await api('/messages/' + cid, 'POST', { content: text });
-                    if (d.success) { input.value = ''; await loadMessages(); showToast('Message envoyé', 'success'); }
-                    else showToast(d.message, 'error');
+                    var d3 = await api('/messages/' + cid, 'POST', { content: text });
+                    if (d3.success) {
+                        if (input) input.value = '';
+                        await loadMessages();
+                        showToast('Message envoyé', 'success');
+                    } else { showToast('Erreur: ' + (d3.message || ''), 'error'); }
                 }
             } catch (e) {
-                showToast('Erreur envoi', 'error');
-            }
-            if (sendBtn) {
-                sendBtn.disabled = false;
-                sendBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Envoyer';
+                showToast('Erreur réseau', 'error');
+            } finally {
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Envoyer';
+                }
             }
         }
 
@@ -2900,16 +2904,128 @@
             <td>${fmtDate(c.created_at)}</td>
             <td style="color:var(--success)">${c.signed_at ? fmtDate(c.signed_at) : '—'}</td>
             <td><div class="td-actions">
-                ${c.file_url ? `<a href="${c.file_url}" target="_blank" class="btn btn-sm btn-outline">Voir</a>` : ''}
-                <button class="btn btn-sm btn-ghost" onclick="viewContractHistory(${c.id})" title="Historique versions">
+                ${c.file_url ? `<a href="${c.file_url}" target="_blank" class="btn btn-sm btn-outline">PDF</a>` : ''}
+                ${c.status !== 'signed' ? `<button class="btn btn-sm btn-primary" onclick="sendContractForSignature(${c.id})" title="Envoyer pour signature via HelloSign">✉ Signer</button>` : '<span style="color:var(--success);font-size:0.78rem;font-weight:600">✓ Signé</span>'}
+                <button class="btn btn-sm btn-ghost" onclick="viewContractHistory(${c.id})" title="Historique" style="padding:0.35rem 0.5rem">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 </button>
-                ${c.status !== 'signed' ? `<button class="btn btn-sm btn-success" onclick="signContract(${c.id})">✓ Signé</button>` : ''}
             </div></td>
         </tr>`).join('');
         }
-        async function createContract() { const d = await api('/contracts', 'POST', { client_id: v('nct-client'), mandate_id: v('nct-mandate') || null, quote_id: v('nct-quote') || null, title: v('nct-title'), content: v('nct-content'), file_url: v('nct-url') }); if (d.success) { closeModal('modal-new-contract'); loadContracts(); showToast('Contrat créé !', 'success'); } else showToast(d.message, 'error'); }
-        async function signContract(id) { const ok = await confirm2('Marquer signé', 'Confirmer que ce contrat a été signé ?', 'Confirmer'); if (!ok) return; const d = await api('/contracts/' + id + '/sign', 'PUT'); if (d.success) { loadContracts(); showToast('Contrat signé !', 'success'); } else showToast(d.message, 'error'); }
+        async function createContract() {
+            const clientId = v('nct-client');
+            const title = v('nct-title');
+            if (!clientId || !title) { showToast('Client et titre requis', 'error'); return; }
+            const d = await api('/contracts', 'POST', {
+                client_id: parseInt(clientId),
+                mandate_id: v('nct-mandate') ? parseInt(v('nct-mandate')) : null,
+                quote_id: v('nct-quote') ? parseInt(v('nct-quote')) : null,
+                title: title,
+                content: v('nct-content') || null,
+                file_url: v('nct-url') || null
+            });
+            if (d.success) {
+                closeModal('modal-new-contract');
+                loadContracts();
+                showToast('Contrat créé !', 'success');
+            } else {
+                showToast(d.message || 'Erreur serveur — vérifiez que la table contracts existe dans pgAdmin', 'error');
+                console.error('Contract error:', d);
+            }
+        }
+        async function signContract(id) {
+            const ok = await confirm2('Marquer signé', 'Confirmer que ce contrat a été signé ?', 'Confirmer');
+            if (!ok) return;
+            const d = await api('/contracts/' + id + '/sign', 'PUT');
+            if (d.success) { loadContracts(); showToast('Contrat signé !', 'success'); }
+            else showToast(d.message, 'error');
+        }
+
+        async function sendContractForSignature(id) {
+            const c = allContracts.find(x => x.id === id);
+            if (!c) return;
+            if (!c.file_url) {
+                showToast('Ajoutez un lien vers le fichier contrat (URL) avant de continuer.', 'error');
+                return;
+            }
+            var existing = document.getElementById('hellosign-modal');
+            if (existing) existing.remove();
+
+            // Build modal with DOM — no string quote conflicts
+            var overlay = document.createElement('div');
+            overlay.id = 'hellosign-modal';
+            overlay.className = 'modal-overlay open';
+
+            var modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.maxWidth = '500px';
+
+            var head = document.createElement('div'); head.className = 'modal-head';
+            var ttl = document.createElement('span'); ttl.className = 'modal-title';
+            ttl.textContent = 'Envoyer pour signature — ' + c.title;
+            var xBtn = document.createElement('button'); xBtn.className = 'modal-close';
+            xBtn.textContent = '×'; xBtn.onclick = function () { overlay.remove(); };
+            head.appendChild(ttl); head.appendChild(xBtn);
+
+            var body = document.createElement('div'); body.className = 'modal-body';
+
+            // Find client info
+            var cli = allClients.find(function (cl) { return cl.id == c.client_id; });
+            var cliEmail = cli ? cli.email : '';
+            var cliName = cli ? cli.full_name : '';
+
+            var g1 = document.createElement('div'); g1.className = 'form-group';
+            var l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Courriel du signataire *';
+            var inp1 = document.createElement('input'); inp1.type = 'email'; inp1.className = 'form-input';
+            inp1.id = 'hs-signer-email'; inp1.value = cliEmail;
+            g1.appendChild(l1); g1.appendChild(inp1);
+
+            var g2 = document.createElement('div'); g2.className = 'form-group';
+            var l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Nom du signataire *';
+            var inp2 = document.createElement('input'); inp2.type = 'text'; inp2.className = 'form-input';
+            inp2.id = 'hs-signer-name'; inp2.value = cliName;
+            g2.appendChild(l2); g2.appendChild(inp2);
+
+            var g3 = document.createElement('div'); g3.className = 'form-group';
+            var l3 = document.createElement('label'); l3.className = 'form-label'; l3.textContent = 'Message personnalisé (optionnel)';
+            var ta = document.createElement('textarea'); ta.className = 'form-textarea'; ta.id = 'hs-message';
+            ta.rows = 2; ta.placeholder = 'Veuillez signer ce contrat de service VNK Automatisation...';
+            g3.appendChild(l3); g3.appendChild(ta);
+
+            var info = document.createElement('div');
+            info.style.cssText = 'background:var(--light-blue);border-radius:8px;padding:0.85rem;font-size:0.82rem;color:var(--primary);margin-top:0.5rem;line-height:1.6';
+            info.innerHTML = '📄 <strong>' + c.title + '</strong><br><a href="' + c.file_url + '" target="_blank" style="color:var(--primary)">Voir le fichier ↗</a><br><span style="font-size:0.75rem;color:var(--text-light)">Le client recevra un courriel avec un lien de signature sécurisé via HelloSign/Dropbox Sign.</span>';
+
+            body.appendChild(g1); body.appendChild(g2); body.appendChild(g3); body.appendChild(info);
+
+            var footer = document.createElement('div'); footer.className = 'modal-footer';
+            var cancelB = document.createElement('button'); cancelB.className = 'btn btn-ghost';
+            cancelB.textContent = 'Annuler'; cancelB.onclick = function () { overlay.remove(); };
+            var sendB = document.createElement('button'); sendB.className = 'btn btn-primary';
+            sendB.textContent = '✉ Envoyer pour signature';
+            sendB.onclick = async function () {
+                const email = (document.getElementById('hs-signer-email') || {}).value || '';
+                const name = (document.getElementById('hs-signer-name') || {}).value || '';
+                const msg = (document.getElementById('hs-message') || {}).value || '';
+                if (!email.trim() || !name.trim()) { showToast('Courriel et nom requis', 'error'); return; }
+                sendB.disabled = true; sendB.textContent = 'Envoi...';
+                const d = await api('/contracts/' + id + '/send-signature', 'POST', {
+                    signer_email: email.trim(), signer_name: name.trim(), message: msg.trim()
+                });
+                if (d.success) {
+                    overlay.remove(); loadContracts();
+                    showToast('Demande de signature envoyée à ' + email + ' !', 'success');
+                } else {
+                    sendB.disabled = false; sendB.textContent = '✉ Envoyer pour signature';
+                    showToast(d.message || 'Erreur HelloSign', 'error');
+                }
+            };
+            footer.appendChild(cancelB); footer.appendChild(sendB);
+            modal.appendChild(head); modal.appendChild(body); modal.appendChild(footer);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+        }
 
         // LITIGES
         async function loadDisputes() {
@@ -3310,14 +3426,23 @@
         // MENU CLIENT ⋯
         // ============================================
         function toggleClientMenu(id, btn) {
-            closeAllClientMenus();
             var menu = document.getElementById('client-menu-' + id);
-            if (menu) {
-                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-            }
+            var wasOpen = menu && menu.style.display !== 'none';
+            closeAllClientMenus();
+            if (wasOpen) return;
+            if (!menu) return;
+            var rect = btn.getBoundingClientRect();
+            menu.style.position = 'fixed';
+            menu.style.top = (rect.bottom + 4) + 'px';
+            menu.style.right = (window.innerWidth - rect.right) + 'px';
+            menu.style.left = 'auto';
+            menu.style.zIndex = '9999';
+            menu.style.display = 'block';
         }
         function closeAllClientMenus() {
-            document.querySelectorAll('[id^="client-menu-"]').forEach(function (m) { m.style.display = 'none'; });
+            document.querySelectorAll('[id^="client-menu-"]').forEach(function (m) {
+                m.style.display = 'none';
+            });
         }
         // Fermer menus si click ailleurs
         document.addEventListener('click', function (e) {
