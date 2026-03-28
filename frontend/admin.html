@@ -1575,6 +1575,27 @@
             .topbar-logo-sub {
                 display: none;
             }
+
+            .topbar-logo-text {
+                font-size: 0.8rem;
+            }
+
+            .topbar-right .btn-sm {
+                display: none;
+            }
+
+            .topbar-right {
+                gap: 0.5rem;
+            }
+
+            .topbar-left {
+                gap: 0.5rem;
+            }
+
+            .admin-topbar {
+                padding: 0 0.75rem;
+                height: 52px;
+            }
         }
     </style>
 </head>
@@ -1625,40 +1646,63 @@
     <!-- LOGIN -->
     <div class="admin-login" id="admin-login">
         <div class="login-card">
+            <!-- Logo -->
             <div class="login-logo">
-                <svg width="60" height="60" viewBox="0 0 60 60">
+                <svg width="52" height="52" viewBox="0 0 60 60">
                     <polygon points="30,3 54,16 54,44 30,57 6,44 6,16" fill="#1B4F8A" opacity="0.08" />
-                    <polygon points="30,3 54,16 54,44 30,57 6,44 6,16" fill="none" stroke="#1B4F8A" stroke-width="2.5" />
-                    <text x="30" y="36" text-anchor="middle" style="font-size:14px;font-weight:800;fill:#1B4F8A;font-family:sans-serif">VNK</text>
+                    <polygon points="30,3 54,16 54,44 30,57 6,44 6,16" fill="none" stroke="#1B4F8A" stroke-width="2" />
+                    <text x="30" y="34" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#1B4F8A;font-family:sans-serif">VNK</text>
                 </svg>
-                <div style="margin-top:0.5rem;font-size:1.1rem;font-weight:800;color:var(--primary)">VNK Automatisation Inc.</div>
-                <div class="login-badge">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                    Accès administrateur
-                </div>
             </div>
-            <h2>Connexion</h2>
-            <p>Tableau de bord de gestion VNK</p>
+            <div style="text-align:center;margin-bottom:1.5rem">
+                <div style="font-size:1.25rem;font-weight:800;color:var(--primary)">VNK Automatisation Inc.</div>
+                <div style="font-size:0.78rem;color:var(--text-light);margin-top:0.25rem">Tableau de bord administrateur</div>
+            </div>
+
+            <!-- SSO Buttons -->
+            <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.25rem">
+                <button onclick="showToast('Google SSO - configuration requise', 'info')" style="width:100%;padding:0.7rem 1rem;border:1.5px solid var(--border);border-radius:10px;background:white;cursor:pointer;font-family:inherit;font-size:0.875rem;font-weight:600;color:var(--text);display:flex;align-items:center;justify-content:center;gap:0.75rem;transition:all 0.15s" onmouseenter="this.style.borderColor='#4285F4';this.style.background='rgba(66,133,244,0.04)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
+                    Continuer avec Google
+                </button>
+                <button onclick="showToast('Microsoft SSO - configuration requise', 'info')" style="width:100%;padding:0.7rem 1rem;border:1.5px solid var(--border);border-radius:10px;background:white;cursor:pointer;font-family:inherit;font-size:0.875rem;font-weight:600;color:var(--text);display:flex;align-items:center;justify-content:center;gap:0.75rem;transition:all 0.15s" onmouseenter="this.style.borderColor='#0078D4';this.style.background='rgba(0,120,212,0.04)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                    <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#F25022" /><rect x="11" y="1" width="9" height="9" fill="#7FBA00" /><rect x="1" y="11" width="9" height="9" fill="#00A4EF" /><rect x="11" y="11" width="9" height="9" fill="#FFB900" /></svg>
+                    Continuer avec Microsoft
+                </button>
+            </div>
+
+            <!-- Divider -->
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem">
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+                <span style="font-size:0.75rem;color:var(--text-light);font-weight:500">ou connexion admin</span>
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+            </div>
+
+            <!-- Email/Password form -->
+            <div id="admin-login-error" class="alert alert-error" style="display:none"></div>
             <form id="admin-login-form">
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom:1rem">
                     <label class="form-label">Courriel</label>
-                    <input type="email" class="form-input" id="admin-email" placeholder="admin@vnk.ca" required autocomplete="email">
+                    <input type="email" id="admin-email" class="form-input" placeholder="admin@vnk.ca" autocomplete="email" required>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom:1.25rem">
                     <label class="form-label">Mot de passe</label>
-                    <div class="input-wrap">
-                        <input type="password" class="form-input" id="admin-password" placeholder="••••••••" required>
-                        <button type="button" class="show-pw-btn" onclick="togglePw('admin-password',this)">
+                    <div style="position:relative">
+                        <input type="password" id="admin-password" class="form-input" placeholder="••••••••" autocomplete="current-password" required style="padding-right:2.75rem">
+                        <button type="button" onclick="togglePw('admin-password',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-light);padding:0.2rem">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                         </button>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-full" style="margin-top:0.75rem">
+                <button type="submit" class="btn btn-primary" style="width:100%;padding:0.8rem;font-size:0.925rem">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></svg>
                     Accéder au tableau de bord
                 </button>
-                <div id="admin-login-error" class="alert alert-error" style="display:none"></div>
             </form>
+
+            <div style="text-align:center;margin-top:1.25rem;font-size:0.75rem;color:var(--text-light)">
+                Accès restreint · VNK Automatisation Inc.
+            </div>
         </div>
     </div>
 
@@ -1672,37 +1716,49 @@
                 <div style="font-size:0.75rem;color:#99BBDD;font-weight:600">Admin</div>
             </div>
             <div class="topbar-right">
-                <a href="https://vnk-website-production.up.railway.app" target="_blank" class="btn btn-sm" style="background:rgba(255,255,255,0.08);color:#99BBDD;border:1px solid rgba(255,255,255,0.15);text-decoration:none" title="Voir le site public">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
-                    <span class="topbar-user">Site public</span>
+                <a href="https://vnk-website-production.up.railway.app" target="_blank" style="background:rgba(255,255,255,0.08);color:#99BBDD;border:1px solid rgba(255,255,255,0.15);text-decoration:none;font-size:0.78rem;font-weight:600;padding:0.35rem 0.75rem;border-radius:8px;display:flex;align-items:center;gap:0.4rem" class="topbar-user">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+                    Site
                 </a>
                 <div style="position:relative">
-                    <div class="topbar-avatar" onclick="toggleAdminProfile()" style="cursor:pointer" title="Mon profil admin">YV</div>
-                    <div id="admin-profile-menu" style="display:none;position:fixed;top:62px;right:1.5rem;background:white;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.18);border:1px solid var(--border);min-width:220px;z-index:9999;padding:0.5rem 0">
-                        <div style="padding:0.85rem 1rem;border-bottom:1px solid var(--border)">
-                            <div style="font-weight:700;font-size:0.9rem;color:var(--text)">Yan Verone Kengne</div>
-                            <div style="font-size:0.75rem;color:var(--text-light);margin-top:2px">yan.verone@vnk.ca</div>
-                            <div style="font-size:0.72rem;color:var(--primary);font-weight:600;margin-top:2px">Administrateur VNK</div>
+                    <div class="topbar-avatar" onclick="toggleAdminProfile()" style="cursor:pointer;user-select:none" title="Mon compte admin">YV</div>
+                    <div id="admin-profile-menu" style="display:none;position:fixed;top:58px;right:1rem;background:white;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,0.2);border:1px solid var(--border);min-width:270px;z-index:9999;overflow:hidden">
+                        <div style="background:linear-gradient(135deg,#1B4F8A,#2E6DB4);padding:1.25rem 1rem;color:white">
+                            <div style="display:flex;align-items:center;gap:0.85rem">
+                                <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;flex-shrink:0">YV</div>
+                                <div>
+                                    <div style="font-weight:700;font-size:0.95rem">Yan Verone Kengne</div>
+                                    <div style="font-size:0.72rem;opacity:0.85;margin-top:1px">yan.verone@vnk.ca</div>
+                                    <div style="font-size:0.68rem;opacity:0.75;margin-top:2px">NEQ : 1181943359</div>
+                                </div>
+                            </div>
+                            <div style="margin-top:0.85rem;padding:0.5rem 0.75rem;background:rgba(255,255,255,0.12);border-radius:8px;font-size:0.72rem;display:grid;grid-template-columns:1fr 1fr;gap:0.25rem">
+                                <span style="opacity:0.8">Role</span><span style="font-weight:700;text-align:right">Administrateur</span>
+                                <span style="opacity:0.8">TVQ</span><span style="font-weight:700;text-align:right">Enregistre</span>
+                                <span style="opacity:0.8">TPS</span><span style="font-weight:700;text-align:right">Enregistre</span>
+                            </div>
                         </div>
-                        <button onclick="toggleAdminProfile();window.open('https://vnk-website-production.up.railway.app/portail','_blank')" style="width:100%;text-align:left;padding:0.6rem 1rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-                            Mon portail client
-                        </button>
-                        <button onclick="toggleAdminProfile();window.open('https://vnk-website-production.up.railway.app','_blank')" style="width:100%;text-align:left;padding:0.6rem 1rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
-                            Voir le site public
-                        </button>
-                        <div style="height:1px;background:var(--border);margin:0.3rem 0"></div>
-                        <button onclick="adminLogout()" style="width:100%;text-align:left;padding:0.6rem 1rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-                            Déconnexion
-                        </button>
+                        <div style="padding:0.4rem 0">
+                            <button onclick="toggleAdminProfile();window.open('https://vnk-website-production.up.railway.app/portail','_blank')" style="width:100%;text-align:left;padding:0.65rem 1rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.65rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                Mon portail client
+                            </button>
+                            <button onclick="toggleAdminProfile();window.open('https://dashboard.stripe.com','_blank')" style="width:100%;text-align:left;padding:0.65rem 1rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.65rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#635BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                                Stripe Dashboard
+                            </button>
+                            <button onclick="toggleAdminProfile();window.open('https://app.hellosign.com','_blank')" style="width:100%;text-align:left;padding:0.65rem 1rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.65rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0061FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+                                Dropbox Sign
+                            </button>
+                            <div style="height:1px;background:var(--border);margin:0.3rem 0.75rem"></div>
+                            <button onclick="adminLogout()" style="width:100%;text-align:left;padding:0.65rem 1rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.65rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                                Deconnexion
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <button class="btn btn-sm" onclick="adminLogout()" style="background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2)">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-                    <span class="topbar-user">Déconnexion</span>
-                </button>
             </div>
         </header>
 
@@ -2210,7 +2266,7 @@
 
 
     <!-- ===== MOBILE BOTTOM NAV ===== -->
-    <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav" style="display:none">
         <div class="mobile-nav-inner">
             <button class="mobile-nav-btn active" id="mobnav-dashboard" onclick="mobileNav('dashboard',this)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
@@ -2534,6 +2590,7 @@
     </div>
 
 
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
     <script>
         let adminToken = null;
         let allClients = [], allMandates = [], allQuotes = [], allInvoices = [], allDocuments = [], allMessages = [], allPaymentsData = {};
@@ -2560,16 +2617,16 @@
             try {
                 const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: v('admin-email'), password: v('admin-password') }) });
                 const d = await r.json();
-                if (d.success && d.token) { adminToken = d.token; localStorage.setItem('vnk-admin-token', d.token); document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; loadAllAdmin().then(() => startAdminPolling()); }
+                if (d.success && d.token) { adminToken = d.token; localStorage.setItem('vnk-admin-token', d.token); document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; var _n = document.getElementById('mobile-bottom-nav'); if (_n) _n.style.display = 'block'; loadAllAdmin().then(() => startAdminPolling()); }
                 else { errEl.textContent = d.message || 'Identifiants incorrects.'; errEl.style.display = 'block'; }
             } catch { errEl.textContent = 'Erreur de connexion.'; errEl.style.display = 'block'; }
         });
 
-        function adminLogout() { adminToken = null; localStorage.removeItem('vnk-admin-token'); if (adminPollingInterval) { clearInterval(adminPollingInterval); adminPollingInterval = null; } document.getElementById('admin-login').style.display = 'flex'; document.getElementById('admin-app').style.display = 'none'; }
+        function adminLogout() { adminToken = null; localStorage.removeItem('vnk-admin-token'); if (adminPollingInterval) { clearInterval(adminPollingInterval); adminPollingInterval = null; } document.getElementById('admin-login').style.display = 'flex'; document.getElementById('admin-app').style.display = 'none'; var _nl = document.getElementById('mobile-bottom-nav'); if (_nl) _nl.style.display = 'none'; var _nd = document.getElementById('mobile-more-drawer'); if (_nd) _nd.style.display = 'none'; }
 
         window.addEventListener('DOMContentLoaded', () => {
             const saved = localStorage.getItem('vnk-admin-token');
-            if (saved) { adminToken = saved; document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; loadAllAdmin().then(() => startAdminPolling()); }
+            if (saved) { adminToken = saved; document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; var _na = document.getElementById('mobile-bottom-nav'); if (_na) _na.style.display = 'block'; loadAllAdmin().then(() => startAdminPolling()); }
             const h = new Date().getHours();
             document.getElementById('dash-greeting').textContent = (h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir') + ', Yan Verone';
             document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
@@ -4160,12 +4217,4 @@
                 }
             };
             footer.appendChild(cancelB); footer.appendChild(saveB);
-            modal.appendChild(head); modal.appendChild(body); modal.appendChild(footer);
-            overlay.appendChild(modal);
-            document.body.appendChild(overlay);
-            overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
-        }
-
-    </script>
-</body>
-</html>
+            modal.appendChild(head); modal.appendChild(body);
