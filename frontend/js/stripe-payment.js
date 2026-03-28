@@ -5,6 +5,19 @@
 const stripePublishableKey = 'pk_test_51TErqtRnDD0deTI4BLVRIDRe8Jy1pfud8ibIoAXUgTi89OH7EQOVcn22KeE9DX8sDeTPiJB7lMyfvhRaRHTILbs600iS6ESs4W';
 let stripeInstance = null;
 
+// ---------- Show payment message ----------
+function showPaymentMessage(message, type) {
+    const existing = document.getElementById('payment-feedback');
+    if (existing) {
+        existing.className = `alert alert-${type}`;
+        existing.textContent = message;
+        existing.style.display = 'block';
+    } else {
+        // Si l'élément n'existe pas, affiche dans la console
+        console.log(`Payment [${type}]: ${message}`);
+    }
+}
+
 function initStripe() {
     // Correction: vérifier que Stripe est chargé et que la clé existe
     if (typeof Stripe !== 'undefined' && stripePublishableKey) {

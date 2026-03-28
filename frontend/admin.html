@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | VNK Automatisation Inc.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #1B4F8A;
+            --primary-dark: #0F2D52;
+            --secondary: #2E75B6;
+            --light-blue: #EBF3FA;
+            --success: #27AE60;
+            --warning: #E07820;
+            --error: #E74C3C;
+            --text: #333;
+            --text-light: #888;
+            --border: #E2E8F0;
+            --bg: #F5F7FA;
+            --white: #fff;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --radius: 10px;
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+        /* === LOGIN === */
+        .admin-login { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--primary-dark); }
+        .login-card { background: var(--white); border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .login-logo { text-align: center; margin-bottom: 1.5rem; }
+        .login-logo svg { display: block; margin: 0 auto 0.5rem; }
+        .login-logo h1 { font-size: 1.3rem; color: var(--primary); font-weight: 800; }
+        .login-logo p { font-size: 0.8rem; color: var(--text-light); }
+        .login-card h2 { font-size: 1.1rem; color: var(--text); margin-bottom: 1.5rem; text-align: center; }
+        .form-group { margin-bottom: 1rem; }
+        .form-label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; }
+        .form-input { width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: inherit; transition: border-color 0.2s; }
+        .form-input:focus { outline: none; border-color: var(--primary); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.7rem 1.2rem; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; font-family: inherit; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { opacity: 0.9; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-warning:hover { opacity: 0.9; }
+        .btn-danger { background: var(--error); color: white; }
+        .btn-danger:hover { opacity: 0.9; }
+        .btn-outline { background: white; color: var(--primary); border: 1.5px solid var(--primary); }
+        .btn-outline:hover { background: var(--light-blue); }
+        .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.78rem; }
+        .btn-full { width: 100%; }
+        .alert { padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; margin-top: 1rem; }
+        .alert-error { background: #fef2f2; color: var(--error); }
+        .alert-success { background: #f0fdf4; color: var(--success); }
+
+        /* === LAYOUT === */
+        .admin-app { display: none; min-height: 100vh; }
+        .admin-topbar { background: var(--primary-dark); color: white; padding: 0 1.5rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+        .topbar-left { display: flex; align-items: center; gap: 1rem; }
+        .topbar-logo { font-size: 1rem; font-weight: 800; color: white; }
+        .topbar-logo span { color: #99BBDD; font-weight: 400; font-size: 0.8rem; }
+        .topbar-right { display: flex; align-items: center; gap: 1rem; }
+        .topbar-user { font-size: 0.82rem; color: #99BBDD; }
+        .admin-layout { display: flex; }
+        .admin-sidebar { width: 220px; background: var(--white); border-right: 1px solid var(--border); min-height: calc(100vh - 56px); position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto; padding: 1rem 0; flex-shrink: 0; }
+        .sidebar-nav { display: flex; flex-direction: column; gap: 2px; padding: 0 0.75rem; }
+        .sidebar-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.88rem; font-weight: 500; color: var(--text); cursor: pointer; border: none; background: none; width: 100%; text-align: left; transition: all 0.15s; }
+        .sidebar-item:hover { background: var(--light-blue); color: var(--primary); }
+        .sidebar-item.active { background: var(--light-blue); color: var(--primary); font-weight: 600; }
+        .sidebar-item svg { flex-shrink: 0; opacity: 0.7; }
+        .sidebar-item.active svg { opacity: 1; }
+        .sidebar-section { font-size: 0.7rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.8px; padding: 0.75rem 1.6rem 0.3rem; }
+        .admin-main { flex: 1; padding: 1.5rem; overflow-y: auto; }
+
+        /* === SECTIONS === */
+        .admin-section { display: none; }
+        .admin-section.active { display: block; }
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+        .section-title { font-size: 1.3rem; font-weight: 700; color: var(--primary); }
+        .section-subtitle { font-size: 0.82rem; color: var(--text-light); margin-top: 0.1rem; }
+
+        /* === STATS CARDS === */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: var(--white); border-radius: var(--radius); padding: 1.25rem; border: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+        .stat-icon { width: 46px; height: 46px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .stat-icon-blue { background: var(--primary); }
+        .stat-icon-green { background: var(--success); }
+        .stat-icon-orange { background: var(--warning); }
+        .stat-icon-red { background: var(--error); }
+        .stat-number { font-size: 1.8rem; font-weight: 800; color: var(--primary); line-height: 1; }
+        .stat-label { font-size: 0.75rem; color: var(--text-light); margin-top: 2px; }
+        .stat-amount { font-size: 0.85rem; font-weight: 700; color: var(--warning); }
+
+        /* === TABLES === */
+        .table-wrap { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+        .table-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .table-title { font-size: 0.95rem; font-weight: 700; color: var(--primary); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: var(--bg); padding: 0.7rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+        td { padding: 0.85rem 1rem; font-size: 0.85rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #FAFBFC; }
+        .td-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+        .badge { display: inline-flex; align-items: center; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.72rem; font-weight: 600; }
+        .badge-active, .badge-paid { background: rgba(39,174,96,0.12); color: var(--success); }
+        .badge-pending { background: rgba(224,120,32,0.12); color: var(--warning); }
+        .badge-unpaid { background: rgba(231,76,60,0.12); color: var(--error); }
+        .badge-accepted { background: rgba(27,79,138,0.12); color: var(--primary); }
+        .badge-completed { background: rgba(39,174,96,0.12); color: var(--success); }
+        .badge-expired, .badge-overdue { background: rgba(136,136,136,0.12); color: #666; }
+
+        /* === MODAL === */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .modal-overlay.open { display: flex; }
+        .modal { background: var(--white); border-radius: 14px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+        .modal-head { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--white); z-index: 1; }
+        .modal-title { font-size: 1rem; font-weight: 700; color: var(--primary); }
+        .modal-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--text-light); line-height: 1; padding: 0.2rem; }
+        .modal-body { padding: 1.5rem; }
+        .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; gap: 0.75rem; justify-content: flex-end; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-select, .form-textarea { width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: inherit; }
+        .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); }
+        .form-textarea { resize: vertical; min-height: 80px; }
+        .tax-preview { background: var(--bg); border-radius: 8px; padding: 0.75rem 1rem; margin-top: 0.5rem; font-size: 0.82rem; display: none; }
+        .tax-preview .tax-line { display: flex; justify-content: space-between; padding: 0.2rem 0; }
+        .tax-preview .tax-total { font-weight: 700; color: var(--primary); border-top: 1px solid var(--border); margin-top: 0.3rem; padding-top: 0.3rem; }
+
+        /* === CLIENT CARD === */
+        .client-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); padding: 1.25rem; display: flex; align-items: center; gap: 1rem; cursor: pointer; transition: all 0.15s; margin-bottom: 0.75rem; }
+        .client-card:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+        .client-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.82rem; font-weight: 800; flex-shrink: 0; }
+        .client-info { flex: 1; }
+        .client-name { font-weight: 700; color: var(--text); font-size: 0.92rem; }
+        .client-company { font-size: 0.8rem; color: var(--text-light); }
+        .client-meta { display: flex; gap: 1rem; margin-top: 0.3rem; font-size: 0.75rem; color: var(--text-light); }
+
+        /* === MESSAGES === */
+        .msg-thread { display: flex; flex-direction: column; gap: 1rem; }
+        .msg-client-block { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+        .msg-client-header { padding: 0.85rem 1.25rem; background: var(--bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+        .msg-client-name { font-weight: 700; font-size: 0.9rem; color: var(--primary); }
+        .msg-count-badge { background: var(--error); color: white; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 10px; }
+        .msg-list { padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; max-height: 300px; overflow-y: auto; }
+        .msg-bubble { max-width: 75%; padding: 0.6rem 0.9rem; border-radius: 10px; font-size: 0.85rem; line-height: 1.5; }
+        .msg-bubble-client { background: var(--light-blue); color: var(--text); align-self: flex-start; border-bottom-left-radius: 3px; }
+        .msg-bubble-vnk { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
+        .msg-time { font-size: 0.7rem; color: var(--text-light); margin-top: 0.2rem; }
+        .msg-compose { padding: 1rem; border-top: 1px solid var(--border); display: flex; gap: 0.75rem; }
+        .msg-compose textarea { flex: 1; padding: 0.65rem 0.9rem; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.85rem; font-family: inherit; resize: none; }
+        .msg-compose textarea:focus { outline: none; border-color: var(--primary); }
+
+        /* === PROGRESS SLIDER === */
+        .progress-wrap { margin: 0.5rem 0; }
+        .progress-bar-bg { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 0.3rem; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); border-radius: 4px; transition: width 0.3s; }
+        input[type=range] { width: 100%; accent-color: var(--primary); }
+
+        /* === EMPTY STATE === */
+        .empty-state { text-align: center; padding: 3rem; color: var(--text-light); }
+        .empty-state svg { opacity: 0.3; margin-bottom: 1rem; }
+
+        /* === TOAST === */
+        .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--primary-dark); color: white; padding: 0.85rem 1.25rem; border-radius: 10px; font-size: 0.88rem; z-index: 9999; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+        .toast.show { display: block; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .admin-sidebar { display: none; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN -->
+<div class="admin-login" id="admin-login">
+    <div class="login-card">
+        <div class="login-logo">
+            <svg width="48" height="48" viewBox="0 0 48 48">
+                <polygon points="24,2 44,13 44,35 24,46 4,35 4,13" fill="#1B4F8A" opacity="0.1"/>
+                <polygon points="24,2 44,13 44,35 24,46 4,35 4,13" fill="none" stroke="#1B4F8A" stroke-width="2"/>
+                <text x="24" y="29" text-anchor="middle" style="font-size:12px;font-weight:800;fill:#1B4F8A;font-family:sans-serif">VNK</text>
+            </svg>
+            <h1>VNK Automatisation Inc.</h1>
+            <p>Tableau de bord administrateur</p>
+        </div>
+        <form id="admin-login-form">
+            <div class="form-group">
+                <label class="form-label">Courriel admin</label>
+                <input type="email" class="form-input" id="admin-email" placeholder="admin@vnk.ca" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Mot de passe</label>
+                <input type="password" class="form-input" id="admin-password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full" style="margin-top:0.5rem">Accéder au tableau de bord</button>
+            <div id="admin-login-error" class="alert alert-error" style="display:none"></div>
+        </form>
+    </div>
+</div>
+
+<!-- ADMIN APP -->
+<div class="admin-app" id="admin-app">
+
+    <!-- Topbar -->
+    <header class="admin-topbar">
+        <div class="topbar-left">
+            <div class="topbar-logo">VNK <span>Admin</span></div>
+        </div>
+        <div class="topbar-right">
+            <span class="topbar-user" id="admin-user-label">Yan Verone</span>
+            <button class="btn btn-sm btn-outline" onclick="adminLogout()" style="color:white;border-color:rgba(255,255,255,0.3)">Déconnexion</button>
+        </div>
+    </header>
+
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <nav class="sidebar-nav">
+                <div class="sidebar-section">Vue d'ensemble</div>
+                <button class="sidebar-item active" onclick="showSection('dashboard')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    Tableau de bord
+                </button>
+                <div class="sidebar-section">Clients</div>
+                <button class="sidebar-item" onclick="showSection('clients')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Clients
+                    <span id="badge-clients" style="margin-left:auto;background:var(--primary);color:white;font-size:0.68rem;padding:0.1rem 0.4rem;border-radius:10px;display:none">0</span>
+                </button>
+                <div class="sidebar-section">Opérations</div>
+                <button class="sidebar-item" onclick="showSection('mandates')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    Mandats
+                </button>
+                <button class="sidebar-item" onclick="showSection('quotes')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Devis
+                    <span id="badge-quotes-admin" style="margin-left:auto;display:none;background:var(--warning);color:white;font-size:0.68rem;padding:0.1rem 0.4rem;border-radius:10px">0</span>
+                </button>
+                <button class="sidebar-item" onclick="showSection('invoices')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    Factures
+                    <span id="badge-invoices-admin" style="margin-left:auto;display:none;background:var(--error);color:white;font-size:0.68rem;padding:0.1rem 0.4rem;border-radius:10px">0</span>
+                </button>
+                <div class="sidebar-section">Contenu</div>
+                <button class="sidebar-item" onclick="showSection('documents')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                    Documents
+                </button>
+                <button class="sidebar-item" onclick="showSection('messages')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Messages
+                    <span id="badge-messages-admin" style="margin-left:auto;display:none;background:var(--error);color:white;font-size:0.68rem;padding:0.1rem 0.4rem;border-radius:10px">0</span>
+                </button>
+                <div class="sidebar-section">Finance</div>
+                <button class="sidebar-item" onclick="showSection('payments')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    Paiements
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Main -->
+        <main class="admin-main">
+
+            <!-- TABLEAU DE BORD -->
+            <div class="admin-section active" id="section-dashboard">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">Tableau de bord</div>
+                        <div class="section-subtitle" id="dash-greeting">Bonjour Yan Verone</div>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="loadAllAdmin()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-4.36"/></svg>
+                        Actualiser
+                    </button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                        <div><div class="stat-number" id="d-clients">-</div><div class="stat-label">Clients actifs</div></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
+                        <div><div class="stat-number" id="d-mandates">-</div><div class="stat-label">Mandats actifs</div></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+                        <div><div class="stat-number" id="d-unpaid">-</div><div class="stat-label">Factures non payées</div><div class="stat-amount" id="d-unpaid-amount"></div></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-green" style="background:var(--success)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                        <div><div class="stat-number" id="d-revenue">-</div><div class="stat-label">Revenu ce mois</div></div>
+                    </div>
+                </div>
+                <!-- Recent activity -->
+                <div class="table-wrap">
+                    <div class="table-header"><div class="table-title">Activité récente</div></div>
+                    <div id="admin-activity" style="padding:1rem"></div>
+                </div>
+            </div>
+
+            <!-- CLIENTS -->
+            <div class="admin-section" id="section-clients">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">Clients</div>
+                        <div class="section-subtitle">Gérer tous vos clients</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="openModal('modal-new-client')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Nouveau client
+                    </button>
+                </div>
+                <div id="clients-list"></div>
+            </div>
+
+            <!-- MANDATS -->
+            <div class="admin-section" id="section-mandates">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">Mandats</div>
+                        <div class="section-subtitle">Suivre et gérer tous les mandats</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="openModal('modal-new-mandate')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Nouveau mandat
+                    </button>
+                </div>
+                <div class="table-wrap">
+                    <table><thead><tr>
+                        <th>Client</th><th>Titre</th><th>Type</th><th>Statut</th><th>Progression</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody id="mandates-tbody"></tbody></table>
+                </div>
+            </div>
+
+            <!-- DEVIS -->
+            <div class="admin-section" id="section-quotes">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">Devis</div>
+                        <div class="section-subtitle">Créer et suivre les devis</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="openModal('modal-new-quote')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Nouveau devis
+                    </button>
+                </div>
+                <div class="table-wrap">
+                    <table><thead><tr>
+                        <th>Numéro</th><th>Client</th><th>Titre</th><th>Montant TTC</th><th>Statut</th><th>Expiration</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody id="quotes-tbody"></tbody></table>
+                </div>
+            </div>
+
+            <!-- FACTURES -->
+            <div class="admin-section" id="section-invoices">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">Factures</div>
+                        <div class="section-subtitle">Créer et suivre les factures</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="openModal('modal-new-invoice')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Nouvelle facture
+                    </button>
+                </div>
+                <div class="table-wrap">
+                    <table><thead><tr>
+                        <th>Numéro</th><th>Client</th><th>Titre</th><th>Montant TTC</th><th>Statut</th><th>Échéance</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody id="invoices-tbody"></tbody></table>
+                </div>
+            </div>
+
+            <!-- DOCUMENTS -->
+            <div class="admin-section" id="section-documents">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">Documents</div>
+                        <div class="section-subtitle">Déposer des livrables pour vos clients</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="openModal('modal-new-document')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Déposer un document
+                    </button>
+                </div>
+                <div class="table-wrap">
+                    <table><thead><tr>
+                        <th>Client</th><th>Titre</th><th>Type</th><th>Mandat</th><th>Date</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody id="documents-tbody"></tbody></table>
+                </div>
+            </div>
+
+            <!-- MESSAGES -->
+            <div class="admin-section" id="section-messages">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">Messagerie</div>
+                        <div class="section-subtitle">Répondre aux clients</div>
+                    </div>
+                </div>
+                <div class="msg-thread" id="messages-thread"></div>
+            </div>
+
+            <!-- PAIEMENTS -->
+            <div class="admin-section" id="section-payments">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">Paiements</div>
+                        <div class="section-subtitle">Historique et confirmation des paiements</div>
+                    </div>
+                </div>
+                <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                        <div><div class="stat-number" id="p-total-paid">-</div><div class="stat-label">Total payé</div></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+                        <div><div class="stat-number" id="p-total-unpaid">-</div><div class="stat-label">Total à recevoir</div></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                        <div><div class="stat-number" id="p-total-invoiced">-</div><div class="stat-label">Total facturé</div></div>
+                    </div>
+                </div>
+                <div class="table-wrap" style="margin-top:1.5rem">
+                    <table><thead><tr>
+                        <th>Facture</th><th>Client</th><th>Montant</th><th>Statut</th><th>Échéance</th><th>Payée le</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody id="payments-tbody"></tbody></table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+
+<!-- Nouveau client -->
+<div class="modal-overlay" id="modal-new-client">
+    <div class="modal">
+        <div class="modal-head"><span class="modal-title">Nouveau client</span><button class="modal-close" onclick="closeModal('modal-new-client')">×</button></div>
+        <div class="modal-body">
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Nom complet *</label><input type="text" class="form-input" id="nc-name" placeholder="Jean Tremblay"></div>
+                <div class="form-group"><label class="form-label">Entreprise</label><input type="text" class="form-input" id="nc-company" placeholder="Industries XYZ Inc."></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Courriel *</label><input type="email" class="form-input" id="nc-email" placeholder="jean@entreprise.com"></div>
+                <div class="form-group"><label class="form-label">Téléphone</label><input type="tel" class="form-input" id="nc-phone" placeholder="418 000-0000"></div>
+            </div>
+            <div class="form-group"><label class="form-label">Mot de passe temporaire *</label><input type="text" class="form-input" id="nc-password" placeholder="Min. 8 caractères"></div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-new-client')">Annuler</button><button class="btn btn-primary" onclick="createClient()">Créer le client</button></div>
+    </div>
+</div>
+
+<!-- Nouveau mandat -->
+<div class="modal-overlay" id="modal-new-mandate">
+    <div class="modal">
+        <div class="modal-head"><span class="modal-title">Nouveau mandat</span><button class="modal-close" onclick="closeModal('modal-new-mandate')">×</button></div>
+        <div class="modal-body">
+            <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nm-client"><option value="">Sélectionner un client</option></select></div>
+            <div class="form-group"><label class="form-label">Titre du mandat *</label><input type="text" class="form-input" id="nm-title" placeholder="Support PLC Siemens S7-1500 — Usine ABC"></div>
+            <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="nm-desc" placeholder="Détails du mandat..."></textarea></div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Type de service</label>
+                    <select class="form-select" id="nm-type">
+                        <option value="plc-support">Support PLC</option>
+                        <option value="audit">Audit technique</option>
+                        <option value="documentation">Documentation</option>
+                        <option value="refactoring">Refactorisation</option>
+                    </select>
+                </div>
+                <div class="form-group"><label class="form-label">Statut</label>
+                    <select class="form-select" id="nm-status">
+                        <option value="active">En cours</option>
+                        <option value="pending">En attente</option>
+                        <option value="paused">En pause</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Date de début</label><input type="date" class="form-input" id="nm-start"></div>
+                <div class="form-group"><label class="form-label">Date de fin estimée</label><input type="date" class="form-input" id="nm-end"></div>
+            </div>
+            <div class="form-group"><label class="form-label">Progression (%) : <span id="nm-progress-val">0</span>%</label>
+                <input type="range" id="nm-progress" min="0" max="100" value="0" oninput="document.getElementById('nm-progress-val').textContent=this.value">
+            </div>
+            <div class="form-group"><label class="form-label">Note visible par le client</label><textarea class="form-textarea" id="nm-notes" placeholder="Intervention en cours — en attente de confirmation client..."></textarea></div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-new-mandate')">Annuler</button><button class="btn btn-primary" onclick="createMandate()">Créer le mandat</button></div>
+    </div>
+</div>
+
+<!-- Modifier mandat -->
+<div class="modal-overlay" id="modal-edit-mandate">
+    <div class="modal">
+        <div class="modal-head"><span class="modal-title">Modifier le mandat</span><button class="modal-close" onclick="closeModal('modal-edit-mandate')">×</button></div>
+        <div class="modal-body">
+            <input type="hidden" id="em-id">
+            <div class="form-group"><label class="form-label">Statut</label>
+                <select class="form-select" id="em-status">
+                    <option value="active">En cours</option>
+                    <option value="pending">En attente</option>
+                    <option value="paused">En pause</option>
+                    <option value="completed">Complété</option>
+                </select>
+            </div>
+            <div class="form-group"><label class="form-label">Progression (%) : <span id="em-progress-val">0</span>%</label>
+                <input type="range" id="em-progress" min="0" max="100" value="0" oninput="document.getElementById('em-progress-val').textContent=this.value">
+            </div>
+            <div class="form-group"><label class="form-label">Note visible par le client</label><textarea class="form-textarea" id="em-notes"></textarea></div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-edit-mandate')">Annuler</button><button class="btn btn-primary" onclick="updateMandate()">Mettre à jour</button></div>
+    </div>
+</div>
+
+<!-- Nouveau devis -->
+<div class="modal-overlay" id="modal-new-quote">
+    <div class="modal">
+        <div class="modal-head"><span class="modal-title">Nouveau devis</span><button class="modal-close" onclick="closeModal('modal-new-quote')">×</button></div>
+        <div class="modal-body">
+            <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nq-client"><option value="">Sélectionner un client</option></select></div>
+            <div class="form-group"><label class="form-label">Titre *</label><input type="text" class="form-input" id="nq-title" placeholder="Audit technique automates Ligne 3"></div>
+            <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="nq-desc"></textarea></div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Montant HT (CAD) *</label><input type="number" class="form-input" id="nq-amount" placeholder="2000" oninput="calcTaxes('nq')"></div>
+                <div class="form-group"><label class="form-label">Validité (jours)</label><input type="number" class="form-input" id="nq-days" value="30"></div>
+            </div>
+            <div class="tax-preview" id="nq-tax-preview">
+                <div class="tax-line"><span>Sous-total HT</span><span id="nq-ht">0,00 $</span></div>
+                <div class="tax-line"><span>TPS (5%)</span><span id="nq-tps">0,00 $</span></div>
+                <div class="tax-line"><span>TVQ (9,975%)</span><span id="nq-tvq">0,00 $</span></div>
+                <div class="tax-line tax-total"><span>TOTAL TTC</span><span id="nq-ttc">0,00 $</span></div>
+            </div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-new-quote')">Annuler</button><button class="btn btn-primary" onclick="createQuote()">Créer le devis</button></div>
+    </div>
+</div>
+
+<!-- Nouvelle facture -->
+<div class="modal-overlay" id="modal-new-invoice">
+    <div class="modal">
+        <div class="modal-head"><span class="modal-title">Nouvelle facture</span><button class="modal-close" onclick="closeModal('modal-new-invoice')">×</button></div>
+        <div class="modal-body">
+            <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="ni-client"><option value="">Sélectionner un client</option></select></div>
+            <div class="form-group"><label class="form-label">Titre *</label><input type="text" class="form-input" id="ni-title" placeholder="Support PLC — Mars 2026"></div>
+            <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="ni-desc"></textarea></div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Montant HT (CAD) *</label><input type="number" class="form-input" id="ni-amount" placeholder="1500" oninput="calcTaxes('ni')"></div>
+                <div class="form-group"><label class="form-label">Délai de paiement (jours)</label><input type="number" class="form-input" id="ni-days" value="30"></div>
+            </div>
+            <div class="tax-preview" id="ni-tax-preview">
+                <div class="tax-line"><span>Sous-total HT</span><span id="ni-ht">0,00 $</span></div>
+                <div class="tax-line"><span>TPS (5%)</span><span id="ni-tps">0,00 $</span></div>
+                <div class="tax-line"><span>TVQ (9,975%)</span><span id="ni-tvq">0,00 $</span></div>
+                <div class="tax-line tax-total"><span>TOTAL TTC</span><span id="ni-ttc">0,00 $</span></div>
+            </div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-new-invoice')">Annuler</button><button class="btn btn-primary" onclick="createInvoice()">Créer la facture</button></div>
+    </div>
+</div>
+
+<!-- Nouveau document -->
+<div class="modal-overlay" id="modal-new-document">
+    <div class="modal">
+        <div class="modal-head"><span class="modal-title">Déposer un document</span><button class="modal-close" onclick="closeModal('modal-new-document')">×</button></div>
+        <div class="modal-body">
+            <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nd-client"><option value="">Sélectionner un client</option></select></div>
+            <div class="form-group"><label class="form-label">Mandat associé (optionnel)</label><select class="form-select" id="nd-mandate"><option value="">Aucun</option></select></div>
+            <div class="form-group"><label class="form-label">Titre du document *</label><input type="text" class="form-input" id="nd-title" placeholder="Rapport d'intervention — Mars 2026"></div>
+            <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="nd-desc"></textarea></div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Type de fichier</label>
+                    <select class="form-select" id="nd-type">
+                        <option value="pdf">PDF</option>
+                        <option value="docx">Word (DOCX)</option>
+                        <option value="zip">ZIP</option>
+                        <option value="other">Autre</option>
+                    </select>
+                </div>
+                <div class="form-group"><label class="form-label">Nom du fichier</label><input type="text" class="form-input" id="nd-filename" placeholder="rapport-intervention.pdf"></div>
+            </div>
+            <div class="form-group"><label class="form-label">URL du fichier *</label><input type="url" class="form-input" id="nd-url" placeholder="https://drive.google.com/..."></div>
+            <div class="form-group"><label class="form-label">Taille (KB)</label><input type="number" class="form-input" id="nd-size" placeholder="256"></div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-new-document')">Annuler</button><button class="btn btn-primary" onclick="createDocument()">Déposer le document</button></div>
+    </div>
+</div>
+
+<script>
+/* ============================================
+   VNK Admin - JavaScript
+   ============================================ */
+
+const API = '';
+let adminToken = null;
+let allClients = [];
+
+// ---------- Login ----------
+document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('admin-email').value;
+    const password = document.getElementById('admin-password').value;
+    const errEl = document.getElementById('admin-login-error');
+    errEl.style.display = 'none';
+
+    try {
+        const res = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (data.success && data.token) {
+            adminToken = data.token;
+            localStorage.setItem('vnk-admin-token', data.token);
+            document.getElementById('admin-login').style.display = 'none';
+            document.getElementById('admin-app').style.display = 'block';
+            loadAllAdmin();
+        } else {
+            errEl.textContent = data.message || 'Identifiants incorrects.';
+            errEl.style.display = 'block';
+        }
+    } catch (err) {
+        errEl.textContent = 'Erreur de connexion.';
+        errEl.style.display = 'block';
+    }
+});
+
+function adminLogout() {
+    adminToken = null;
+    localStorage.removeItem('vnk-admin-token');
+    document.getElementById('admin-login').style.display = 'flex';
+    document.getElementById('admin-app').style.display = 'none';
+}
+
+// Auto-login si token sauvegardé
+window.addEventListener('DOMContentLoaded', () => {
+    const saved = localStorage.getItem('vnk-admin-token');
+    if (saved) {
+        adminToken = saved;
+        document.getElementById('admin-login').style.display = 'none';
+        document.getElementById('admin-app').style.display = 'block';
+        loadAllAdmin();
+    }
+    const h = new Date().getHours();
+    const g = h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
+    document.getElementById('dash-greeting').textContent = `${g}, Yan Verone`;
+});
+
+// ---------- Auth header ----------
+function authH() { return { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' }; }
+
+// ---------- API calls ----------
+async function api(path, method = 'GET', body = null) {
+    const opts = { method, headers: authH() };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch('/api/admin' + path, opts);
+    const data = await res.json();
+    if (!data.success && data.message === 'Access denied.') adminLogout();
+    return data;
+}
+
+// ---------- Load all ----------
+async function loadAllAdmin() {
+    await Promise.all([
+        loadDashboard(),
+        loadClients(),
+        loadMandates(),
+        loadQuotes(),
+        loadInvoices(),
+        loadDocuments(),
+        loadMessages(),
+        loadPayments()
+    ]);
+}
+
+// ---------- Dashboard ----------
+async function loadDashboard() {
+    const data = await api('/dashboard');
+    if (!data.success) return;
+    const d = data.stats;
+    document.getElementById('d-clients').textContent = d.clients;
+    document.getElementById('d-mandates').textContent = d.activeMandates;
+    document.getElementById('d-unpaid').textContent = d.unpaidInvoices;
+    document.getElementById('d-unpaid-amount').textContent = fmt(d.unpaidAmount);
+    document.getElementById('d-revenue').textContent = fmt(d.monthRevenue);
+
+    const act = document.getElementById('admin-activity');
+    if (!data.activity || !data.activity.length) {
+        act.innerHTML = '<p style="color:var(--text-light);font-size:0.85rem;text-align:center;padding:1rem">Aucune activité récente.</p>';
+        return;
+    }
+    act.innerHTML = data.activity.map(a => `
+        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0;border-bottom:1px solid var(--border)">
+            <div style="width:8px;height:8px;border-radius:50%;background:${a.type==='invoice'?'var(--warning)':a.type==='quote'?'var(--primary)':'var(--success)'};flex-shrink:0"></div>
+            <div style="flex:1">
+                <div style="font-size:0.85rem;font-weight:600">${a.description}</div>
+                <div style="font-size:0.75rem;color:var(--text-light)">${a.client_name} · ${new Date(a.date).toLocaleDateString('fr-CA')}</div>
+            </div>
+            ${a.amount ? `<div style="font-size:0.85rem;font-weight:700;color:var(--primary)">${fmt(a.amount)}</div>` : ''}
+        </div>`).join('');
+}
+
+// ---------- Clients ----------
+async function loadClients() {
+    const data = await api('/clients');
+    if (!data.success) return;
+    allClients = data.clients || [];
+    const badge = document.getElementById('badge-clients');
+    badge.textContent = allClients.length;
+    badge.style.display = allClients.length ? 'inline' : 'none';
+
+    const list = document.getElementById('clients-list');
+    if (!allClients.length) { list.innerHTML = '<div class="empty-state"><p>Aucun client.</p></div>'; return; }
+    list.innerHTML = allClients.map(c => `
+        <div class="client-card">
+            <div class="client-avatar">${initials(c.full_name)}</div>
+            <div class="client-info">
+                <div class="client-name">${c.full_name}</div>
+                <div class="client-company">${c.company_name || '—'}</div>
+                <div class="client-meta">
+                    <span>${c.email}</span>
+                    ${c.phone ? `<span>${c.phone}</span>` : ''}
+                    <span>Depuis ${new Date(c.created_at).toLocaleDateString('fr-CA')}</span>
+                </div>
+            </div>
+            <div style="display:flex;gap:0.5rem">
+                <span class="badge ${c.is_active ? 'badge-active' : 'badge-expired'}">${c.is_active ? 'Actif' : 'Inactif'}</span>
+            </div>
+        </div>`).join('');
+
+    // Populate selects
+    ['nm-client','nq-client','ni-client','nd-client'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">Sélectionner un client</option>' +
+            allClients.map(c => `<option value="${c.id}">${c.full_name}${c.company_name ? ' — ' + c.company_name : ''}</option>`).join('');
+        sel.value = cur;
+    });
+}
+
+// ---------- Mandates ----------
+async function loadMandates() {
+    const data = await api('/mandates');
+    if (!data.success) return;
+    const tbody = document.getElementById('mandates-tbody');
+    if (!data.mandates.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-light);padding:2rem">Aucun mandat.</td></tr>'; return; }
+    const serviceLabels = { 'plc-support':'Support PLC', 'audit':'Audit', 'documentation':'Documentation', 'refactoring':'Refactorisation' };
+    tbody.innerHTML = data.mandates.map(m => `
+        <tr>
+            <td><strong>${m.client_name}</strong><br><span style="font-size:0.75rem;color:var(--text-light)">${m.company_name||''}</span></td>
+            <td>${m.title}</td>
+            <td>${serviceLabels[m.service_type]||m.service_type||'—'}</td>
+            <td><span class="badge badge-${m.status}">${statusLabel(m.status)}</span></td>
+            <td>
+                <div style="display:flex;align-items:center;gap:0.5rem">
+                    <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+                        <div style="height:100%;width:${m.progress||0}%;background:linear-gradient(90deg,var(--primary),var(--secondary));border-radius:3px"></div>
+                    </div>
+                    <span style="font-size:0.75rem;color:var(--text-light);width:28px">${m.progress||0}%</span>
+                </div>
+            </td>
+            <td><div class="td-actions">
+                <button class="btn btn-sm btn-outline" onclick="openEditMandate(${m.id},'${m.status}',${m.progress||0},\`${(m.notes||'').replace(/`/g,"'")}\`)">Modifier</button>
+            </div></td>
+        </tr>`).join('');
+}
+
+// ---------- Quotes ----------
+async function loadQuotes() {
+    const data = await api('/quotes');
+    if (!data.success) return;
+    const pending = (data.quotes||[]).filter(q=>q.status==='pending').length;
+    const badge = document.getElementById('badge-quotes-admin');
+    badge.textContent = pending; badge.style.display = pending ? 'inline' : 'none';
+    const tbody = document.getElementById('quotes-tbody');
+    if (!data.quotes.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:2rem">Aucun devis.</td></tr>'; return; }
+    tbody.innerHTML = data.quotes.map(q => `
+        <tr>
+            <td><strong>${q.quote_number}</strong></td>
+            <td>${q.client_name}</td>
+            <td>${q.title}</td>
+            <td style="font-weight:700;color:var(--primary)">${fmt(q.amount_ttc)}</td>
+            <td><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></td>
+            <td>${q.expiry_date ? new Date(q.expiry_date).toLocaleDateString('fr-CA') : '—'}</td>
+            <td><div class="td-actions">
+                <a href="/api/quotes/${q.id}/pdf" target="_blank" class="btn btn-sm btn-outline">PDF</a>
+            </div></td>
+        </tr>`).join('');
+}
+
+// ---------- Invoices ----------
+async function loadInvoices() {
+    const data = await api('/invoices');
+    if (!data.success) return;
+    const unpaid = (data.invoices||[]).filter(i=>i.status==='unpaid').length;
+    const badge = document.getElementById('badge-invoices-admin');
+    badge.textContent = unpaid; badge.style.display = unpaid ? 'inline' : 'none';
+    const tbody = document.getElementById('invoices-tbody');
+    if (!data.invoices.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:2rem">Aucune facture.</td></tr>'; return; }
+    tbody.innerHTML = data.invoices.map(inv => {
+        const overdue = inv.status==='unpaid' && new Date(inv.due_date) < new Date();
+        const statusClass = overdue ? 'overdue' : inv.status;
+        const statusText = overdue ? 'En retard' : statusLabel(inv.status);
+        return `<tr>
+            <td><strong>${inv.invoice_number}</strong></td>
+            <td>${inv.client_name}</td>
+            <td>${inv.title}</td>
+            <td style="font-weight:700;color:var(--primary)">${fmt(inv.amount_ttc)}</td>
+            <td><span class="badge badge-${statusClass}">${statusText}</span></td>
+            <td>${inv.due_date ? new Date(inv.due_date).toLocaleDateString('fr-CA') : '—'}</td>
+            <td><div class="td-actions">
+                <a href="/api/invoices/${inv.id}/pdf" target="_blank" class="btn btn-sm btn-outline">PDF</a>
+                ${inv.status==='unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">Marquer payée</button>` : ''}
+            </div></td>
+        </tr>`;
+    }).join('');
+}
+
+// ---------- Documents ----------
+async function loadDocuments() {
+    const data = await api('/documents');
+    if (!data.success) return;
+    const tbody = document.getElementById('documents-tbody');
+    if (!data.documents.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-light);padding:2rem">Aucun document.</td></tr>'; return; }
+    const typeLabels = { pdf:'Rapport PDF', docx:'Word', zip:'ZIP', other:'Document' };
+    tbody.innerHTML = data.documents.map(d => `
+        <tr>
+            <td>${d.client_name}</td>
+            <td><strong>${d.title}</strong><br><span style="font-size:0.75rem;color:var(--text-light)">${d.description||''}</span></td>
+            <td><span class="badge badge-active">${typeLabels[d.file_type]||d.file_type}</span></td>
+            <td>${d.mandate_title||'—'}</td>
+            <td>${new Date(d.created_at).toLocaleDateString('fr-CA')}</td>
+            <td><div class="td-actions">
+                ${d.file_url ? `<a href="${d.file_url}" target="_blank" class="btn btn-sm btn-outline">Voir</a>` : ''}
+                <button class="btn btn-sm btn-danger" onclick="deleteDocument(${d.id})">Supprimer</button>
+            </div></td>
+        </tr>`).join('');
+}
+
+// ---------- Messages ----------
+async function loadMessages() {
+    const data = await api('/messages');
+    if (!data.success) return;
+    const unread = (data.threads||[]).reduce((sum,t)=>sum+(t.unread_count||0),0);
+    const badge = document.getElementById('badge-messages-admin');
+    badge.textContent = unread; badge.style.display = unread ? 'inline' : 'none';
+    const thread = document.getElementById('messages-thread');
+    if (!data.threads.length) { thread.innerHTML = '<div class="empty-state"><p>Aucun message.</p></div>'; return; }
+    thread.innerHTML = data.threads.map(t => `
+        <div class="msg-client-block">
+            <div class="msg-client-header" onclick="toggleMessages(${t.client_id})">
+                <div class="msg-client-name">${t.client_name} <span style="font-weight:400;color:var(--text-light);font-size:0.8rem">— ${t.company_name||''}</span></div>
+                <div style="display:flex;align-items:center;gap:0.5rem">
+                    ${t.unread_count ? `<span class="msg-count-badge">${t.unread_count} non lu${t.unread_count>1?'s':''}</span>` : ''}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+            </div>
+            <div id="msg-${t.client_id}" style="display:none">
+                <div class="msg-list" id="msg-list-${t.client_id}">
+                    ${(t.messages||[]).map(m => `
+                        <div style="display:flex;flex-direction:column;align-items:${m.sender==='client'?'flex-start':'flex-end'}">
+                            <div style="font-size:0.7rem;color:var(--text-light);margin-bottom:0.15rem">${m.sender==='client'?t.client_name:'VNK Automatisation'}</div>
+                            <div class="msg-bubble ${m.sender==='client'?'msg-bubble-client':'msg-bubble-vnk'}">${m.content}</div>
+                            <div class="msg-time">${new Date(m.created_at).toLocaleString('fr-CA')}</div>
+                        </div>`).join('')}
+                </div>
+                <div class="msg-compose">
+                    <textarea id="reply-${t.client_id}" rows="2" placeholder="Répondre en tant que VNK..."></textarea>
+                    <button class="btn btn-primary btn-sm" onclick="sendAdminMessage(${t.client_id})">Envoyer</button>
+                </div>
+            </div>
+        </div>`).join('');
+}
+
+function toggleMessages(clientId) {
+    const el = document.getElementById('msg-' + clientId);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    if (el.style.display === 'block') {
+        const list = document.getElementById('msg-list-' + clientId);
+        if (list) list.scrollTop = list.scrollHeight;
+    }
+}
+
+async function sendAdminMessage(clientId) {
+    const input = document.getElementById('reply-' + clientId);
+    const content = input.value.trim();
+    if (!content) return;
+    const data = await api('/messages/' + clientId, 'POST', { content });
+    if (data.success) { input.value = ''; loadMessages(); showToast('Message envoyé'); }
+}
+
+// ---------- Payments ----------
+async function loadPayments() {
+    const data = await api('/payments');
+    if (!data.success) return;
+    document.getElementById('p-total-paid').textContent = fmt(data.totalPaid||0);
+    document.getElementById('p-total-unpaid').textContent = fmt(data.totalUnpaid||0);
+    document.getElementById('p-total-invoiced').textContent = fmt(data.totalInvoiced||0);
+    const tbody = document.getElementById('payments-tbody');
+    if (!data.invoices.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:2rem">Aucune facture.</td></tr>'; return; }
+    tbody.innerHTML = data.invoices.map(inv => {
+        const overdue = inv.status==='unpaid' && new Date(inv.due_date) < new Date();
+        return `<tr>
+            <td><strong>${inv.invoice_number}</strong></td>
+            <td>${inv.client_name}</td>
+            <td style="font-weight:700;color:var(--primary)">${fmt(inv.amount_ttc)}</td>
+            <td><span class="badge badge-${overdue?'overdue':inv.status}">${overdue?'En retard':statusLabel(inv.status)}</span></td>
+            <td>${inv.due_date ? new Date(inv.due_date).toLocaleDateString('fr-CA') : '—'}</td>
+            <td>${inv.paid_at ? new Date(inv.paid_at).toLocaleDateString('fr-CA') : '—'}</td>
+            <td>${inv.status==='unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">Confirmer paiement</button>` : '<span style="color:var(--success);font-size:0.8rem">✓ Payée</span>'}</td>
+        </tr>`;
+    }).join('');
+}
+
+// ---------- Create functions ----------
+async function createClient() {
+    const data = await api('/clients', 'POST', {
+        full_name: document.getElementById('nc-name').value,
+        email: document.getElementById('nc-email').value,
+        password: document.getElementById('nc-password').value,
+        company_name: document.getElementById('nc-company').value,
+        phone: document.getElementById('nc-phone').value
+    });
+    if (data.success) { closeModal('modal-new-client'); loadClients(); showToast('Client créé !'); }
+    else alert(data.message);
+}
+
+async function createMandate() {
+    const data = await api('/mandates', 'POST', {
+        client_id: document.getElementById('nm-client').value,
+        title: document.getElementById('nm-title').value,
+        description: document.getElementById('nm-desc').value,
+        service_type: document.getElementById('nm-type').value,
+        status: document.getElementById('nm-status').value,
+        progress: parseInt(document.getElementById('nm-progress').value),
+        start_date: document.getElementById('nm-start').value,
+        end_date: document.getElementById('nm-end').value,
+        notes: document.getElementById('nm-notes').value
+    });
+    if (data.success) { closeModal('modal-new-mandate'); loadMandates(); loadDashboard(); showToast('Mandat créé !'); }
+    else alert(data.message);
+}
+
+function openEditMandate(id, status, progress, notes) {
+    document.getElementById('em-id').value = id;
+    document.getElementById('em-status').value = status;
+    document.getElementById('em-progress').value = progress;
+    document.getElementById('em-progress-val').textContent = progress;
+    document.getElementById('em-notes').value = notes;
+    openModal('modal-edit-mandate');
+}
+
+async function updateMandate() {
+    const id = document.getElementById('em-id').value;
+    const data = await api('/mandates/' + id, 'PUT', {
+        status: document.getElementById('em-status').value,
+        progress: parseInt(document.getElementById('em-progress').value),
+        notes: document.getElementById('em-notes').value
+    });
+    if (data.success) { closeModal('modal-edit-mandate'); loadMandates(); loadDashboard(); showToast('Mandat mis à jour !'); }
+    else alert(data.message);
+}
+
+async function createQuote() {
+    const data = await api('/quotes', 'POST', {
+        client_id: document.getElementById('nq-client').value,
+        title: document.getElementById('nq-title').value,
+        description: document.getElementById('nq-desc').value,
+        amount_ht: parseFloat(document.getElementById('nq-amount').value),
+        expiry_days: parseInt(document.getElementById('nq-days').value)
+    });
+    if (data.success) { closeModal('modal-new-quote'); loadQuotes(); loadDashboard(); showToast('Devis créé !'); }
+    else alert(data.message);
+}
+
+async function createInvoice() {
+    const data = await api('/invoices', 'POST', {
+        client_id: document.getElementById('ni-client').value,
+        title: document.getElementById('ni-title').value,
+        description: document.getElementById('ni-desc').value,
+        amount_ht: parseFloat(document.getElementById('ni-amount').value),
+        due_days: parseInt(document.getElementById('ni-days').value)
+    });
+    if (data.success) { closeModal('modal-new-invoice'); loadInvoices(); loadDashboard(); loadPayments(); showToast('Facture créée !'); }
+    else alert(data.message);
+}
+
+async function createDocument() {
+    const data = await api('/documents', 'POST', {
+        client_id: document.getElementById('nd-client').value,
+        mandate_id: document.getElementById('nd-mandate').value || null,
+        title: document.getElementById('nd-title').value,
+        description: document.getElementById('nd-desc').value,
+        file_type: document.getElementById('nd-type').value,
+        file_name: document.getElementById('nd-filename').value,
+        file_url: document.getElementById('nd-url').value,
+        file_size: parseInt(document.getElementById('nd-size').value) || null
+    });
+    if (data.success) { closeModal('modal-new-document'); loadDocuments(); showToast('Document déposé !'); }
+    else alert(data.message);
+}
+
+async function markPaid(invoiceId) {
+    if (!confirm('Confirmer le paiement manuel de cette facture ?')) return;
+    const data = await api('/invoices/' + invoiceId + '/mark-paid', 'PUT');
+    if (data.success) { loadInvoices(); loadPayments(); loadDashboard(); showToast('Facture marquée payée !'); }
+    else alert(data.message);
+}
+
+async function deleteDocument(id) {
+    if (!confirm('Supprimer ce document ?')) return;
+    const data = await api('/documents/' + id, 'DELETE');
+    if (data.success) { loadDocuments(); showToast('Document supprimé.'); }
+}
+
+// ---------- When client selected for document, load their mandates ----------
+document.getElementById('nd-client').addEventListener('change', async function() {
+    const clientId = this.value;
+    const sel = document.getElementById('nd-mandate');
+    sel.innerHTML = '<option value="">Aucun</option>';
+    if (!clientId) return;
+    const data = await api('/mandates?client_id=' + clientId);
+    if (data.success) {
+        data.mandates.forEach(m => {
+            sel.innerHTML += `<option value="${m.id}">${m.title}</option>`;
+        });
+    }
+});
+
+// ---------- Tax calculator ----------
+function calcTaxes(prefix) {
+    const ht = parseFloat(document.getElementById(prefix + '-amount').value) || 0;
+    const tps = ht * 0.05;
+    const tvq = ht * 0.09975;
+    const ttc = ht + tps + tvq;
+    document.getElementById(prefix + '-tax-preview').style.display = ht ? 'block' : 'none';
+    document.getElementById(prefix + '-ht').textContent = fmt(ht);
+    document.getElementById(prefix + '-tps').textContent = fmt(tps);
+    document.getElementById(prefix + '-tvq').textContent = fmt(tvq);
+    document.getElementById(prefix + '-ttc').textContent = fmt(ttc);
+}
+
+// ---------- Section navigation ----------
+function showSection(name) {
+    document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
+    document.getElementById('section-' + name).classList.add('active');
+    document.querySelectorAll('.sidebar-item').forEach(b => {
+        if (b.getAttribute('onclick') === `showSection('${name}')`) b.classList.add('active');
+    });
+}
+
+// ---------- Modal helpers ----------
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ---------- Helpers ----------
+function fmt(amount) { return new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(amount || 0); }
+function initials(name) { return (name||'?').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase(); }
+function statusLabel(s) { return { active:'En cours', pending:'En attente', completed:'Complété', paused:'En pause', paid:'Payée', unpaid:'Non payée', accepted:'Accepté', expired:'Expiré', declined:'Refusé' }[s] || s; }
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
