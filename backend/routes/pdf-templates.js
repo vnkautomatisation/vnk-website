@@ -270,7 +270,7 @@ async function generateQuotePDF(res, quote, client, lines) {
     // Badge document (droite)
     const bx = w - 148, by = 18, bw = 120, bh = 64;
     doc.rect(bx, by, bw, bh).fillColor('#2A6BA8').fill();
-    doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor('#5A8FBF').strokeOpacity(1).stroke();
+    doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor('#5A8FBF').stroke();
     doc.fillColor(C.white).fontSize(10).font('Helvetica-Bold')
         .text('DEVIS', bx, by + 10, { width: bw, align: 'center', characterSpacing: 2 });
     doc.fillColor(C.white).fontSize(9).font('Helvetica')
@@ -283,7 +283,7 @@ async function generateQuotePDF(res, quote, client, lines) {
     // ── BLOCS INFO ───────────────────────────
     const cw = contentWidth(doc);
     const halfW = (cw - 12) / 2;
-    const infoH = 108;
+    const infoH = 96;
     const infoY = doc.y;  // capturer Y avant les deux blocs
 
     infoBox(doc, C.marginL, infoY, halfW, infoH, C.blueMid, 'CLIENT', [
@@ -302,19 +302,19 @@ async function generateQuotePDF(res, quote, client, lines) {
         ['Statut', 'En attente d\'approbation'],
     ]);
 
-    doc.y = infoY + infoH + 18;
+    doc.y = infoY + infoH + 10;
 
     // ── DESCRIPTION ──────────────────────────
     sectionBar(doc, 'Description des services');
-    doc.fillColor(C.text).fontSize(9.5).font('Helvetica-Bold')
+    doc.fillColor(C.text).fontSize(9).font('Helvetica-Bold')
         .text(quote.title, C.marginL, doc.y, { width: cw });
-    doc.y += 14;
+    doc.y += 11;
     if (quote.description) {
         doc.fillColor(C.gray).fontSize(8).font('Helvetica')
-            .text(quote.description, C.marginL, doc.y, { width: cw, lineGap: 3 });
-        doc.y += 10;
+            .text(quote.description, C.marginL, doc.y, { width: cw, lineGap: 2 });
+        doc.y += 8;
     }
-    doc.y += 8;
+    doc.y += 4;
 
     // ── TABLEAU ──────────────────────────────
     sectionBar(doc, 'Lignes de service');
@@ -340,46 +340,40 @@ async function generateQuotePDF(res, quote, client, lines) {
             .text(`•  ${c}`, C.marginL + 6, doc.y, { width: cw - 6, lineGap: 1 });
         doc.y += 11;
     });
-    doc.y += 4;
+    doc.y += 3;
 
     // ── ACCEPTATION / SIGNATURE ───────────────
-    // Saut de page si moins de 130px disponibles avant footer
-    if (doc.y + 130 > doc.page.height - 54) {
-        doc.addPage();
-        doc.y = 40;
-    }
-
     sectionBar(doc, 'Acceptation');
-    doc.fillColor(C.gray).fontSize(8).font('Helvetica')
+    doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
         .text('En signant ci-dessous, le client accepte les termes et conditions de ce devis et autorise VNK Automatisation Inc. à procéder aux travaux décrits.',
             C.marginL, doc.y, { width: cw, lineGap: 2 });
-    doc.y += 14;
+    doc.y += 12;
 
     const sigY = doc.y;
     const sigW = (cw - 16) / 2;
 
     // Bloc signature client
-    doc.rect(C.marginL, sigY, sigW, 56).fillColor(C.grayLight).fill();
-    doc.rect(C.marginL, sigY, 3, 56).fillColor(C.blue).fill();
-    doc.rect(C.marginL, sigY, sigW, 56).lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.rect(C.marginL, sigY, sigW, 50).fillColor(C.grayLight).fill();
+    doc.rect(C.marginL, sigY, 3, 50).fillColor(C.blue).fill();
+    doc.rect(C.marginL, sigY, sigW, 50).lineWidth(0.5).strokeColor(C.border).stroke();
     doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
-        .text('SIGNATURE DU CLIENT', C.marginL + 10, sigY + 8);
-    doc.moveTo(C.marginL + 10, sigY + 40).lineTo(C.marginL + sigW - 10, sigY + 40)
+        .text('SIGNATURE DU CLIENT', C.marginL + 10, sigY + 7);
+    doc.moveTo(C.marginL + 10, sigY + 36).lineTo(C.marginL + sigW - 10, sigY + 36)
         .lineWidth(0.5).strokeColor(C.border).strokeOpacity(1).stroke();
     doc.fillColor(C.gray).fontSize(7).font('Helvetica')
-        .text(client.full_name || '', C.marginL + 10, sigY + 44);
+        .text(client.full_name || '', C.marginL + 10, sigY + 39);
 
     // Bloc date
     const dx = C.marginL + sigW + 16;
-    doc.rect(dx, sigY, sigW, 56).fillColor(C.grayLight).fill();
-    doc.rect(dx, sigY, 3, 56).fillColor(C.blue).fill();
-    doc.rect(dx, sigY, sigW, 56).lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.rect(dx, sigY, sigW, 50).fillColor(C.grayLight).fill();
+    doc.rect(dx, sigY, 3, 50).fillColor(C.blue).fill();
+    doc.rect(dx, sigY, sigW, 50).lineWidth(0.5).strokeColor(C.border).stroke();
     doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
-        .text('DATE', dx + 10, sigY + 8);
-    doc.moveTo(dx + 10, sigY + 40).lineTo(dx + sigW - 10, sigY + 40)
+        .text('DATE', dx + 10, sigY + 7);
+    doc.moveTo(dx + 10, sigY + 36).lineTo(dx + sigW - 10, sigY + 36)
         .lineWidth(0.5).strokeColor(C.border).strokeOpacity(1).stroke();
 
-    doc.y = sigY + 56;
+    doc.y = sigY + 50;
 
     drawFooter(doc, quote.quote_number, C.navy);
     doc.end();
@@ -416,7 +410,7 @@ async function generateInvoicePDF(res, invoice, client) {
     // Badge FACTURE
     const bx = w - 148, by = 18, bw = 120, bh = 64;
     doc.rect(bx, by, bw, bh).fillColor('#1A4570').fill();
-    doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor('#3A6590').strokeOpacity(1).stroke();
+    doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor('#3A6590').stroke();
     doc.fillColor(C.white).fontSize(10).font('Helvetica-Bold')
         .text('FACTURE', bx, by + 10, { width: bw, align: 'center', characterSpacing: 2 });
     doc.fillColor(C.white).fontSize(9).font('Helvetica')
