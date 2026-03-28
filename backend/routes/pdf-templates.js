@@ -93,11 +93,11 @@ function sectionBar(doc, label, accentColor) {
     accentColor = accentColor || C.blue;
     const w = contentWidth(doc);
     const y = doc.y;
-    doc.rect(C.marginL, y, w, 18).fillColor(C.grayLight).fill();
-    doc.rect(C.marginL, y, 3, 18).fillColor(accentColor).fill();
-    doc.fillColor(accentColor).fontSize(7.5).font('Helvetica-Bold')
-        .text(label.toUpperCase(), C.marginL + 10, y + 5, { width: w - 20, characterSpacing: 0.4 });
-    doc.y = y + 24;
+    doc.rect(C.marginL, y, w, 22).fillColor(C.grayLight).fill();
+    doc.rect(C.marginL, y, 3, 22).fillColor(accentColor).fill();
+    doc.fillColor(accentColor).fontSize(8).font('Helvetica-Bold')
+        .text(label.toUpperCase(), C.marginL + 10, y + 7, { width: w - 20, characterSpacing: 0.4 });
+    doc.y = y + 30;
 }
 
 // Ligne label / valeur dans un bloc info
@@ -180,11 +180,12 @@ function taxBlock(doc, ht, tps, tvq, ttc, totalLabel) {
     const w = contentWidth(doc);
     const boxW = 210;
     const boxX = C.marginL + w - boxW;
-    let y = doc.y + 6;
+    const startY = doc.y;  // Y de départ = fin du tableau
+    let y = startY + 6;
 
     // Fond du bloc
-    doc.rect(boxX - 4, y - 6, boxW + 4, 62).fillColor(C.grayLight).fill();
-    doc.rect(boxX - 4, y - 6, boxW + 4, 62)
+    doc.rect(boxX - 4, y - 4, boxW + 4, 62).fillColor(C.grayLight).fill();
+    doc.rect(boxX - 4, y - 4, boxW + 4, 62)
         .lineWidth(0.5).strokeColor(C.border).strokeOpacity(1).stroke();
 
     const rows = [
@@ -201,7 +202,7 @@ function taxBlock(doc, ht, tps, tvq, ttc, totalLabel) {
     });
 
     // Ligne séparatrice
-    doc.moveTo(boxX, y - 4).lineTo(boxX + boxW, y - 4)
+    doc.moveTo(boxX, y - 3).lineTo(boxX + boxW, y - 3)
         .lineWidth(0.5).strokeColor(C.border).stroke();
 
     // Total final
@@ -212,7 +213,8 @@ function taxBlock(doc, ht, tps, tvq, ttc, totalLabel) {
     doc.fillColor(C.white).fontSize(11).font('Helvetica-Bold')
         .text(fmt(ttc), boxX + 100, y + 2, { width: boxW - 104, align: 'right' });
 
-    doc.y = y + 26;
+    // doc.y = fin du bloc total + marge, jamais moins que startY
+    doc.y = y + 26 + 10;
 }
 
 // Footer commun
@@ -302,19 +304,19 @@ async function generateQuotePDF(res, quote, client, lines) {
         ['Statut', 'En attente d\'approbation'],
     ]);
 
-    doc.y = infoY + infoH + 8;
+    doc.y = infoY + infoH + 18;
 
     // ── DESCRIPTION ──────────────────────────
     sectionBar(doc, 'Description des services');
     doc.fillColor(C.text).fontSize(9.5).font('Helvetica-Bold')
         .text(quote.title, C.marginL, doc.y, { width: cw });
-    doc.y += 9;
+    doc.y += 14;
     if (quote.description) {
         doc.fillColor(C.gray).fontSize(8).font('Helvetica')
-            .text(quote.description, C.marginL, doc.y, { width: cw, lineGap: 2 });
-        doc.y += 6;
+            .text(quote.description, C.marginL, doc.y, { width: cw, lineGap: 3 });
+        doc.y += 10;
     }
-    doc.y += 4;
+    doc.y += 8;
 
     // ── TABLEAU ──────────────────────────────
     sectionBar(doc, 'Lignes de service');
@@ -338,16 +340,16 @@ async function generateQuotePDF(res, quote, client, lines) {
     conditions.forEach(c => {
         doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
             .text(`•  ${c}`, C.marginL + 6, doc.y, { width: cw - 6, lineGap: 2 });
-        doc.y += 10;
+        doc.y += 13;
     });
-    doc.y += 3;
+    doc.y += 6;
 
     // ── ACCEPTATION / SIGNATURE ───────────────
     sectionBar(doc, 'Acceptation');
     doc.fillColor(C.gray).fontSize(8).font('Helvetica')
         .text('En signant ci-dessous, le client accepte les termes et conditions de ce devis et autorise VNK Automatisation Inc. à procéder aux travaux décrits.',
-            C.marginL, doc.y, { width: cw, lineGap: 1 });
-    doc.y += 10;
+            C.marginL, doc.y, { width: cw, lineGap: 3 });
+    doc.y += 20;
 
     const sigY = doc.y;
     const sigW = (cw - 20) / 2;
@@ -446,7 +448,7 @@ async function generateInvoicePDF(res, invoice, client) {
     const badgeLabel = isPaid ? 'PAYÉE' : 'EN ATTENTE';
     statusBadge(doc, rx + halfW - 100, infoY + 72, badgeLabel, badgeBg, badgeTxt);
 
-    doc.y = infoY + infoH + 8;
+    doc.y = infoY + infoH + 18;
 
     // ── TABLEAU ──────────────────────────────
     sectionBar(doc, 'Description', isPaid ? C.green : C.blue);
@@ -550,7 +552,7 @@ async function generateContractPDF(res, contract, client, quote) {
         ['Téléphone', client.phone],
     ]);
 
-    doc.y = infoY + infoH + 8;
+    doc.y = infoY + infoH + 18;
 
     // ── OBJET ────────────────────────────────
     sectionBar(doc, 'Objet du contrat');

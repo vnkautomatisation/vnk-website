@@ -18,12 +18,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('vnk-token');
     if (token) showDashboard();
 
+    // Pré-remplir courriel sauvegardé
+    const savedEmail = localStorage.getItem('vnk-portal-email');
+    if (savedEmail) {
+        const emailEl = document.getElementById('login-email');
+        if (emailEl) { emailEl.value = savedEmail; const rem = document.getElementById('remember-me'); if (rem) rem.checked = true; }
+    }
+
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const loginBtn = document.getElementById('login-btn');
         const loginError = document.getElementById('login-error');
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
+        const remember = document.getElementById('remember-me')?.checked;
+
+        // Sauvegarder ou effacer le courriel
+        if (remember) { localStorage.setItem('vnk-portal-email', email); }
+        else { localStorage.removeItem('vnk-portal-email'); }
 
         loginBtn.disabled = true;
         loginBtn.textContent = 'Connexion...';
@@ -107,6 +119,13 @@ async function loadAllData() {
             if (data.activeMandates > 0) showBadge('badge-mandates', data.activeMandates);
             renderActivity(data.recentActivity || []);
         }
+        // Charger le badge contrats
+        const contractsRes = await fetch('/api/contracts', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (contractsRes.ok) {
+            const cd = await contractsRes.json();
+            const pending = (cd.contracts || []).filter(c => c.status === 'pending_signature').length;
+            if (pending > 0) showBadge('badge-contracts', pending);
+        }
 
         const quotesRes = await fetch('/api/quotes', { headers: { 'Authorization': `Bearer ${token}` } });
         if (quotesRes.ok) { const data = await quotesRes.json(); renderQuotes(data.quotes || []); }
@@ -153,10 +172,14 @@ function showTab(tabName) {
     const titles = {
         dashboard: 'Tableau de bord', mandates: 'Mes mandats',
         quotes: 'Mes devis', invoices: 'Mes factures',
+        contracts: 'Mes contrats',
         documents: 'Mes documents', messages: 'Messagerie'
     };
     const mobileTitle = document.getElementById('mobile-tab-title');
     if (mobileTitle) mobileTitle.textContent = titles[tabName] || '';
+
+    // Charger les données si nécessaire
+    if (tabName === 'contracts') loadPortalContracts();
 
     window.scrollTo(0, 0);
 }
@@ -475,14 +498,65 @@ function logout() {
 
 function togglePortalPw() {
     const input = document.getElementById('login-password');
-    const eye = document.getElementById('eye-portal');
+    const btn = document.querySelector('button[onclick="togglePortalPw()"]');
     if (!input) return;
     const isHidden = input.type === 'password';
     input.type = isHidden ? 'text' : 'password';
-    if (eye) {
-        eye.innerHTML = isHidden
-            ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
-            : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    if (btn) {
+        btn.innerHTML = isHidden
+            ? `<svg id="eye-portal" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+            : `<svg id="eye-portal" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+    }
+}
+
+// ─── Contrats portail client ───────────────────
+async function loadPortalContracts() {
+    const token = localStorage.getItem('vnk-token');
+    const list = document.getElementById('contracts-list');
+    if (!list) return;
+    try {
+        const res = await fetch('/api/contracts', { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await res.json();
+        if (!data.success || !data.contracts.length) {
+            list.innerHTML = `<div class="portal-empty-state">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <p>Aucun contrat disponible.</p></div>`;
+            return;
+        }
+        const statusLabel = { draft: 'Brouillon', pending_signature: 'En attente de signature', viewed: 'Consulté', signed: 'Signé' };
+        const statusColor = { draft: '#94A3B8', pending_signature: '#D97706', viewed: '#2E86AB', signed: '#27AE60' };
+        list.innerHTML = data.contracts.map(c => {
+            const sl = statusLabel[c.status] || c.status;
+            const sc = statusColor[c.status] || '#94A3B8';
+            const date = new Date(c.created_at).toLocaleDateString('fr-CA');
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border:1px solid #E2E8F0;border-radius:10px;margin-bottom:0.75rem;background:white">
+                <div style="flex:1">
+                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.25rem">
+                        <strong style="font-size:0.9rem">${c.contract_number}</strong>
+                        <span style="background:${sc}22;color:${sc};font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">${sl}</span>
+                    </div>
+                    <div style="font-size:0.85rem;color:#1E293B;margin-bottom:0.2rem">${c.title}</div>
+                    <div style="font-size:0.75rem;color:#94A3B8">
+                        ${c.quote_number ? `Devis ${c.quote_number} · ` : ''}${date}
+                        ${c.signed_at ? ` · Signé le ${new Date(c.signed_at).toLocaleDateString('fr-CA')}` : ''}
+                    </div>
+                </div>
+                <a href="/api/contracts/${c.id}/pdf" target="_blank" 
+                   style="display:flex;align-items:center;gap:6px;padding:0.5rem 1rem;border:1.5px solid #1B4F8A;border-radius:7px;color:#1B4F8A;font-size:0.82rem;font-weight:600;text-decoration:none;white-space:nowrap;margin-left:1rem"
+                   onmouseover="this.style.background='#1B4F8A';this.style.color='white'" 
+                   onmouseout="this.style.background='transparent';this.style.color='#1B4F8A'">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Voir le contrat
+                </a>
+            </div>`;
+        }).join('');
+        // Badge
+        const pending = data.contracts.filter(c => c.status === 'pending_signature').length;
+        const badge = document.getElementById('badge-contracts');
+        if (badge) { badge.style.display = pending ? 'inline-block' : 'none'; badge.textContent = pending; }
+    } catch (e) {
+        console.error('loadPortalContracts error:', e);
+        list.innerHTML = '<p class="portal-empty">Erreur de chargement.</p>';
     }
 }
 

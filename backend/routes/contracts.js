@@ -1,215 +1,240 @@
 /* ============================================
    VNK Automatisation Inc. - Contracts Routes
-   ============================================ */
-
+   Flux: créer → PDF auto → Dropbox Sign → webhook signé
+============================================ */
+'use strict';
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 const { sendSignatureRequest, getSignatureStatus } = require('../services/hellosign');
 
-// GET /api/contracts — get client contracts
+async function nextContractNumber() {
+    const year = new Date().getFullYear();
+    const res = await pool.query(
+        "SELECT COUNT(*) FROM contracts WHERE EXTRACT(YEAR FROM created_at) = $1", [year]
+    );
+    return `CT-${year}-${String(parseInt(res.rows[0].count) + 1).padStart(3, '0')}`;
+}
+
+// GET / — liste contrats client
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT c.id, c.status, c.signature_date, c.signature_url,
-              c.created_at, q.quote_number, q.title, q.amount_ttc
-       FROM contracts c
-       JOIN quotes q ON c.quote_id = q.id
-       WHERE c.client_id = $1
-       ORDER BY c.created_at DESC`,
+            `SELECT c.id, c.contract_number, c.title, c.status,
+                    c.file_url, c.signed_at, c.created_at, c.hellosign_request_id,
+                    q.quote_number, q.amount_ttc
+             FROM contracts c
+             LEFT JOIN quotes q ON c.quote_id = q.id
+             WHERE c.client_id = $1
+             ORDER BY c.created_at DESC`,
             [req.user.id]
         );
-
-        res.json({
-            success: true,
-            count: result.rows.length,
-            contracts: result.rows
-        });
-
-    } catch (error) {
-        console.error('Get contracts error:', error);
-        res.status(500).json({ success: false, message: 'Server error.' });
+        res.json({ success: true, count: result.rows.length, contracts: result.rows });
+    } catch (e) {
+        console.error('Get contracts error:', e);
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
     }
 });
 
-// GET /api/contracts/:id — get single contract
+// GET /:id
 router.get('/:id', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT c.*, q.quote_number, q.title, q.amount_ttc,
-              cl.full_name, cl.company_name, cl.email
-       FROM contracts c
-       JOIN quotes q ON c.quote_id = q.id
-       JOIN clients cl ON c.client_id = cl.id
-       WHERE c.id = $1 AND c.client_id = $2`,
+            `SELECT c.*, q.quote_number, q.amount_ttc, cl.full_name, cl.company_name, cl.email
+             FROM contracts c
+             LEFT JOIN quotes q ON c.quote_id = q.id
+             JOIN clients cl ON c.client_id = cl.id
+             WHERE c.id = $1 AND c.client_id = $2`,
             [req.params.id, req.user.id]
         );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Contract not found.'
-            });
-        }
-
-        res.json({
-            success: true,
-            contract: result.rows[0]
-        });
-
-    } catch (error) {
-        console.error('Get contract error:', error);
-        res.status(500).json({ success: false, message: 'Server error.' });
+        if (!result.rows.length)
+            return res.status(404).json({ success: false, message: 'Contrat introuvable.' });
+        res.json({ success: true, contract: result.rows[0] });
+    } catch (e) {
+        console.error('Get contract error:', e);
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
     }
 });
 
-// POST /api/contracts — create contract from accepted quote (admin)
+// POST / — créer contrat (admin)
+// Body: { client_id, quote_id?, mandate_id?, title, content?, file_url? }
 router.post('/', async (req, res) => {
     try {
-        const { quote_id, content } = req.body;
+        const { client_id, quote_id, mandate_id, title, content, file_url } = req.body;
 
-        // Get quote and client info
-        const quoteResult = await pool.query(
-            `SELECT q.*, cl.full_name, cl.email, cl.company_name
-       FROM quotes q
-       JOIN clients cl ON q.client_id = cl.id
-       WHERE q.id = $1 AND q.status = 'accepted'`,
-            [quote_id]
-        );
+        if (!client_id || !title)
+            return res.status(400).json({ success: false, message: 'client_id et title sont obligatoires.' });
 
-        if (quoteResult.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Accepted quote not found.'
-            });
+        // Récupérer client
+        const clientRes = await pool.query('SELECT * FROM clients WHERE id = $1', [client_id]);
+        if (!clientRes.rows.length)
+            return res.status(404).json({ success: false, message: 'Client introuvable.' });
+        const client = clientRes.rows[0];
+
+        // Récupérer devis si fourni
+        let quote = null;
+        if (quote_id) {
+            const qr = await pool.query('SELECT * FROM quotes WHERE id = $1', [quote_id]);
+            if (qr.rows.length) quote = qr.rows[0];
         }
 
-        const quote = quoteResult.rows[0];
+        // Numéro auto + contenu auto
+        const contractNumber = await nextContractNumber();
+        const contractContent = content || (quote
+            ? `Services d'automatisation industrielle conformément au devis ${quote.quote_number}.\n\n${quote.description || ''}`
+            : "Services d'automatisation industrielle selon entente préalable.");
 
-        // Create contract in database
-        const contractResult = await pool.query(
-            `INSERT INTO contracts (quote_id, client_id, content, status, created_at)
-       VALUES ($1, $2, $3, 'pending', NOW())
-       RETURNING *`,
-            [quote_id, quote.client_id, content]
+        // Insérer en DB
+        const contractRes = await pool.query(
+            `INSERT INTO contracts
+                (client_id, quote_id, mandate_id, contract_number, title, content, file_url, status, created_at, updated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,'draft',NOW(),NOW()) RETURNING *`,
+            [client_id, quote_id || null, mandate_id || null, contractNumber, title, contractContent, file_url || null]
         );
+        const contract = contractRes.rows[0];
 
-        const contract = contractResult.rows[0];
+        // URL du PDF : file_url fourni OU lien vers notre endpoint PDF
+        const domain = process.env.APP_URL || ('https://' + (process.env.RAILWAY_PUBLIC_DOMAIN || 'localhost:3000'));
+        const pdfUrl = file_url || `${domain}/api/contracts/${contract.id}/pdf`;
 
-        // Send HelloSign signature request if configured
-        const signatureResult = await sendSignatureRequest({
-            clientEmail: quote.email,
-            clientName: quote.full_name,
-            title: `Service Contract — ${quote.title}`,
-            documentUrl: process.env.CONTRACT_TEMPLATE_URL || null
+        // Envoyer à Dropbox Sign
+        const signResult = await sendSignatureRequest({
+            clientEmail: client.email,
+            clientName: client.full_name,
+            title: `${contractNumber} — ${title}`,
+            documentUrl: pdfUrl,
         });
 
-        // Update contract with HelloSign ID if successful
-        if (signatureResult.success) {
+        if (signResult.success && signResult.signatureRequestId) {
             await pool.query(
-                `UPDATE contracts 
-         SET hellosign_request_id = $1, updated_at = NOW()
-         WHERE id = $2`,
-                [signatureResult.signatureRequestId, contract.id]
+                `UPDATE contracts SET hellosign_request_id=$1, status='pending_signature', updated_at=NOW() WHERE id=$2`,
+                [signResult.signatureRequestId, contract.id]
             );
+            contract.status = 'pending_signature';
+            contract.hellosign_request_id = signResult.signatureRequestId;
         }
 
         res.status(201).json({
             success: true,
-            message: 'Contract created successfully.',
+            message: signResult.success
+                ? `Contrat ${contractNumber} créé et envoyé pour signature à ${client.email}.`
+                : `Contrat ${contractNumber} créé. Signature non envoyée : ${signResult.message}`,
             contract,
-            signature: signatureResult
+            signature: signResult
         });
 
-    } catch (error) {
-        console.error('Create contract error:', error);
-        res.status(500).json({ success: false, message: 'Server error.' });
+    } catch (e) {
+        console.error('Create contract error:', e);
+        res.status(500).json({ success: false, message: 'Erreur serveur : ' + e.message });
     }
 });
 
-// GET /api/contracts/:id/status — check signature status
-router.get('/:id/status', authenticateToken, async (req, res) => {
+// PUT /:id/sign — signer manuellement (admin)
+router.put('/:id/sign', async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT hellosign_request_id, status FROM contracts WHERE id = $1 AND client_id = $2',
-            [req.params.id, req.user.id]
+            `UPDATE contracts SET status='signed', signed_at=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *`,
+            [req.params.id]
         );
+        if (!result.rows.length)
+            return res.status(404).json({ success: false, message: 'Contrat introuvable.' });
+        res.json({ success: true, message: 'Contrat marqué comme signé.', contract: result.rows[0] });
+    } catch (e) {
+        console.error('Sign contract error:', e);
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    }
+});
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Contract not found.'
-            });
-        }
+// PUT /:id/resend — renvoyer la demande de signature
+router.put('/:id/resend', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT c.*, cl.full_name, cl.email FROM contracts c JOIN clients cl ON c.client_id=cl.id WHERE c.id=$1`,
+            [req.params.id]
+        );
+        if (!result.rows.length)
+            return res.status(404).json({ success: false, message: 'Contrat introuvable.' });
 
-        const contract = result.rows[0];
+        const c = result.rows[0];
+        const domain = process.env.APP_URL || ('https://' + (process.env.RAILWAY_PUBLIC_DOMAIN || 'localhost:3000'));
+        const pdfUrl = c.file_url || `${domain}/api/contracts/${c.id}/pdf`;
 
-        if (!contract.hellosign_request_id) {
-            return res.json({
-                success: true,
-                status: 'pending',
-                message: 'Signature request not yet sent.'
-            });
-        }
+        const signResult = await sendSignatureRequest({
+            clientEmail: c.email, clientName: c.full_name,
+            title: `${c.contract_number} — ${c.title}`, documentUrl: pdfUrl,
+        });
 
-        // Check status with HelloSign
-        const statusResult = await getSignatureStatus(contract.hellosign_request_id);
-
-        // Update database if completed
-        if (statusResult.success && statusResult.isComplete) {
+        if (signResult.success) {
             await pool.query(
-                `UPDATE contracts 
-         SET status = 'signed', signature_date = NOW(), updated_at = NOW()
-         WHERE id = $1`,
-                [req.params.id]
+                `UPDATE contracts SET hellosign_request_id=$1, status='pending_signature', updated_at=NOW() WHERE id=$2`,
+                [signResult.signatureRequestId, c.id]
             );
         }
 
         res.json({
-            success: true,
-            status: statusResult.status,
-            isComplete: statusResult.isComplete
+            success: signResult.success,
+            message: signResult.success ? `Demande renvoyée à ${c.email}.` : signResult.message
         });
-
-    } catch (error) {
-        console.error('Contract status error:', error);
-        res.status(500).json({ success: false, message: 'Server error.' });
+    } catch (e) {
+        console.error('Resend error:', e);
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
     }
 });
 
-// POST /api/contracts/webhook — HelloSign webhook
+// GET /:id/status — statut Dropbox Sign
+router.get('/:id/status', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT hellosign_request_id, status FROM contracts WHERE id=$1 AND client_id=$2',
+            [req.params.id, req.user.id]
+        );
+        if (!result.rows.length)
+            return res.status(404).json({ success: false, message: 'Contrat introuvable.' });
+
+        const c = result.rows[0];
+        if (!c.hellosign_request_id)
+            return res.json({ success: true, status: c.status, message: 'Demande non encore envoyée.' });
+
+        const statusResult = await getSignatureStatus(c.hellosign_request_id);
+        if (statusResult.success && statusResult.isComplete) {
+            await pool.query(
+                `UPDATE contracts SET status='signed', signed_at=NOW(), updated_at=NOW() WHERE id=$1`,
+                [req.params.id]
+            );
+        }
+        res.json({ success: true, status: statusResult.status, isComplete: statusResult.isComplete });
+    } catch (e) {
+        console.error('Contract status error:', e);
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    }
+});
+
+// POST /webhook — HelloSign webhook
 router.post('/webhook', async (req, res) => {
     try {
-        // HelloSign requires responding with text/html "Hello API Event Received"
-        console.log('HelloSign webhook received');
-
         const payload = req.body;
-
-        // Handle the event if it exists
-        if (payload && payload.event) {
+        if (payload?.event) {
             const eventType = payload.event.event_type;
+            const sigId = payload.signature_request?.signature_request_id;
             console.log(`HelloSign event: ${eventType}`);
 
-            if (eventType === 'signature_request_signed') {
-                const signatureRequestId = payload.signature_request?.signature_request_id;
-                if (signatureRequestId) {
-                    await pool.query(
-                        `UPDATE contracts 
-             SET status = 'signed', signature_date = NOW(), updated_at = NOW()
-             WHERE hellosign_request_id = $1`,
-                        [signatureRequestId]
-                    );
-                    console.log(`Contract signed — ID: ${signatureRequestId}`);
-                }
+            if (eventType === 'signature_request_signed' && sigId) {
+                await pool.query(
+                    `UPDATE contracts SET status='signed', signed_at=NOW(), updated_at=NOW() WHERE hellosign_request_id=$1`,
+                    [sigId]
+                );
+            }
+            if (eventType === 'signature_request_viewed' && sigId) {
+                await pool.query(
+                    `UPDATE contracts SET status='viewed', updated_at=NOW() WHERE hellosign_request_id=$1 AND status='pending_signature'`,
+                    [sigId]
+                );
             }
         }
-
-        // HelloSign requires exactly this response
         res.status(200).send('Hello API Event Received');
-
-    } catch (error) {
-        console.error('HelloSign webhook error:', error);
+    } catch (e) {
+        console.error('Webhook error:', e);
         res.status(200).send('Hello API Event Received');
     }
 });

@@ -502,8 +502,8 @@ function renderContracts() {
     if (search) list = list.filter(c => (c.client_name + ' ' + c.title + ' ' + c.contract_number).toLowerCase().includes(search));
     const tbody = document.getElementById('contracts-tbody');
     if (!tbody) return;
-    const sl = { draft: 'Brouillon', pending: 'En attente signature', signed: 'Signé', cancelled: 'Annulé' };
-    const bc = { draft: 'badge-expired', pending: 'badge-pending', signed: 'badge-paid', cancelled: 'badge-overdue' };
+    const sl = { draft: 'Brouillon', pending: 'En attente signature', pending_signature: 'En attente signature', viewed: 'Consulté', signed: 'Signé', cancelled: 'Annulé' };
+    const bc = { draft: 'badge-expired', pending: 'badge-pending', pending_signature: 'badge-pending', viewed: 'badge-pending', signed: 'badge-paid', cancelled: 'badge-overdue' };
     if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun contrat.</td></tr>'; return; }
     tbody.innerHTML = list.map(c => `<tr>
         <td><strong>${c.contract_number}</strong></td>
@@ -514,13 +514,45 @@ function renderContracts() {
         <td style="font-size:0.8rem">${new Date(c.created_at).toLocaleDateString('fr-CA')}</td>
         <td style="font-size:0.8rem;color:var(--success)">${c.signed_at ? new Date(c.signed_at).toLocaleDateString('fr-CA') : '—'}</td>
         <td><div class="td-actions">
-            ${c.file_url ? `<a href="${c.file_url}" target="_blank" class="btn btn-sm btn-outline">Voir</a>` : ''}
-            ${c.status !== 'signed' ? `<button class="btn btn-sm btn-success" onclick="signContract(${c.id})">✓ Signé</button>` : ''}
+            <div style="position:relative;display:inline-block">
+                <button class="btn btn-sm btn-outline" onclick="toggleContractMenu(event,${c.id})" title="Actions" style="padding:0.3rem 0.5rem">⋮</button>
+                <div id="cmenu-${c.id}" style="display:none;position:absolute;right:0;top:100%;background:white;border:1px solid #E2E8F0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:200;min-width:170px;padding:4px 0">
+                    <a href="/api/contracts/${c.id}/pdf" target="_blank" style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:0.82rem;color:#1E293B;text-decoration:none;cursor:pointer" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='transparent'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        Prévisualiser PDF
+                    </a>
+                    ${c.file_url ? `<a href="${c.file_url}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:0.82rem;color:#1E293B;text-decoration:none" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='transparent'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Fichier joint
+                    </a>` : ''}
+                    ${c.status !== 'signed' ? `<button onclick="resendSignature(${c.id});toggleContractMenu(event,${c.id})" style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:0.82rem;color:#1E293B;background:none;border:none;width:100%;text-align:left;cursor:pointer" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='transparent'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        Renvoyer signature
+                    </button>` : ''}
+                    ${c.status !== 'signed' ? `<div style="border-top:1px solid #E2E8F0;margin:4px 0"></div>
+                    <button onclick="signContract(${c.id});toggleContractMenu(event,${c.id})" style="display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:0.82rem;color:#27AE60;background:none;border:none;width:100%;text-align:left;cursor:pointer" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='transparent'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Marquer signé
+                    </button>` : ''}
+                </div>
+            </div>
         </div></td>
     </tr>`).join('');
 }
 
 function filterContracts() { renderContracts(); }
+
+function toggleContractMenu(e, id) {
+    e.stopPropagation();
+    // Fermer tous les autres menus ouverts
+    document.querySelectorAll('[id^="cmenu-"]').forEach(m => { if (m.id !== `cmenu-${id}`) m.style.display = 'none'; });
+    const menu = document.getElementById(`cmenu-${id}`);
+    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+// Fermer les menus en cliquant ailleurs
+document.addEventListener('click', () => {
+    document.querySelectorAll('[id^="cmenu-"]').forEach(m => m.style.display = 'none');
+});
 function setContractFilter(f, btn) {
     contractFilter = f;
     btn.closest('.filter-tabs').querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
