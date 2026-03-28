@@ -12,8 +12,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-
-    <!-- NAVIGATION -->
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="nav-logo">
@@ -26,11 +24,11 @@
                 </svg>
             </div>
             <ul class="nav-links" id="nav-links">
-                <li><a href="index.html" class="nav-link">Accueil</a></li>
-                <li><a href="services.html" class="nav-link">Services</a></li>
-                <li><a href="a-propos.html" class="nav-link">À propos</a></li>
-                <li><a href="contact.html" class="nav-link active">Contact</a></li>
-                <li><a href="portail.html" class="nav-link nav-portal">Portail client</a></li>
+                <li><a href="index.html" class="nav-link" data-i18n="nav.home">Accueil</a></li>
+                <li><a href="services.html" class="nav-link" data-i18n="nav.services">Services</a></li>
+                <li><a href="a-propos.html" class="nav-link" data-i18n="nav.about">À propos</a></li>
+                <li><a href="contact.html" class="nav-link active" data-i18n="nav.contact">Contact</a></li>
+                <li><a href="portail.html" class="nav-link nav-portal" data-i18n="nav.portal">Portail client</a></li>
             </ul>
             <div class="nav-actions">
                 <button class="lang-toggle" id="lang-toggle" onclick="toggleLanguage()">EN</button>
@@ -39,63 +37,58 @@
         </div>
     </nav>
 
-    <!-- PAGE HEADER -->
     <section class="page-header">
         <div class="page-header-bg">
             <img src="images/hero-bg.jpg" alt="Contactez VNK Automatisation">
             <div class="page-header-overlay"></div>
         </div>
         <div class="container page-header-content">
-            <div class="section-tag" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3)">Contact</div>
-            <h1>Contactez-nous</h1>
-            <p>Consultation gratuite de 30 minutes — sans engagement. Réponse dans les 24 heures ouvrables.</p>
+            <div class="section-tag" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3)" data-i18n="nav.contact">Contact</div>
+            <h1 data-i18n="contact.title">Contactez-nous</h1>
+            <p data-i18n="contact.subtitle">Consultation gratuite de 30 minutes — sans engagement. Réponse dans les 24 heures ouvrables.</p>
         </div>
     </section>
 
-    <!-- CONTACT SECTION -->
     <section class="contact-section">
         <div class="container">
             <div class="contact-grid">
-
-                <!-- Formulaire -->
                 <div class="contact-form-wrapper">
-                    <h2>Envoyez-nous un message</h2>
-                    <p class="contact-form-desc">Décrivez votre situation et nous vous répondrons dans les 24 heures ouvrables.</p>
-
+                    <h2 data-i18n="contact.form.title">Envoyez-nous un message</h2>
+                    <p class="contact-form-desc" data-i18n="contact.form.desc">Décrivez votre situation et nous vous répondrons dans les 24 heures ouvrables.</p>
                     <form class="contact-form" id="contact-form">
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label">Nom complet *</label>
+                                <label class="form-label" data-i18n="contact.form.name">Nom complet *</label>
                                 <input type="text" class="form-input" id="name" name="name" required placeholder="Jean Tremblay">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Entreprise</label>
+                                <label class="form-label" data-i18n="contact.form.company">Entreprise</label>
                                 <input type="text" class="form-input" id="company" name="company" placeholder="Industries XYZ Inc.">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label">Courriel *</label>
+                                <label class="form-label" data-i18n="contact.form.email">Courriel *</label>
                                 <input type="email" class="form-input" id="email" name="email" required placeholder="jean@entreprise.com">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Téléphone</label>
+                                <label class="form-label" data-i18n="contact.form.phone">Téléphone</label>
                                 <input type="tel" class="form-input" id="phone" name="phone" placeholder="418 000-0000">
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Service qui vous intéresse</label>
+                            <label class="form-label" data-i18n="contact.form.service">Service qui vous intéresse</label>
                             <select class="form-select" id="service" name="service">
-                                <option value="">Sélectionner un service</option>
-                                <option value="plc-support">Support PLC à distance</option>
-                                <option value="audit">Audit technique</option>
-                                <option value="documentation">Documentation industrielle</option>
-                                <option value="refactoring">Refactorisation PLC</option>
-                                <option value="other">Autre</option>
+                                <option value="" data-i18n="contact.form.select">Sélectionner un service</option>
+                                <option value="plc-support" data-i18n="services.plc.title">Support PLC à distance</option>
+                                <option value="audit" data-i18n="services.audit.title">Audit technique</option>
+                                <option value="documentation" data-i18n="services.doc.title">Documentation industrielle</option>
+                                <option value="refactoring" data-i18n="services.refactor.title">Refactorisation PLC</option>
+                                <option value="other" data-i18n="contact.form.other">Autre</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Marque d'automate concernée</label>
+                            <label class="form-label" data-i18n="contact.form.plc_brand">Marque d'automate concernée</label>
                             <select class="form-select" id="plc-brand" name="plc_brand">
                                 <option value="">Sélectionner</option>
                                 <option value="siemens">Siemens</option>
@@ -106,174 +99,91 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Décrivez votre situation *</label>
-                            <textarea class="form-textarea" id="message" name="message" required rows="5"
-                                      placeholder="Décrivez votre équipement, le problème rencontré ou vos besoins..."></textarea>
+                            <label class="form-label" data-i18n="contact.form.message">Décrivez votre situation *</label>
+                            <textarea class="form-textarea" id="message" name="message" required rows="5" placeholder="Décrivez votre équipement, le problème rencontré ou vos besoins..."></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary" style="width:100%" id="submit-btn">
-                            Envoyer le message
-                        </button>
+                        <button type="submit" class="btn btn-primary" style="width:100%" id="submit-btn" data-i18n="contact.form.submit">Envoyer le message</button>
                         <div id="form-feedback" style="margin-top:1rem; display:none;"></div>
                     </form>
                 </div>
 
-                <!-- Colonne de droite -->
                 <div class="contact-info-wrapper">
-
-                    <!-- Infos de contact -->
                     <div class="contact-info-card">
-                        <h3>Informations de contact</h3>
+                        <h3 data-i18n="contact.info.title">Informations de contact</h3>
                         <div class="contact-info-item">
-                            <div class="contact-info-icon-wrap">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                                    <polyline points="22,6 12,13 2,6" />
-                                </svg>
-                            </div>
-                            <div>
-                                <strong>Courriel</strong>
-                                <p>vnkautomatisation@gmail.com</p>
-                            </div>
+                            <div class="contact-info-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg></div>
+                            <div><strong data-i18n="contact.info.email">Courriel</strong><p>vnkautomatisation@gmail.com</p></div>
                         </div>
                         <div class="contact-info-item">
-                            <div class="contact-info-icon-wrap">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                                    <circle cx="12" cy="10" r="3" />
-                                </svg>
-                            </div>
-                            <div>
-                                <strong>Localisation</strong>
-                                <p>Québec, QC, Canada</p>
-                                <p class="contact-info-sub">Service à distance — partout au Québec</p>
-                            </div>
+                            <div class="contact-info-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg></div>
+                            <div><strong data-i18n="contact.info.location">Localisation</strong><p>Québec, QC, Canada</p><p class="contact-info-sub" data-i18n="contact.info.remote">Service à distance — partout au Québec</p></div>
                         </div>
                         <div class="contact-info-item">
-                            <div class="contact-info-icon-wrap">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <polyline points="12 6 12 12 16 14" />
-                                </svg>
-                            </div>
-                            <div>
-                                <strong>Temps de réponse</strong>
-                                <p>Dans les 24 heures ouvrables</p>
-                            </div>
+                            <div class="contact-info-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg></div>
+                            <div><strong data-i18n="contact.info.response">Temps de réponse</strong><p data-i18n="contact.info.response_time">Dans les 24 heures ouvrables</p></div>
                         </div>
                         <div class="contact-info-item">
-                            <div class="contact-info-icon-wrap">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                                    <polyline points="9 22 9 12 15 12 15 22" />
-                                </svg>
-                            </div>
-                            <div>
-                                <strong>Entreprise</strong>
-                                <p>VNK Automatisation Inc.</p>
-                                <p class="contact-info-sub">Société par actions — Québec, Canada</p>
-                            </div>
+                            <div class="contact-info-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg></div>
+                            <div><strong data-i18n="contact.info.company">Entreprise</strong><p>VNK Automatisation Inc.</p><p class="contact-info-sub">Société par actions — Québec, Canada</p></div>
                         </div>
                     </div>
 
-                    <!-- Processus -->
                     <div class="contact-process-card">
-                        <h3>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:6px"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
-                            Notre processus
-                        </h3>
+                        <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:6px"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg><span data-i18n="contact.process.title">Notre processus</span></h3>
                         <div class="contact-process-steps">
-                            <div class="contact-process-step">
-                                <div class="contact-step-number">1</div>
-                                <div>
-                                    <strong>Message ou réservation</strong>
-                                    <p>Décrivez votre besoin via le formulaire ou réservez directement un appel.</p>
-                                </div>
-                            </div>
-                            <div class="contact-process-step">
-                                <div class="contact-step-number">2</div>
-                                <div>
-                                    <strong>Appel de qualification</strong>
-                                    <p>Discussion de 30 minutes pour comprendre votre situation précisément.</p>
-                                </div>
-                            </div>
-                            <div class="contact-process-step">
-                                <div class="contact-step-number">3</div>
-                                <div>
-                                    <strong>Devis formel</strong>
-                                    <p>Proposition détaillée avec périmètre exact, délais et tarifs transparents.</p>
-                                </div>
-                            </div>
-                            <div class="contact-process-step">
-                                <div class="contact-step-number">4</div>
-                                <div>
-                                    <strong>Contrat et démarrage</strong>
-                                    <p>Signature électronique et début immédiat de l'intervention.</p>
-                                </div>
-                            </div>
+                            <div class="contact-process-step"><div class="contact-step-number">1</div><div><strong data-i18n="contact.process.step1">Message ou réservation</strong><p data-i18n="contact.process.step1_desc">Décrivez votre besoin via le formulaire ou réservez directement un appel.</p></div></div>
+                            <div class="contact-process-step"><div class="contact-step-number">2</div><div><strong data-i18n="contact.process.step2">Appel de qualification</strong><p data-i18n="contact.process.step2_desc">Discussion de 30 minutes pour comprendre votre situation précisément.</p></div></div>
+                            <div class="contact-process-step"><div class="contact-step-number">3</div><div><strong data-i18n="contact.process.step3">Devis formel</strong><p data-i18n="contact.process.step3_desc">Proposition détaillée avec périmètre exact, délais et tarifs transparents.</p></div></div>
+                            <div class="contact-process-step"><div class="contact-step-number">4</div><div><strong data-i18n="contact.process.step4">Contrat et démarrage</strong><p data-i18n="contact.process.step4_desc">Signature électronique et début immédiat de l'intervention.</p></div></div>
                         </div>
                     </div>
 
-                    <!-- Calendly inline widget -->
                     <div class="contact-calendly-card">
-                        <h3>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:6px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-                            Réserver directement
-                        </h3>
-                        <p>Choisissez un créneau pour une consultation gratuite de 30 minutes.</p>
-                        <div class="calendly-inline-widget"
-                             data-url="https://calendly.com/vnkautomatisation/consultation-30min?hide_gdpr_banner=1&primary_color=1b4f8a"
-                             style="min-width:280px; height:630px;">
-                        </div>
+                        <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:6px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg><span data-i18n="contact.calendly.title">Réserver directement</span></h3>
+                        <p data-i18n="contact.calendly.desc">Choisissez un créneau pour une consultation gratuite de 30 minutes.</p>
+                        <div class="calendly-inline-widget" data-url="https://calendly.com/vnkautomatisation/consultation-30min?hide_gdpr_banner=1&primary_color=1b4f8a" style="min-width:280px; height:630px;"></div>
                         <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
                         <p class="contact-calendly-note">Appel téléphonique ou vidéo — selon votre préférence</p>
                     </div>
-
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- FOOTER -->
     <footer class="footer">
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand">
                     <div class="footer-logo">
-                        <svg width="200" height="42" viewBox="0 0 200 42">
-                            <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="white" opacity="0.15" />
-                            <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="none" stroke="white" stroke-width="1.8" />
-                            <text x="21" y="26" text-anchor="middle" style="font-size:11px;font-weight:800;fill:white;font-family:sans-serif">VNK</text>
-                            <text x="48" y="18" style="font-size:13px;font-weight:700;fill:white;font-family:sans-serif">Automatisation Inc.</text>
-                            <text x="48" y="33" style="font-size:7.5px;fill:rgba(255,255,255,0.6);font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text>
-                        </svg>
+                        <svg width="200" height="42" viewBox="0 0 200 42"><polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="white" opacity="0.15" /><polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="none" stroke="white" stroke-width="1.8" /><text x="21" y="26" text-anchor="middle" style="font-size:11px;font-weight:800;fill:white;font-family:sans-serif">VNK</text><text x="48" y="18" style="font-size:13px;font-weight:700;fill:white;font-family:sans-serif">Automatisation Inc.</text><text x="48" y="33" style="font-size:7.5px;fill:rgba(255,255,255,0.6);font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text></svg>
                     </div>
-                    <p class="footer-desc">Services d'automatisation industrielle B2B — Québec, Canada.</p>
+                    <p class="footer-desc" data-i18n="footer.desc">Services d'automatisation industrielle B2B — Québec, Canada.</p>
                 </div>
                 <div class="footer-links">
-                    <h4>Services</h4>
+                    <h4 data-i18n="footer.services">Services</h4>
                     <ul>
-                        <li><a href="services.html#plc">Support PLC</a></li>
-                        <li><a href="services.html#audit">Audit technique</a></li>
-                        <li><a href="services.html#documentation">Documentation</a></li>
-                        <li><a href="services.html#refactoring">Refactorisation</a></li>
+                        <li><a href="services.html#plc" data-i18n="services.plc.title">Support PLC</a></li>
+                        <li><a href="services.html#audit" data-i18n="services.audit.title">Audit technique</a></li>
+                        <li><a href="services.html#documentation" data-i18n="services.doc.title">Documentation</a></li>
+                        <li><a href="services.html#refactoring" data-i18n="services.refactor.title">Refactorisation</a></li>
                     </ul>
                 </div>
                 <div class="footer-links">
-                    <h4>Entreprise</h4>
+                    <h4 data-i18n="footer.company">Entreprise</h4>
                     <ul>
-                        <li><a href="a-propos.html">À propos</a></li>
-                        <li><a href="contact.html">Contact</a></li>
-                        <li><a href="portail.html">Portail client</a></li>
+                        <li><a href="a-propos.html" data-i18n="nav.about">À propos</a></li>
+                        <li><a href="contact.html" data-i18n="nav.contact">Contact</a></li>
+                        <li><a href="portail.html" data-i18n="nav.portal">Portail client</a></li>
                     </ul>
                 </div>
                 <div class="footer-contact">
-                    <h4>Contact</h4>
+                    <h4 data-i18n="footer.contact">Contact</h4>
                     <p>vnkautomatisation@gmail.com</p>
                     <p>Québec, QC, Canada</p>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>© 2026 VNK Automatisation Inc. Tous droits réservés.</p>
+                <p data-i18n="footer.copyright">© 2026 VNK Automatisation Inc. Tous droits réservés.</p>
             </div>
         </div>
     </footer>
@@ -282,6 +192,5 @@
     <script src="js/main.js"></script>
     <script src="js/animations.js"></script>
     <script src="js/contact.js"></script>
-
 </body>
 </html>
