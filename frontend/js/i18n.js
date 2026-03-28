@@ -4,21 +4,32 @@
 
 const translations = {
     fr: {
+        // Navigation
         'nav.home': 'Accueil',
         'nav.services': 'Services',
         'nav.about': 'À propos',
         'nav.contact': 'Contact',
         'nav.portal': 'Portail client',
+
+        // Hero
         'hero.badge': "Services d'automatisation industrielle",
         'hero.title1': 'Solutions PLC,',
         'hero.title2': 'SCADA & HMI',
         'hero.title3': "pour l'industrie",
         'hero.subtitle': "Support technique à distance, audits, documentation et modernisation de systèmes automatisés pour les entreprises industrielles au Québec.",
         'hero.cta.primary': 'Réserver une consultation',
-        'hero.cta.secondary': 'Voir les services',
+        'hero.cta.secondary': 'Voir les services →',
         'hero.stats.services': 'Services spécialisés',
         'hero.stats.brands': "Marques d'automates",
         'hero.stats.market': 'Marché industriel',
+
+        // Brands
+        'brands.title': 'Automates supportés',
+        'brands.other': 'Autres marques',
+        'brands.on_request': 'Sur demande',
+
+        // Services
+        'services.tag': 'Nos services',
         'services.title': 'Nos services',
         'services.subtitle': 'Solutions techniques adaptées à vos besoins industriels',
         'services.includes': 'Ce qui est inclus',
@@ -26,9 +37,16 @@ const translations = {
         'services.pricing': 'Tarification',
         'services.cta': 'Demander un devis',
         'services.learn_more': 'En savoir plus →',
-        'services.all': 'Voir tous les services',
+        'services.all': 'Voir tous les services et tarifs',
+        'services.tag.code': 'Analyse code',
+        'services.tag.report': 'Rapport détaillé',
+        'services.tag.operator': 'Opérateur',
+        'services.tag.maintenance': 'Maintenance',
+        'services.tag.legacy': 'Legacy code',
+
         'services.plc.title': 'Support PLC à distance',
-        'services.plc.desc': "Diagnostic et résolution rapide de pannes sur vos automates Siemens, Rockwell, B&R et Schneider.",
+        'services.plc.desc': "Diagnostic et résolution rapide de pannes sur vos automates — sans attendre un déplacement.",
+        'services.plc.lead': "Diagnostic et résolution rapide de pannes sur vos automates industriels. Intervention à distance sans délai de déplacement.",
         'services.plc.price': '120–150 CAD/h',
         'services.plc.inc1': 'Diagnostic à distance de la panne',
         'services.plc.inc2': 'Modification et correction du programme PLC',
@@ -41,8 +59,10 @@ const translations = {
         'services.plc.monthly': 'Forfait mensuel standard',
         'services.plc.priority': 'Forfait mensuel prioritaire',
         'services.plc.priority_note': 'Temps de réponse garanti',
+
         'services.audit.title': 'Audit technique',
-        'services.audit.desc': "Évaluation complète de votre système d'automatisation — risques, performance et recommandations.",
+        'services.audit.desc': "Évaluation complète de votre système — risques, performance et plan d'action concret.",
+        'services.audit.lead': "Évaluation complète et objective de votre système d'automatisation.",
         'services.audit.price': '1 500–4 000 CAD',
         'services.audit.inc1': 'Analyse complète du code PLC existant',
         'services.audit.inc2': 'Évaluation de la documentation disponible',
@@ -54,8 +74,10 @@ const translations = {
         'services.audit.small_note': 'Système simple — 1 à 2 automates',
         'services.audit.full': 'Audit complet',
         'services.audit.full_note': 'Système complexe — multiple automates',
+
         'services.doc.title': 'Documentation industrielle',
-        'services.doc.desc': "Création de procédures opérateur, maintenance, dépannage et documentation complète du code PLC.",
+        'services.doc.desc': "Procédures opérateur, maintenance et dépannage — rédigées pour votre équipe.",
+        'services.doc.lead': "Création de documentation technique complète pour vos systèmes automatisés.",
         'services.doc.price': '800–5 000 CAD',
         'services.doc.inc1': 'Procédures opérateur étape par étape',
         'services.doc.inc2': 'Guide de maintenance préventive',
@@ -65,8 +87,10 @@ const translations = {
         'services.doc.inc6': 'Format Word, PDF et en ligne selon besoin',
         'services.doc.basic': 'Documentation de base',
         'services.doc.complete': 'Documentation complète',
+
         'services.refactor.title': 'Refactorisation PLC',
-        'services.refactor.desc': "Modernisation et restructuration de code legacy — amélioration de la fiabilité et de la maintenabilité.",
+        'services.refactor.desc': "Modernisation de code legacy — fiabilité améliorée, dette technique éliminée.",
+        'services.refactor.lead': "Restructuration et modernisation de code PLC legacy.",
         'services.refactor.price': '3 000–50 000 CAD',
         'services.refactor.inc1': 'Analyse et cartographie du code existant',
         'services.refactor.inc2': 'Restructuration selon les meilleures pratiques IEC 61131-3',
@@ -77,8 +101,20 @@ const translations = {
         'services.refactor.small': 'Refactorisation partielle',
         'services.refactor.full': 'Refactorisation complète',
         'services.refactor.new': 'Nouvelle implémentation',
-        'brands.title': 'Automates supportés',
+
+        // Stats section
+        'stats.plc_rate': 'Taux horaire de départ — support PLC',
+        'stats.response': 'Temps de réponse maximum',
+        'stats.documented': 'Intervention documentée avec rapport écrit',
+        'stats.brands': "Marques d'automates supportées",
+
+        // Why VNK
         'why.title': 'Pourquoi VNK ?',
+        'why.tag': 'Pourquoi VNK ?',
+        'why.intro': "VNK Automatisation Inc. est une entreprise de services industriels spécialisée exclusivement en automatisation — PLC, SCADA, HMI. Pas de généraliste, pas de compromis sur la qualité technique.",
+        'why.learn_more': 'En savoir plus sur VNK →',
+        'why.badge.title': 'Société par actions',
+        'why.badge.sub': 'Constituée au Québec — mars 2026',
         'why.specialized.title': 'Spécialisé',
         'why.specialized.desc': "Focus exclusif sur l'automatisation industrielle.",
         'why.remote.title': 'À distance',
@@ -87,17 +123,52 @@ const translations = {
         'why.documented.desc': "Chaque intervention est documentée — rapport écrit systématique.",
         'why.structured.title': 'Structuré',
         'why.structured.desc': "Contrat, devis et facturation professionnels à chaque mandat.",
+
+        // Testimonials
+        'testimonials.tag': 'Témoignages',
+        'testimonials.title': 'Ce que disent nos clients',
+        'testimonials.coming_soon': 'Témoignage à venir — lancement officiel 2027',
+        'testimonials.1.text': '"Intervention rapide et professionnelle. Le rapport d\'intervention était clair et complet. Je recommande VNK pour tout projet d\'automatisation."',
+        'testimonials.1.name': 'Jean Tremblay',
+        'testimonials.1.role': 'Responsable maintenance — Industries XYZ Inc.',
+        'testimonials.2.text': '"L\'audit technique a révélé des risques que nous n\'avions pas identifiés. Le plan d\'action était précis et actionnable. Très bon travail."',
+        'testimonials.2.name': 'Marc Lavoie',
+        'testimonials.2.role': 'Directeur technique — PME Manufacturière',
+        'testimonials.3.text': '"La documentation produite par VNK a permis à notre équipe de maintenance de travailler de manière autonome. Excellent investissement."',
+        'testimonials.3.name': 'Sophie Parent',
+        'testimonials.3.role': 'Chef de projet — Intégrateur Québec',
+
+        // CTA
         'cta.title': 'Prêt à optimiser votre système ?',
         'cta.subtitle': 'Réservez une consultation gratuite de 30 minutes pour discuter de vos besoins.',
         'cta.button': 'Réserver maintenant',
+        'cta.view_prices': 'Voir les tarifs',
+        'cta.view_services': 'Voir les services',
+        'cta.view_about': 'En savoir plus sur VNK',
+
+        // Footer
         'footer.services': 'Services',
         'footer.company': 'Entreprise',
         'footer.contact': 'Contact',
+        'footer.desc': "Services d'automatisation industrielle B2B — Québec, Canada.",
         'footer.copyright': '© 2026 VNK Automatisation Inc. Tous droits réservés.',
-        'about.title': 'À propos de VNK',
-        'about.subtitle': 'Value. Network. Knowledge.',
+
+        // Process
+        'contact.process.title': 'Notre processus',
+        'process.title': 'Comment ça fonctionne',
+        'process.subtitle': 'De votre premier message à la livraison finale — un processus structuré et transparent.',
+        'process.step5': 'Livraison et rapport',
+        'process.step5_desc': 'Rapport écrit complet livré, validation client, facturation émise.',
+
+        // About page
+        'about.tag': 'À propos',
+        'about.page_title': 'VNK Automatisation Inc.',
+        'about.page_subtitle': 'Value. Network. Knowledge. — Services industriels B2B spécialisés au Québec',
+        'about.badge.title': 'Société par actions',
+        'about.badge.sub': 'Constituée au Québec — mars 2026',
         'about.founder.title': 'Yan Verone Kengne',
         'about.founder.role': 'Fondateur et expert en automatisation industrielle',
+        'about.founder.card_role': 'Fondateur — VNK Automatisation Inc.',
         'about.founder.desc1': "Technicien spécialisé en automatisation industrielle avec une expertise approfondie en programmation PLC, SCADA et HMI pour plusieurs marques d'automates industriels.",
         'about.founder.desc2': "VNK Automatisation Inc. a été fondée en mars 2026 avec une mission claire : offrir des services techniques spécialisés de haute qualité aux entreprises industrielles du Québec.",
         'about.value.desc': "Chaque intervention apporte une valeur concrète et mesurable à votre opération.",
@@ -105,12 +176,23 @@ const translations = {
         'about.knowledge.desc': "Une expertise technique profonde, constamment mise à jour sur les technologies industrielles.",
         'about.location': 'Localisation',
         'about.founded': 'Fondée',
+        'about.founded_date': 'Mars 2026',
         'about.type': 'Type',
         'about.type_value': 'Société par actions',
+        'about.sector_label': 'Secteur',
+        'about.sector': 'Automatisation industrielle B2B',
+        'about.market_label': 'Marché',
+        'about.market': 'Québec, Canada',
         'about.contact_btn': 'Prendre contact',
+        'about.founder_tag': 'Le fondateur',
+        'about.skills_tag': 'Compétences',
         'about.expertise.title': 'Expertise technique',
         'about.expertise.subtitle': 'Compétences spécialisées en automatisation industrielle',
+        'about.protocols_title': 'Protocoles & Standards',
+        'about.safety_title': 'Sécurité & Documentation',
+        'about.commitment_tag': 'Notre engagement',
         'about.commitment.title': 'Notre engagement',
+        'about.commitment.subtitle': 'Un standard professionnel rigoureux à chaque mandat.',
         'about.commitment.contract': 'Contrat systématique',
         'about.commitment.contract_desc': 'Aucune intervention sans contrat signé. Périmètre, délais et tarifs clairement définis avant de commencer.',
         'about.commitment.report': 'Rapport écrit',
@@ -119,6 +201,8 @@ const translations = {
         'about.commitment.confidential_desc': 'NDA disponible sur demande. Vos données et procédés industriels restent confidentiels.',
         'about.commitment.responsive': 'Réactivité',
         'about.commitment.responsive_desc': "Intervention à distance sans délai de déplacement. Réponse rapide quand votre production est en jeu.",
+
+        // Contact page
         'contact.title': 'Contactez-nous',
         'contact.subtitle': 'Consultation gratuite de 30 minutes — sans engagement',
         'contact.form.title': 'Envoyez-nous un message',
@@ -142,7 +226,6 @@ const translations = {
         'contact.info.company': 'Entreprise',
         'contact.calendly.title': 'Réserver directement',
         'contact.calendly.desc': 'Choisissez un créneau pour une consultation gratuite de 30 minutes.',
-        'contact.process.title': 'Notre processus',
         'contact.process.step1': 'Message ou réservation',
         'contact.process.step1_desc': 'Décrivez votre besoin via le formulaire ou Calendly',
         'contact.process.step2': 'Appel de qualification',
@@ -151,6 +234,8 @@ const translations = {
         'contact.process.step3_desc': 'Proposition détaillée avec périmètre, délais et tarifs',
         'contact.process.step4': 'Contrat et démarrage',
         'contact.process.step4_desc': "Signature électronique et début de l'intervention",
+
+        // Portal
         'portal.login.title': 'Connexion au portail',
         'portal.login.subtitle': 'Accédez à vos mandats, devis et factures',
         'portal.login.email': 'Courriel',
@@ -181,21 +266,32 @@ const translations = {
     },
 
     en: {
+        // Navigation
         'nav.home': 'Home',
         'nav.services': 'Services',
         'nav.about': 'About',
         'nav.contact': 'Contact',
         'nav.portal': 'Client Portal',
+
+        // Hero
         'hero.badge': 'Industrial Automation Services',
         'hero.title1': 'PLC, SCADA &',
         'hero.title2': 'HMI Solutions',
         'hero.title3': 'for Industry',
         'hero.subtitle': 'Remote technical support, audits, documentation and modernization of automated systems for industrial companies in Quebec.',
         'hero.cta.primary': 'Book a Consultation',
-        'hero.cta.secondary': 'View Services',
+        'hero.cta.secondary': 'View Services →',
         'hero.stats.services': 'Specialized Services',
         'hero.stats.brands': 'PLC Brands',
         'hero.stats.market': 'B2B Market',
+
+        // Brands
+        'brands.title': 'Supported PLCs',
+        'brands.other': 'Other brands',
+        'brands.on_request': 'On request',
+
+        // Services
+        'services.tag': 'Our services',
         'services.title': 'Our Services',
         'services.subtitle': 'Technical solutions tailored to your industrial needs',
         'services.includes': 'What is included',
@@ -203,9 +299,16 @@ const translations = {
         'services.pricing': 'Pricing',
         'services.cta': 'Request a Quote',
         'services.learn_more': 'Learn more →',
-        'services.all': 'View all services',
+        'services.all': 'View all services and pricing',
+        'services.tag.code': 'Code analysis',
+        'services.tag.report': 'Detailed report',
+        'services.tag.operator': 'Operator',
+        'services.tag.maintenance': 'Maintenance',
+        'services.tag.legacy': 'Legacy code',
+
         'services.plc.title': 'Remote PLC Support',
-        'services.plc.desc': 'Fast diagnosis and troubleshooting for Siemens, Rockwell, B&R and Schneider controllers.',
+        'services.plc.desc': 'Fast diagnosis and troubleshooting for your controllers — without waiting for travel.',
+        'services.plc.lead': 'Fast diagnosis and troubleshooting for industrial controllers. Remote intervention without travel delays.',
         'services.plc.price': '$120–150 CAD/h',
         'services.plc.inc1': 'Remote fault diagnosis',
         'services.plc.inc2': 'PLC program modification and correction',
@@ -218,8 +321,10 @@ const translations = {
         'services.plc.monthly': 'Standard monthly plan',
         'services.plc.priority': 'Priority monthly plan',
         'services.plc.priority_note': 'Guaranteed response time',
+
         'services.audit.title': 'Technical Audit',
-        'services.audit.desc': 'Complete assessment of your automation system — risks, performance and recommendations.',
+        'services.audit.desc': 'Complete assessment of your system — risks, performance and concrete action plan.',
+        'services.audit.lead': 'Complete and objective assessment of your automation system.',
         'services.audit.price': '$1,500–4,000 CAD',
         'services.audit.inc1': 'Complete analysis of existing PLC code',
         'services.audit.inc2': 'Assessment of available documentation',
@@ -231,8 +336,10 @@ const translations = {
         'services.audit.small_note': 'Simple system — 1 to 2 PLCs',
         'services.audit.full': 'Complete audit',
         'services.audit.full_note': 'Complex system — multiple PLCs',
+
         'services.doc.title': 'Industrial Documentation',
-        'services.doc.desc': 'Creation of operator procedures, maintenance, troubleshooting and complete PLC code documentation.',
+        'services.doc.desc': 'Operator procedures, maintenance and troubleshooting — written for your team.',
+        'services.doc.lead': 'Creation of complete technical documentation for your automated systems.',
         'services.doc.price': '$800–5,000 CAD',
         'services.doc.inc1': 'Step-by-step operator procedures',
         'services.doc.inc2': 'Preventive maintenance guide',
@@ -242,8 +349,10 @@ const translations = {
         'services.doc.inc6': 'Word, PDF and online format as needed',
         'services.doc.basic': 'Basic documentation',
         'services.doc.complete': 'Complete documentation',
+
         'services.refactor.title': 'PLC Refactoring',
-        'services.refactor.desc': 'Modernization and restructuring of legacy code — improved reliability and maintainability.',
+        'services.refactor.desc': 'Legacy code modernization — improved reliability, technical debt eliminated.',
+        'services.refactor.lead': 'Restructuring and modernization of legacy PLC code.',
         'services.refactor.price': '$3,000–50,000 CAD',
         'services.refactor.inc1': 'Analysis and mapping of existing code',
         'services.refactor.inc2': 'Restructuring per IEC 61131-3 best practices',
@@ -254,8 +363,20 @@ const translations = {
         'services.refactor.small': 'Partial refactoring',
         'services.refactor.full': 'Complete refactoring',
         'services.refactor.new': 'New implementation',
-        'brands.title': 'Supported PLCs',
+
+        // Stats section
+        'stats.plc_rate': 'Starting hourly rate — PLC support',
+        'stats.response': 'Maximum response time',
+        'stats.documented': 'Intervention documented with written report',
+        'stats.brands': 'Supported PLC brands',
+
+        // Why VNK
         'why.title': 'Why VNK?',
+        'why.tag': 'Why VNK?',
+        'why.intro': 'VNK Automatisation Inc. is an industrial services company specializing exclusively in automation — PLC, SCADA, HMI. No generalists, no compromise on technical quality.',
+        'why.learn_more': 'Learn more about VNK →',
+        'why.badge.title': 'Corporation',
+        'why.badge.sub': 'Incorporated in Quebec — March 2026',
         'why.specialized.title': 'Specialized',
         'why.specialized.desc': 'Exclusive focus on industrial automation.',
         'why.remote.title': 'Remote',
@@ -264,17 +385,52 @@ const translations = {
         'why.documented.desc': 'Every intervention is documented — systematic written report.',
         'why.structured.title': 'Structured',
         'why.structured.desc': 'Professional contract, quote and invoicing for every mandate.',
+
+        // Testimonials
+        'testimonials.tag': 'Testimonials',
+        'testimonials.title': 'What our clients say',
+        'testimonials.coming_soon': 'Testimonial coming soon — official launch 2027',
+        'testimonials.1.text': '"Fast and professional intervention. The intervention report was clear and complete. I recommend VNK for any automation project."',
+        'testimonials.1.name': 'Jean Tremblay',
+        'testimonials.1.role': 'Maintenance Manager — Industries XYZ Inc.',
+        'testimonials.2.text': '"The technical audit revealed risks we had not identified. The action plan was precise and actionable. Very good work."',
+        'testimonials.2.name': 'Marc Lavoie',
+        'testimonials.2.role': 'Technical Director — Manufacturing SME',
+        'testimonials.3.text': '"The documentation produced by VNK allowed our maintenance team to work autonomously. Excellent investment."',
+        'testimonials.3.name': 'Sophie Parent',
+        'testimonials.3.role': 'Project Manager — Quebec Integrator',
+
+        // CTA
         'cta.title': 'Ready to optimize your system?',
         'cta.subtitle': 'Book a free 30-minute consultation to discuss your needs.',
         'cta.button': 'Book Now',
+        'cta.view_prices': 'View pricing',
+        'cta.view_services': 'View services',
+        'cta.view_about': 'Learn more about VNK',
+
+        // Footer
         'footer.services': 'Services',
         'footer.company': 'Company',
         'footer.contact': 'Contact',
+        'footer.desc': 'Industrial automation B2B services — Quebec, Canada.',
         'footer.copyright': '© 2026 VNK Automatisation Inc. All rights reserved.',
-        'about.title': 'About VNK',
-        'about.subtitle': 'Value. Network. Knowledge.',
+
+        // Process
+        'contact.process.title': 'Our process',
+        'process.title': 'How it works',
+        'process.subtitle': 'From your first message to final delivery — a structured and transparent process.',
+        'process.step5': 'Delivery and report',
+        'process.step5_desc': 'Complete written report delivered, client validation, invoice issued.',
+
+        // About page
+        'about.tag': 'About',
+        'about.page_title': 'VNK Automatisation Inc.',
+        'about.page_subtitle': 'Value. Network. Knowledge. — Specialized B2B industrial services in Quebec',
+        'about.badge.title': 'Corporation',
+        'about.badge.sub': 'Incorporated in Quebec — March 2026',
         'about.founder.title': 'Yan Verone Kengne',
         'about.founder.role': 'Founder and industrial automation expert',
+        'about.founder.card_role': 'Founder — VNK Automatisation Inc.',
         'about.founder.desc1': 'Specialized technician in industrial automation with deep expertise in PLC, SCADA and HMI programming for multiple industrial PLC brands.',
         'about.founder.desc2': 'VNK Automatisation Inc. was founded in March 2026 with a clear mission: to provide high-quality specialized technical services to industrial companies in Quebec.',
         'about.value.desc': 'Every intervention delivers concrete and measurable value to your operation.',
@@ -282,12 +438,23 @@ const translations = {
         'about.knowledge.desc': 'Deep technical expertise, constantly updated on industrial technologies.',
         'about.location': 'Location',
         'about.founded': 'Founded',
+        'about.founded_date': 'March 2026',
         'about.type': 'Type',
         'about.type_value': 'Corporation',
+        'about.sector_label': 'Sector',
+        'about.sector': 'Industrial automation B2B',
+        'about.market_label': 'Market',
+        'about.market': 'Quebec, Canada',
         'about.contact_btn': 'Get in touch',
+        'about.founder_tag': 'The founder',
+        'about.skills_tag': 'Skills',
         'about.expertise.title': 'Technical Expertise',
         'about.expertise.subtitle': 'Specialized skills in industrial automation',
+        'about.protocols_title': 'Protocols & Standards',
+        'about.safety_title': 'Safety & Documentation',
+        'about.commitment_tag': 'Our commitment',
         'about.commitment.title': 'Our Commitment',
+        'about.commitment.subtitle': 'A rigorous professional standard at every mandate.',
         'about.commitment.contract': 'Systematic contract',
         'about.commitment.contract_desc': 'No intervention without a signed contract. Scope, deadlines and rates clearly defined before starting.',
         'about.commitment.report': 'Written report',
@@ -296,6 +463,8 @@ const translations = {
         'about.commitment.confidential_desc': 'NDA available on request. Your data and industrial processes remain confidential.',
         'about.commitment.responsive': 'Responsiveness',
         'about.commitment.responsive_desc': 'Remote intervention without travel delays. Fast response when your production is at stake.',
+
+        // Contact page
         'contact.title': 'Contact Us',
         'contact.subtitle': 'Free 30-minute consultation — no commitment',
         'contact.form.title': 'Send us a message',
@@ -319,7 +488,6 @@ const translations = {
         'contact.info.company': 'Company',
         'contact.calendly.title': 'Book directly',
         'contact.calendly.desc': 'Choose a time slot for a free 30-minute consultation.',
-        'contact.process.title': 'Our process',
         'contact.process.step1': 'Message or booking',
         'contact.process.step1_desc': 'Describe your need via the form or Calendly',
         'contact.process.step2': 'Qualification call',
@@ -328,6 +496,8 @@ const translations = {
         'contact.process.step3_desc': 'Detailed proposal with scope, deadlines and rates',
         'contact.process.step4': 'Contract and start',
         'contact.process.step4_desc': 'Electronic signature and start of intervention',
+
+        // Portal
         'portal.login.title': 'Portal Login',
         'portal.login.subtitle': 'Access your mandates, quotes and invoices',
         'portal.login.email': 'Email',
@@ -376,7 +546,7 @@ window.i18n = {
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             const translation = this.t(key);
-            if (translation) {
+            if (translation && translation !== key) {
                 if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
                     el.placeholder = translation;
                 } else {
