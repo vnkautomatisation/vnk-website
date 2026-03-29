@@ -3654,18 +3654,18 @@ img {
 .vnk-chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 0.85rem;
+    padding: 1rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    min-height: 280px;
+    gap: 0.6rem;
+    min-height: 300px;
     background: #F8FAFC;
 }
 
 .vnk-chat-msg {
     display: flex;
     flex-direction: column;
-    max-width: 82%;
+    max-width: 80%;
 }
 
     .vnk-chat-msg.vnk {
@@ -3677,9 +3677,9 @@ img {
     }
 
 .vnk-chat-msg-bubble {
-    padding: 0.5rem 0.8rem;
+    padding: 0.55rem 0.85rem;
     border-radius: 12px;
-    font-size: 0.84rem;
+    font-size: 0.85rem;
     line-height: 1.4;
     word-break: break-word;
 }
@@ -3698,7 +3698,7 @@ img {
 }
 
 .vnk-chat-msg-time {
-    font-size: 0.67rem;
+    font-size: 0.68rem;
     color: #94A3B8;
     margin-top: 2px;
     padding: 0 2px;
@@ -3709,23 +3709,23 @@ img {
 }
 
 .vnk-chat-compose {
-    padding: 0.5rem 0.65rem 0.6rem;
+    padding: 0.5rem 0.75rem 0.6rem;
     border-top: 1px solid #E2E8F0;
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.35rem;
     background: white;
 }
 
 .vnk-chat-actions {
     display: flex;
     align-items: center;
-    gap: 0.1rem;
+    gap: 0.15rem;
 }
 
 .vnk-chat-action-btn {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border: none;
     background: none;
     color: #94A3B8;
@@ -3734,7 +3734,7 @@ img {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s,color 0.15s;
+    transition: background 0.15s, color 0.15s;
 }
 
     .vnk-chat-action-btn:hover {
@@ -3742,18 +3742,24 @@ img {
         color: #1B4F8A;
     }
 
+.vnk-chat-compose-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
 .vnk-chat-input {
     flex: 1;
-    padding: 0.45rem 0.7rem;
+    padding: 0.5rem 0.75rem;
     border: 1.5px solid #E2E8F0;
-    border-radius: 14px;
-    font-size: 0.84rem;
+    border-radius: 16px;
+    font-size: 0.85rem;
     outline: none;
     resize: none;
     line-height: 1.4;
     font-family: inherit;
     transition: border-color 0.15s;
-    min-height: 34px;
+    min-height: 36px;
 }
 
     .vnk-chat-input:focus {
@@ -3761,8 +3767,8 @@ img {
     }
 
 .vnk-chat-send {
-    width: 34px;
-    height: 34px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     background: #1B4F8A;
     color: white;
@@ -3796,7 +3802,7 @@ img {
 
 .vnk-emoji-item {
     cursor: pointer;
-    font-size: 1.3rem;
+    font-size: 1.35rem;
     padding: 3px;
     border-radius: 4px;
     display: inline-block;
@@ -3807,10 +3813,11 @@ img {
         background: #F1F5F9;
     }
 
-@media (max-width:480px) {
+@media (max-width: 480px) {
     .vnk-chat-panel {
         width: calc(100vw - 2rem);
         right: 0;
+        bottom: 70px;
         max-height: 70vh;
         border-radius: 16px;
     }
@@ -3819,4 +3826,18 @@ img {
         bottom: 1rem;
         right: 1rem;
     }
+}
+
+.vnk-chat-login-prompt {
+    padding: 1.25rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #64748B;
+    background: #F8FAFC;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
 }
