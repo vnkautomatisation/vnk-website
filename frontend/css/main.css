@@ -2875,7 +2875,7 @@ img {
 .portal-dashboard {
     display: grid;
     grid-template-columns: 240px 1fr;
-    height: calc(100vh - var(--nav-height));
+    min-height: calc(100vh - var(--nav-height));
     margin-top: var(--nav-height);
     overflow: hidden;
 }
@@ -3008,10 +3008,12 @@ img {
 
 /* ---------- Main content ---------- */
 .portal-main {
-    padding: var(--spacing-md);
+    padding: 0;
     overflow-y: auto;
     height: 100%;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .portal-tab {
@@ -3040,115 +3042,6 @@ img {
 .portal-tab-subtitle {
     font-size: 0.85rem;
     color: var(--color-text-light);
-}
-
-/* ── Toolbar (titre + barre recherche) ── */
-.portal-toolbar {
-    margin-bottom: 1rem;
-}
-
-.portal-toolbar-title {
-    display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-    margin-bottom: 0.6rem;
-}
-
-    .portal-toolbar-title h2 {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: #1B4F8A;
-    }
-
-    .portal-toolbar-title span {
-        font-size: 0.82rem;
-        color: #94A3B8;
-    }
-
-.portal-search-bar {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.portal-search-input-wrap {
-    flex: 1;
-    position: relative;
-}
-
-    .portal-search-input-wrap svg {
-        position: absolute;
-        left: 0.75rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #94A3B8;
-        pointer-events: none;
-    }
-
-.portal-search-input {
-    width: 100%;
-    padding: 0.5rem 0.75rem 0.5rem 2.25rem;
-    border: 1.5px solid #E2E8F0;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    background: white;
-    color: #1E293B;
-    transition: border-color 0.15s,box-shadow 0.15s;
-    box-sizing: border-box;
-}
-
-    .portal-search-input:focus {
-        outline: none;
-        border-color: #1B4F8A;
-        box-shadow: 0 0 0 3px rgba(27,79,138,0.08);
-    }
-
-    .portal-search-input::placeholder {
-        color: #CBD5E0;
-    }
-
-.portal-filter-select {
-    padding: 0.5rem 2rem 0.5rem 0.85rem;
-    border: 1.5px solid #E2E8F0;
-    border-radius: 8px;
-    font-size: 0.82rem;
-    background: white;
-    color: #1E293B;
-    cursor: pointer;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.6rem center;
-}
-
-    .portal-filter-select:focus {
-        outline: none;
-        border-color: #1B4F8A;
-    }
-
-.portal-sort-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.5rem 0.85rem;
-    border: 1.5px solid #E2E8F0;
-    border-radius: 8px;
-    background: white;
-    color: #64748B;
-    font-size: 0.82rem;
-    font-weight: 500;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.15s;
-}
-
-    .portal-sort-btn:hover, .portal-sort-btn.active {
-        border-color: #1B4F8A;
-        color: #1B4F8A;
-        background: #EBF5FB;
-    }
-
-.portal-tab-content { /* contenu normal */
 }
 
 /* ---------- Stats row ---------- */
@@ -3524,22 +3417,259 @@ img {
         grid-template-columns: 1fr;
     }
 }
-/* ═══════════════════════════════════════════════
-   WIDGET CHAT FLOTTANT — toutes les pages
-   ═══════════════════════════════════════════════ */
+
+
+/* ── Toolbar sticky (titre + barre recherche) ── */
+.portal-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #F8FAFC;
+    border-bottom: 1px solid #E2E8F0;
+    padding: 0.75rem 1.25rem;
+    flex-shrink: 0;
+}
+
+.portal-toolbar-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.6rem;
+}
+
+    .portal-toolbar-title h2 {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1B4F8A;
+        margin: 0;
+    }
+
+    .portal-toolbar-title span {
+        font-size: 0.82rem;
+        color: #94A3B8;
+    }
+
+.portal-search-bar {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.portal-search-input-wrap {
+    flex: 1;
+    position: relative;
+}
+
+    .portal-search-input-wrap svg {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94A3B8;
+        pointer-events: none;
+    }
+
+.portal-search-input {
+    width: 100%;
+    padding: 0.45rem 0.75rem 0.45rem 2.2rem;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 8px;
+    font-size: 0.84rem;
+    background: white;
+    color: #1E293B;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+}
+
+    .portal-search-input:focus {
+        outline: none;
+        border-color: #1B4F8A;
+    }
+
+    .portal-search-input::placeholder {
+        color: #CBD5E0;
+    }
+
+.portal-filter-select {
+    padding: 0.45rem 2rem 0.45rem 0.75rem;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 0.5rem center;
+    color: #1E293B;
+    cursor: pointer;
+    appearance: none;
+}
+
+    .portal-filter-select:focus {
+        outline: none;
+        border-color: #1B4F8A;
+    }
+
+.portal-sort-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.75rem;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 8px;
+    background: white;
+    color: #64748B;
+    font-size: 0.82rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+}
+
+    .portal-sort-btn:hover, .portal-sort-btn.active {
+        border-color: #1B4F8A;
+        color: #1B4F8A;
+        background: #EBF5FB;
+    }
+
+.portal-tab-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.25rem;
+    min-height: 0;
+}
+
+/* ── Ligne compacte ── */
+.portal-row {
+    display: grid;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    margin-bottom: 0.3rem;
+    background: white;
+    transition: box-shadow 0.15s;
+}
+
+    .portal-row:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+
+.portal-row-num {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 110px;
+}
+
+    .portal-row-num strong {
+        font-size: 0.82rem;
+        color: #1B4F8A;
+    }
+
+.portal-row-badge {
+    font-size: 0.67rem;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 8px;
+    width: fit-content;
+}
+
+.portal-row-title {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.portal-row-title-main {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #1E293B;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.portal-row-title-sub {
+    font-size: 0.71rem;
+    color: #94A3B8;
+    margin-top: 1px;
+}
+
+.portal-row-amount {
+    text-align: right;
+    min-width: 80px;
+}
+
+.portal-row-amount-main {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #1B4F8A;
+}
+
+.portal-row-amount-sub {
+    font-size: 0.67rem;
+    color: #94A3B8;
+}
+
+.portal-row-btn {
+    font-size: 0.75rem !important;
+    padding: 0.28rem 0.55rem !important;
+    white-space: nowrap;
+}
+
+/* ── Section archivés/historique ── */
+.portal-archive-section {
+    margin-top: 1rem;
+    border-top: 1.5px solid #E2E8F0;
+    padding-top: 0.75rem;
+}
+
+.portal-archive-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748B;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 0 0.5rem;
+}
+
+    .portal-archive-toggle svg {
+        transition: transform 0.2s;
+    }
+
+    .portal-archive-toggle.open svg {
+        transform: rotate(180deg);
+    }
+
+.portal-archive-body {
+    opacity: 0.75;
+}
+
+/* ── Dashboard stats gelées ── */
+.portal-dashboard-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    background: #F8FAFC;
+    border-bottom: 1px solid #E2E8F0;
+    padding: 0.75rem 1.25rem;
+    flex-shrink: 0;
+}
+
+/* ── Widget chat ── */
 .vnk-chat-widget {
     position: fixed;
     bottom: 1.5rem;
     right: 1.5rem;
     z-index: 9000;
-    font-family: system-ui, sans-serif;
+    font-family: system-ui,sans-serif;
 }
 
 .vnk-chat-bubble {
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #1B4F8A, #2E86AB);
+    background: linear-gradient(135deg,#1B4F8A,#2E86AB);
     color: white;
     border: none;
     cursor: pointer;
@@ -3547,7 +3677,7 @@ img {
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 20px rgba(27,79,138,0.45);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s,box-shadow 0.2s;
     position: relative;
 }
 
@@ -3574,7 +3704,7 @@ img {
 
 .vnk-chat-panel {
     position: absolute;
-    bottom: 70px;
+    bottom: 62px;
     right: 0;
     width: 360px;
     background: white;
@@ -3584,7 +3714,7 @@ img {
     flex-direction: column;
     overflow: hidden;
     max-height: 560px;
-    transition: width 0.25s ease, max-height 0.25s ease;
+    transition: width 0.25s,max-height 0.25s;
 }
 
     .vnk-chat-panel.open {
@@ -3592,17 +3722,17 @@ img {
     }
 
 .vnk-chat-header {
-    background: linear-gradient(135deg, #1B4F8A, #2E86AB);
+    background: linear-gradient(135deg,#1B4F8A,#2E86AB);
     color: white;
-    padding: 1rem 1.1rem;
+    padding: 0.85rem 1rem;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.6rem;
 }
 
 .vnk-chat-header-avatar {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     background: rgba(255,255,255,0.2);
     display: flex;
@@ -3613,12 +3743,12 @@ img {
 
 .vnk-chat-header-info strong {
     display: block;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 700;
 }
 
 .vnk-chat-header-info span {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     opacity: 0.8;
     display: flex;
     align-items: center;
@@ -3627,8 +3757,8 @@ img {
 
     .vnk-chat-header-info span::before {
         content: '';
-        width: 7px;
-        height: 7px;
+        width: 6px;
+        height: 6px;
         border-radius: 50%;
         background: #2ECC71;
         display: inline-block;
@@ -3643,7 +3773,7 @@ img {
     opacity: 0.8;
     padding: 4px;
     border-radius: 50%;
-    transition: opacity 0.15s, background 0.15s;
+    transition: opacity 0.15s,background 0.15s;
 }
 
     .vnk-chat-close:hover {
@@ -3654,18 +3784,18 @@ img {
 .vnk-chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 1rem;
+    padding: 0.85rem;
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    min-height: 300px;
+    gap: 0.5rem;
+    min-height: 280px;
     background: #F8FAFC;
 }
 
 .vnk-chat-msg {
     display: flex;
     flex-direction: column;
-    max-width: 80%;
+    max-width: 82%;
 }
 
     .vnk-chat-msg.vnk {
@@ -3677,9 +3807,9 @@ img {
     }
 
 .vnk-chat-msg-bubble {
-    padding: 0.55rem 0.85rem;
+    padding: 0.5rem 0.8rem;
     border-radius: 12px;
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     line-height: 1.4;
     word-break: break-word;
 }
@@ -3698,7 +3828,7 @@ img {
 }
 
 .vnk-chat-msg-time {
-    font-size: 0.68rem;
+    font-size: 0.67rem;
     color: #94A3B8;
     margin-top: 2px;
     padding: 0 2px;
@@ -3709,23 +3839,23 @@ img {
 }
 
 .vnk-chat-compose {
-    padding: 0.5rem 0.75rem 0.6rem;
+    padding: 0.5rem 0.65rem 0.6rem;
     border-top: 1px solid #E2E8F0;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.3rem;
     background: white;
 }
 
 .vnk-chat-actions {
     display: flex;
     align-items: center;
-    gap: 0.15rem;
+    gap: 0.1rem;
 }
 
 .vnk-chat-action-btn {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     border: none;
     background: none;
     color: #94A3B8;
@@ -3734,7 +3864,7 @@ img {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s,color 0.15s;
 }
 
     .vnk-chat-action-btn:hover {
@@ -3742,24 +3872,18 @@ img {
         color: #1B4F8A;
     }
 
-.vnk-chat-compose-row {
-    display: flex;
-    gap: 0.5rem;
-    align-items: flex-end;
-}
-
 .vnk-chat-input {
     flex: 1;
-    padding: 0.5rem 0.75rem;
+    padding: 0.45rem 0.7rem;
     border: 1.5px solid #E2E8F0;
-    border-radius: 16px;
-    font-size: 0.85rem;
+    border-radius: 14px;
+    font-size: 0.84rem;
     outline: none;
     resize: none;
     line-height: 1.4;
     font-family: inherit;
     transition: border-color 0.15s;
-    min-height: 36px;
+    min-height: 34px;
 }
 
     .vnk-chat-input:focus {
@@ -3767,8 +3891,8 @@ img {
     }
 
 .vnk-chat-send {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     background: #1B4F8A;
     color: white;
@@ -3802,7 +3926,7 @@ img {
 
 .vnk-emoji-item {
     cursor: pointer;
-    font-size: 1.35rem;
+    font-size: 1.3rem;
     padding: 3px;
     border-radius: 4px;
     display: inline-block;
@@ -3813,11 +3937,10 @@ img {
         background: #F1F5F9;
     }
 
-@media (max-width: 480px) {
+@media (max-width:480px) {
     .vnk-chat-panel {
         width: calc(100vw - 2rem);
         right: 0;
-        bottom: 70px;
         max-height: 70vh;
         border-radius: 16px;
     }
@@ -3826,18 +3949,4 @@ img {
         bottom: 1rem;
         right: 1rem;
     }
-}
-
-.vnk-chat-login-prompt {
-    padding: 1.25rem;
-    text-align: center;
-    font-size: 0.85rem;
-    color: #64748B;
-    background: #F8FAFC;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
 }

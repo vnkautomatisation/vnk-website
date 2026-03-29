@@ -329,11 +329,11 @@ function renderQuotes(quotes) {
             '<div style="font-size:0.88rem;font-weight:700;color:#1B4F8A">' + formatCurrency(q.amount_ttc) + '</div>' +
             '<div style="font-size:0.67rem;color:#94A3B8">HT ' + formatCurrency(q.amount_ht) + '</div>' +
             '</div>' +
-            '<button class="btn btn-outline btn-sm" style="font-size:0.75rem;padding:0.25rem 0.5rem" onclick="downloadPDF(`quotes`,' + q.id + ',`' + q.quote_number + '`)">PDF</button>'
-                (q.status === 'pending' ?
-                    '<button class="btn btn-primary btn-sm" style="font-size:0.75rem;padding:0.25rem 0.5rem" onclick="acceptQuote(' + q.id + ')">Accepter</button>' :
-                    '<div></div>') +
-                '</div>';
+            '<button class="btn btn-outline btn-sm" style="font-size:0.75rem;padding:0.25rem 0.5rem" onclick="downloadPDF(\'quotes\',' + q.id + ',\'' + q.quote_number + '\')">PDF</button>' +
+            (q.status === 'pending' ?
+                '<button class="btn btn-primary btn-sm" style="font-size:0.75rem;padding:0.25rem 0.5rem" onclick="acceptQuote(' + q.id + ')">Accepter</button>' :
+                '<div></div>') +
+            '</div>';
     };
 
     // Séparer actifs / archivés
@@ -410,11 +410,11 @@ function renderInvoices(invoices) {
             '<div style="font-size:0.88rem;font-weight:700;color:' + (isPaid ? '#27AE60' : '#1B4F8A') + '">' + formatCurrency(inv.amount_ttc) + '</div>' +
             '<div style="font-size:0.67rem;color:#94A3B8">HT ' + formatCurrency(inv.amount_ht) + '</div>' +
             '</div>' +
-            '<button class="btn btn-outline btn-sm" style="font-size:0.75rem;padding:0.25rem 0.5rem" onclick="downloadPDF(`invoices`,' + inv.id + ',`' + inv.invoice_number + '`)">PDF</button>'
-                (inv.status === 'unpaid' || inv.status === 'overdue' ?
-                    '<button class="btn btn-primary btn-sm" style="font-size:0.75rem;padding:0.25rem 0.5rem" onclick="payInvoice(' + inv.id + ',' + inv.amount_ttc + ')">Payer</button>' :
-                    '<div></div>') +
-                '</div>';
+            '<button class="btn btn-outline btn-sm" style="font-size:0.75rem;padding:0.25rem 0.5rem" onclick="downloadPDF(\'invoices\',' + inv.id + ',\'' + inv.invoice_number + '\')">PDF</button>' +
+            (inv.status === 'unpaid' || inv.status === 'overdue' ?
+                '<button class="btn btn-primary btn-sm" style="font-size:0.75rem;padding:0.25rem 0.5rem" onclick="payInvoice(' + inv.id + ',' + inv.amount_ttc + ')">Payer</button>' :
+                '<div></div>') +
+            '</div>';
     };
 
     // Séparer actives / historique
