@@ -1935,34 +1935,180 @@ async function acceptQuote(quoteId) {
 }
 
 async function signContract(contractId, hellosignId, fileUrl) {
-    const token = localStorage.getItem('vnk-token');
-    const user = JSON.parse(localStorage.getItem('vnk-user') || '{}');
+    // Toujours ouvrir le modal de signature canvas — Option A
+    openSignatureModal(contractId);
+}
 
-    if (fileUrl) {
-        showConfirm('Signer ce contrat', 'Vous allez être redirigé vers le document pour le lire et le signer en ligne.', () => window.open(fileUrl, '_blank'), { type: 'info', confirmLabel: 'Ouvrir le document' });
+// ── Modal de signature canvas ──────────────────────────────────────
+function openSignatureModal(contractId) {
+    // Créer le modal s'il n'existe pas encore
+    let overlay = document.getElementById('vnk-sign-modal');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'vnk-sign-modal';
+        overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;padding:1rem';
+        overlay.innerHTML = `
+        <div style="background:white;border-radius:16px;width:100%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden">
+            <div style="background:#0F2D52;padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between">
+                <div>
+                    <div style="font-size:0.95rem;font-weight:700;color:white">Signer le contrat</div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.7);margin-top:2px" id="sign-modal-subtitle"></div>
+                </div>
+                <button onclick="closeSignatureModal()" style="background:rgba(255,255,255,0.1);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center">×</button>
+            </div>
+            <div style="padding:1.25rem">
+                <!-- Prévisualisation PDF -->
+                <div style="border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;margin-bottom:1rem;height:220px;background:#F8FAFC">
+                    <iframe id="sign-modal-iframe" src="" style="width:100%;height:100%;border:none;display:block"></iframe>
+                </div>
+                <!-- Instructions -->
+                <div style="font-size:0.82rem;color:#64748B;margin-bottom:0.75rem;display:flex;align-items:center;gap:6px">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    Dessinez votre signature dans la zone ci-dessous
+                </div>
+                <!-- Canvas de signature -->
+                <div style="border:2px solid #1B4F8A;border-radius:10px;background:white;position:relative;touch-action:none">
+                    <canvas id="sign-canvas" width="472" height="130" style="display:block;width:100%;height:130px;border-radius:8px;cursor:crosshair"></canvas>
+                    <button onclick="clearSignatureCanvas()" style="position:absolute;top:6px;right:6px;background:white;border:1px solid #E2E8F0;border-radius:6px;padding:3px 8px;font-size:0.72rem;color:#64748B;cursor:pointer">Effacer</button>
+                </div>
+                <!-- Avertissement légal -->
+                <div style="margin-top:0.75rem;font-size:0.75rem;color:#94A3B8;line-height:1.5">
+                    En soumettant cette signature, vous confirmez avoir lu et accepté les termes du contrat. 
+                    Votre adresse IP et la date seront enregistrées comme preuve de consentement.
+                </div>
+            </div>
+            <div style="padding:0.85rem 1.25rem;border-top:1px solid #E2E8F0;display:flex;justify-content:flex-end;gap:0.75rem">
+                <button onclick="closeSignatureModal()" style="padding:0.55rem 1.25rem;background:white;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer">Annuler</button>
+                <button id="sign-submit-btn" onclick="submitSignature()" style="padding:0.55rem 1.5rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    Signer et soumettre
+                </button>
+            </div>
+        </div>`;
+        document.body.appendChild(overlay);
+        initSignatureCanvas();
+    }
+
+    // Stocker l'id du contrat courant
+    overlay._contractId = contractId;
+    document.getElementById('sign-modal-subtitle').textContent = 'Contrat #' + contractId;
+
+    // Charger le PDF dans l'iframe
+    const token = localStorage.getItem('vnk-token');
+    const iframe = document.getElementById('sign-modal-iframe');
+    // Utiliser fetch pour charger avec auth header et créer un blob URL
+    fetch('/api/contracts/' + contractId + '/pdf', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(r => r.blob())
+        .then(blob => { iframe.src = URL.createObjectURL(blob); })
+        .catch(() => { iframe.src = ''; });
+
+    clearSignatureCanvas();
+    overlay.style.display = 'flex';
+}
+
+function closeSignatureModal() {
+    const overlay = document.getElementById('vnk-sign-modal');
+    if (overlay) {
+        overlay.style.display = 'none';
+        const iframe = document.getElementById('sign-modal-iframe');
+        if (iframe && iframe.src.startsWith('blob:')) URL.revokeObjectURL(iframe.src);
+    }
+}
+
+let _signCanvas = null, _signCtx = null, _signDrawing = false, _signLastX = 0, _signLastY = 0;
+
+function initSignatureCanvas() {
+    _signCanvas = document.getElementById('sign-canvas');
+    if (!_signCanvas) return;
+    _signCtx = _signCanvas.getContext('2d');
+    _signCtx.strokeStyle = '#0F2D52';
+    _signCtx.lineWidth = 2.5;
+    _signCtx.lineCap = 'round';
+    _signCtx.lineJoin = 'round';
+
+    function getPos(e) {
+        const rect = _signCanvas.getBoundingClientRect();
+        const scaleX = _signCanvas.width / rect.width;
+        const scaleY = _signCanvas.height / rect.height;
+        const src = e.touches ? e.touches[0] : e;
+        return { x: (src.clientX - rect.left) * scaleX, y: (src.clientY - rect.top) * scaleY };
+    }
+
+    _signCanvas.addEventListener('mousedown', e => { _signDrawing = true; const p = getPos(e); _signLastX = p.x; _signLastY = p.y; });
+    _signCanvas.addEventListener('mousemove', e => { if (!_signDrawing) return; const p = getPos(e); _signCtx.beginPath(); _signCtx.moveTo(_signLastX, _signLastY); _signCtx.lineTo(p.x, p.y); _signCtx.stroke(); _signLastX = p.x; _signLastY = p.y; });
+    _signCanvas.addEventListener('mouseup', () => { _signDrawing = false; });
+    _signCanvas.addEventListener('mouseleave', () => { _signDrawing = false; });
+    _signCanvas.addEventListener('touchstart', e => { e.preventDefault(); _signDrawing = true; const p = getPos(e); _signLastX = p.x; _signLastY = p.y; }, { passive: false });
+    _signCanvas.addEventListener('touchmove', e => { e.preventDefault(); if (!_signDrawing) return; const p = getPos(e); _signCtx.beginPath(); _signCtx.moveTo(_signLastX, _signLastY); _signCtx.lineTo(p.x, p.y); _signCtx.stroke(); _signLastX = p.x; _signLastY = p.y; }, { passive: false });
+    _signCanvas.addEventListener('touchend', () => { _signDrawing = false; });
+}
+
+function clearSignatureCanvas() {
+    if (!_signCanvas) { _signCanvas = document.getElementById('sign-canvas'); _signCtx = _signCanvas?.getContext('2d'); }
+    if (_signCtx) _signCtx.clearRect(0, 0, _signCanvas.width, _signCanvas.height);
+}
+
+function isCanvasEmpty() {
+    if (!_signCanvas) return true;
+    const data = _signCtx.getImageData(0, 0, _signCanvas.width, _signCanvas.height).data;
+    for (let i = 3; i < data.length; i += 4) { if (data[i] > 0) return false; }
+    return true;
+}
+
+async function submitSignature() {
+    if (isCanvasEmpty()) {
+        showPortalToast('Veuillez dessiner votre signature avant de soumettre.', 'error');
         return;
     }
+    const overlay = document.getElementById('vnk-sign-modal');
+    const contractId = overlay?._contractId;
+    if (!contractId) return;
 
-    if (hellosignId) {
-        try {
-            const r = await fetch('/api/contracts/' + contractId + '/signing-url', { headers: { Authorization: 'Bearer ' + token } });
-            const d = await r.json();
-            if (d.success && d.signingUrl) {
-                showConfirm('Signer électroniquement', 'Vous allez être redirigé vers HelloSign pour signer ce contrat.', () => window.open(d.signingUrl, '_blank'), { type: 'info', confirmLabel: 'Signer maintenant' });
-                return;
+    const btn = document.getElementById('sign-submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Envoi en cours...';
+
+    const signatureData = _signCanvas.toDataURL('image/png');
+    const token = localStorage.getItem('vnk-token');
+
+    try {
+        const r = await fetch('/api/contracts/' + contractId + '/client-sign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ signature_data: signatureData })
+        });
+        const d = await r.json();
+        if (d.success) {
+            closeSignatureModal();
+            showPortalToast('Contrat signé avec succès !', 'success');
+            // Rafraîchir la liste des contrats
+            if (typeof loadDashboard === 'function') {
+                const authFetch_ = (url) => fetch(url, { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json());
+                authFetch_('/api/contracts').then(data => {
+                    if (data.contracts) { window._allContracts = data.contracts; filterContracts(); }
+                }).catch(() => { });
             }
-        } catch { }
+        } else {
+            showPortalToast(d.message || 'Erreur lors de la signature.', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Signer et soumettre';
+        }
+    } catch (e) {
+        showPortalToast('Erreur réseau. Veuillez réessayer.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Signer et soumettre';
     }
+}
 
-    _ensureModal();
-    document.getElementById('vnk-modal-icon').innerHTML = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
-    document.getElementById('vnk-modal-title').textContent = 'Contrat en préparation';
-    document.getElementById('vnk-modal-msg').innerHTML = 'VNK prépare actuellement votre contrat.<br><br>Vous recevrez un courriel à <strong>' + (user.email || 'votre adresse') + '</strong> dès que le document est prêt à signer.';
-    document.getElementById('vnk-modal-stripe').style.display = 'none';
-    document.getElementById('vnk-modal-btns').innerHTML =
-        '<button onclick="_closeModal()" style="padding:0.6rem 1.5rem;background:white;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">Fermer</button>' +
-        '<button onclick="_closeAndOpenChat()" style="padding:0.6rem 1.5rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">Envoyer un message</button>';
-    document.getElementById('vnk-modal').style.display = 'flex';
+function showPortalToast(msg, type) {
+    let t = document.getElementById('portal-toast-sig');
+    if (!t) { t = document.createElement('div'); t.id = 'portal-toast-sig'; t.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);padding:0.65rem 1.25rem;border-radius:8px;font-size:0.85rem;font-weight:600;z-index:99999;transition:opacity 0.3s'; document.body.appendChild(t); }
+    t.textContent = msg;
+    t.style.background = type === 'error' ? '#E74C3C' : '#27AE60';
+    t.style.color = 'white';
+    t.style.opacity = '1';
+    clearTimeout(t._to);
+    t._to = setTimeout(() => { t.style.opacity = '0'; }, 3500);
 }
 
 function _closeAndOpenChat() {

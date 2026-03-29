@@ -10,6 +10,10 @@ const { authenticateToken } = require('../middleware/auth');
 // GET /api/quotes
 router.get('/', authenticateToken, async (req, res) => {
     try {
+        // Migration douce — s'assurer que les colonnes existent
+        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS service_type VARCHAR(100)`).catch(() => { });
+        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMP`).catch(() => { });
+
         const clientId = req.query.client_id || req.user.id;
         const result = await pool.query(
             `SELECT id, quote_number, title, description, service_type,
@@ -48,6 +52,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // POST /api/quotes (admin)
 router.post('/', async (req, res) => {
     try {
+        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS service_type VARCHAR(100)`).catch(() => { });
+        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMP`).catch(() => { });
         const { client_id, title, description, amount_ht, service_type, expiry_days = 30 } = req.body;
         const tps = parseFloat((amount_ht * 0.05).toFixed(2));
         const tvq = parseFloat((amount_ht * 0.09975).toFixed(2));

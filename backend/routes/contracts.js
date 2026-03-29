@@ -239,4 +239,68 @@ router.post('/webhook', async (req, res) => {
     }
 });
 
+// POST /:id/client-sign — signature dessin du client (canvas base64)
+router.post('/:id/client-sign', authenticateToken, async (req, res) => {
+    try {
+        const { signature_data, ip_address } = req.body;
+        if (!signature_data || !signature_data.startsWith('data:image/')) {
+            return res.status(400).json({ success: false, message: 'Données de signature invalides.' });
+        }
+
+        // Vérifier que le contrat appartient bien à ce client
+        const check = await pool.query(
+            `SELECT id FROM contracts WHERE id=$1 AND client_id=$2`,
+            [req.params.id, req.user.id]
+        );
+        if (!check.rows.length)
+            return res.status(404).json({ success: false, message: 'Contrat introuvable.' });
+
+        // Migrations douces — ajouter colonnes si elles n'existent pas encore
+        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS client_signature_data TEXT`).catch(() => { });
+        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS client_signature_ip VARCHAR(64)`).catch(() => { });
+        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS admin_signed_at TIMESTAMPTZ`).catch(() => { });
+        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS admin_signature_data TEXT`).catch(() => { });
+
+        const ip = ip_address || req.headers['x-forwarded-for'] || req.connection.remoteAddress || '';
+
+        const result = await pool.query(
+            `UPDATE contracts
+             SET client_signature_data = $1,
+                 client_signature_ip   = $2,
+                 signed_at             = NOW(),
+                 status                = 'signed',
+                 updated_at            = NOW()
+             WHERE id = $3
+             RETURNING *`,
+            [signature_data, ip.split(',')[0].trim(), req.params.id]
+        );
+
+        res.json({ success: true, message: 'Contrat signé avec succès.', contract: result.rows[0] });
+    } catch (e) {
+        console.error('Client sign error:', e);
+        res.status(500).json({ success: false, message: 'Erreur serveur : ' + e.message });
+    }
+});
+
+// POST /:id/admin-sign — signature dessin de l'admin (canvas base64) [client routes]
+router.post('/:id/admin-sign-canvas', async (req, res) => {
+    try {
+        const { signature_data } = req.body;
+        if (!signature_data || !signature_data.startsWith('data:image/')) {
+            return res.status(400).json({ success: false, message: 'Données de signature invalides.' });
+        }
+        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS admin_signature_data TEXT`).catch(() => { });
+        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS admin_signed_at TIMESTAMPTZ`).catch(() => { });
+        const result = await pool.query(
+            `UPDATE contracts SET admin_signature_data=$1, admin_signed_at=NOW(), updated_at=NOW() WHERE id=$2 RETURNING *`,
+            [signature_data, req.params.id]
+        );
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Contrat introuvable.' });
+        res.json({ success: true, contract: result.rows[0] });
+    } catch (e) {
+        console.error('Admin sign canvas error:', e);
+        res.status(500).json({ success: false, message: 'Erreur serveur : ' + e.message });
+    }
+});
+
 module.exports = router;
