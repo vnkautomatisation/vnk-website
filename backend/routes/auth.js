@@ -55,7 +55,7 @@ router.post('/login', async (req, res) => {
                 company: client.company_name
             },
             process.env.JWT_SECRET,
-            { expiresIn: '24h' }
+            { expiresIn: '7d' }
         );
 
         // Update last login
@@ -71,7 +71,15 @@ router.post('/login', async (req, res) => {
                 id: client.id,
                 name: client.full_name,
                 email: client.email,
-                company: client.company_name
+                company: client.company_name,
+                phone: client.phone,
+                address: client.address,
+                city: client.city,
+                province: client.province,
+                postal_code: client.postal_code,
+                sector: client.sector,
+                technologies: client.technologies,
+                created_at: client.created_at
             }
         });
 

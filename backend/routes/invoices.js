@@ -10,6 +10,7 @@ const { authenticateToken } = require('../middleware/auth');
 // GET /api/invoices — get client invoices
 router.get('/', authenticateToken, async (req, res) => {
     try {
+        const clientId = req.query.client_id || req.user.id;
         const result = await pool.query(
             `SELECT id, invoice_number, title, description, amount_ht,
   tps_amount, tvq_amount, amount_ttc,
@@ -17,7 +18,7 @@ router.get('/', authenticateToken, async (req, res) => {
 FROM invoices
 WHERE client_id = $1
 ORDER BY created_at DESC`,
-            [req.user.id]
+            [clientId]
         );
 
         res.json({
