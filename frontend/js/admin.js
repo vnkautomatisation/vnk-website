@@ -1086,4 +1086,32 @@ router.put('/expenses/:id', authenticateAdmin, async (req, res) => {
     }
 });
 
-module.exports = router;
+// ============================================
+// DELETE — Suppression complète sans restriction
+// ============================================
+router.delete('/quotes/:id', authenticateAdmin, async (req, res) => {
+    try { await pool.query('DELETE FROM quotes WHERE id=$1', [req.params.id]); res.json({ success: true }); }
+    catch (err) { res.status(500).json({ success: false, message: 'Server error.' }); }
+});
+
+router.delete('/invoices/:id', authenticateAdmin, async (req, res) => {
+    try { await pool.query('DELETE FROM invoices WHERE id=$1', [req.params.id]); res.json({ success: true }); }
+    catch (err) { res.status(500).json({ success: false, message: 'Server error.' }); }
+});
+
+router.delete('/mandates/:id', authenticateAdmin, async (req, res) => {
+    try { await pool.query('DELETE FROM mandates WHERE id=$1', [req.params.id]); res.json({ success: true }); }
+    catch (err) { res.status(500).json({ success: false, message: 'Server error.' }); }
+});
+
+router.delete('/contracts/:id', authenticateAdmin, async (req, res) => {
+    try { await pool.query('DELETE FROM contracts WHERE id=$1', [req.params.id]); res.json({ success: true }); }
+    catch (err) { res.status(500).json({ success: false, message: 'Server error.' }); }
+});
+
+router.delete('/clients/:id', authenticateAdmin, async (req, res) => {
+    try { await pool.query('DELETE FROM clients WHERE id=$1', [req.params.id]); res.json({ success: true }); }
+    catch (err) { res.status(500).json({ success: false, message: 'Server error.' }); }
+});
+
+module.exports = router;    
