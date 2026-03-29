@@ -153,11 +153,10 @@ async function loadAllData() {
             if (pending > 0) showBadge('badge-contracts', pending);
         }
         if (messages) {
-            renderMessages(messages.messages || []);
             const unread = (messages.messages || []).filter(m => !m.is_read && m.sender === 'vnk').length;
             if (el('stat-messages')) el('stat-messages').textContent = unread;
-            if (unread > 0) { showBadge('badge-messages', unread); updateMessageBadge(unread); }
-            else updateMessageBadge(0);
+            // Notifier le widget chat flottant
+            if (typeof vnkChatNotify === 'function') vnkChatNotify(messages.messages || [], unread);
         }
         const user = JSON.parse(localStorage.getItem('vnk-user') || '{}');
         renderProfile(user);
@@ -185,7 +184,7 @@ function showTab(tabName) {
     const overlay = document.getElementById('portal-overlay');
     if (sidebar) sidebar.classList.remove('open');
     if (overlay) overlay.classList.remove('open');
-    const titles = { profile: 'Mon profil', dashboard: 'Tableau de bord', mandates: 'Mes mandats', quotes: 'Mes devis', invoices: 'Mes factures', contracts: 'Mes contrats', documents: 'Mes documents', messages: 'Messagerie' };
+    const titles = { profile: 'Mon profil', dashboard: 'Tableau de bord', mandates: 'Mes mandats', quotes: 'Mes devis', invoices: 'Mes factures', contracts: 'Mes contrats', documents: 'Mes documents' };
     const mobileTitle = document.getElementById('mobile-tab-title');
     if (mobileTitle) mobileTitle.textContent = titles[tabName] || '';
     localStorage.setItem('vnk-portal-tab', tabName);
@@ -444,31 +443,6 @@ function renderDocuments(documents) {
     }).join('');
 }
 
-function renderMessages(messages) {
-    const list = document.getElementById('messages-list');
-    if (!list) return;
-    if (!messages.length) { list.innerHTML = '<p class="portal-empty">Aucun message. Envoyez votre premier message ci-dessous.</p>'; return; }
-    list.innerHTML = messages.map(m => '<div style="display:flex;flex-direction:column;align-items:' + (m.sender === 'client' ? 'flex-end' : 'flex-start') + '"><div style="font-size:0.72rem;color:var(--color-text-light);margin-bottom:0.2rem">' + (m.sender === 'client' ? 'Vous' : 'VNK Automatisation') + '</div><div class="portal-message-bubble portal-message-' + (m.sender === 'client' ? 'client' : 'vnk') + '">' + m.content + '</div><div class="portal-message-time">' + new Date(m.created_at).toLocaleString('fr-CA') + '</div></div>').join('');
-    list.scrollTop = list.scrollHeight;
-}
-
-async function sendMessage() {
-    const input = document.getElementById('message-input');
-    const content = input.value.trim();
-    if (!content) return;
-    const token = localStorage.getItem('vnk-token');
-    const sendBtn = document.querySelector('.portal-message-compose .btn');
-    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Envoi...'; }
-    try {
-        const res = await fetch('/api/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ content }) });
-        if (res.ok) {
-            input.value = '';
-            const r = await fetch('/api/messages', { headers: { 'Authorization': 'Bearer ' + token } });
-            if (r.ok) { const d = await r.json(); renderMessages(d.messages || []); }
-        }
-    } catch (error) { console.error('Send message error:', error); }
-    finally { if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Envoyer'; } }
-}
 
 async function downloadPDF(type, id, number) {
     const token = localStorage.getItem('vnk-token');
@@ -509,20 +483,7 @@ function togglePortalPw() {
         : '<svg id="eye-portal" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 }
 
-function updateMessageBadge(count) {
-    let badge = document.getElementById('vnk-float-badge');
-    if (!badge) {
-        badge = document.createElement('div');
-        badge.id = 'vnk-float-badge';
-        badge.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;z-index:9000;background:#1B4F8A;color:white;border-radius:50px;padding:0.6rem 1rem;font-size:0.85rem;font-weight:700;display:flex;align-items:center;gap:0.5rem;box-shadow:0 4px 16px rgba(27,79,138,0.35);cursor:pointer;transition:all 0.2s';
-        badge.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span id="vnk-float-badge-count">1</span>';
-        badge.onclick = () => { showTab('messages'); badge.style.display = 'none'; };
-        document.body.appendChild(badge);
-    }
-    const countEl = document.getElementById('vnk-float-badge-count');
-    if (countEl) countEl.textContent = count;
-    badge.style.display = count > 0 ? 'flex' : 'none';
-}
+// Messages gérés par chat-widget.js
 
 // ═══════════════════════════════════════════════
 // MODAL MAISON — remplace alert() et confirm()
@@ -606,29 +567,42 @@ async function payInvoice(invoiceId, amountTtc) {
 
     // Formulaire de facturation
     document.getElementById('vnk-modal-stripe').innerHTML = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.75rem">
+        <div style="display:flex;gap:8px;margin-bottom:0.65rem">
+            <img src="https://js.stripe.com/v3/fingerprinted/img/visa-729c05c240c4bdb47b03ac81d9945bfe.svg" height="24" alt="Visa" style="height:24px;object-fit:contain">
+            <img src="https://js.stripe.com/v3/fingerprinted/img/mastercard-4d8844094130711885b5e41b28c9848f.svg" height="24" alt="MC" style="height:24px;object-fit:contain">
+            <img src="https://js.stripe.com/v3/fingerprinted/img/amex-a49b82f46c5cd6a96a6e418a6ca1717c.svg" height="24" alt="Amex" style="height:24px;object-fit:contain">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.6rem">
             <div>
-                <label style="font-size:0.75rem;color:#64748B;display:block;margin-bottom:3px">Nom sur la carte</label>
+                <label style="font-size:0.75rem;color:#64748B;display:block;margin-bottom:3px">Nom sur la carte *</label>
                 <input id="vnk-card-name" value="${user.name || ''}" placeholder="Jean Tremblay" style="width:100%;padding:0.5rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:7px;font-size:0.85rem;box-sizing:border-box">
             </div>
             <div>
-                <label style="font-size:0.75rem;color:#64748B;display:block;margin-bottom:3px">Courriel</label>
+                <label style="font-size:0.75rem;color:#64748B;display:block;margin-bottom:3px">Courriel *</label>
                 <input id="vnk-card-email" value="${user.email || ''}" placeholder="jean@example.com" style="width:100%;padding:0.5rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:7px;font-size:0.85rem;box-sizing:border-box">
             </div>
         </div>
-        <div style="margin-bottom:0.75rem">
-            <label style="font-size:0.75rem;color:#64748B;display:block;margin-bottom:3px">Numéro de carte</label>
-            <div id="vnk-card-element" style="padding:0.65rem 0.75rem;border:1.5px solid #E2E8F0;border-radius:7px;background:white"></div>
+        <div style="margin-bottom:0.6rem">
+            <label style="font-size:0.75rem;color:#64748B;display:block;margin-bottom:3px">Numéro de carte *</label>
+            <div id="vnk-card-number" style="padding:0.62rem 0.75rem;border:1.5px solid #E2E8F0;border-radius:7px;background:white"></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.75rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;margin-bottom:0.6rem">
+            <div>
+                <label style="font-size:0.75rem;color:#64748B;display:block;margin-bottom:3px">Expiration *</label>
+                <div id="vnk-card-expiry" style="padding:0.62rem 0.75rem;border:1.5px solid #E2E8F0;border-radius:7px;background:white"></div>
+            </div>
+            <div>
+                <label style="font-size:0.75rem;color:#64748B;display:block;margin-bottom:3px">CVC *</label>
+                <div id="vnk-card-cvc" style="padding:0.62rem 0.75rem;border:1.5px solid #E2E8F0;border-radius:7px;background:white"></div>
+            </div>
             <div>
                 <label style="font-size:0.75rem;color:#64748B;display:block;margin-bottom:3px">Code postal</label>
                 <input id="vnk-card-postal" value="${user.postal_code || ''}" placeholder="G1A 1A1" style="width:100%;padding:0.5rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:7px;font-size:0.85rem;box-sizing:border-box">
             </div>
-            <div style="display:flex;align-items:flex-end;gap:6px;padding-bottom:2px">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                <span style="font-size:0.72rem;color:#64748B">Paiement sécurisé SSL / Stripe</span>
-            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:0.5rem">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span style="font-size:0.72rem;color:#94A3B8">Paiement sécurisé SSL · Propulsé par Stripe</span>
         </div>
         <div id="vnk-card-error" style="color:#E74C3C;font-size:0.8rem;min-height:1.2em"></div>`;
 
@@ -637,13 +611,16 @@ async function payInvoice(invoiceId, amountTtc) {
         '<button id="vnk-pay-btn" style="padding:0.6rem 1.5rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Payer ' + amount + '</button>';
     document.getElementById('vnk-modal').style.display = 'flex';
 
-    // Monter le widget Stripe
+    // Monter les champs Stripe séparés
     const elements = _stripe.elements();
-    _cardElement = elements.create('card', {
-        hidePostalCode: true,
-        style: { base: { fontSize: '15px', color: '#1E293B', fontFamily: 'system-ui, sans-serif', '::placeholder': { color: '#CBD5E0' } } }
-    });
-    _cardElement.mount('#vnk-card-element');
+    const cardStyle = { base: { fontSize: '14px', color: '#1E293B', fontFamily: 'system-ui, sans-serif', '::placeholder': { color: '#CBD5E0' } } };
+    const cardNumber = elements.create('cardNumber', { style: cardStyle, showIcon: true });
+    const cardExpiry = elements.create('cardExpiry', { style: cardStyle });
+    const cardCvc = elements.create('cardCvc', { style: cardStyle });
+    cardNumber.mount('#vnk-card-number');
+    cardExpiry.mount('#vnk-card-expiry');
+    cardCvc.mount('#vnk-card-cvc');
+    _cardElement = cardNumber; // référence principale pour confirmCardPayment
 
     document.getElementById('vnk-pay-btn').onclick = async () => {
         const btn = document.getElementById('vnk-pay-btn');
@@ -712,30 +689,49 @@ async function acceptQuote(quoteId) {
 }
 
 async function signContract(contractId, hellosignId, fileUrl) {
-    // Si on a un lien direct (HelloSign ou PDF), ouvrir directement
     const token = localStorage.getItem('vnk-token');
+    const user = JSON.parse(localStorage.getItem('vnk-user') || '{}');
+
+    // Cas 1 — lien direct PDF disponible
     if (fileUrl) {
-        showConfirm('Signer ce contrat', 'Vous allez être redirigé vers le document pour le lire et le signer.', () => window.open(fileUrl, '_blank'));
+        showConfirm('Signer ce contrat', 'Vous allez être redirigé vers le document pour le lire et le signer en ligne.', () => window.open(fileUrl, '_blank'));
         return;
     }
+
+    // Cas 2 — HelloSign request ID disponible
     if (hellosignId) {
-        // Obtenir le lien de signature HelloSign
         try {
             const r = await fetch('/api/contracts/' + contractId + '/signing-url', { headers: { Authorization: 'Bearer ' + token } });
             const d = await r.json();
             if (d.success && d.signingUrl) {
-                showConfirm('Signer ce contrat', 'Vous allez être redirigé vers HelloSign pour signer ce contrat électroniquement.', () => window.open(d.signingUrl, '_blank'));
+                showConfirm('Signer électroniquement', 'Vous allez être redirigé vers HelloSign pour signer ce contrat de façon légalement reconnue.', () => window.open(d.signingUrl, '_blank'));
                 return;
             }
         } catch { }
     }
-    // Fallback — contacter VNK
-    showInfo('Signature en attente', 'Le lien de signature sera disponible sous peu. Vous recevrez un courriel à ' + (JSON.parse(localStorage.getItem('vnk-user') || '{}').email || 'votre adresse') + ' dès que le document est prêt.', 'info');
+
+    // Cas 3 — Aucun lien disponible : informer et rediriger vers messages
+    _ensureModal();
+    document.getElementById('vnk-modal-icon').innerHTML = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+    document.getElementById('vnk-modal-title').textContent = 'Contrat en préparation';
+    document.getElementById('vnk-modal-msg').innerHTML =
+        'VNK prépare actuellement votre contrat.<br><br>' +
+        'Vous recevrez un courriel à <strong>' + (user.email || 'votre adresse') + '</strong> dès que le document est prêt à signer.<br><br>' +
+        'Des questions ? Écrivez-nous directement.';
+    document.getElementById('vnk-modal-stripe').style.display = 'none';
+    document.getElementById('vnk-modal-btns').innerHTML =
+        '<button onclick="_closeModal()" style="padding:0.6rem 1.5rem;background:white;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">Fermer</button>' +
+        '<button onclick="_closeAndOpenChat()" style="padding:0.6rem 1.5rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">💬 Envoyer un message</button>';
+    document.getElementById('vnk-modal').style.display = 'flex';
 }
 
-// ═══════════════════════════════════════════════
-// TRI — dropdown multi-options
-// ═══════════════════════════════════════════════
+function _closeAndOpenChat() {
+    _closeModal();
+    const panel = document.getElementById('vnk-chat-panel');
+    if (panel && !panel.classList.contains('open') && typeof vnkChatToggle === 'function') vnkChatToggle();
+}
+
+
 const _sortState = {};
 let _sortDropdownOpen = null;
 
