@@ -1472,7 +1472,7 @@ img {
 .hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient( 135deg, rgba(15, 45, 82, 0.92) 0%, rgba(27, 79, 138, 0.80) 50%, rgba(46, 117, 182, 0.70) 100% );
+    background: linear-gradient(135deg, rgba(15,45,82,0.92) 0%, rgba(27,79,138,0.80) 50%, rgba(46,117,182,0.70) 100%);
 }
 
 .hero-container {
@@ -1881,7 +1881,7 @@ img {
     bottom: 1.5rem;
     left: 1.5rem;
     right: 1.5rem;
-    background: rgba(15, 45, 82, 0.92);
+    background: rgba(15,45,82,0.92);
     backdrop-filter: blur(8px);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: var(--border-radius);
@@ -2043,14 +2043,13 @@ img {
 .testimonial-coming-soon {
     margin-top: 0.75rem;
     padding: 0.4rem 0.75rem;
-    background: rgba(243, 156, 18, 0.1);
+    background: rgba(243,156,18,0.1);
     border-radius: var(--border-radius);
     font-size: 0.72rem;
     color: #856404;
-    border: 1px solid rgba(243, 156, 18, 0.2);
+    border: 1px solid rgba(243,156,18,0.2);
 }
 
-/* ---------- CTA actions ---------- */
 .cta-actions {
     display: flex;
     gap: var(--spacing-sm);
@@ -2063,7 +2062,6 @@ img {
     margin-bottom: var(--spacing-sm);
 }
 
-/* ---------- Footer desc ---------- */
 .footer-desc {
     font-size: 0.85rem;
     color: rgba(255,255,255,0.45);
@@ -2123,7 +2121,6 @@ img {
     }
 }
 
-/* ---------- Brand logos SVG ---------- */
 .brand-logo-svg {
     display: block;
     margin: 0 auto 0.4rem;
@@ -2135,14 +2132,13 @@ img {
     color: var(--color-text);
 }
 
-/* ---------- Service card icon style ---------- */
 .service-card-icon {
     position: absolute;
     bottom: 0.75rem;
     left: 1rem;
     width: 40px;
     height: 40px;
-    background: rgba(27, 79, 138, 0.85);
+    background: rgba(27,79,138,0.85);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -2150,7 +2146,6 @@ img {
     backdrop-filter: blur(4px);
 }
 
-/* ---------- Why icon box style ---------- */
 .why-icon-box {
     width: 40px;
     height: 40px;
@@ -2162,7 +2157,6 @@ img {
     flex-shrink: 0;
 }
 
-/* ---------- CTA icon ---------- */
 .cta-icon {
     margin-bottom: var(--spacing-sm);
     display: flex;
@@ -2238,7 +2232,6 @@ img {
         color: white;
     }
 
-/* ---------- Service detail icon wrap ---------- */
 .service-detail-icon-wrap {
     width: 64px;
     height: 64px;
@@ -2266,7 +2259,6 @@ img {
     margin-bottom: var(--spacing-md);
 }
 
-/* ---------- Service detail image ---------- */
 .service-detail-image {
     border-radius: var(--border-radius-lg);
     overflow: hidden;
@@ -2365,6 +2357,7 @@ img {
         font-size: 1.8rem;
     }
 }
+
 /* ---------- About page layout ---------- */
 .founder-layout {
     display: grid;
@@ -2485,7 +2478,6 @@ img {
     margin-bottom: var(--spacing-sm);
 }
 
-/* ---------- VNK Values ---------- */
 .vnk-values {
     margin-top: var(--spacing-md);
     display: flex;
@@ -2538,7 +2530,6 @@ img {
     line-height: 1.5;
 }
 
-/* ---------- Expertise cards with colored headers ---------- */
 .expertise-card-header {
     display: flex;
     align-items: center;
@@ -2581,7 +2572,6 @@ img {
     background: linear-gradient(135deg, #2C3E50, #4A6280);
 }
 
-/* ---------- Commitment icons ---------- */
 .commitment-icon-wrap {
     width: 64px;
     height: 64px;
@@ -2593,7 +2583,6 @@ img {
     margin: 0 auto var(--spacing-sm);
 }
 
-/* ---------- Info items with icons ---------- */
 .info-label {
     display: flex;
     align-items: center;
@@ -2603,7 +2592,6 @@ img {
     font-size: 0.82rem;
 }
 
-/* ---------- Responsive About ---------- */
 @media (max-width: 1024px) {
     .founder-layout {
         grid-template-columns: 1fr;
@@ -2699,12 +2687,12 @@ img {
 
 /* ============================================
    PORTAIL CLIENT — Layout 3 zones gelées
-   [Sidebar] | [Header gelé + Contenu défilant] | [Actions — dashboard only]
+   [Sidebar 240px] | [Header gelé + Contenu défilant] | [Panel droit 320px]
    ============================================ */
 
 .portal-body {
     background: var(--color-bg);
-    overflow: hidden; /* Le scroll est géré zone par zone */
+    overflow: hidden;
 }
 
 .portal-mobile-footer {
@@ -2719,9 +2707,7 @@ img {
     display: none;
 }
 
-/* ─────────────────────────────────────────────
-   PAGE LOGIN
-───────────────────────────────────────────── */
+/* ── PAGE LOGIN ── */
 .portal-login-section {
     min-height: 100vh;
     padding-top: var(--nav-height);
@@ -2821,7 +2807,6 @@ img {
         margin-bottom: 0.15rem;
     }
 
-/* Panneau info login */
 .portal-info {
     padding: var(--spacing-md) 0;
 }
@@ -2869,30 +2854,26 @@ img {
 .portal-coming-soon {
     margin-top: var(--spacing-md);
     padding: var(--spacing-sm);
-    background: rgba(243, 156, 18, 0.1);
+    background: rgba(243,156,18,0.1);
     border-radius: var(--border-radius);
-    border: 1px solid rgba(243, 156, 18, 0.3);
+    border: 1px solid rgba(243,156,18,0.3);
     font-size: 0.82rem;
     color: #856404;
 }
 
-/* ─────────────────────────────────────────────
-   DASHBOARD — GRILLE 3 COLONNES
-───────────────────────────────────────────── */
+/* ── DASHBOARD — GRILLE 3 COLONNES ── */
 .portal-dashboard {
     display: grid;
-    grid-template-columns: 240px 1fr 260px;
+    grid-template-columns: 240px 1fr 320px; /* ← panel droit 320px */
     height: calc(100vh - var(--nav-height));
     margin-top: var(--nav-height);
-    overflow: hidden; /* Chaque colonne gère son propre scroll */
+    overflow: hidden;
 }
 
-/* ─────────────────────────────────────────────
-   ZONE 1 — SIDEBAR GAUCHE : toujours gelée
-───────────────────────────────────────────── */
+/* ── ZONE 1 — SIDEBAR ── */
 .portal-sidebar {
     grid-column: 1;
-    background: var(--color-white);
+    background: #F8FBFD;
     border-right: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
@@ -3014,10 +2995,7 @@ img {
         background: var(--color-bg);
     }
 
-/* ─────────────────────────────────────────────
-   ZONE 2 — CONTENU CENTRAL
-   Header gelé en haut + Contenu défilant en bas
-───────────────────────────────────────────── */
+/* ── ZONE 2 — CONTENU CENTRAL ── */
 .portal-main {
     grid-column: 2;
     display: flex;
@@ -3025,14 +3003,14 @@ img {
     height: 100%;
     overflow: hidden;
     background: var(--color-bg);
-    min-width: 0; /* Évite le débordement en grille */
+    min-width: 0;
 }
 
 /* Header gelé — titre + barre recherche/tri */
 .portal-main-header {
     flex-shrink: 0;
     background: var(--color-white);
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 2px solid var(--color-light-blue);
     padding: 1rem 1.5rem 0.85rem;
     z-index: 5;
 }
@@ -3044,17 +3022,11 @@ img {
     padding: 1.25rem 1.5rem;
 }
 
-/* Headers de tab dans le header gelé */
-.portal-tab-header {
-    /* Pas de margin-bottom — tout est dans portal-main-header */
-}
-
 .portal-tab-subtitle {
     font-size: 0.82rem;
     color: var(--color-text-light);
 }
 
-/* Les tabs — juste le contenu, sans toolbar */
 .portal-tab {
     display: none;
 }
@@ -3148,13 +3120,49 @@ img {
         background: #EBF5FB;
     }
 
-/* ─────────────────────────────────────────────
-   ZONE 3 — PANEL DROIT ACTIONS RAPIDES
-   Visible uniquement sur le tableau de bord
-───────────────────────────────────────────── */
+/* Bouton Actualiser — présent sur tous les onglets */
+.portal-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.38rem 0.85rem;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 7px;
+    background: white;
+    color: #64748B;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    font-family: inherit;
+    flex-shrink: 0;
+}
+
+    .portal-refresh-btn:hover {
+        border-color: #1B4F8A;
+        color: #1B4F8A;
+        background: #EBF5FB;
+    }
+
+    .portal-refresh-btn.loading svg {
+        animation: spin-refresh 0.7s linear infinite;
+    }
+
+@keyframes spin-refresh {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── ZONE 3 — PANEL DROIT : pleine hauteur, flex column ── */
 .portal-action-panel {
     grid-column: 3;
-    background: var(--color-white);
+    background: #F0F6FB;
     border-left: 1px solid var(--color-border);
     height: 100%;
     overflow-y: auto;
@@ -3164,20 +3172,15 @@ img {
     flex-direction: column;
 }
 
-/* Responsive — ajuster la grille pour 320px */
-.portal-dashboard {
-    grid-template-columns: 240px 1fr 320px;
-}
-
 .portal-action-panel-title {
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: var(--color-text-light);
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--color-primary);
     text-transform: uppercase;
-    letter-spacing: 0.8px;
+    letter-spacing: 1px;
     margin-bottom: 0.85rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 2px solid var(--color-light-blue);
 }
 
 .portal-action-empty {
@@ -3193,7 +3196,6 @@ img {
         opacity: 0.25;
     }
 
-/* Actions requises items */
 .portal-action-required-item {
     background: #FEF3C7;
     border: 1px solid #F59E0B;
@@ -3244,65 +3246,18 @@ img {
             background: #B45309;
         }
 
-/* Bouton Actualiser — présent sur tous les onglets */
-.portal-refresh-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.38rem 0.85rem;
-    border: 1.5px solid #E2E8F0;
-    border-radius: 7px;
-    background: white;
-    color: #64748B;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.15s;
-    font-family: inherit;
-    flex-shrink: 0;
-}
-
-    .portal-refresh-btn:hover {
-        border-color: #1B4F8A;
-        color: #1B4F8A;
-        background: #EBF5FB;
-    }
-
-    .portal-refresh-btn.loading svg {
-        animation: spin-refresh 0.7s linear infinite;
-    }
-
-@keyframes spin-refresh {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* ─────────────────────────────────────────────
-   STATS ROW — tableau de bord, gelées en haut du contenu
-───────────────────────────────────────────── */
+/* ── STATS — gelées en haut du contenu, compactes ── */
 .portal-stats-row {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 210px));
-    gap: 0.65rem;
-    margin-bottom: 1rem;
-    position: sticky;
-    top: 0;
-    z-index: 4;
-    background: var(--color-bg);
-    padding-top: 0.15rem;
-    padding-bottom: 0.5rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
 }
 
 .portal-stat-card {
     background: var(--color-white);
     border-radius: var(--border-radius-lg);
-    padding: var(--spacing-sm);
+    padding: 0.85rem 1rem;
     border: 1px solid var(--color-border);
     display: flex;
     align-items: center;
@@ -3310,8 +3265,8 @@ img {
 }
 
 .portal-stat-icon {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     border-radius: var(--border-radius);
     display: flex;
     align-items: center;
@@ -3337,18 +3292,18 @@ img {
 
 .portal-stat-number {
     display: block;
-    font-size: 1.8rem;
+    font-size: 1.7rem;
     font-weight: 800;
     color: var(--color-primary);
     line-height: 1;
 }
 
 .portal-stat-label {
-    font-size: 0.75rem;
+    font-size: 0.73rem;
     color: var(--color-text-light);
+    margin-top: 1px;
 }
 
-/* Card activité */
 .portal-card {
     background: var(--color-white);
     border-radius: var(--border-radius-lg);
@@ -3382,11 +3337,15 @@ img {
     padding: var(--spacing-sm) 0;
 }
 
-/* Boutons rapides dans le panel droit */
 .portal-quick-actions {
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+    position: sticky;
+    top: 0;
+    background: #F0F6FB;
+    padding-bottom: 0.75rem;
+    z-index: 2;
 }
 
 .portal-quick-btn {
@@ -3394,7 +3353,7 @@ img {
     align-items: center;
     gap: 0.75rem;
     padding: 0.65rem var(--spacing-sm);
-    background: var(--color-bg);
+    background: var(--color-white);
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
     font-size: 0.83rem;
@@ -3405,6 +3364,7 @@ img {
     text-decoration: none;
     width: 100%;
     text-align: left;
+    font-family: inherit;
 }
 
     .portal-quick-btn:hover {
@@ -3413,9 +3373,7 @@ img {
         color: var(--color-primary);
     }
 
-/* ─────────────────────────────────────────────
-   LISTES D'ITEMS
-───────────────────────────────────────────── */
+/* ── LISTES D'ITEMS ── */
 .portal-list {
     display: flex;
     flex-direction: column;
@@ -3473,7 +3431,6 @@ img {
     color: var(--color-primary);
 }
 
-/* Status badges */
 .portal-status {
     display: inline-flex;
     align-items: center;
@@ -3519,7 +3476,6 @@ img {
     color: #1E8C4E;
 }
 
-/* Progress bar */
 .portal-progress {
     margin-top: 0.5rem;
 }
@@ -3546,7 +3502,6 @@ img {
     transition: width 0.5s ease;
 }
 
-/* Empty states */
 .portal-empty-state {
     text-align: center;
     padding: var(--spacing-lg);
@@ -3566,9 +3521,6 @@ img {
     font-size: 0.85rem;
 }
 
-/* ─────────────────────────────────────────────
-   MESSAGES (widget chat — géré par chat-widget.js)
-───────────────────────────────────────────── */
 .portal-messages-layout {
     display: flex;
     flex-direction: column;
@@ -3588,11 +3540,7 @@ img {
     gap: 0.75rem;
 }
 
-/* ─────────────────────────────────────────────
-   RESPONSIVE
-───────────────────────────────────────────── */
-
-/* Tablet — masquer le panel droit */
+/* ── RESPONSIVE ── */
 @media (max-width: 1280px) {
     .portal-dashboard {
         grid-template-columns: 240px 1fr;
@@ -3607,7 +3555,6 @@ img {
     }
 }
 
-/* Mobile/Tablet portrait — sidebar en tiroir */
 @media (max-width: 1024px) {
     .portal-body {
         overflow: auto;
@@ -3708,9 +3655,7 @@ img {
     }
 }
 
-/* ─────────────────────────────────────────────
-   WIDGET CHAT FLOTTANT — toutes les pages
-───────────────────────────────────────────── */
+/* ── WIDGET CHAT FLOTTANT ── */
 .vnk-chat-widget {
     position: fixed;
     bottom: 1.5rem;
