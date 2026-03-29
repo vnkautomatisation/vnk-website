@@ -10,7 +10,7 @@ const { authenticateToken } = require('../middleware/auth');
 // GET /api/quotes
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const clientId = req.user.id;
+        const clientId = req.query.client_id || req.user.id;
         const result = await pool.query(
             `SELECT id, quote_number, title, description, service_type,
                     amount_ht, tps_amount, tvq_amount, amount_ttc,
