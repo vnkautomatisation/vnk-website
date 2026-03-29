@@ -134,9 +134,8 @@ async function loadAllData() {
         }
         if (docs) {
             const docsArr = docs.documents || [];
-            // Enrichir avec les factures payées et contrats signés
-            window._allDocuments = _buildDocumentsList(docsArr, window._allInvoices || [], window._allContracts || []);
-            renderDocuments(window._allDocuments);
+            window._allDocuments = docsArr;
+            renderDocuments(docsArr);
             // Badge basé sur les documents non lus
             const unread = _getUnreadDocs(docsArr);
             const navBadge = document.getElementById('badge-documents');
@@ -310,7 +309,7 @@ function renderQuotes(quotes) {
     const sl = { pending: 'En attente', accepted: 'Accepté', declined: 'Refusé', expired: 'Expiré' };
     const sc = { pending: '#D97706', accepted: '#27AE60', declined: '#E74C3C', expired: '#94A3B8' };
     const svl = { 'plc-support': 'Support PLC', 'audit': 'Audit technique', 'documentation': 'Documentation', 'refactoring': 'Refactorisation' };
-    const renderQ = q => {
+    list.innerHTML = quotes.map(q => {
         const color = sc[q.status] || '#94A3B8';
         const svc = q.service_type ? (svl[q.service_type] || q.service_type) : null;
         const isExpired = q.expiry_date && new Date(q.expiry_date) < new Date();
@@ -319,57 +318,20 @@ function renderQuotes(quotes) {
             '<strong style="font-size:0.8rem;color:#1B4F8A;white-space:nowrap">' + q.quote_number + '</strong>' +
             '<span style="background:' + color + '22;color:' + color + ';font-size:0.63rem;font-weight:700;padding:1px 5px;border-radius:6px;width:fit-content">' + (sl[q.status] || q.status) + '</span>' +
             '</div>' +
-            '<div style="min-width:0">' +
-            '<div style="font-size:0.83rem;font-weight:600;color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + q.title + '</div>' +
-            '<div style="font-size:0.69rem;color:#94A3B8">' +
-            (svc ? '<span style="color:#1B4F8A">' + svc + '</span> · ' : '') +
-            new Date(q.created_at).toLocaleDateString('fr-CA') +
-            (q.expiry_date ? ' · <span style="color:' + (isExpired ? '#E74C3C' : '#94A3B8') + '">exp. ' + new Date(q.expiry_date).toLocaleDateString('fr-CA') + '</span>' : '') +
-            '</div></div>' +
-            '<div style="text-align:right;font-size:0.85rem;font-weight:700;color:#1B4F8A;white-space:nowrap">' + formatCurrency(q.amount_ttc) + '</div>' +
-            '<button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:0.2rem 0.4rem" onclick="downloadPDF(\'quotes\',' + q.id + ',\'' + q.quote_number + '\')">PDF</button>' +
-            (q.status === 'pending' ?
-                '<button class="btn btn-primary btn-sm" style="font-size:0.72rem;padding:0.2rem 0.4rem" onclick="acceptQuote(' + q.id + ')">Accepter</button>' :
-                '<div></div>') +
-            '</div>';
-    };
-
-    // Séparer actifs / archivés
-    const actifs = quotes.filter(q => q.status === 'pending');
-    const archives = quotes.filter(q => q.status !== 'pending');
-
-    let html = '';
-
-    if (actifs.length) {
-        html += actifs.map(renderQ).join('');
-    } else {
-        html += '<div style="padding:1rem;font-size:0.85rem;color:#94A3B8;text-align:center;background:#F8FAFC;border-radius:8px">Aucun devis en attente</div>';
-    }
-
-    // Section archivés — repliable, initiale fermée
-    if (archives.length) {
-        const isOpen = localStorage.getItem('vnk-quotes-archive-open') === '1';
-        html += '<div style="margin-top:1.25rem;border-top:1.5px solid #E2E8F0;padding-top:1rem">' +
-            '<button id="vnk-archive-toggle" onclick="_toggleQuoteArchive()" style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;color:#64748B;background:none;border:none;cursor:pointer;padding:0;margin-bottom:0.75rem">' +
-            '<svg id="vnk-archive-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform 0.2s;transform:' + (isOpen ? 'rotate(180deg)' : 'rotate(0deg)') + '"><polyline points="6 9 12 15 18 9"/></svg>' +
-            'Archivés (' + archives.length + ')' +
-            '</button>' +
-            '<div id="vnk-archive-body" style="display:' + (isOpen ? 'block' : 'none') + ';opacity:0.8">' +
-            archives.map(renderQ).join('') +
-            '</div></div>';
-    }
-
-    list.innerHTML = html;
-}
-
-function _toggleQuoteArchive() {
-    const body = document.getElementById('vnk-archive-body');
-    const chevron = document.getElementById('vnk-archive-chevron');
-    if (!body) return;
-    const isOpen = body.style.display !== 'none';
-    body.style.display = isOpen ? 'none' : 'block';
-    if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
-    localStorage.setItem('vnk-quotes-archive-open', isOpen ? '0' : '1');
+            '<div class="portal-item-meta" style="margin-top:0.3rem;background:#F8FAFC;padding:3px 6px;border-radius:4px">' +
+            '<span>HT : <strong>' + formatCurrency(q.amount_ht) + '</strong></span>' +
+            '<span>TPS : ' + formatCurrency(q.tps_amount) + '</span>' +
+            '<span>TVQ : ' + formatCurrency(q.tvq_amount) + '</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="portal-item-actions">' +
+            '<span class="portal-item-amount">' + formatCurrency(q.amount_ttc) + '</span>' +
+            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">' + (sl[q.status] || q.status) + '</span>' +
+            '<div style="display:flex;gap:0.4rem;margin-top:0.3rem">' +
+            '<button class="btn btn-outline btn-sm" onclick="downloadPDF(\'quotes\',' + q.id + ',\'' + q.quote_number + '\')">PDF</button>' +
+            (q.status === 'pending' ? '<button class="btn btn-primary btn-sm" onclick="acceptQuote(' + q.id + ')">Accepter</button>' : '') +
+            '</div></div></div>';
+    }).join('');
 }
 
 function filterQuotes() {
@@ -387,7 +349,7 @@ function renderInvoices(invoices) {
     if (!invoices.length) { list.innerHTML = '<div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><p>Aucune facture disponible.</p></div>'; return; }
     const sl = { unpaid: 'Non payée', paid: 'Payée', overdue: 'En retard', cancelled: 'Annulée' };
     const sc = { unpaid: '#D97706', paid: '#27AE60', overdue: '#E74C3C', cancelled: '#94A3B8' };
-    const renderI = inv => {
+    list.innerHTML = invoices.map(inv => {
         const color = sc[inv.status] || '#94A3B8';
         const isPaid = inv.status === 'paid';
         const isOverdue = inv.status === 'overdue';
@@ -397,56 +359,20 @@ function renderInvoices(invoices) {
             '<strong style="font-size:0.8rem;color:#1B4F8A;white-space:nowrap">' + inv.invoice_number + '</strong>' +
             '<span style="background:' + color + '22;color:' + color + ';font-size:0.63rem;font-weight:700;padding:1px 5px;border-radius:6px;width:fit-content">' + (sl[inv.status] || inv.status) + '</span>' +
             '</div>' +
-            '<div style="min-width:0">' +
-            '<div style="font-size:0.83rem;font-weight:600;color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + inv.title + '</div>' +
-            '<div style="font-size:0.69rem;color:#94A3B8">' +
-            new Date(inv.created_at).toLocaleDateString('fr-CA') +
-            (inv.due_date ? ' · <span style="color:' + (isOverdue ? '#E74C3C' : '#94A3B8') + '">éch. ' + new Date(inv.due_date).toLocaleDateString('fr-CA') + '</span>' : '') +
-            (inv.paid_at ? ' · <span style="color:#27AE60">payée ' + new Date(inv.paid_at).toLocaleDateString('fr-CA') + '</span>' : '') +
-            '</div></div>' +
-            '<div style="text-align:right;font-size:0.85rem;font-weight:700;color:' + (isPaid ? '#27AE60' : '#1B4F8A') + ';white-space:nowrap">' + formatCurrency(inv.amount_ttc) + '</div>' +
-            '<button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:0.2rem 0.4rem" onclick="downloadPDF(\'invoices\',' + inv.id + ',\'' + inv.invoice_number + '\')">PDF</button>' +
-            (inv.status === 'unpaid' || inv.status === 'overdue' ?
-                '<button class="btn btn-primary btn-sm" style="font-size:0.72rem;padding:0.2rem 0.4rem" onclick="payInvoice(' + inv.id + ',' + inv.amount_ttc + ')">Payer</button>' :
-                '<div></div>') +
-            '</div>';
-    };
-
-    // Séparer actives / historique
-    const actives = invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled');
-    const historique = invoices.filter(i => i.status === 'paid' || i.status === 'cancelled');
-
-    let html = '';
-
-    if (actives.length) {
-        html += actives.map(renderI).join('');
-    } else {
-        html += '<div style="padding:1rem;font-size:0.85rem;color:#94A3B8;text-align:center;background:#F8FAFC;border-radius:8px">Aucune facture en attente</div>';
-    }
-
-    if (historique.length) {
-        const isOpen = localStorage.getItem('vnk-invoices-history-open') === '1';
-        html += '<div style="margin-top:1.25rem;border-top:1.5px solid #E2E8F0;padding-top:1rem">' +
-            '<button id="vnk-history-toggle" onclick="_toggleInvoiceHistory()" style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;color:#64748B;background:none;border:none;cursor:pointer;padding:0;margin-bottom:0.75rem">' +
-            '<svg id="vnk-history-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform 0.2s;transform:' + (isOpen ? 'rotate(180deg)' : 'rotate(0deg)') + '"><polyline points="6 9 12 15 18 9"/></svg>' +
-            'Historique — payées (' + historique.length + ')' +
-            '</button>' +
-            '<div id="vnk-history-body" style="display:' + (isOpen ? 'block' : 'none') + ';opacity:0.8">' +
-            historique.map(renderI).join('') +
-            '</div></div>';
-    }
-
-    list.innerHTML = html;
-}
-
-function _toggleInvoiceHistory() {
-    const body = document.getElementById('vnk-history-body');
-    const chevron = document.getElementById('vnk-history-chevron');
-    if (!body) return;
-    const isOpen = body.style.display !== 'none';
-    body.style.display = isOpen ? 'none' : 'block';
-    if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
-    localStorage.setItem('vnk-invoices-history-open', isOpen ? '0' : '1');
+            '<div class="portal-item-meta" style="margin-top:0.3rem;background:#F8FAFC;padding:3px 6px;border-radius:4px">' +
+            '<span>HT : <strong>' + formatCurrency(inv.amount_ht) + '</strong></span>' +
+            '<span>TPS : ' + formatCurrency(inv.tps_amount) + '</span>' +
+            '<span>TVQ : ' + formatCurrency(inv.tvq_amount) + '</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="portal-item-actions">' +
+            '<span class="portal-item-amount" style="color:' + (isPaid ? '#27AE60' : 'var(--color-primary)') + '">' + formatCurrency(inv.amount_ttc) + '</span>' +
+            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">' + (sl[inv.status] || inv.status) + '</span>' +
+            '<div style="display:flex;gap:0.4rem;margin-top:0.3rem">' +
+            '<button class="btn btn-outline btn-sm" onclick="downloadPDF(\'invoices\',' + inv.id + ',\'' + inv.invoice_number + '\')">PDF</button>' +
+            (inv.status === 'unpaid' || inv.status === 'overdue' ? '<button class="btn btn-primary btn-sm" onclick="payInvoice(' + inv.id + ',' + inv.amount_ttc + ')">Payer</button>' : '') +
+            '</div></div></div>';
+    }).join('');
 }
 
 function filterInvoices() {
@@ -514,7 +440,7 @@ function _getReadDocs() {
 }
 // Téléchargement robuste — gère data: URI et URL normale
 function downloadDoc(id) {
-    const doc = (window._allDocuments || []).find(d => String(d.id) === String(id));
+    const doc = (window._allDocuments || []).find(d => d.id === id);
     if (!doc || !doc.file_url) return;
     _markDocRead(id);
     _updateDocItem(id);
@@ -549,12 +475,11 @@ function downloadDoc(id) {
 
 function _markDocRead(id) {
     const read = _getReadDocs();
-    const sid = String(id);
-    if (!read.map(String).includes(sid)) { read.push(sid); localStorage.setItem('vnk-read-docs', JSON.stringify(read)); }
+    if (!read.includes(id)) { read.push(id); localStorage.setItem('vnk-read-docs', JSON.stringify(read)); }
 }
 function _getUnreadDocs(docs) {
     const read = _getReadDocs();
-    return docs.filter(d => !read.map(String).includes(String(d.id)));
+    return docs.filter(d => !read.includes(d.id));
 }
 
 window._docSortState = 'date-desc';
@@ -611,52 +536,7 @@ function applyDocSort(val) {
     filterDocuments();
 }
 
-function _buildDocumentsList(docs, invoices, contracts) {
-    // Partir des documents réels
-    const result = [...docs];
-    const existingIds = new Set(docs.map(d => d._synth_id || String(d.id)));
-
-    // Ajouter les factures payées comme documents synthétiques
-    (invoices || [])
-        .filter(inv => inv.status === 'paid' || inv.status === 'cancelled')
-        .forEach(inv => {
-            const sid = 'inv-' + inv.id;
-            if (!existingIds.has(sid)) {
-                result.push({
-                    id: sid, _synth_id: sid, _synth: true,
-                    title: inv.invoice_number + (inv.title ? ' — ' + inv.title : ''),
-                    description: 'Facture ' + (inv.status === 'paid' ? 'payée' : 'annulée') + ' · ' + formatCurrency(inv.amount_ttc),
-                    file_type: 'pdf', file_name: inv.invoice_number + '.pdf',
-                    file_url: null, _invoice_id: inv.id,
-                    created_at: inv.paid_at || inv.created_at,
-                    _category: 'Factures', _action: 'pdf-invoice'
-                });
-            }
-        });
-
-    // Ajouter les contrats signés comme documents synthétiques
-    (contracts || [])
-        .filter(ct => ct.status === 'signed')
-        .forEach(ct => {
-            const sid = 'ct-' + ct.id;
-            if (!existingIds.has(sid)) {
-                result.push({
-                    id: sid, _synth_id: sid, _synth: true,
-                    title: ct.contract_number + (ct.title ? ' — ' + ct.title : ''),
-                    description: 'Contrat signé le ' + (ct.signed_at ? new Date(ct.signed_at).toLocaleDateString('fr-CA') : '—'),
-                    file_type: 'pdf', file_name: ct.contract_number + '.pdf',
-                    file_url: '/api/contracts/' + ct.id + '/pdf', _contract_id: ct.id,
-                    created_at: ct.signed_at || ct.created_at,
-                    _category: 'Contrats', _action: 'pdf-contract'
-                });
-            }
-        });
-
-    return result;
-}
-
 function _docCategory(doc) {
-    if (doc._category) return doc._category; // Items synthétiques
     const t = (doc.file_type || doc.file_name || '').toLowerCase();
     const title = (doc.title || '').toLowerCase();
     if (title.includes('facture') || title.includes('invoice') || t.includes('facture')) return 'Factures';
@@ -694,8 +574,8 @@ function renderDocuments(documents) {
         groups[cat].push(doc);
     });
 
-    const renderDocCard = doc => {
-        const isRead = readIds.map(String).includes(String(doc.id));
+    const renderDoc = doc => {
+        const isRead = readIds.includes(doc.id);
         const size = doc.file_size ? (doc.file_size > 1048576 ? (doc.file_size / 1048576).toFixed(1) + ' Mo' : Math.round(doc.file_size / 1024) + ' Ko') : '';
         const ext = (doc.file_name || doc.title || '').split('.').pop().toLowerCase();
         const ftype = ftypes[ext] || 'Fichier';
