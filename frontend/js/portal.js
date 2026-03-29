@@ -76,6 +76,9 @@ function showDashboard() {
     if (el('dashboard-greeting')) el('dashboard-greeting').textContent = greeting + ', ' + name.split(' ')[0] + ' !';
     loadAllData();
     startPolling();
+    // Restaurer l'onglet actif
+    const savedTab = localStorage.getItem('vnk-portal-tab');
+    if (savedTab && savedTab !== 'dashboard') showTab(savedTab);
 }
 
 async function authFetch(url) {
@@ -184,6 +187,7 @@ function showTab(tabName) {
     const titles = { profile: 'Mon profil', dashboard: 'Tableau de bord', mandates: 'Mes mandats', quotes: 'Mes devis', invoices: 'Mes factures', contracts: 'Mes contrats', documents: 'Mes documents', messages: 'Messagerie' };
     const mobileTitle = document.getElementById('mobile-tab-title');
     if (mobileTitle) mobileTitle.textContent = titles[tabName] || '';
+    localStorage.setItem('vnk-portal-tab', tabName);
     window.scrollTo(0, 0);
 }
 
