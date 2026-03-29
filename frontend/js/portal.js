@@ -279,7 +279,9 @@ function renderQuotes(quotes) {
             '<div class="portal-item-title">' + q.quote_number + ' — ' + q.title + '</div>' +
             '<div class="portal-item-desc">' + (q.description || '') + '</div>' +
             '<div class="portal-item-meta"><span>Émis: ' + new Date(q.created_at).toLocaleDateString('fr-CA') + '</span>' +
-            (q.expiry_date ? '<span>Expire: ' + new Date(q.expiry_date).toLocaleDateString('fr-CA') + '</span>' : '') + '</div></div>' +
+            (q.expiry_date ? '<span>Expire: ' + new Date(q.expiry_date).toLocaleDateString('fr-CA') + '</span>' : '') +
+            (q.service_type ? '<span style="background:#EBF5FB;color:#1B4F8A;padding:1px 6px;border-radius:4px;font-size:0.72rem">' + ({ 'plc-support': 'Support PLC', 'audit': 'Audit', 'documentation': 'Documentation', 'refactoring': 'Refactorisation' }[q.service_type] || q.service_type) + '</span>' : '') +
+            '</div></div>' +
             '<div class="portal-item-actions">' +
             '<span class="portal-item-amount">' + formatCurrency(q.amount_ttc) + '</span>' +
             '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:3px 8px;border-radius:4px">' + (sl[q.status] || q.status) + '</span>' +
