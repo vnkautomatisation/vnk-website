@@ -40,7 +40,7 @@ const C = {
     // Infos société
     name: 'VNK Automatisation Inc.',
     neq: '1181943359',
-    email: 'yan.verone@vnk.ca',
+    email: 'vnkautomatisation@gmail.com',
     phone: '(819) 290-8686',
     address: 'Québec, QC, Canada',
     tps: 'À compléter (Revenu Canada)',
@@ -757,40 +757,69 @@ async function generateContractPDF(res, contract, client, quote) {
 
     const sigY = doc.y;
     const sigW = (cw - 16) / 2;
+    const sigBoxH = 110; // plus haut pour accueillir l'image de signature
 
-    // VNK
-    doc.rect(C.marginL, sigY, sigW, 80).fillColor(C.grayLight).fill();
-    doc.rect(C.marginL, sigY, 3, 80).fillColor(C.blue).fill();
-    doc.rect(C.marginL, sigY, sigW, 80).lineWidth(0.5).strokeColor(C.border).stroke();
+    // ── Bloc VNK (gauche) ──
+    doc.rect(C.marginL, sigY, sigW, sigBoxH).fillColor(C.grayLight).fill();
+    doc.rect(C.marginL, sigY, 3, sigBoxH).fillColor(C.blue).fill();
+    doc.rect(C.marginL, sigY, sigW, sigBoxH).lineWidth(0.5).strokeColor(C.border).stroke();
     doc.fillColor(C.blue).fontSize(8).font('Helvetica-Bold').text('VNK AUTOMATISATION INC.', C.marginL + 10, sigY + 8);
     doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
-        .text(`${C.founder}`, C.marginL + 10, sigY + 22)
-        .text(`${C.title}`, C.marginL + 10, sigY + 33);
-    doc.moveTo(C.marginL + 10, sigY + 58).lineTo(C.marginL + sigW - 10, sigY + 58)
-        .lineWidth(0.5).strokeColor(C.border).stroke();
-    doc.fillColor(C.gray).fontSize(7).text('Signature', C.marginL + 10, sigY + 62);
-    doc.moveTo(C.marginL + 10, sigY + 74).lineTo(C.marginL + sigW - 10, sigY + 74)
-        .lineWidth(0.5).strokeColor(C.border).stroke();
-    doc.fillColor(C.gray).fontSize(7).text('Date', C.marginL + 10, sigY + 78 - 2);
+        .text(C.founder, C.marginL + 10, sigY + 20)
+        .text(C.title, C.marginL + 10, sigY + 30);
 
-    // Client
+    // Image de signature admin si disponible
+    if (contract.admin_signature_data && contract.admin_signature_data.startsWith('data:image/')) {
+        try {
+            const base64 = contract.admin_signature_data.replace(/^data:image\/\w+;base64,/, '');
+            const imgBuf = Buffer.from(base64, 'base64');
+            doc.image(imgBuf, C.marginL + 10, sigY + 40, { width: sigW - 20, height: 40, fit: [sigW - 20, 40] });
+        } catch (e) { /* image corrompue — on laisse la ligne vide */ }
+    }
+    // Ligne de signature
+    doc.moveTo(C.marginL + 10, sigY + 84).lineTo(C.marginL + sigW - 10, sigY + 84)
+        .lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.fillColor(C.gray).fontSize(7).text('Signature', C.marginL + 10, sigY + 87);
+
+    // Date
+    const adminSignedDate = contract.admin_signed_at ? dateCA(contract.admin_signed_at) : '_______________';
+    doc.moveTo(C.marginL + 10, sigY + 100).lineTo(C.marginL + sigW - 10, sigY + 100)
+        .lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.fillColor(C.gray).fontSize(7)
+        .text('Date : ' + adminSignedDate, C.marginL + 10, sigY + 103);
+
+    // ── Bloc Client (droite) ──
     const cx2 = C.marginL + sigW + 16;
-    doc.rect(cx2, sigY, sigW, 80).fillColor(C.grayLight).fill();
-    doc.rect(cx2, sigY, 3, 80).fillColor(C.navy).fill();
-    doc.rect(cx2, sigY, sigW, 80).lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.rect(cx2, sigY, sigW, sigBoxH).fillColor(C.grayLight).fill();
+    doc.rect(cx2, sigY, 3, sigBoxH).fillColor(C.navy).fill();
+    doc.rect(cx2, sigY, sigW, sigBoxH).lineWidth(0.5).strokeColor(C.border).stroke();
     doc.fillColor(C.navy).fontSize(8).font('Helvetica-Bold')
         .text((client.company_name || client.full_name || '').toUpperCase(), cx2 + 10, sigY + 8, { width: sigW - 20 });
     doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
-        .text(client.full_name || '', cx2 + 10, sigY + 22)
-        .text('Titre / Fonction :', cx2 + 10, sigY + 33);
-    doc.moveTo(cx2 + 10, sigY + 58).lineTo(cx2 + sigW - 10, sigY + 58)
-        .lineWidth(0.5).strokeColor(C.border).stroke();
-    doc.fillColor(C.gray).fontSize(7).text('Signature', cx2 + 10, sigY + 62);
-    doc.moveTo(cx2 + 10, sigY + 74).lineTo(cx2 + sigW - 10, sigY + 74)
-        .lineWidth(0.5).strokeColor(C.border).stroke();
-    doc.fillColor(C.gray).fontSize(7).text('Date', cx2 + 10, sigY + 78 - 2);
+        .text(client.full_name || '', cx2 + 10, sigY + 20);
 
-    doc.y = sigY + 80 + 16;
+    // Image de signature client si disponible
+    if (contract.client_signature_data && contract.client_signature_data.startsWith('data:image/')) {
+        try {
+            const base64 = contract.client_signature_data.replace(/^data:image\/\w+;base64,/, '');
+            const imgBuf = Buffer.from(base64, 'base64');
+            doc.image(imgBuf, cx2 + 10, sigY + 40, { width: sigW - 20, height: 40, fit: [sigW - 20, 40] });
+        } catch (e) { /* image corrompue */ }
+    }
+    // Ligne de signature
+    doc.moveTo(cx2 + 10, sigY + 84).lineTo(cx2 + sigW - 10, sigY + 84)
+        .lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.fillColor(C.gray).fontSize(7).text('Signature', cx2 + 10, sigY + 87);
+
+    // Date + IP
+    const clientSignedDate = contract.signed_at ? dateCA(contract.signed_at) : '_______________';
+    const ipStr = contract.client_signature_ip ? '  ·  IP : ' + contract.client_signature_ip : '';
+    doc.moveTo(cx2 + 10, sigY + 100).lineTo(cx2 + sigW - 10, sigY + 100)
+        .lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.fillColor(C.gray).fontSize(7)
+        .text('Date : ' + clientSignedDate + ipStr, cx2 + 10, sigY + 103, { width: sigW - 20 });
+
+    doc.y = sigY + sigBoxH + 16;
 
     // Table annexes
     contractPara(doc, 'Le présent contrat inclut les annexes suivantes, intégrées et faisant partie intégrante de l\'entente :', cw, { color: C.gray });

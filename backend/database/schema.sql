@@ -282,7 +282,7 @@ CREATE INDEX idx_expenses_date ON expenses(expense_date);
 -- ============================================================
 INSERT INTO admins (email, password_hash, full_name)
 VALUES (
-    'yan.verone@vnk.ca',
+    'vnkautomatisation@gmail.com',
     '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TqrqMGwsyMkBUFJsqVVvSxzBPvYK',
     'Yan Verone Kengne'
 );

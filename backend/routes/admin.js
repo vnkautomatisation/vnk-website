@@ -459,6 +459,34 @@ router.put('/contracts/:id/sign', authenticateAdmin, async (req, res) => {
 });
 
 // ============================================
+// PUT /api/admin/contracts/:id/admin-sign
+// Signature côté admin (Yan Verone) — accepte signature canvas base64
+// ============================================
+router.put('/contracts/:id/admin-sign', authenticateAdmin, async (req, res) => {
+    try {
+        const { signature_data } = req.body;
+        // Migrations douces
+        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS admin_signed_at TIMESTAMPTZ`).catch(() => { });
+        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS admin_signature_data TEXT`).catch(() => { });
+
+        let query, params;
+        if (signature_data && signature_data.startsWith('data:image/')) {
+            query = `UPDATE contracts SET admin_signed_at=NOW(), admin_signature_data=$1, updated_at=NOW() WHERE id=$2 RETURNING *`;
+            params = [signature_data, req.params.id];
+        } else {
+            query = `UPDATE contracts SET admin_signed_at=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *`;
+            params = [req.params.id];
+        }
+        const result = await pool.query(query, params);
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Contrat non trouvé.' });
+        res.json({ success: true, contract: result.rows[0] });
+    } catch (err) {
+        console.error('admin-sign error:', err);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// ============================================
 // EXPENSES — Dépenses professionnelles
 // ============================================
 router.get('/expenses', authenticateAdmin, async (req, res) => {
