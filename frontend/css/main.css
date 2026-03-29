@@ -2876,6 +2876,7 @@ img {
     display: grid;
     grid-template-columns: 240px 1fr;
     height: calc(100vh - var(--nav-height));
+    max-height: calc(100vh - var(--nav-height));
     margin-top: var(--nav-height);
     overflow: hidden;
 }
@@ -2889,9 +2890,10 @@ img {
     flex-direction: column;
     padding: var(--spacing-md) 0;
     position: sticky;
-    top: var(--nav-height);
-    height: calc(100vh - var(--nav-height));
+    top: 0;
+    height: 100%;
     overflow-y: auto;
+    flex-shrink: 0;
 }
 
 .portal-sidebar-user {
@@ -3011,6 +3013,7 @@ img {
     padding: var(--spacing-md);
     overflow-y: auto;
     height: 100%;
+    min-height: 0;
 }
 
 .portal-tab {
@@ -3030,9 +3033,10 @@ img {
     gap: var(--spacing-sm);
     position: sticky;
     top: 0;
-    background: var(--color-bg, #F8FAFC);
+    background: #F8FAFC;
     z-index: 10;
-    padding-top: 0.25rem;
+    padding-top: 0.5rem;
+    margin-top: -0.5rem;
 }
 
     .portal-tab-header h2 {
