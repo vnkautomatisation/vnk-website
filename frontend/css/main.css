@@ -2875,7 +2875,7 @@ img {
 .portal-dashboard {
     display: grid;
     grid-template-columns: 240px 1fr;
-    min-height: calc(100vh - var(--nav-height));
+    height: calc(100vh - var(--nav-height));
     margin-top: var(--nav-height);
     overflow: hidden;
 }
@@ -3010,6 +3010,8 @@ img {
 .portal-main {
     padding: var(--spacing-md);
     overflow-y: auto;
+    height: 100%;
+    min-height: 0;
 }
 
 .portal-tab {
@@ -3038,6 +3040,115 @@ img {
 .portal-tab-subtitle {
     font-size: 0.85rem;
     color: var(--color-text-light);
+}
+
+/* ── Toolbar (titre + barre recherche) ── */
+.portal-toolbar {
+    margin-bottom: 1rem;
+}
+
+.portal-toolbar-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.6rem;
+}
+
+    .portal-toolbar-title h2 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #1B4F8A;
+    }
+
+    .portal-toolbar-title span {
+        font-size: 0.82rem;
+        color: #94A3B8;
+    }
+
+.portal-search-bar {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.portal-search-input-wrap {
+    flex: 1;
+    position: relative;
+}
+
+    .portal-search-input-wrap svg {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94A3B8;
+        pointer-events: none;
+    }
+
+.portal-search-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    background: white;
+    color: #1E293B;
+    transition: border-color 0.15s,box-shadow 0.15s;
+    box-sizing: border-box;
+}
+
+    .portal-search-input:focus {
+        outline: none;
+        border-color: #1B4F8A;
+        box-shadow: 0 0 0 3px rgba(27,79,138,0.08);
+    }
+
+    .portal-search-input::placeholder {
+        color: #CBD5E0;
+    }
+
+.portal-filter-select {
+    padding: 0.5rem 2rem 0.5rem 0.85rem;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    background: white;
+    color: #1E293B;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+}
+
+    .portal-filter-select:focus {
+        outline: none;
+        border-color: #1B4F8A;
+    }
+
+.portal-sort-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.85rem;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 8px;
+    background: white;
+    color: #64748B;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+}
+
+    .portal-sort-btn:hover, .portal-sort-btn.active {
+        border-color: #1B4F8A;
+        color: #1B4F8A;
+        background: #EBF5FB;
+    }
+
+.portal-tab-content { /* contenu normal */
 }
 
 /* ---------- Stats row ---------- */
@@ -3413,7 +3524,6 @@ img {
         grid-template-columns: 1fr;
     }
 }
-
 /* ═══════════════════════════════════════════════
    WIDGET CHAT FLOTTANT — toutes les pages
    ═══════════════════════════════════════════════ */
@@ -3466,14 +3576,15 @@ img {
     position: absolute;
     bottom: 70px;
     right: 0;
-    width: 340px;
+    width: 360px;
     background: white;
     border-radius: 16px;
     box-shadow: 0 12px 40px rgba(0,0,0,0.18);
     display: none;
     flex-direction: column;
     overflow: hidden;
-    max-height: 480px;
+    max-height: 560px;
+    transition: width 0.25s ease, max-height 0.25s ease;
 }
 
     .vnk-chat-panel.open {
@@ -3547,7 +3658,7 @@ img {
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
-    min-height: 200px;
+    min-height: 300px;
     background: #F8FAFC;
 }
 
@@ -3598,24 +3709,57 @@ img {
 }
 
 .vnk-chat-compose {
-    padding: 0.75rem;
+    padding: 0.5rem 0.75rem 0.6rem;
     border-top: 1px solid #E2E8F0;
     display: flex;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: 0.35rem;
     background: white;
+}
+
+.vnk-chat-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.vnk-chat-action-btn {
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: none;
+    color: #94A3B8;
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+}
+
+    .vnk-chat-action-btn:hover {
+        background: #F1F5F9;
+        color: #1B4F8A;
+    }
+
+.vnk-chat-compose-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
 }
 
 .vnk-chat-input {
     flex: 1;
-    padding: 0.55rem 0.75rem;
+    padding: 0.5rem 0.75rem;
     border: 1.5px solid #E2E8F0;
-    border-radius: 20px;
+    border-radius: 16px;
     font-size: 0.85rem;
     outline: none;
     resize: none;
     line-height: 1.4;
     font-family: inherit;
     transition: border-color 0.15s;
+    min-height: 36px;
 }
 
     .vnk-chat-input:focus {
@@ -3646,6 +3790,43 @@ img {
         background: #CBD5E0;
         cursor: not-allowed;
     }
+
+.vnk-menu-item {
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+    .vnk-menu-item:hover {
+        background: #F1F5F9 !important;
+    }
+
+.vnk-emoji-item {
+    cursor: pointer;
+    font-size: 1.35rem;
+    padding: 3px;
+    border-radius: 4px;
+    display: inline-block;
+    transition: background 0.12s;
+}
+
+    .vnk-emoji-item:hover {
+        background: #F1F5F9;
+    }
+
+@media (max-width: 480px) {
+    .vnk-chat-panel {
+        width: calc(100vw - 2rem);
+        right: 0;
+        bottom: 70px;
+        max-height: 70vh;
+        border-radius: 16px;
+    }
+
+    .vnk-chat-widget {
+        bottom: 1rem;
+        right: 1rem;
+    }
+}
 
 .vnk-chat-login-prompt {
     padding: 1.25rem;
