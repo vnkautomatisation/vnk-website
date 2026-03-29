@@ -312,11 +312,14 @@ function renderQuotes(quotes) {
     list.innerHTML = quotes.map(q => {
         const color = sc[q.status] || '#94A3B8';
         const svc = q.service_type ? (svl[q.service_type] || q.service_type) : null;
-        const isExpired = q.expiry_date && new Date(q.expiry_date) < new Date();
-        return '<div style="display:grid;grid-template-columns:110px 1fr auto 52px 62px;align-items:center;gap:0.5rem;padding:0.4rem 0.75rem;border-bottom:1px solid #F1F5F9;background:white;transition:background 0.1s" onmouseover="this.style.background=\'#FAFCFF\'" onmouseout="this.style.background=\'white\'">' +
-            '<div style="display:flex;flex-direction:column;gap:1px">' +
-            '<strong style="font-size:0.8rem;color:#1B4F8A;white-space:nowrap">' + q.quote_number + '</strong>' +
-            '<span style="background:' + color + '22;color:' + color + ';font-size:0.63rem;font-weight:700;padding:1px 5px;border-radius:6px;width:fit-content">' + (sl[q.status] || q.status) + '</span>' +
+        return '<div class="portal-list-item">' +
+            '<div style="flex:1">' +
+            '<div class="portal-item-title">' + q.quote_number + ' — ' + q.title + '</div>' +
+            (q.description ? '<div class="portal-item-desc">' + q.description + '</div>' : '') +
+            '<div class="portal-item-meta">' +
+            (svc ? '<span style="background:#EBF5FB;color:#1B4F8A;padding:1px 6px;border-radius:4px;font-weight:600">' + svc + '</span>' : '') +
+            '<span>Émis : ' + new Date(q.created_at).toLocaleDateString('fr-CA') + '</span>' +
+            (q.expiry_date ? '<span>Expire : ' + new Date(q.expiry_date).toLocaleDateString('fr-CA') + '</span>' : '') +
             '</div>' +
             '<div class="portal-item-meta" style="margin-top:0.3rem;background:#F8FAFC;padding:3px 6px;border-radius:4px">' +
             '<span>HT : <strong>' + formatCurrency(q.amount_ht) + '</strong></span>' +
@@ -353,11 +356,14 @@ function renderInvoices(invoices) {
         const color = sc[inv.status] || '#94A3B8';
         const isPaid = inv.status === 'paid';
         const isOverdue = inv.status === 'overdue';
-        const lb = isPaid ? 'border-left:2px solid #27AE60;' : isOverdue ? 'border-left:2px solid #E74C3C;' : '';
-        return '<div style="display:grid;grid-template-columns:110px 1fr auto 52px 62px;align-items:center;gap:0.5rem;padding:0.4rem 0.75rem;border-bottom:1px solid #F1F5F9;background:white;' + lb + 'transition:background 0.1s" onmouseover="this.style.background=\'#FAFCFF\'" onmouseout="this.style.background=\'white\'">' +
-            '<div style="display:flex;flex-direction:column;gap:1px">' +
-            '<strong style="font-size:0.8rem;color:#1B4F8A;white-space:nowrap">' + inv.invoice_number + '</strong>' +
-            '<span style="background:' + color + '22;color:' + color + ';font-size:0.63rem;font-weight:700;padding:1px 5px;border-radius:6px;width:fit-content">' + (sl[inv.status] || inv.status) + '</span>' +
+        return '<div class="portal-list-item" style="' + (isPaid ? 'border-left:3px solid #27AE60' : isOverdue ? 'border-left:3px solid #E74C3C' : '') + '">' +
+            '<div style="flex:1">' +
+            '<div class="portal-item-title">' + inv.invoice_number + ' — ' + inv.title + '</div>' +
+            (inv.description ? '<div class="portal-item-desc">' + inv.description + '</div>' : '') +
+            '<div class="portal-item-meta">' +
+            '<span>Émise : ' + new Date(inv.created_at).toLocaleDateString('fr-CA') + '</span>' +
+            (inv.due_date ? '<span>Échéance : <strong style="color:' + (isOverdue ? '#E74C3C' : 'inherit') + '">' + new Date(inv.due_date).toLocaleDateString('fr-CA') + '</strong></span>' : '') +
+            (inv.paid_at ? '<span style="color:#27AE60">Payée le : ' + new Date(inv.paid_at).toLocaleDateString('fr-CA') + '</span>' : '') +
             '</div>' +
             '<div class="portal-item-meta" style="margin-top:0.3rem;background:#F8FAFC;padding:3px 6px;border-radius:4px">' +
             '<span>HT : <strong>' + formatCurrency(inv.amount_ht) + '</strong></span>' +
@@ -536,31 +542,13 @@ function applyDocSort(val) {
     filterDocuments();
 }
 
-function _docCategory(doc) {
-    const t = (doc.file_type || doc.file_name || '').toLowerCase();
-    const title = (doc.title || '').toLowerCase();
-    if (title.includes('facture') || title.includes('invoice') || t.includes('facture')) return 'Factures';
-    if (title.includes('contrat') || title.includes('contract') || t.includes('contrat')) return 'Contrats';
-    if (title.includes('devis') || title.includes('quote')) return 'Devis';
-    if (title.includes('rapport') || title.includes('audit') || title.includes('documentation') || title.includes('doc')) return 'Documentation technique';
-    return 'Autres documents';
-}
-
-const _catOrder = ['Documentation technique', 'Factures', 'Contrats', 'Devis', 'Autres documents'];
-const _catIcons = {
-    'Documentation technique': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
-    'Factures': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
-    'Contrats': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>',
-    'Devis': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
-    'Autres documents': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>'
-};
-
-
 function renderDocuments(documents) {
     const list = document.getElementById('documents-list');
     if (!list) return;
     if (!documents.length) {
-        list.innerHTML = '<div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg><p>Aucun document disponible.</p><p style="font-size:0.8rem;color:var(--color-text-light)">Les fichiers apparaîtront ici une fois votre mandat démarré.</p></div>';
+        list.innerHTML = '<div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>' +
+            '<p>Aucun document disponible pour l\'instant.</p>' +
+            '<p style="font-size:0.8rem;color:var(--color-text-light)">Les rapports et livrables apparaîtront ici une fois votre mandat démarré.</p></div>';
         return;
     }
     const readIds = _getReadDocs();
@@ -580,66 +568,40 @@ function renderDocuments(documents) {
         const ext = (doc.file_name || doc.title || '').split('.').pop().toLowerCase();
         const ftype = ftypes[ext] || 'Fichier';
         const tcolor = { PDF: '#E74C3C', Word: '#1B4F8A', Excel: '#27AE60', Image: '#8E44AD', Fichier: '#64748B' }[ftype] || '#64748B';
-        return '<div style="display:flex;align-items:center;gap:0.6rem;padding:0.45rem 0.5rem;border-bottom:1px solid #F1F5F9;background:white" id="doc-item-' + doc.id + '">' +
-            '<span style="background:' + tcolor + '22;color:' + tcolor + ';font-size:0.63rem;font-weight:700;padding:1px 5px;border-radius:4px;flex-shrink:0">' + ftype + '</span>' +
+        return '<div class="portal-list-item" style="' + (!isRead ? 'border-left:3px solid #1B4F8A;background:#F8FBFF;' : '') + 'margin-bottom:0.5rem" id="doc-item-' + doc.id + '">' +
             '<div style="flex:1;min-width:0">' +
-            '<div style="font-size:0.82rem;font-weight:600;color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + doc.title + '</div>' +
-            '<div style="font-size:0.68rem;color:#94A3B8">' + new Date(doc.created_at).toLocaleDateString('fr-CA') + (size ? ' · ' + size : '') + '</div>' +
+            '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.2rem">' +
+            '<div class="portal-item-title" style="margin-bottom:0;font-size:0.88rem">' + doc.title + '</div>' +
+            (!isRead ? '<span style="background:#1B4F8A;color:white;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:10px">NOUVEAU</span>' : '') +
+            '<span style="background:' + tcolor + '22;color:' + tcolor + ';font-size:0.68rem;font-weight:600;padding:1px 6px;border-radius:4px">' + ftype + '</span>' +
             '</div>' +
-            (!isRead ? '<span style="background:#1B4F8A;color:white;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px">NOUVEAU</span>' : '<span style="color:#27AE60;font-size:0.65rem;display:flex;align-items:center;gap:2px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Lu</span>') +
-            (doc._action === 'pdf-invoice' ?
-                '<a href="/api/invoices/' + doc._invoice_id + '/pdf" target="_blank" class="btn btn-primary btn-sm" style="font-size:0.72rem;padding:0.2rem 0.5rem;text-decoration:none" onclick="_markDocRead(' + JSON.stringify(doc.id) + ')">Télécharger</a>' :
-                doc.file_url ?
-                    '<button class="btn btn-primary btn-sm" style="font-size:0.72rem;padding:0.2rem 0.5rem" onclick="downloadDoc(' + JSON.stringify(doc.id) + ')">Télécharger</button>' :
-                    '<span style="font-size:0.7rem;color:#94A3B8">Bientôt dispo</span>') +
-            '</div>';
+            (doc.description ? '<div class="portal-item-desc" style="font-size:0.78rem">' + doc.description + '</div>' : '') +
+            '<div class="portal-item-meta" style="font-size:0.73rem">' +
+            (doc.mandate_title ? '<span style="display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> ' + doc.mandate_title + '</span>' : '') +
+            '<span style="display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ' + new Date(doc.created_at).toLocaleDateString('fr-CA') + '</span>' +
+            (size ? '<span>' + size + '</span>' : '') +
+            (isRead ? '<span style="color:#27AE60;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Lu</span>' : '<span style="color:#D97706;display:inline-flex;align-items:center;gap:3px"><svg width="8" height="8" viewBox="0 0 24 24" fill="#D97706"><circle cx="12" cy="12" r="10"/></svg>Non lu</span>') +
+            '</div></div>' +
+            '<div class="portal-item-actions">' +
+            (doc.file_url ? '<button class="btn btn-primary btn-sm" onclick="downloadDoc(' + doc.id + ')">⬇ Télécharger</button>' : '<span style="font-size:0.75rem;color:#94A3B8">Bientôt dispo</span>') +
+            '</div></div>';
     };
 
-    // Catégories en colonnes (grille 2 colonnes), Autres documents en ligne
-    const gridCats = ['Documentation technique', 'Factures', 'Contrats', 'Devis'];
-    const lineCats = ['Autres documents'];
-
-    let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">';
-    let hasGrid = false;
-
-    gridCats.forEach(cat => {
-        if (!groups[cat]) return;
-        hasGrid = true;
-        const docs = groups[cat];
-        const unread = docs.filter(d => !readIds.map(String).includes(String(d.id))).length;
-        html += '<div style="background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0;overflow:hidden">' +
-            '<div style="padding:0.65rem 0.85rem;background:white;border-bottom:2px solid #E2E8F0;display:flex;align-items:center;gap:0.5rem;position:sticky;top:0">' +
-            '<span style="color:#1B4F8A">' + (_catIcons[cat] || '') + '</span>' +
-            '<h3 style="font-size:0.83rem;font-weight:700;color:#1B4F8A;margin:0;flex:1">' + cat + '</h3>' +
-            '<span style="font-size:0.72rem;color:#94A3B8">' + docs.length + '</span>' +
-            (unread > 0 ? '<span style="background:#1B4F8A;color:white;font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:8px">' + unread + ' nouveau' + (unread > 1 ? 'x' : '') + '</span>' : '') +
-            '</div>' +
-            '<div style="max-height:280px;overflow-y:auto;padding:0.5rem">' +
-            docs.map(renderDocCard).join('') +
-            '</div></div>';
-    });
-
-    if (!hasGrid) html = '';
-    else html += '</div>';
-
-    // Autres documents en ligne simple
-    lineCats.forEach(cat => {
-        if (!groups[cat]) return;
-        const docs = groups[cat];
-        const unread = docs.filter(d => !readIds.map(String).includes(String(d.id))).length;
-        html += '<div style="background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0;overflow:hidden;margin-bottom:1rem">' +
-            '<div style="padding:0.65rem 0.85rem;background:white;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;gap:0.5rem">' +
-            '<span style="color:#1B4F8A">' + (_catIcons[cat] || '') + '</span>' +
-            '<h3 style="font-size:0.83rem;font-weight:700;color:#1B4F8A;margin:0;flex:1">' + cat + '</h3>' +
-            '<span style="font-size:0.72rem;color:#94A3B8">' + docs.length + '</span>' +
-            (unread > 0 ? '<span style="background:#1B4F8A;color:white;font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:8px">' + unread + ' nouveau' + (unread > 1 ? 'x' : '') + '</span>' : '') +
-            '</div>' +
-            '<div style="max-height:200px;overflow-y:auto">' +
-            docs.map(renderDocLine).join('') +
-            '</div></div>';
-    });
-
-    list.innerHTML = html;
+    list.innerHTML = _catOrder
+        .filter(cat => groups[cat])
+        .map(cat => {
+            const docs = groups[cat];
+            const unread = docs.filter(d => !readIds.includes(d.id)).length;
+            return '<div style="margin-bottom:1.5rem">' +
+                '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;padding-bottom:0.5rem;border-bottom:2px solid #E2E8F0">' +
+                '<span style="color:#1B4F8A">' + (_catIcons[cat] || '') + '</span>' +
+                '<h3 style="font-size:0.88rem;font-weight:700;color:#1B4F8A;margin:0">' + cat + '</h3>' +
+                '<span style="font-size:0.75rem;color:#94A3B8">' + docs.length + ' fichier' + (docs.length > 1 ? 's' : '') + '</span>' +
+                (unread > 0 ? '<span style="background:#1B4F8A;color:white;font-size:0.68rem;font-weight:700;padding:1px 7px;border-radius:10px">' + unread + ' nouveau' + (unread > 1 ? 'x' : '') + '</span>' : '') +
+                '</div>' +
+                docs.map(renderDoc).join('') +
+                '</div>';
+        }).join('');
 }
 
 function _updateDocItem(id) {
