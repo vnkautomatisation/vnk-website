@@ -293,34 +293,28 @@ function renderQuotes(quotes) {
     list.innerHTML = quotes.map(q => {
         const color = sc[q.status] || '#94A3B8';
         const svc = q.service_type ? (svl[q.service_type] || q.service_type) : null;
-        return '<div style="border:1px solid #E2E8F0;border-radius:10px;padding:1rem 1.25rem;margin-bottom:0.75rem;background:white">' +
-            '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:0.6rem">' +
+        return '<div class="portal-list-item">' +
             '<div style="flex:1">' +
-            '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.3rem;flex-wrap:wrap">' +
-            '<strong style="font-size:0.9rem;color:#1B4F8A">' + q.quote_number + '</strong>' +
-            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">' + (sl[q.status] || q.status) + '</span>' +
-            (svc ? '<span style="background:#EBF5FB;color:#1B4F8A;font-size:0.72rem;padding:2px 8px;border-radius:4px">' + svc + '</span>' : '') +
-            '</div>' +
-            '<div style="font-size:0.88rem;font-weight:600;color:#1E293B">' + q.title + '</div>' +
-            (q.description ? '<div style="font-size:0.8rem;color:#64748B;margin-top:2px">' + q.description + '</div>' : '') +
-            '</div>' +
-            '<div style="text-align:right;flex-shrink:0">' +
-            '<div style="font-size:1.05rem;font-weight:700;color:#1B4F8A">' + formatCurrency(q.amount_ttc) + '</div>' +
-            '<div style="font-size:0.7rem;color:#94A3B8">TTC</div>' +
-            '</div></div>' +
-            '<div style="display:flex;gap:1.5rem;font-size:0.75rem;color:#64748B;margin-bottom:0.6rem;flex-wrap:wrap">' +
+            '<div class="portal-item-title">' + q.quote_number + ' — ' + q.title + '</div>' +
+            (q.description ? '<div class="portal-item-desc">' + q.description + '</div>' : '') +
+            '<div class="portal-item-meta">' +
+            (svc ? '<span style="background:#EBF5FB;color:#1B4F8A;padding:1px 6px;border-radius:4px;font-weight:600">' + svc + '</span>' : '') +
             '<span>Émis : ' + new Date(q.created_at).toLocaleDateString('fr-CA') + '</span>' +
             (q.expiry_date ? '<span>Expire : ' + new Date(q.expiry_date).toLocaleDateString('fr-CA') + '</span>' : '') +
             '</div>' +
-            '<div style="background:#F8FAFC;border-radius:6px;padding:0.4rem 0.75rem;display:flex;gap:1.5rem;font-size:0.75rem;color:#64748B;margin-bottom:0.6rem;flex-wrap:wrap">' +
-            '<span>HT : <strong style="color:#1E293B">' + formatCurrency(q.amount_ht) + '</strong></span>' +
+            '<div class="portal-item-meta" style="margin-top:0.3rem;background:#F8FAFC;padding:3px 6px;border-radius:4px">' +
+            '<span>HT : <strong>' + formatCurrency(q.amount_ht) + '</strong></span>' +
             '<span>TPS : ' + formatCurrency(q.tps_amount) + '</span>' +
             '<span>TVQ : ' + formatCurrency(q.tvq_amount) + '</span>' +
             '</div>' +
-            '<div style="display:flex;gap:0.5rem;justify-content:flex-end">' +
+            '</div>' +
+            '<div class="portal-item-actions">' +
+            '<span class="portal-item-amount">' + formatCurrency(q.amount_ttc) + '</span>' +
+            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">' + (sl[q.status] || q.status) + '</span>' +
+            '<div style="display:flex;gap:0.4rem;margin-top:0.3rem">' +
             '<button class="btn btn-outline btn-sm" onclick="downloadPDF(\'quotes\',' + q.id + ',\'' + q.quote_number + '\')">PDF</button>' +
             (q.status === 'pending' ? '<button class="btn btn-primary btn-sm" onclick="acceptQuote(' + q.id + ')">Accepter</button>' : '') +
-            '</div></div>';
+            '</div></div></div>';
     }).join('');
 }
 
@@ -343,34 +337,28 @@ function renderInvoices(invoices) {
         const color = sc[inv.status] || '#94A3B8';
         const isPaid = inv.status === 'paid';
         const isOverdue = inv.status === 'overdue';
-        return '<div style="border:1px solid #E2E8F0;border-radius:10px;padding:1rem 1.25rem;margin-bottom:0.75rem;background:white;' + (isPaid ? 'border-left:3px solid #27AE60' : (isOverdue ? 'border-left:3px solid #E74C3C' : '')) + '">' +
-            '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:0.6rem">' +
+        return '<div class="portal-list-item" style="' + (isPaid ? 'border-left:3px solid #27AE60' : isOverdue ? 'border-left:3px solid #E74C3C' : '') + '">' +
             '<div style="flex:1">' +
-            '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.3rem;flex-wrap:wrap">' +
-            '<strong style="font-size:0.9rem;color:#1B4F8A">' + inv.invoice_number + '</strong>' +
-            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">' + (sl[inv.status] || inv.status) + '</span>' +
-            '</div>' +
-            '<div style="font-size:0.88rem;font-weight:600;color:#1E293B">' + inv.title + '</div>' +
-            (inv.description ? '<div style="font-size:0.8rem;color:#64748B;margin-top:2px">' + inv.description + '</div>' : '') +
-            '</div>' +
-            '<div style="text-align:right;flex-shrink:0">' +
-            '<div style="font-size:1.05rem;font-weight:700;color:' + (isPaid ? '#27AE60' : '#1B4F8A') + '">' + formatCurrency(inv.amount_ttc) + '</div>' +
-            '<div style="font-size:0.7rem;color:#94A3B8">TTC</div>' +
-            '</div></div>' +
-            '<div style="display:flex;gap:1.5rem;font-size:0.75rem;color:#64748B;margin-bottom:0.6rem;flex-wrap:wrap">' +
+            '<div class="portal-item-title">' + inv.invoice_number + ' — ' + inv.title + '</div>' +
+            (inv.description ? '<div class="portal-item-desc">' + inv.description + '</div>' : '') +
+            '<div class="portal-item-meta">' +
             '<span>Émise : ' + new Date(inv.created_at).toLocaleDateString('fr-CA') + '</span>' +
             (inv.due_date ? '<span>Échéance : <strong style="color:' + (isOverdue ? '#E74C3C' : 'inherit') + '">' + new Date(inv.due_date).toLocaleDateString('fr-CA') + '</strong></span>' : '') +
             (inv.paid_at ? '<span style="color:#27AE60">Payée le : ' + new Date(inv.paid_at).toLocaleDateString('fr-CA') + '</span>' : '') +
             '</div>' +
-            '<div style="background:#F8FAFC;border-radius:6px;padding:0.4rem 0.75rem;display:flex;gap:1.5rem;font-size:0.75rem;color:#64748B;margin-bottom:0.6rem;flex-wrap:wrap">' +
-            '<span>HT : <strong style="color:#1E293B">' + formatCurrency(inv.amount_ht) + '</strong></span>' +
+            '<div class="portal-item-meta" style="margin-top:0.3rem;background:#F8FAFC;padding:3px 6px;border-radius:4px">' +
+            '<span>HT : <strong>' + formatCurrency(inv.amount_ht) + '</strong></span>' +
             '<span>TPS : ' + formatCurrency(inv.tps_amount) + '</span>' +
             '<span>TVQ : ' + formatCurrency(inv.tvq_amount) + '</span>' +
             '</div>' +
-            '<div style="display:flex;gap:0.5rem;justify-content:flex-end">' +
+            '</div>' +
+            '<div class="portal-item-actions">' +
+            '<span class="portal-item-amount" style="color:' + (isPaid ? '#27AE60' : 'var(--color-primary)') + '">' + formatCurrency(inv.amount_ttc) + '</span>' +
+            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">' + (sl[inv.status] || inv.status) + '</span>' +
+            '<div style="display:flex;gap:0.4rem;margin-top:0.3rem">' +
             '<button class="btn btn-outline btn-sm" onclick="downloadPDF(\'invoices\',' + inv.id + ',\'' + inv.invoice_number + '\')">PDF</button>' +
             (inv.status === 'unpaid' || inv.status === 'overdue' ? '<button class="btn btn-primary btn-sm" onclick="payInvoice(' + inv.id + ',' + inv.amount_ttc + ')">Payer</button>' : '') +
-            '</div></div>';
+            '</div></div></div>';
     }).join('');
 }
 
