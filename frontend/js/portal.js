@@ -369,7 +369,7 @@ function renderInvoices(invoices) {
             '</div>' +
             '<div style="display:flex;gap:0.5rem;justify-content:flex-end">' +
             '<button class="btn btn-outline btn-sm" onclick="downloadPDF(\'invoices\',' + inv.id + ',\'' + inv.invoice_number + '\')">PDF</button>' +
-            (inv.status === 'unpaid' || inv.status === 'overdue' ? '<button class="btn btn-primary btn-sm" onclick="payInvoice(' + inv.id + ')">Payer</button>' : '') +
+            (inv.status === 'unpaid' || inv.status === 'overdue' ? '<button class="btn btn-primary btn-sm" onclick="payInvoice(' + inv.id + ',' + inv.amount_ttc + ')">Payer</button>' : '') +
             '</div></div>';
     }).join('');
 }
@@ -417,16 +417,6 @@ function filterContracts() {
     renderPortalContracts(list);
 }
 
-async function signContract(contractId) {
-    const token = localStorage.getItem('vnk-token');
-    try {
-        const r = await fetch('/api/contracts/' + contractId + '/signing-url', { headers: { 'Authorization': 'Bearer ' + token } });
-        const d = await r.json();
-        if (d.success && d.signingUrl) window.open(d.signingUrl, '_blank');
-        else alert('Lien de signature indisponible. Contactez VNK à vnkautomatisation@gmail.com');
-    } catch { alert('Erreur. Contactez VNK à vnkautomatisation@gmail.com'); }
-}
-
 function renderDocuments(documents) {
     const list = document.getElementById('documents-list');
     if (!list) return;
@@ -461,34 +451,6 @@ async function sendMessage() {
         }
     } catch (error) { console.error('Send message error:', error); }
     finally { if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Envoyer'; } }
-}
-
-async function acceptQuote(quoteId) {
-    const token = localStorage.getItem('vnk-token');
-    if (!confirm('Voulez-vous accepter ce devis ? Un contrat vous sera envoyé pour signature.')) return;
-    try {
-        const res = await fetch('/api/quotes/' + quoteId + '/accept', { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token } });
-        if (res.ok) loadAllData();
-    } catch (error) { console.error('Accept quote error:', error); }
-}
-
-async function payInvoice(invoiceId) {
-    const token = localStorage.getItem('vnk-token');
-    try {
-        const res = await fetch('/api/payments/create-session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({ invoiceId })
-        });
-        const data = await res.json();
-        if (data.url) {
-            window.location.href = data.url;
-        } else {
-            alert('Paiement en ligne bientôt disponible. Contactez VNK à vnkautomatisation@gmail.com pour arranger le paiement.');
-        }
-    } catch (error) {
-        alert('Paiement en ligne bientôt disponible. Contactez VNK à vnkautomatisation@gmail.com');
-    }
 }
 
 async function downloadPDF(type, id, number) {
@@ -545,28 +507,221 @@ function updateMessageBadge(count) {
     badge.style.display = count > 0 ? 'flex' : 'none';
 }
 
-// ─── Tri et filtres ───────────────────────────
-const _sortState = { quotes: 'desc', invoices: 'desc', contracts: 'desc' };
+// ═══════════════════════════════════════════════
+// MODAL MAISON — remplace alert() et confirm()
+// ═══════════════════════════════════════════════
+function _ensureModal() {
+    if (document.getElementById('vnk-modal')) return;
+    const el = document.createElement('div');
+    el.id = 'vnk-modal';
+    el.style.cssText = 'display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.55);backdrop-filter:blur(3px);align-items:center;justify-content:center';
+    el.innerHTML = `
+        <div id="vnk-modal-box" style="background:white;border-radius:16px;padding:2rem;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);position:relative">
+            <div id="vnk-modal-icon" style="text-align:center;margin-bottom:1rem"></div>
+            <h3 id="vnk-modal-title" style="font-size:1.05rem;font-weight:700;color:#0F172A;margin-bottom:0.5rem;text-align:center"></h3>
+            <p id="vnk-modal-msg" style="font-size:0.88rem;color:#64748B;text-align:center;line-height:1.5;margin-bottom:1.5rem"></p>
+            <div id="vnk-modal-stripe" style="margin-bottom:1.25rem;display:none">
+                <div id="vnk-card-element" style="padding:0.75rem;border:1.5px solid #E2E8F0;border-radius:8px;background:#F8FAFC"></div>
+                <div id="vnk-card-error" style="color:#E74C3C;font-size:0.8rem;margin-top:0.4rem"></div>
+            </div>
+            <div id="vnk-modal-btns" style="display:flex;gap:0.75rem;justify-content:center"></div>
+        </div>`;
+    document.body.appendChild(el);
+    el.addEventListener('click', e => { if (e.target === el) _closeModal(); });
+}
+
+function _closeModal() {
+    const m = document.getElementById('vnk-modal');
+    if (m) m.style.display = 'none';
+}
+
+// showInfo(title, msg, icon?)
+function showInfo(title, msg, icon) {
+    _ensureModal();
+    const icons = { success: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>', error: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#E74C3C" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>', info: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' };
+    document.getElementById('vnk-modal-icon').innerHTML = icons[icon || 'info'] || '';
+    document.getElementById('vnk-modal-title').textContent = title;
+    document.getElementById('vnk-modal-msg').textContent = msg;
+    document.getElementById('vnk-modal-stripe').style.display = 'none';
+    document.getElementById('vnk-modal-btns').innerHTML = '<button onclick="_closeModal()" style="padding:0.6rem 1.75rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">OK</button>';
+    document.getElementById('vnk-modal').style.display = 'flex';
+}
+
+// showConfirm(title, msg, onConfirm)
+function showConfirm(title, msg, onConfirm) {
+    _ensureModal();
+    document.getElementById('vnk-modal-icon').innerHTML = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+    document.getElementById('vnk-modal-title').textContent = title;
+    document.getElementById('vnk-modal-msg').textContent = msg;
+    document.getElementById('vnk-modal-stripe').style.display = 'none';
+    document.getElementById('vnk-modal-btns').innerHTML =
+        '<button onclick="_closeModal()" style="padding:0.6rem 1.5rem;background:white;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">Annuler</button>' +
+        '<button id="vnk-modal-confirm" style="padding:0.6rem 1.5rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">Confirmer</button>';
+    document.getElementById('vnk-modal-confirm').onclick = () => { _closeModal(); onConfirm(); };
+    document.getElementById('vnk-modal').style.display = 'flex';
+}
+
+// ═══════════════════════════════════════════════
+// STRIPE — paiement intégré
+// ═══════════════════════════════════════════════
+const _stripeKey = 'pk_test_51TErqtRnDD0deTI4BLVRIDRe8Jy1pfud8ibIoAXUgTi89OH7EQOVcn22KeE9DX8sDeTPiJB7lMyfvhRaRHTILbs600iS6ESs4W';
+let _stripe = null, _cardElement = null;
+
+function _initStripe() {
+    if (_stripe) return;
+    if (typeof Stripe !== 'undefined') _stripe = Stripe(_stripeKey);
+}
+
+async function payInvoice(invoiceId, amountTtc) {
+    _initStripe();
+    if (!_stripe) { showInfo('Paiement indisponible', 'Stripe n\'est pas chargé. Rechargez la page.', 'error'); return; }
+    const token = localStorage.getItem('vnk-token');
+
+    _ensureModal();
+    const amount = amountTtc ? formatCurrency(amountTtc) : '...';
+    document.getElementById('vnk-modal-icon').innerHTML = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
+    document.getElementById('vnk-modal-title').textContent = 'Paiement sécurisé';
+    document.getElementById('vnk-modal-msg').textContent = 'Montant : ' + amount + ' CAD (TTC)';
+    document.getElementById('vnk-modal-stripe').style.display = 'block';
+    document.getElementById('vnk-card-error').textContent = '';
+    document.getElementById('vnk-modal-btns').innerHTML =
+        '<button onclick="_closeModal()" style="padding:0.6rem 1.5rem;background:white;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">Annuler</button>' +
+        '<button id="vnk-pay-btn" style="padding:0.6rem 1.5rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">Payer maintenant</button>';
+    document.getElementById('vnk-modal').style.display = 'flex';
+
+    // Monter le widget Stripe
+    const elements = _stripe.elements();
+    _cardElement = elements.create('card', { style: { base: { fontSize: '15px', color: '#1E293B', '::placeholder': { color: '#CBD5E0' } } } });
+    _cardElement.mount('#vnk-card-element');
+
+    document.getElementById('vnk-pay-btn').onclick = async () => {
+        const btn = document.getElementById('vnk-pay-btn');
+        btn.disabled = true; btn.textContent = 'Traitement...';
+        try {
+            // Créer le payment intent
+            const r = await fetch('/api/payments/create-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                body: JSON.stringify({ invoice_id: invoiceId })
+            });
+            const d = await r.json();
+            if (!d.success || !d.clientSecret) {
+                document.getElementById('vnk-card-error').textContent = d.message || 'Erreur création paiement.';
+                btn.disabled = false; btn.textContent = 'Payer maintenant'; return;
+            }
+            // Confirmer avec Stripe
+            const { error, paymentIntent } = await _stripe.confirmCardPayment(d.clientSecret, {
+                payment_method: { card: _cardElement }
+            });
+            if (error) {
+                document.getElementById('vnk-card-error').textContent = error.message;
+                btn.disabled = false; btn.textContent = 'Payer maintenant';
+            } else if (paymentIntent.status === 'succeeded') {
+                _closeModal();
+                showInfo('Paiement réussi !', 'Votre paiement a été traité avec succès. La facture sera mise à jour sous peu.', 'success');
+                setTimeout(() => loadAllData(), 2000);
+            }
+        } catch (e) {
+            document.getElementById('vnk-card-error').textContent = 'Erreur de connexion.';
+            btn.disabled = false; btn.textContent = 'Payer maintenant';
+        }
+    };
+}
+
+async function acceptQuote(quoteId) {
+    showConfirm(
+        'Accepter ce devis ?',
+        'En acceptant ce devis, un contrat de service vous sera envoyé pour signature électronique.',
+        async () => {
+            const token = localStorage.getItem('vnk-token');
+            const res = await fetch('/api/quotes/' + quoteId + '/accept', { method: 'PUT', headers: { Authorization: 'Bearer ' + token } });
+            if (res.ok) {
+                showInfo('Devis accepté !', 'Un contrat vous sera envoyé pour signature prochainement.', 'success');
+                loadAllData();
+            } else {
+                showInfo('Erreur', 'Impossible d\'accepter ce devis. Réessayez.', 'error');
+            }
+        }
+    );
+}
+
+async function signContract(contractId) {
+    const token = localStorage.getItem('vnk-token');
+    try {
+        const r = await fetch('/api/contracts/' + contractId + '/signing-url', { headers: { Authorization: 'Bearer ' + token } });
+        const d = await r.json();
+        if (d.success && d.signingUrl) {
+            showConfirm('Signer ce contrat', 'Vous allez être redirigé vers HelloSign pour signer ce contrat électroniquement.', () => window.open(d.signingUrl, '_blank'));
+        } else {
+            showInfo('Signature indisponible', 'Le lien de signature n\'est pas encore disponible. Contactez VNK à vnkautomatisation@gmail.com', 'info');
+        }
+    } catch { showInfo('Erreur', 'Impossible d\'obtenir le lien de signature.', 'error'); }
+}
+
+// ═══════════════════════════════════════════════
+// TRI — dropdown multi-options
+// ═══════════════════════════════════════════════
+const _sortState = {};
+let _sortDropdownOpen = null;
+
+const _sortOptions = {
+    quotes: [['date-desc', 'Date (récent)'], ['date-asc', 'Date (ancien)'], ['name-asc', 'Nom A→Z'], ['name-desc', 'Nom Z→A'], ['amount-desc', 'Montant ↓'], ['amount-asc', 'Montant ↑']],
+    invoices: [['date-desc', 'Date (récent)'], ['date-asc', 'Date (ancien)'], ['name-asc', 'Nom A→Z'], ['name-desc', 'Nom Z→A'], ['amount-desc', 'Montant ↓'], ['amount-asc', 'Montant ↑']],
+    contracts: [['date-desc', 'Date (récent)'], ['date-asc', 'Date (ancien)'], ['name-asc', 'Nom A→Z'], ['name-desc', 'Nom Z→A']]
+};
 
 function toggleSort(type) {
-    const dir = _sortState[type] === 'desc' ? 'asc' : 'desc';
-    _sortState[type] = dir;
-    const label = document.getElementById(type.replace('s', '') + '-sort-label') ||
-        document.getElementById(type.slice(0, -1) + '-sort-label');
-    const btn = document.getElementById(type.slice(0, -1) + '-sort-btn') ||
-        document.getElementById(type + '-sort-btn');
-    if (label) label.textContent = 'Date ' + (dir === 'desc' ? '↓' : '↑');
-    if (btn) btn.classList.toggle('active', dir === 'asc');
+    const existingDropdown = document.getElementById('sort-dropdown-' + type);
+    if (existingDropdown) { existingDropdown.remove(); _sortDropdownOpen = null; return; }
+    if (_sortDropdownOpen) {
+        const old = document.getElementById('sort-dropdown-' + _sortDropdownOpen);
+        if (old) old.remove();
+    }
+    _sortDropdownOpen = type;
+    const btn = document.getElementById(type.slice(0, -1) + '-sort-btn') || document.getElementById(type + '-sort-btn');
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const dropdown = document.createElement('div');
+    dropdown.id = 'sort-dropdown-' + type;
+    dropdown.style.cssText = 'position:fixed;z-index:9999;background:white;border:1.5px solid #E2E8F0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:180px;padding:4px 0;top:' + (rect.bottom + 4) + 'px;right:' + (window.innerWidth - rect.right) + 'px';
+    const current = _sortState[type] || 'date-desc';
+    dropdown.innerHTML = _sortOptions[type].map(([val, label]) =>
+        '<div onclick="applySort(\'' + type + '\',\'' + val + '\')" style="padding:8px 14px;font-size:0.83rem;cursor:pointer;color:' + (current === val ? '#1B4F8A' : '#1E293B') + ';font-weight:' + (current === val ? '600' : '400') + ';display:flex;align-items:center;gap:8px" onmouseover="this.style.background=\'#F1F5F9\'" onmouseout="this.style.background=\'transparent\'">' +
+        (current === val ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '<span style="width:13px"></span>') +
+        label + '</div>'
+    ).join('');
+    document.body.appendChild(dropdown);
+    setTimeout(() => document.addEventListener('click', function _close(e) {
+        if (!dropdown.contains(e.target) && e.target !== btn) {
+            dropdown.remove(); _sortDropdownOpen = null;
+            document.removeEventListener('click', _close);
+        }
+    }), 0);
+}
+
+function applySort(type, val) {
+    _sortState[type] = val;
+    const dropdown = document.getElementById('sort-dropdown-' + type);
+    if (dropdown) { dropdown.remove(); _sortDropdownOpen = null; }
+    const labelMap = { 'date-desc': 'Date ↓', 'date-asc': 'Date ↑', 'name-asc': 'Nom A→Z', 'name-desc': 'Nom Z→A', 'amount-desc': 'Montant ↓', 'amount-asc': 'Montant ↑' };
+    const labelEl = document.getElementById(type.slice(0, -1) + '-sort-label') || document.getElementById(type + '-sort-label');
+    if (labelEl) labelEl.textContent = labelMap[val] || val;
+    const btn = document.getElementById(type.slice(0, -1) + '-sort-btn') || document.getElementById(type + '-sort-btn');
+    if (btn) btn.classList.toggle('active', val !== 'date-desc');
     if (type === 'quotes') filterQuotes();
     else if (type === 'invoices') filterInvoices();
     else if (type === 'contracts') filterContracts();
 }
 
-function sortByDate(arr, field, dir) {
+function _applySort(arr, val, numField) {
     return [...arr].sort((a, b) => {
-        const da = new Date(a[field] || a.created_at);
-        const db = new Date(b[field] || b.created_at);
-        return dir === 'desc' ? db - da : da - db;
+        if (val === 'date-desc') return new Date(b.created_at) - new Date(a.created_at);
+        if (val === 'date-asc') return new Date(a.created_at) - new Date(b.created_at);
+        if (val === 'name-asc') return (a.title || '').localeCompare(b.title || '');
+        if (val === 'name-desc') return (b.title || '').localeCompare(a.title || '');
+        if (val === 'amount-desc') return parseFloat(b[numField] || 0) - parseFloat(a[numField] || 0);
+        if (val === 'amount-asc') return parseFloat(a[numField] || 0) - parseFloat(b[numField] || 0);
+        return 0;
     });
 }
 
@@ -576,7 +731,7 @@ function filterQuotes() {
     let list = window._allQuotes || [];
     if (status !== 'all') list = list.filter(q => q.status === status);
     if (search) list = list.filter(q => ((q.quote_number || '') + ' ' + (q.title || '')).toLowerCase().includes(search));
-    list = sortByDate(list, 'created_at', _sortState.quotes);
+    list = _applySort(list, _sortState.quotes || 'date-desc', 'amount_ttc');
     renderQuotes(list);
 }
 
@@ -586,7 +741,7 @@ function filterInvoices() {
     let list = window._allInvoices || [];
     if (status !== 'all') list = list.filter(i => i.status === status);
     if (search) list = list.filter(i => ((i.invoice_number || '') + ' ' + (i.title || '')).toLowerCase().includes(search));
-    list = sortByDate(list, 'created_at', _sortState.invoices);
+    list = _applySort(list, _sortState.invoices || 'date-desc', 'amount_ttc');
     renderInvoices(list);
 }
 
@@ -596,6 +751,6 @@ function filterContracts() {
     let list = window._allContracts || [];
     if (status !== 'all') list = list.filter(c => c.status === status || (status === 'pending_signature' && c.status === 'pending'));
     if (search) list = list.filter(c => ((c.contract_number || '') + ' ' + (c.title || '')).toLowerCase().includes(search));
-    list = sortByDate(list, 'created_at', _sortState.contracts);
+    list = _applySort(list, _sortState.contracts || 'date-desc', 'amount_ttc');
     renderPortalContracts(list);
 }
