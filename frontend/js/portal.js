@@ -93,15 +93,16 @@ async function loadAllData() {
     const token = localStorage.getItem('vnk-token');
     if (!token) return;
 
-    try {
-        // Helper fetch avec gestion 401
-        const authFetch = async (url) => {
+    const authFetch = async (url) => {
+        try {
             const r = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
             if (r.status === 401 || r.status === 403) { logout(); return null; }
             if (!r.ok) return null;
             return r.json();
-        };
+        } catch (e) { return null; }
+    };
 
+    try {
         const [dash, quotes, invoices, messages, docs, mandates, contracts] = await Promise.all([
             authFetch('/api/clients/dashboard'),
             authFetch('/api/quotes'),
@@ -126,12 +127,15 @@ async function loadAllData() {
         if (invoices) { window._allInvoices = invoices.invoices || []; renderInvoices(window._allInvoices); }
         if (docs) renderDocuments(docs.documents || []);
         if (mandates) renderMandates(mandates.mandates || []);
+
         if (contracts) {
             window._allContracts = contracts.contracts || [];
             renderPortalContracts(window._allContracts);
-            const pendingC = window._allContracts.filter(c => c.status === 'pending_signature').length;
-            if (pendingC > 0) showBadge('badge-contracts', pendingC);
+            const pending = window._allContracts.filter(c => c.status === 'pending_signature').length;
+            if (pending > 0) showBadge('badge-contracts', pending);
+            document.getElementById('stat-contracts') && (document.getElementById('stat-contracts').textContent = window._allContracts.length);
         }
+
         if (messages) {
             renderMessages(messages.messages || []);
             const unread = (messages.messages || []).filter(m => !m.is_read && m.sender === 'vnk').length;
@@ -139,7 +143,6 @@ async function loadAllData() {
             if (unread > 0) showBadge('badge-messages', unread);
         }
 
-        // Charger profil
         const user = JSON.parse(localStorage.getItem('vnk-user') || '{}');
         renderProfile(user);
 
@@ -168,39 +171,35 @@ function showTab(tabName) {
     };
     const mobileTitle = document.getElementById('mobile-tab-title');
     if (mobileTitle) mobileTitle.textContent = titles[tabName] || '';
-    if (tabName === 'contracts' && !window._allContracts) loadPortalContracts();
     window.scrollTo(0, 0);
 }
 
-// ─── Profil client ────────────────────────────
+// ─── Profil ──────────────────────────────────
 function renderProfile(user) {
     const el = document.getElementById('profile-content');
     if (!el) return;
+    const pRow = (l, v) => `<div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:0.5px solid #E2E8F0;font-size:0.83rem"><span style="color:#64748B">${l}</span><span style="font-weight:600;color:#1E293B">${v || '—'}</span></div>`;
     el.innerHTML = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1rem">
             <div style="background:#F8FAFC;border-radius:10px;padding:1.25rem;border:1px solid #E2E8F0">
-                <h4 style="font-size:0.82rem;font-weight:700;color:#1B4F8A;letter-spacing:.05em;margin-bottom:1rem">INFORMATIONS PERSONNELLES</h4>
-                ${pRow('Nom complet', user.name || '—')}
-                ${pRow('Courriel', user.email || '—')}
-                ${pRow('Entreprise', user.company || '—')}
+                <h4 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;letter-spacing:.05em;margin-bottom:1rem;text-transform:uppercase">Informations personnelles</h4>
+                ${pRow('Nom complet', user.name)}
+                ${pRow('Courriel', user.email)}
+                ${pRow('Entreprise', user.company)}
             </div>
             <div style="background:#F8FAFC;border-radius:10px;padding:1.25rem;border:1px solid #E2E8F0">
-                <h4 style="font-size:0.82rem;font-weight:700;color:#1B4F8A;letter-spacing:.05em;margin-bottom:1rem">COMPTE VNK</h4>
+                <h4 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;letter-spacing:.05em;margin-bottom:1rem;text-transform:uppercase">Compte VNK</h4>
                 ${pRow('Portail', 'Actif')}
-                ${pRow('Membre depuis', user.created_at ? new Date(user.created_at).toLocaleDateString('fr-CA') : '2026')}
                 ${pRow('Langue', 'Français')}
+                ${pRow('Contrats', (window._allContracts || []).length + ' contrat(s)')}
             </div>
         </div>
-        <div style="margin-top:1rem;background:#EBF5FB;border-radius:10px;padding:1rem 1.25rem;border-left:3px solid #1B4F8A;font-size:0.82rem;color:#1B4F8A">
-            Pour modifier vos informations ou changer votre mot de passe, contactez VNK Automatisation Inc. à <strong>yan.verone@vnk.ca</strong>
+        <div style="background:#EBF5FB;border-radius:10px;padding:1rem 1.25rem;border-left:3px solid #1B4F8A;font-size:0.82rem;color:#1B4F8A">
+            Pour modifier vos informations ou changer votre mot de passe, contactez VNK à <strong>yan.verone@vnk.ca</strong>
         </div>`;
 }
-function pRow(label, value) {
-    return `<div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:0.5px solid #E2E8F0;font-size:0.83rem">
-        <span style="color:#64748B">${label}</span><span style="font-weight:600;color:#1E293B">${value}</span></div>`;
-}
 
-// ─── Tri + recherche devis ────────────────────
+// ─── Filtres devis ────────────────────────────
 function filterQuotes() {
     const search = (document.getElementById('quote-search')?.value || '').toLowerCase();
     const status = document.getElementById('quote-filter')?.value || 'all';
@@ -210,7 +209,7 @@ function filterQuotes() {
     renderQuotes(list);
 }
 
-// ─── Tri + recherche factures ─────────────────
+// ─── Filtres factures ─────────────────────────
 function filterInvoices() {
     const search = (document.getElementById('invoice-search')?.value || '').toLowerCase();
     const status = document.getElementById('invoice-filter')?.value || 'all';
@@ -220,34 +219,35 @@ function filterInvoices() {
     renderInvoices(list);
 }
 
-// ─── Contrats portail client ──────────────────
-async function loadPortalContracts() {
-    const token = localStorage.getItem('vnk-token');
-    try {
-        const res = await fetch('/api/contracts', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (!res.ok) return;
-        const data = await res.json();
-        window._allContracts = data.contracts || [];
-        renderPortalContracts(window._allContracts);
-    } catch (e) { console.error('loadPortalContracts:', e); }
+// ─── Filtres contrats ─────────────────────────
+function filterContracts() {
+    const search = (document.getElementById('contract-search')?.value || '').toLowerCase();
+    const status = document.getElementById('contract-filter')?.value || 'all';
+    let list = window._allContracts || [];
+    if (status !== 'all') list = list.filter(c => c.status === status);
+    if (search) list = list.filter(c => (c.contract_number + ' ' + c.title).toLowerCase().includes(search));
+    renderPortalContracts(list);
 }
 
+// ─── Render contrats portail ──────────────────
 function renderPortalContracts(contracts) {
     const list = document.getElementById('contracts-list');
     if (!list) return;
-    if (!contracts.length) {
+    if (!contracts || !contracts.length) {
         list.innerHTML = `<div class="portal-empty-state">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <p>Aucun contrat disponible.</p></div>`; return;
+            <p>Aucun contrat disponible.</p></div>`;
+        return;
     }
     const sl = { draft: 'Brouillon', pending_signature: 'En attente de signature', viewed: 'Consulté', signed: 'Signé' };
     const sc = { draft: '#94A3B8', pending_signature: '#D97706', viewed: '#2E86AB', signed: '#27AE60' };
-    list.innerHTML = contracts.map(c => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border:1px solid #E2E8F0;border-radius:10px;margin-bottom:0.75rem;background:white">
+    list.innerHTML = contracts.map(c => {
+        const color = sc[c.status] || '#94A3B8';
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border:1px solid #E2E8F0;border-radius:10px;margin-bottom:0.75rem;background:white">
             <div style="flex:1">
                 <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem">
                     <strong style="font-size:0.9rem">${c.contract_number}</strong>
-                    <span style="background:${sc[c.status] || '#94A3B8'}22;color:${sc[c.status] || '#94A3B8'};font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">${sl[c.status] || c.status}</span>
+                    <span style="background:${color}22;color:${color};font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">${sl[c.status] || c.status}</span>
                 </div>
                 <div style="font-size:0.85rem;color:#1E293B;margin-bottom:0.2rem">${c.title}</div>
                 <div style="font-size:0.75rem;color:#94A3B8">
@@ -261,12 +261,14 @@ function renderPortalContracts(contracts) {
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     Voir
                 </a>
-                ${c.status === 'signed' ? `<a href="/api/contracts/${c.id}/pdf" download style="display:flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;border:1.5px solid #27AE60;border-radius:6px;color:#27AE60;font-size:0.78rem;font-weight:600;text-decoration:none">
+                ${c.status === 'signed' ? `<a href="/api/contracts/${c.id}/pdf" download
+                    style="display:flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;border:1.5px solid #27AE60;border-radius:6px;color:#27AE60;font-size:0.78rem;font-weight:600;text-decoration:none">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     Télécharger
                 </a>` : ''}
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
 
 // ---------- Badge helper ----------
