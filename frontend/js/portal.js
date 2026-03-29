@@ -1,3 +1,4 @@
+// @ts-nocheck
 /* ============================================
    VNK Automatisation Inc. — Portal JavaScript
    Version complète — Mars 2026
@@ -74,7 +75,8 @@ function showDashboard() {
     loadAllData();
     startPolling();
 
-    const savedTab = localStorage.getItem('vnk-portal-tab');
+    // Restaurer onglet + état des filtres/recherches
+    const savedTab = (window.VNKState ? window.VNKState.get('tab') : null) || localStorage.getItem('vnk-portal-tab');
     if (savedTab && savedTab !== 'dashboard') showTab(savedTab);
 }
 
@@ -160,16 +162,17 @@ async function loadAllData() {
             if (el('stat-mandates')) el('stat-mandates').textContent = dash.activeMandates || 0;
             if (el('stat-quotes')) el('stat-quotes').textContent = dash.pendingQuotes || 0;
             if (el('stat-invoices')) el('stat-invoices').textContent = dash.pendingInvoices || 0;
-            if (dash.pendingQuotes > 0) showBadge('badge-quotes', dash.pendingQuotes);
-            if (dash.pendingInvoices > 0) showBadge('badge-invoices', dash.pendingInvoices);
-            if (dash.activeMandates > 0) showBadge('badge-mandates', dash.activeMandates);
+            // Toujours mettre à jour les badges — showBadge gère le masquage si count=0
+            showBadge('badge-quotes', dash.pendingQuotes || 0);
+            showBadge('badge-invoices', dash.pendingInvoices || 0);
+            showBadge('badge-mandates', dash.activeMandates || 0);
             renderActivity(dash.recentActivity || []);
         }
         if (quotes) {
             window._allQuotes = quotes.quotes || [];
             const pendingQuotes = window._allQuotes.filter(q => q.status === 'pending');
             renderQuotes(window._allQuotes);
-            if (pendingQuotes.length > 0) showBadge('badge-quotes', pendingQuotes.length);
+            showBadge('badge-quotes', pendingQuotes.length);
         } else {
             const qlist = el('quotes-list');
             if (qlist) qlist.innerHTML = '<div style="padding:1rem;background:#FEF3C7;border-radius:8px;border-left:3px solid #D97706;font-size:0.85rem;color:#92400E"><strong>Session expirée.</strong> <a href="#" onclick="logout()" style="color:#92400E">Reconnectez-vous</a> pour voir vos devis.</div>';
@@ -178,31 +181,27 @@ async function loadAllData() {
             window._allInvoices = invoices.invoices || [];
             renderInvoices(window._allInvoices);
             const unpaid = window._allInvoices.filter(i => i.status === 'unpaid' || i.status === 'overdue').length;
-            if (unpaid > 0) showBadge('badge-invoices', unpaid);
+            showBadge('badge-invoices', unpaid);
         }
         if (docs) {
             const docsArr = docs.documents || [];
-            window._allDocuments = _buildDocumentsList(docsArr, window._allInvoices || [], window._allContracts || []);
+            window._allDocuments = _buildDocumentsList(docsArr, window._allInvoices || [], window._allContracts || [], window._allQuotes || []);
             renderDocuments(window._allDocuments);
             const unread = _getUnreadDocs(docsArr);
-            const navBadge = document.getElementById('badge-documents');
-            if (navBadge) {
-                if (unread.length > 0) { navBadge.textContent = unread.length; navBadge.style.display = 'inline-block'; }
-                else navBadge.style.display = 'none';
-            }
+            showBadge('badge-documents', unread.length);
         }
         if (mandates) {
             const mArr = mandates.mandates || [];
             window._allMandates = mArr;
-            renderMandates(mArr);
+            filterMandates();
             const activeMandates = mArr.filter(m => m.status === 'active' || m.status === 'in_progress').length;
-            if (activeMandates > 0) showBadge('badge-mandates', activeMandates);
+            showBadge('badge-mandates', activeMandates);
         }
         if (contracts) {
             window._allContracts = contracts.contracts || [];
             renderPortalContracts(window._allContracts);
             const pending = window._allContracts.filter(c => c.status === 'pending_signature' || c.status === 'pending').length;
-            if (pending > 0) showBadge('badge-contracts', pending);
+            showBadge('badge-contracts', pending);
         }
         if (messages) {
             const msgs = messages.messages || [];
@@ -223,6 +222,72 @@ async function loadAllData() {
         // Mettre à jour l'avatar sidebar seulement (pas toute la page profil)
         await _refreshUserFromAPI();
     } catch (error) { console.log('Data loading error:', error); }
+}
+
+
+/* ═══════════════════════════════════════════
+   PAGINATION — système universel
+   Affiche 25 items par page sur tous les onglets
+═══════════════════════════════════════════ */
+const PAGE_SIZE = 25;
+const _pageState = { quotes: 1, invoices: 1, mandates: 1, contracts: 1, documents: 1 };
+
+function _paginate(arr, tab) {
+    const page = _pageState[tab] || 1;
+    const total = arr.length;
+    const pages = Math.ceil(total / PAGE_SIZE);
+    const slice = arr.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    return { slice, page, pages, total };
+}
+
+function _renderPager(tab, pages, page, total, containerEl) {
+    if (!containerEl) return;
+    if (pages <= 1) { containerEl.innerHTML = ''; return; }
+    const from = (page - 1) * _PAGE_SIZE + 1;
+    const to = Math.min(page * _PAGE_SIZE, total);
+
+    // Max 3 numéros : prev, current, next + ... aux extrêmes
+    let numBtns = '';
+    const showFirst = page > 2;
+    const showLast = page < pages - 1;
+    if (showFirst) {
+        numBtns += '<button onclick="_goPage(\'' + tab + '\',1)" style="' + _pagerBtn(false) + '">1</button>';
+        if (page > 3) numBtns += '<span style="padding:0 4px;color:#94A3B8;font-size:0.8rem">…</span>';
+    }
+    for (let p = Math.max(1, page - 1); p <= Math.min(pages, page + 1); p++) {
+        numBtns += '<button onclick="_goPage(\'' + tab + '\',' + p + ')" style="' + _pagerBtn(p === page) + '">' + p + '</button>';
+    }
+    if (showLast) {
+        if (page < pages - 2) numBtns += '<span style="padding:0 4px;color:#94A3B8;font-size:0.8rem">…</span>';
+        numBtns += '<button onclick="_goPage(\'' + tab + '\',' + pages + ')" style="' + _pagerBtn(false) + '">' + pages + '</button>';
+    }
+
+    containerEl.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-top:0.75rem;padding-top:0.5rem;border-top:1px solid #E2E8F0';
+    containerEl.innerHTML = '<span style="font-size:0.75rem;color:#94A3B8">' + from + '–' + to + ' sur ' + total + '</span>'
+        + '<div style="display:flex;align-items:center;gap:0.25rem">'
+        + '<button onclick="_goPage(\'' + tab + '\',' + (page - 1) + ')" ' + (page <= 1 ? 'disabled' : '') + ' style="' + _pagerBtn(false) + '">&lsaquo;</button>'
+        + numBtns
+        + '<button onclick="_goPage(\'' + tab + '\',' + (page + 1) + ')" ' + (page >= pages ? 'disabled' : '') + ' style="' + _pagerBtn(false) + '">&rsaquo;</button>'
+        + '</div>';
+}
+
+
+function _pagerBtn(active) {
+    return 'min-width:32px;height:32px;border:1.5px solid ' + (active ? '#1B4F8A' : '#E2E8F0')
+        + ';background:' + (active ? '#1B4F8A' : 'white')
+        + ';color:' + (active ? 'white' : '#475569')
+        + ';border-radius:6px;cursor:' + (active ? 'default' : 'pointer')
+        + ';font-size:0.8rem;font-weight:600;font-family:inherit';
+}
+
+function _goPage(tab, page) {
+    _pageState[tab] = page;
+    window.scrollTo(0, 0);
+    if (tab === 'quotes') filterQuotes();
+    else if (tab === 'invoices') filterInvoices();
+    else if (tab === 'mandates') filterMandates();
+    else if (tab === 'contracts') filterContracts();
+    else if (tab === 'documents') filterDocuments();
 }
 
 /* ─────────────────────────────────────────────
@@ -389,7 +454,7 @@ function showTab(tabName) {
         });
     }
 
-    // 8. Marquer les documents comme vus
+    // 8. Marquer les documents comme vus → badge disparaît
     if (tabName === 'documents') {
         (window._allDocuments || []).forEach(d => _markDocRead(d.id));
         const badge = document.getElementById('badge-documents');
@@ -404,7 +469,14 @@ function showTab(tabName) {
 
 function showBadge(id, count) {
     const badge = document.getElementById(id);
-    if (badge) { badge.style.display = 'inline-block'; badge.textContent = count; }
+    if (!badge) return;
+    if (count && count > 0) {
+        badge.style.display = 'inline-block';
+        badge.textContent = count;
+    } else {
+        badge.style.display = 'none';
+        badge.textContent = '0';
+    }
 }
 
 function renderProfile(user) {
@@ -421,9 +493,7 @@ function renderProfile(user) {
             <div style="background:white;border-radius:16px;border:1px solid #E2E8F0;padding:2rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:1.5rem">
                 <div style="position:relative;flex-shrink:0">
                     <div id="profile-avatar-preview" style="width:80px;height:80px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#1B4F8A,#2E75B6);display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:800;color:white;border:3px solid #E2E8F0">
-                        ${avatarSrc
-            ? `<img src="${avatarSrc}" style="width:100%;height:100%;object-fit:cover" alt="${name}">`
-            : initials}
+                        ${avatarSrc ? '<img src="' + avatarSrc + '" style="width:100%;height:100%;object-fit:cover" alt="' + name + '">' : initials}
                     </div>
                     <label for="avatar-upload" style="position:absolute;bottom:0;right:0;width:26px;height:26px;background:#1B4F8A;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid white" title="Changer l'avatar">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -434,8 +504,8 @@ function renderProfile(user) {
                     <div style="font-size:1.15rem;font-weight:800;color:#0F172A;margin-bottom:0.15rem">${name}</div>
                     <div style="font-size:0.875rem;color:#64748B;margin-bottom:0.75rem">${user.email || ''}</div>
                     <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-                        ${user.company || user.company_name ? `<span style="background:#EBF5FB;color:#1B4F8A;font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:20px">${user.company || user.company_name}</span>` : ''}
-                        ${user.sector ? `<span style="background:#F0FDF4;color:#16A34A;font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:20px">${user.sector}</span>` : ''}
+                        ${(user.company || user.company_name) ? '<span style="background:#EBF5FB;color:#1B4F8A;font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:20px">' + (user.company || user.company_name) + '</span>' : ''}
+                        ${user.sector ? '<span style="background:#F0FDF4;color:#16A34A;font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:20px">' + user.sector + '</span>' : ''}
                     </div>
                 </div>
                 <span id="avatar-upload-status" style="font-size:0.78rem;color:#27AE60;display:none;margin-left:auto">
@@ -694,6 +764,18 @@ function renderActivity(activities) {
     }).join('');
 }
 
+function filterMandates() {
+    const search = (document.getElementById('mandate-search')?.value || '').toLowerCase();
+    const status = document.getElementById('mandate-filter')?.value || 'all';
+    let list = window._allMandates || [];
+    if (status !== 'all') list = list.filter(m => m.status === status);
+    if (search) { list = list.filter(m => ((m.title || '') + ' ' + (m.description || '')).toLowerCase().includes(search)); _pageState.mandates = 1; }
+    window._filteredMandates = list;
+    const { slice, page, pages, total } = _paginate(list, 'mandates');
+    renderMandates(slice);
+    _renderPager('mandates', pages, page, total, document.getElementById('mandates-list'));
+}
+
 function renderMandates(mandates) {
     const list = document.getElementById('mandates-list');
     if (!list) return;
@@ -710,6 +792,50 @@ function renderMandates(mandates) {
         (m.notes ? '<div style="margin-top:0.75rem;padding:0.6rem 0.75rem;background:var(--color-light-blue);border-radius:6px;font-size:0.82rem;color:var(--color-primary);border-left:3px solid var(--color-primary)"><strong>Note de VNK :</strong> ' + m.notes + '</div>' : '') +
         '</div><div class="portal-item-actions"><span class="portal-status portal-status-' + m.status + '">' + (stl[m.status] || m.status) + '</span></div></div>').join('');
 }
+
+
+/* ─────────────────────────────────────────────
+   PAGINATION — affiche N items par page
+───────────────────────────────────────────── */
+const _PAGE_SIZE = 20;  // Items par page
+
+function _renderPagination(containerId, totalItems, currentPage, onPageChange) {
+    const totalPages = Math.ceil(totalItems / _PAGE_SIZE);
+    if (totalPages <= 1) return '';
+    const pages = [];
+    for (let p = 1; p <= totalPages; p++) {
+        if (p === 1 || p === totalPages || (p >= currentPage - 1 && p <= currentPage + 1)) {
+            pages.push(p);
+        } else if (pages[pages.length - 1] !== '...') {
+            pages.push('...');
+        }
+    }
+    return `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:1rem;padding-top:0.75rem;border-top:1px solid #E2E8F0">
+        <span style="font-size:0.78rem;color:#94A3B8">${totalItems} élément${totalItems > 1 ? 's' : ''}</span>
+        <div style="display:flex;gap:0.25rem;align-items:center">
+            <button onclick="${onPageChange}(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''} 
+                style="padding:4px 10px;border:1.5px solid ${currentPage <= 1 ? '#E2E8F0' : '#1B4F8A'};border-radius:6px;background:white;color:${currentPage <= 1 ? '#CBD5E0' : '#1B4F8A'};cursor:${currentPage <= 1 ? 'default' : 'pointer'};font-size:0.8rem;font-weight:600;font-family:inherit">
+                Préc.
+            </button>
+            ${pages.map(p => p === '...'
+        ? '<span style="padding:4px 6px;color:#94A3B8">…</span>'
+        : '<button onclick="' + onPageChange + '(' + p + ')" style="padding:4px 10px;border:1.5px solid ' + (p === currentPage ? '#1B4F8A' : '#E2E8F0') + ';border-radius:6px;background:' + (p === currentPage ? '#1B4F8A' : 'white') + ';color:' + (p === currentPage ? 'white' : '#64748B') + ';cursor:pointer;font-size:0.8rem;font-weight:600;font-family:inherit">' + p + '</button>'
+    ).join('')}
+            <button onclick="${onPageChange}(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}
+                style="padding:4px 10px;border:1.5px solid ${currentPage >= totalPages ? '#E2E8F0' : '#1B4F8A'};border-radius:6px;background:white;color:${currentPage >= totalPages ? '#CBD5E0' : '#1B4F8A'};cursor:${currentPage >= totalPages ? 'default' : 'pointer'};font-size:0.8rem;font-weight:600;font-family:inherit">
+                Suiv.
+            </button>
+        </div>
+    </div>`;
+}
+
+// Pages courantes par onglet
+let _pageQuotes = 1, _pageInvoices = 1, _pageMandates = 1, _pageContracts = 1, _pageDocuments = 1;
+function _goPageQuotes(p) { _pageQuotes = p; renderQuotes(window._allQuotes || []); }
+function _goPageInvoices(p) { _pageInvoices = p; renderInvoices(window._allInvoices || []); }
+function _goPageMandates(p) { _pageMandates = p; renderMandates(window._allMandates || []); }
+function _goPageContracts(p) { _pageContracts = p; renderPortalContracts(window._allContracts || []); }
+function _goPageDocuments(p) { _pageDocuments = p; renderDocuments(window._allDocuments || []); }
 
 function renderQuotes(quotes) {
     const list = document.getElementById('quotes-list');
@@ -785,9 +911,12 @@ function filterQuotes() {
     const status = document.getElementById('quote-filter')?.value || 'all';
     let list = window._allQuotes || [];
     if (status !== 'all') list = list.filter(q => q.status === status);
-    if (search) list = list.filter(q => ((q.quote_number || '') + ' ' + (q.title || '')).toLowerCase().includes(search));
+    if (search) { list = list.filter(q => ((q.quote_number || '') + ' ' + (q.title || '')).toLowerCase().includes(search)); _pageState.quotes = 1; }
     list = _applySort(list, _sortState.quotes || 'date-desc', 'amount_ttc');
-    renderQuotes(list);
+    window._filteredQuotes = list;
+    const { slice, page, pages, total } = _paginate(list, 'quotes');
+    renderQuotes(slice);
+    _renderPager('quotes', pages, page, total, document.getElementById('quotes-list'));
 }
 
 function renderInvoices(invoices) {
@@ -864,9 +993,12 @@ function filterInvoices() {
     const status = document.getElementById('invoice-filter')?.value || 'all';
     let list = window._allInvoices || [];
     if (status !== 'all') list = list.filter(i => i.status === status);
-    if (search) list = list.filter(i => ((i.invoice_number || '') + ' ' + (i.title || '')).toLowerCase().includes(search));
+    if (search) { list = list.filter(i => ((i.invoice_number || '') + ' ' + (i.title || '')).toLowerCase().includes(search)); _pageState.invoices = 1; }
     list = _applySort(list, _sortState.invoices || 'date-desc', 'amount_ttc');
-    renderInvoices(list);
+    window._filteredInvoices = list;
+    const { slice, page, pages, total } = _paginate(list, 'invoices');
+    renderInvoices(slice);
+    _renderPager('invoices', pages, page, total, document.getElementById('invoices-list'));
 }
 
 function renderPortalContracts(contracts) {
@@ -909,9 +1041,12 @@ function filterContracts() {
     const status = document.getElementById('contract-filter')?.value || 'all';
     let list = window._allContracts || [];
     if (status !== 'all') list = list.filter(c => c.status === status || (status === 'pending_signature' && c.status === 'pending'));
-    if (search) list = list.filter(c => ((c.contract_number || '') + ' ' + (c.title || '')).toLowerCase().includes(search));
+    if (search) { list = list.filter(c => ((c.contract_number || '') + ' ' + (c.title || '')).toLowerCase().includes(search)); _pageState.contracts = 1; }
     list = _applySort(list, _sortState.contracts || 'date-desc', 'amount_ttc');
-    renderPortalContracts(list);
+    window._filteredContracts = list;
+    const { slice, page, pages, total } = _paginate(list, 'contracts');
+    renderPortalContracts(slice);
+    _renderPager('contracts', pages, page, total, document.getElementById('contracts-list'));
 }
 
 /* ── Documents ── */
@@ -919,9 +1054,90 @@ function _getReadDocs() {
     try { return JSON.parse(localStorage.getItem('vnk-read-docs') || '[]'); } catch { return []; }
 }
 
+// Ouvrir un document : modal VNK aperçu + télécharger + marquer lu
+function openDoc(docId) {
+    const doc = (window._allDocuments || []).find(d => String(d.id) === String(docId));
+    if (!doc) return;
+
+    let fileUrl = doc.file_url;
+    if (!fileUrl && doc._invoice_id) fileUrl = '/api/invoices/' + doc._invoice_id + '/pdf';
+    if (!fileUrl && doc._quote_id) fileUrl = '/api/quotes/' + doc._quote_id + '/pdf';
+    if (!fileUrl && doc._contract_id) fileUrl = '/api/contracts/' + doc._contract_id + '/pdf';
+    if (doc._action === 'pdf-invoice' && doc._invoice_id) fileUrl = '/api/invoices/' + doc._invoice_id + '/pdf';
+    if (doc._action === 'pdf-quote' && doc._quote_id) fileUrl = '/api/quotes/' + doc._quote_id + '/pdf';
+    if (doc._action === 'pdf-contract' && doc._contract_id) fileUrl = '/api/contracts/' + doc._contract_id + '/pdf';
+
+    if (!fileUrl) return;
+
+    // Marquer comme lu
+    _markDocRead(docId);
+
+    // Supprimer modale existante
+    var ex = document.getElementById('doc-viewer-modal');
+    if (ex) ex.remove();
+
+    var isPdf = fileUrl.includes('/pdf') || fileUrl.startsWith('data:application/pdf') || fileUrl.toLowerCase().endsWith('.pdf');
+    var isImg = /\.(png|jpg|jpeg|gif|webp)$/i.test(fileUrl) || fileUrl.startsWith('data:image');
+    var dlUrl = fileUrl;
+    var fname = doc.file_name || doc.title + '.pdf';
+    var date = doc.created_at ? new Date(doc.created_at).toLocaleDateString('fr-CA') : '';
+
+    var previewHtml = isPdf
+        ? '<iframe src="' + dlUrl + '#toolbar=1" style="width:100%;height:100%;border:none" title="' + doc.title + '"></iframe>'
+        : isImg
+            ? '<img src="' + dlUrl + '" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;display:block;margin:auto" alt="' + doc.title + '">'
+            : '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:1rem;color:#64748B"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>Aperçu non disponible.<br><small>Téléchargez pour ouvrir ce fichier.</small></p></div>';
+
+    var modal = document.createElement('div');
+    modal.id = 'doc-viewer-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,0.75);display:flex;align-items:center;justify-content:center;padding:1rem';
+    modal.innerHTML = '<div style="background:white;border-radius:14px;width:min(920px,96vw);height:min(87vh,820px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 70px rgba(0,0,0,0.4)">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1.25rem;border-bottom:1px solid #E2E8F0;flex-shrink:0;gap:1rem">'
+        + '<div style="min-width:0;flex:1">'
+        + '<div style="font-size:0.92rem;font-weight:700;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + doc.title + '</div>'
+        + '<div style="font-size:0.72rem;color:#94A3B8;margin-top:2px">' + date + '</div>'
+        + '</div>'
+        + '<div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0">'
+        + '<a href="' + dlUrl + '" download="' + fname + '" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;background:#1B4F8A;color:white;border-radius:7px;font-size:0.78rem;font-weight:600;text-decoration:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Télécharger</a>'
+        + '<button onclick="document.getElementById(\'doc-viewer-modal\').remove()" style="width:32px;height:32px;border:1.5px solid #E2E8F0;border-radius:7px;background:white;cursor:pointer;font-size:1.1rem;color:#64748B;display:flex;align-items:center;justify-content:center;font-family:inherit">×</button>'
+        + '</div>'
+        + '</div>'
+        + '<div style="flex:1;overflow:auto;background:#F8FAFC;padding:4px">' + previewHtml + '</div>'
+        + '</div>';
+
+    modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
+    // Rafraîchir les cartes pour afficher "Lu"
+    renderDocuments(window._allDocuments || []);
+}
+
+// Marquer un doc comme lu — local + API
+function _markDocRead(docId) {
+    var readIds = _getReadDocs();
+    if (readIds.map(String).includes(String(docId))) return; // Déjà lu
+    readIds.push(String(docId));
+    try { localStorage.setItem('vnk_read_docs', JSON.stringify(readIds)); } catch (e) { }
+    // Notifier le serveur
+    var token = localStorage.getItem('vnk-token');
+    if (token) {
+        fetch('/api/documents/' + docId + '/read', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+        }).catch(function () { });
+    }
+    // Mettre à jour le badge sidebar
+    var unread = (window._allDocuments || []).filter(function (d) { return !readIds.includes(String(d.id)); }).length;
+    if (typeof showBadge === 'function') showBadge('badge-documents', unread);
+}
+
 function downloadDoc(id) {
-    const doc = (window._allDocuments || []).find(d => String(d.id) === String(id));
-    if (!doc || !doc.file_url) return;
+    const doc = (window._allDocuments || []).find(d => String(d.id) === String(id) || String(d._synth_id) === String(id));
+    if (!doc) return;
+    // Si pas d'URL mais c'est un PDF synthétique → générer via API
+    if (!doc.file_url && doc._invoice_id) { downloadPDF('invoices', doc._invoice_id, doc.title); return; }
+    if (!doc.file_url && doc._contract_id) { downloadPDF('contracts', doc._contract_id, doc.title); return; }
+    if (!doc.file_url && doc._quote_id) { downloadPDF('quotes', doc._quote_id, doc.title); return; }
+    if (!doc.file_url) return;
     _markDocRead(id);
     _updateDocItem(id);
     if (doc.file_url.startsWith('data:')) {
@@ -960,11 +1176,38 @@ window._docSearch = '';
 
 function filterDocuments() {
     const search = (document.getElementById('doc-search')?.value || '').toLowerCase();
+    const catFilter = document.getElementById('doc-cat-filter')?.value || 'all';
+    const readFilter = document.getElementById('doc-read-filter')?.value || 'all';
+    if (search || catFilter !== 'all' || readFilter !== 'all') _pageState.documents = 1;
     window._docSearch = search;
+    window._docFilterCat = catFilter === 'all' ? 'Tous' : catFilter;
+    window._docFilterRead = readFilter;
+    // Sauvegarder l'état
+    if (window.VNKState) {
+        window.VNKState.save('doc_search', search);
+        window.VNKState.save('doc_cat', catFilter);
+        window.VNKState.save('doc_read', readFilter);
+    }
     let list = window._allDocuments || [];
     if (search) list = list.filter(d => (d.title || '').toLowerCase().includes(search) || (d.description || '').toLowerCase().includes(search));
+    if (catFilter !== 'all') list = list.filter(d => _docCategory(d) === catFilter);
+    if (readFilter !== 'all') {
+        const readIds = _getReadDocs().map(String);
+        if (readFilter === 'unread') list = list.filter(d => !readIds.includes(String(d.id)));
+        else if (readFilter === 'read') list = list.filter(d => readIds.includes(String(d.id)));
+    }
     list = _sortDocs(list, window._docSortState);
+    window._filteredDocs = list;
     renderDocuments(list);
+}
+
+function setDocView(mode) {
+    window._docViewMode = mode;
+    const btnList = document.getElementById('doc-view-list');
+    const btnGrid = document.getElementById('doc-view-grid');
+    if (btnList) { btnList.style.background = mode === 'list' ? '#1B4F8A' : 'white'; btnList.style.color = mode === 'list' ? 'white' : '#64748B'; }
+    if (btnGrid) { btnGrid.style.background = mode === 'grid' ? '#1B4F8A' : 'white'; btnGrid.style.color = mode === 'grid' ? 'white' : '#64748B'; }
+    filterDocuments();
 }
 
 function _sortDocs(arr, val) {
@@ -1009,7 +1252,7 @@ function applyDocSort(val) {
     filterDocuments();
 }
 
-function _buildDocumentsList(docs, invoices, contracts) {
+function _buildDocumentsList(docs, invoices, contracts, quotes) {
     const result = [...docs];
     const existingIds = new Set(docs.map(d => d._synth_id || String(d.id)));
     (invoices || []).filter(inv => inv.status === 'paid' || inv.status === 'cancelled').forEach(inv => {
@@ -1018,27 +1261,56 @@ function _buildDocumentsList(docs, invoices, contracts) {
             result.push({ id: sid, _synth_id: sid, _synth: true, title: inv.invoice_number + (inv.title ? ' — ' + inv.title : ''), description: 'Facture ' + (inv.status === 'paid' ? 'payée' : 'annulée') + ' · ' + formatCurrency(inv.amount_ttc), file_type: 'pdf', file_name: inv.invoice_number + '.pdf', file_url: null, _invoice_id: inv.id, created_at: inv.paid_at || inv.created_at, _category: 'Factures', _action: 'pdf-invoice' });
         }
     });
+    // Ajouter les devis acceptés
+    (quotes || []).filter(q => q.status === 'accepted' || q.status === 'approved').forEach(q => {
+        const sid = 'q-' + q.id;
+        if (!existingIds.has(sid)) {
+            result.push({
+                id: sid, _synth_id: sid, _synth: true,
+                title: q.quote_number + (q.title ? ' — ' + q.title : ''),
+                description: 'Devis accepté · ' + formatCurrency(q.amount_ttc || q.total_ttc || 0),
+                file_type: 'pdf', file_name: q.quote_number + '.pdf',
+                file_url: '/api/quotes/' + q.id + '/pdf',
+                _quote_id: q.id, created_at: q.accepted_at || q.created_at,
+                _category: 'Devis', _action: 'pdf-quote'
+            });
+            existingIds.add(sid);
+        }
+    });
+
     (contracts || []).filter(ct => ct.status === 'signed').forEach(ct => {
         const sid = 'ct-' + ct.id;
         if (!existingIds.has(sid)) {
             result.push({ id: sid, _synth_id: sid, _synth: true, title: ct.contract_number + (ct.title ? ' — ' + ct.title : ''), description: 'Contrat signé le ' + (ct.signed_at ? new Date(ct.signed_at).toLocaleDateString('fr-CA') : '—'), file_type: 'pdf', file_name: ct.contract_number + '.pdf', file_url: '/api/contracts/' + ct.id + '/pdf', _contract_id: ct.id, created_at: ct.signed_at || ct.created_at, _category: 'Contrats', _action: 'pdf-contract' });
         }
     });
+    // Devis acceptés → catégorie Devis
+    (quotes || []).filter(q => q.status === 'accepted').forEach(q => {
+        const sid = 'q-' + q.id;
+        if (!existingIds.has(sid)) {
+            result.push({ id: sid, _synth_id: sid, _synth: true, title: q.quote_number + (q.title ? ' — ' + q.title : ''), description: 'Devis accepté · ' + formatCurrency(q.amount_ttc), file_type: 'pdf', file_name: q.quote_number + '.pdf', file_url: '/api/quotes/' + q.id + '/pdf', _quote_id: q.id, created_at: q.accepted_at || q.updated_at || q.created_at, _category: 'Devis', _action: 'pdf-quote' });
+        }
+    });
     return result;
 }
 
 function _docCategory(doc) {
+    // Priorité 1 : catégorie explicite en DB (champ category)
+    if (doc.category) return doc.category;
+    // Priorité 2 : catégorie synthétique (factures payées auto, devis acceptés auto)
     if (doc._category) return doc._category;
+    // Priorité 3 : déduction par titre/type
     const t = (doc.file_type || doc.file_name || '').toLowerCase();
     const title = (doc.title || '').toLowerCase();
     if (title.includes('facture') || title.includes('invoice') || t.includes('facture')) return 'Factures';
     if (title.includes('contrat') || title.includes('contract') || t.includes('contrat')) return 'Contrats';
     if (title.includes('devis') || title.includes('quote')) return 'Devis';
+    if (title.includes('livrable') || title.includes('programme') || title.includes('plc') || title.includes('hmi')) return 'Livrables';
     if (title.includes('rapport') || title.includes('audit') || title.includes('documentation') || title.includes('doc')) return 'Documentation technique';
     return 'Autres documents';
 }
 
-const _catOrder = ['Documentation technique', 'Factures', 'Contrats', 'Devis', 'Autres documents'];
+const _catOrder = ['Documentation technique', 'Livrables', 'Factures', 'Contrats', 'Devis', 'Autres documents'];
 const _catIcons = {
     'Documentation technique': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
     'Factures': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
@@ -1051,12 +1323,24 @@ function renderDocuments(documents) {
     const list = document.getElementById('documents-list');
     if (!list) return;
     if (!documents.length) {
-        list.innerHTML = '<div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg><p>Aucun document disponible pour l\'instant.</p><p style="font-size:0.8rem;color:var(--color-text-light)">Les rapports et livrables apparaîtront ici une fois votre mandat démarré.</p></div>';
+        list.innerHTML = '<div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg><p>Aucun document disponible.</p></div>';
         return;
     }
     const readIds = _getReadDocs();
-    const ftypes = { pdf: 'PDF', doc: 'Word', docx: 'Word', xls: 'Excel', xlsx: 'Excel', png: 'Image', jpg: 'Image', jpeg: 'Image' };
+    const readFilter = window._docFilterRead || 'all';
 
+    const catColors = {
+        'Livrables': { icon: '#EA580C', badgeBg: '#FFEDD5' },
+        'Factures': { icon: '#16A34A', badgeBg: '#DCFCE7' },
+        'Devis': { icon: '#2563EB', badgeBg: '#DBEAFE' },
+        'Contrats': { icon: '#7C3AED', badgeBg: '#EDE9FE' },
+        'Documentation technique': { icon: '#0284C7', badgeBg: '#E0F2FE' },
+        'Autres documents': { icon: '#64748B', badgeBg: '#F1F5F9' }
+    };
+    const defaultColor = { icon: '#64748B', badgeBg: '#F1F5F9' };
+    const CAT_PAGE = 15;
+
+    // Grouper par catégorie
     const groups = {};
     documents.forEach(doc => {
         const cat = _docCategory(doc);
@@ -1064,47 +1348,162 @@ function renderDocuments(documents) {
         groups[cat].push(doc);
     });
 
-    const renderDoc = doc => {
-        const isRead = readIds.map(String).includes(String(doc.id));
-        const size = doc.file_size ? (doc.file_size > 1048576 ? (doc.file_size / 1048576).toFixed(1) + ' Mo' : Math.round(doc.file_size / 1024) + ' Ko') : '';
-        const ext = (doc.file_name || doc.title || '').split('.').pop().toLowerCase();
-        const ftype = ftypes[ext] || 'Fichier';
-        const tcolor = { PDF: '#E74C3C', Word: '#1B4F8A', Excel: '#27AE60', Image: '#8E44AD', Fichier: '#64748B' }[ftype] || '#64748B';
-        return '<div class="portal-list-item" style="' + (!isRead ? 'border-left:3px solid #1B4F8A;background:#F8FBFF;' : '') + 'margin-bottom:0.5rem" id="doc-item-' + doc.id + '">' +
-            '<div style="flex:1;min-width:0">' +
-            '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.2rem">' +
-            '<div class="portal-item-title" style="margin-bottom:0;font-size:0.88rem">' + doc.title + '</div>' +
-            (!isRead ? '<span style="background:#1B4F8A;color:white;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:10px">NOUVEAU</span>' : '') +
-            '<span style="background:' + tcolor + '22;color:' + tcolor + ';font-size:0.68rem;font-weight:600;padding:1px 6px;border-radius:4px">' + ftype + '</span>' +
-            '</div>' +
-            (doc.description ? '<div class="portal-item-desc" style="font-size:0.78rem">' + doc.description + '</div>' : '') +
-            '<div class="portal-item-meta" style="font-size:0.73rem">' +
-            (doc.mandate_title ? '<span style="display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> ' + doc.mandate_title + '</span>' : '') +
-            '<span style="display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ' + new Date(doc.created_at).toLocaleDateString('fr-CA') + '</span>' +
-            (size ? '<span>' + size + '</span>' : '') +
-            (isRead ? '<span style="color:#27AE60;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Lu</span>' : '<span style="color:#D97706;display:inline-flex;align-items:center;gap:3px"><svg width="8" height="8" viewBox="0 0 24 24" fill="#D97706"><circle cx="12" cy="12" r="10"/></svg>Non lu</span>') +
-            '</div></div>' +
-            '<div class="portal-item-actions">' +
-            (doc.file_url ? '<button class="btn btn-primary btn-sm" onclick="downloadDoc(' + doc.id + ')">⬇ Télécharger</button>' : '<span style="font-size:0.75rem;color:#94A3B8">Bientôt dispo</span>') +
-            '</div></div>';
+    if (!window._docCatPage) window._docCatPage = {};
+    if (!window._docCatExpanded) window._docCatExpanded = {};
+
+    // Exposer les fonctions toggle/page globalement (pas d'onclick avec strings complexes)
+    window._docToggleCat = function (cat) {
+        window._docCatExpanded[cat] = window._docCatExpanded[cat] === false ? true : false;
+        renderDocuments(window._allDocuments || []);
+    };
+    window._docSetCatPage = function (cat, p) {
+        window._docCatPage[cat] = p;
+        renderDocuments(window._allDocuments || []);
     };
 
-    list.innerHTML = _catOrder
-        .filter(cat => groups[cat])
-        .map(cat => {
-            const docs = groups[cat];
-            const unread = docs.filter(d => !readIds.includes(d.id)).length;
-            return '<div style="margin-bottom:1.5rem">' +
-                '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;padding-bottom:0.5rem;border-bottom:2px solid #E2E8F0">' +
-                '<span style="color:#1B4F8A">' + (_catIcons[cat] || '') + '</span>' +
-                '<h3 style="font-size:0.88rem;font-weight:700;color:#1B4F8A;margin:0">' + cat + '</h3>' +
-                '<span style="font-size:0.75rem;color:#94A3B8">' + docs.length + ' fichier' + (docs.length > 1 ? 's' : '') + '</span>' +
-                (unread > 0 ? '<span style="background:#1B4F8A;color:white;font-size:0.68rem;font-weight:700;padding:1px 7px;border-radius:10px">' + unread + ' nouveau' + (unread > 1 ? 'x' : '') + '</span>' : '') +
-                '</div>' +
-                docs.map(renderDoc).join('') +
-                '</div>';
-        }).join('');
+    const activeCat = window._docFilterCat || 'Tous';
+    const search = (document.getElementById('doc-search')?.value || '').toLowerCase();
+
+    // ── Carte document ──
+    const renderCard = (doc) => {
+        const isRead = readIds.map(String).includes(String(doc.id));
+        const cat = _docCategory(doc);
+        const colors = catColors[cat] || defaultColor;
+
+        let statusText = '';
+        if (doc.category === 'Factures' || doc._category === 'Factures') statusText = 'Facture payée';
+        else if (doc.category === 'Devis' || doc._category === 'Devis') statusText = 'Devis accepté';
+        else if (doc.category === 'Contrats' || doc._category === 'Contrats') statusText = 'Contrat signé';
+        else if (doc.description) statusText = doc.description.split('·')[0].trim().substring(0, 35);
+
+        let fileUrl = doc.file_url;
+        if (!fileUrl && doc._invoice_id) fileUrl = '/api/invoices/' + doc._invoice_id + '/pdf';
+        if (!fileUrl && doc._quote_id) fileUrl = '/api/quotes/' + doc._quote_id + '/pdf';
+        if (!fileUrl && doc._contract_id) fileUrl = '/api/contracts/' + doc._contract_id + '/pdf';
+        if (doc._action === 'pdf-invoice' && doc._invoice_id) fileUrl = '/api/invoices/' + doc._invoice_id + '/pdf';
+        if (doc._action === 'pdf-quote' && doc._quote_id) fileUrl = '/api/quotes/' + doc._quote_id + '/pdf';
+        if (doc._action === 'pdf-contract' && doc._contract_id) fileUrl = '/api/contracts/' + doc._contract_id + '/pdf';
+
+        const hasFile = !!fileUrl;
+        const date = doc.created_at ? new Date(doc.created_at).toLocaleDateString('fr-CA') : '';
+        const docIdStr = JSON.stringify(doc.id);
+
+        const readBadge = isRead
+            ? '<span style="display:inline-flex;align-items:center;gap:3px;font-size:0.65rem;color:#16A34A;font-weight:600"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Lu</span>'
+            : '<span style="display:inline-flex;align-items:center;gap:3px;font-size:0.65rem;color:#DC2626;font-weight:700"><svg width="7" height="7" viewBox="0 0 24 24" fill="#DC2626"><circle cx="12" cy="12" r="10"/></svg>Non lu</span>';
+
+        const iconHtml = hasFile
+            ? '<div onclick="openDoc(' + docIdStr + ')" style="width:34px;height:34px;flex-shrink:0;border-radius:7px;background:' + colors.badgeBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity 0.15s" onmouseenter="this.style.opacity=\'0.7\'" onmouseleave="this.style.opacity=\'1\'">'
+            + '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="' + colors.icon + '" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>'
+            : '<div style="width:34px;height:34px;flex-shrink:0;border-radius:7px;background:' + colors.badgeBg + ';display:flex;align-items:center;justify-content:center">'
+            + '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="' + colors.icon + '" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>';
+
+        const dlBtn = hasFile
+            ? '<button onclick="downloadDoc(' + docIdStr + ')" style="display:inline-flex;align-items:center;gap:4px;padding:0.35rem 0.7rem;background:' + colors.icon + ';color:white;border:none;border-radius:7px;font-size:0.72rem;font-weight:600;cursor:pointer;font-family:inherit"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Télécharger</button>'
+            : '<span style="font-size:0.7rem;color:#94A3B8;font-style:italic">Bientôt dispo</span>';
+
+        return '<div id="doc-item-' + doc.id + '" style="background:white;border:1.5px solid ' + (isRead ? '#E2E8F0' : colors.icon) + ';border-radius:10px;padding:0.85rem;display:flex;flex-direction:column;gap:0.5rem;position:relative">'
+            + (!isRead ? '<span style="position:absolute;top:-7px;left:10px;background:' + colors.icon + ';color:white;font-size:0.58rem;font-weight:700;padding:1px 8px;border-radius:8px;text-transform:uppercase">Nouveau</span>' : '')
+            + '<div style="display:flex;align-items:flex-start;gap:0.6rem">'
+            + iconHtml
+            + '<div style="flex:1;min-width:0">'
+            + '<div style="font-size:0.82rem;font-weight:700;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + doc.title + '">' + doc.title + '</div>'
+            + '<div style="display:flex;align-items:center;gap:0.4rem;margin-top:2px;flex-wrap:wrap">'
+            + (statusText ? '<span style="font-size:0.7rem;color:' + colors.icon + ';font-weight:500">' + statusText + '</span><span style="color:#E2E8F0">·</span>' : '')
+            + readBadge
+            + '</div>'
+            + '</div>'
+            + '</div>'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;padding-top:0.4rem;border-top:1px solid #F1F5F9">'
+            + '<span style="font-size:0.68rem;color:#94A3B8">' + date + '</span>'
+            + dlBtn
+            + '</div>'
+            + '</div>';
+    };
+
+    // ── Bloc accordéon par catégorie ──
+    const renderCategoryBlock = (cat, docs) => {
+        const colors = catColors[cat] || defaultColor;
+        const unread = docs.filter(d => !readIds.map(String).includes(String(d.id))).length;
+        const isExpanded = window._docCatExpanded[cat] !== false; // Dépli par défaut
+        const catPage = window._docCatPage[cat] || 1;
+        const totalPages = Math.ceil(docs.length / CAT_PAGE);
+        const start = (catPage - 1) * CAT_PAGE;
+        const visibleDocs = isExpanded ? docs.slice(start, start + CAT_PAGE) : [];
+
+        // Index numérique stable pour le cat (évite les guillemets dans onclick)
+        const catIdx = Object.keys(window._docCatExpanded).indexOf(cat);
+
+        // Mini-pagination en bas du bloc
+        let pagerHtml = '';
+        if (isExpanded && totalPages > 1) {
+            pagerHtml = '<div style="display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-top:0.6rem;padding-top:0.5rem;border-top:1px solid #F1F5F9">'
+                + '<button onclick="event.stopPropagation();window._docSetCatPage(' + JSON.stringify(cat) + ',' + Math.max(1, catPage - 1) + ')" '
+                + (catPage <= 1 ? 'disabled' : '')
+                + ' style="width:28px;height:28px;border:1.5px solid #E2E8F0;border-radius:6px;background:white;cursor:pointer;font-family:inherit">&lsaquo;</button>'
+                + '<span style="font-size:0.75rem;color:#64748B;font-weight:600">' + catPage + ' / ' + totalPages + '</span>'
+                + '<button onclick="event.stopPropagation();window._docSetCatPage(' + JSON.stringify(cat) + ',' + Math.min(totalPages, catPage + 1) + ')" '
+                + (catPage >= totalPages ? 'disabled' : '')
+                + ' style="width:28px;height:28px;border:1.5px solid #E2E8F0;border-radius:6px;background:white;cursor:pointer;font-family:inherit">&rsaquo;</button>'
+                + '<span style="font-size:0.7rem;color:#94A3B8">' + docs.length + ' fichier' + (docs.length > 1 ? 's' : '') + '</span>'
+                + '</div>';
+        }
+
+        return '<div style="margin-bottom:0.85rem;border-radius:10px;border:1px solid ' + colors.icon + '28;overflow:hidden">'
+            + '<div onclick="window._docToggleCat(' + JSON.stringify(cat) + ')" style="display:flex;align-items:center;gap:0.6rem;padding:0.7rem 0.9rem;background:' + colors.badgeBg + ';cursor:pointer;user-select:none">'
+            + '<div style="width:26px;height:26px;border-radius:6px;background:' + colors.icon + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+            + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+            + '</div>'
+            + '<span style="font-size:0.85rem;font-weight:700;color:' + colors.icon + ';flex:1">' + cat + '</span>'
+            + '<span style="font-size:0.72rem;color:' + colors.icon + ';opacity:0.65">' + docs.length + ' fichier' + (docs.length > 1 ? 's' : '') + '</span>'
+            + (unread > 0 ? '<span style="background:' + colors.icon + ';color:white;font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">' + unread + ' nouveau' + (unread > 1 ? 'x' : '') + '</span>' : '')
+            + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="' + colors.icon + '" stroke-width="2.5" style="transform:rotate(' + (isExpanded ? '180' : '0') + 'deg);transition:transform 0.2s;flex-shrink:0;margin-left:4px"><polyline points="6 9 12 15 18 9"/></svg>'
+            + '</div>'
+            + (isExpanded
+                ? '<div style="padding:0.75rem;background:white">'
+                + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.6rem">'
+                + (visibleDocs.length ? visibleDocs.map(renderCard).join('') : '<p style="font-size:0.82rem;color:#94A3B8;text-align:center;padding:1rem">Aucun document.</p>')
+                + '</div>'
+                + pagerHtml
+                + '</div>'
+                : '')
+            + '</div>';
+    };
+
+    let html = '';
+
+    if (activeCat === 'Tous') {
+        const allCatKeys = [..._catOrder.filter(c => groups[c]), ...Object.keys(groups).filter(c => !_catOrder.includes(c))];
+        let anyVisible = false;
+        allCatKeys.forEach(cat => {
+            let docs = groups[cat] || [];
+            if (search) docs = docs.filter(d => (d.title || '').toLowerCase().includes(search));
+            if (readFilter === 'unread') docs = docs.filter(d => !readIds.map(String).includes(String(d.id)));
+            else if (readFilter === 'read') docs = docs.filter(d => readIds.map(String).includes(String(d.id)));
+            if (docs.length) { html += renderCategoryBlock(cat, docs); anyVisible = true; }
+        });
+        if (!anyVisible) html = '<p class="portal-empty">Aucun document trouvé.</p>';
+    } else {
+        let docs = groups[activeCat] || [];
+        if (search) docs = docs.filter(d => (d.title || '').toLowerCase().includes(search));
+        if (readFilter === 'unread') docs = docs.filter(d => !readIds.map(String).includes(String(d.id)));
+        else if (readFilter === 'read') docs = docs.filter(d => readIds.map(String).includes(String(d.id)));
+        const total = docs.length;
+        const paged = docs.slice((_pageDocuments - 1) * _PAGE_SIZE, _pageDocuments * _PAGE_SIZE);
+        html = !paged.length
+            ? '<p class="portal-empty">Aucun document dans cette catégorie.</p>'
+            : '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.7rem">' + paged.map(renderCard).join('') + '</div>';
+        if (total > _PAGE_SIZE) {
+            list.innerHTML = html;
+            const pagerEl = document.createElement('div');
+            list.appendChild(pagerEl);
+            _renderPager('documents', Math.ceil(total / _PAGE_SIZE), _pageDocuments, total, pagerEl);
+            return;
+        }
+    }
+    list.innerHTML = html;
 }
+
 
 function _updateDocItem(id) {
     setTimeout(() => {

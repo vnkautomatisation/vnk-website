@@ -1738,7 +1738,15 @@
                 <div style="font-size:0.75rem;color:#99BBDD;font-weight:600">Admin</div>
             </div>
             <div class="topbar-right">
-                <a href="https://vnk-website-production.up.railway.app" target="_blank" style="background:rgba(255,255,255,0.08);color:#99BBDD;border:1px solid rgba(255,255,255,0.15);text-decoration:none;font-size:0.78rem;font-weight:600;padding:0.35rem 0.75rem;border-radius:8px;display:flex;align-items:center;gap:0.4rem" class="topbar-user">
+                <!-- Bouton Actualiser topbar -->
+                <button id="admin-topbar-refresh" onclick="adminRefresh(this)"
+                        style="display:flex;align-items:center;gap:5px;padding:5px 12px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(255,255,255,0.08);cursor:pointer;font-size:0.78rem;font-weight:600;color:rgba(255,255,255,0.85);font-family:inherit;transition:all 0.15s"
+                        onmouseenter="this.style.background='rgba(255,255,255,0.18)'"
+                        onmouseleave="this.style.background='rgba(255,255,255,0.08)'">
+                    <svg id="admin-topbar-refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
+                    Actualiser
+                </button>
+                <a id="admin-site-link" href="#" target="_blank" style="background:rgba(255,255,255,0.08);color:#99BBDD;border:1px solid rgba(255,255,255,0.15);text-decoration:none;font-size:0.78rem;font-weight:600;padding:0.35rem 0.75rem;border-radius:8px;display:flex;align-items:center;gap:0.4rem" class="topbar-user">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
                     Site
                 </a>
@@ -1819,7 +1827,7 @@
                         <span class="sidebar-badge" id="badge-transactions" style="background:var(--success);display:none">0</span>
                     </button>
                     <div class="sidebar-section">Contenu</div>
-                    <button class="sidebar-item" onclick="showSection('documents')">
+                    <button class="sidebar-item" onclick="showSection('documents');document.getElementById('badge-docs-admin') && (document.getElementById('badge-docs-admin').style.display='none')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>
                         Documents
                     </button>
@@ -1900,7 +1908,7 @@
                         <div class="toolbar">
                             <div class="search-box">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-                                <input type="text" id="clients-search" placeholder="Nom, entreprise, courriel..." oninput="filterClients()">
+                                <input type="text" id="clients-search" data-state-key="clients_search" placeholder="Nom, entreprise, courriel..." oninput="filterClients()">
                             </div>
                             <div class="filter-tabs">
                                 <button class="filter-tab active" onclick="setClientFilter('all',this)">Tous</button>
@@ -1931,7 +1939,7 @@
                     </div>
                     <div class="table-wrap">
                         <div class="toolbar">
-                            <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="mandates-search" placeholder="Rechercher un mandat..." oninput="filterTable('mandates')"></div>
+                            <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="mandates-search" data-state-key="mandates_search" placeholder="Rechercher un mandat..." oninput="filterTable('mandates')"></div>
                             <div class="filter-tabs">
                                 <button class="filter-tab active" onclick="setFilter('mandates','all',this)">Tous</button>
                                 <button class="filter-tab" onclick="setFilter('mandates','active',this)">En cours</button>
@@ -1955,7 +1963,7 @@
                     </div>
                     <div class="table-wrap">
                         <div class="toolbar">
-                            <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="quotes-search" placeholder="Rechercher un devis..." oninput="filterTable('quotes')"></div>
+                            <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="quotes-search" data-state-key="quotes_search" placeholder="Rechercher un devis..." oninput="filterTable('quotes')"></div>
                             <div class="filter-tabs">
                                 <button class="filter-tab active" onclick="setFilter('quotes','all',this)">Tous</button>
                                 <button class="filter-tab" onclick="setFilter('quotes','pending',this)">En attente</button>
@@ -1979,7 +1987,7 @@
                     </div>
                     <div class="table-wrap">
                         <div class="toolbar">
-                            <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="invoices-search" placeholder="Rechercher une facture..." oninput="filterTable('invoices')"></div>
+                            <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="invoices-search" data-state-key="invoices_search" placeholder="Rechercher une facture..." oninput="filterTable('invoices')"></div>
                             <div class="filter-tabs">
                                 <button class="filter-tab active" onclick="setFilter('invoices','all',this)">Toutes</button>
                                 <button class="filter-tab" onclick="setFilter('invoices','unpaid',this)">Non payées</button>
@@ -2034,17 +2042,49 @@
                 <!-- ===== DOCUMENTS ===== -->
                 <div class="admin-section" id="section-documents">
                     <div class="section-header">
-                        <div><div class="section-title">Documents</div><div class="section-subtitle">Déposer des livrables — rapports, fichiers, documentation</div></div>
+                        <div>
+                            <div class="section-title">
+                                Documents
+                                <span id="badge-docs-admin" style="display:none;background:#E74C3C;color:white;font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:auto">Nouveau</span>
+                            </div><div class="section-subtitle">Déposer des livrables — rapports, fichiers, documentation</div>
+                        </div>
                         <button class="btn btn-primary" onclick="openModal('modal-new-document')">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                             Déposer un document
                         </button>
                     </div>
+                    <!-- Filtres documents admin -->
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;align-items:center">
+                        <div class="search-box" style="flex:1;min-width:200px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="doc-filter-search" data-state-key="doc_search" placeholder="Rechercher titre, client, catégorie..." oninput="filterTable('documents')"></div>
+                        <select id="doc-filter-client" data-state-key="doc_client" class="form-select" style="min-width:180px;max-width:260px;font-size:0.82rem" onchange="filterTable('documents')"><option value="">Tous les clients</option></select>
+                        <select id="doc-filter-cat" data-state-key="doc_cat" class="form-select" style="min-width:160px;font-size:0.82rem" onchange="filterTable('documents')">
+                            <option value="">Toutes catégories</option>
+                            <option>Documentation technique</option>
+                            <option>Livrables</option>
+                            <option>Factures</option>
+                            <option>Devis</option>
+                            <option>Contrats</option>
+                            <option>Autres documents</option>
+                        </select>
+                        <span id="doc-count-info" style="font-size:0.78rem;color:var(--text-light);white-space:nowrap"></span>
+                    </div>
                     <div class="table-wrap">
-                        <div class="toolbar">
-                            <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="documents-search" placeholder="Rechercher un document..." oninput="filterTable('documents')"></div>
+                        <div class="toolbar" style="justify-content:space-between">
+                            <div style="display:flex;align-items:center;gap:0.5rem">
+                                <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="documents-search" data-state-key="doc_search" placeholder="Rechercher un document..." oninput="filterTable('documents')"></div>
+                            </div>
+                            <!-- Indicateur page + navigation -->
+                            <div class="pagination" id="documents-pag" style="display:none;align-items:center;gap:0.35rem;margin-left:auto">
+                                <span id="documents-pag-info" style="font-size:0.78rem;color:var(--text-light);white-space:nowrap;margin-right:0.3rem"></span>
+                                <div class="page-btns" id="documents-pag-btns" style="display:flex;gap:0.2rem"></div>
+                            </div>
                         </div>
-                        <table><thead><tr><th onclick="sortTable('documents','client_name')">Client ↕</th><th onclick="sortTable('documents','title')">Titre ↕</th><th>Type</th><th>Mandat</th><th onclick="sortTable('documents','created_at')">Déposé le ↕</th><th>Actions</th></tr></thead><tbody id="documents-tbody"></tbody></table>
+                        <table><thead><tr><th onclick="sortTable('documents','client_name')">Client ↕</th><th onclick="sortTable('documents','title')">Titre ↕</th><th>Catégorie</th><th>Mandat</th><th onclick="sortTable('documents','created_at')">Déposé le ↕</th><th>Actions</th></tr></thead><tbody id="documents-tbody"></tbody></table>
+                        <!-- Pagination en bas aussi -->
+                        <div id="documents-pag-bottom" style="padding:0.75rem 1rem;border-top:1px solid var(--border);display:none;align-items:center;justify-content:space-between">
+                            <span id="documents-pag-info-bottom" style="font-size:0.78rem;color:var(--text-light)"></span>
+                            <div id="documents-pag-btns-bottom" style="display:flex;gap:0.2rem"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -2164,7 +2204,7 @@
                         </div>
                         <div class="table-wrap" style="margin-top:1rem">
                             <div class="toolbar">
-                                <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="payments-search" placeholder="Rechercher..." oninput="filterTable('payments')"></div>
+                                <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="payments-search" data-state-key="payments_search" placeholder="Rechercher..." oninput="filterTable('payments')"></div>
                                 <div class="filter-tabs">
                                     <button class="filter-tab active" onclick="setFilter('payments','all',this)">Toutes</button>
                                     <button class="filter-tab" onclick="setFilter('payments','unpaid',this)">Non payées</button>
@@ -2540,8 +2580,36 @@
                     <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nd-client" onchange="loadClientMandates()"><option value="">Sélectionner</option></select></div>
                     <div class="form-group"><label class="form-label">Mandat associé</label><select class="form-select" id="nd-mandate"><option value="">Aucun</option></select></div>
                 </div>
-                <div class="form-group"><label class="form-label">Titre du document *</label><input type="text" class="form-input" id="nd-title" placeholder="Rapport d'intervention — Mars 2026"></div>
-                <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="nd-desc" rows="2"></textarea></div>
+                <div class="form-row">
+                    <div class="form-group" style="flex:2"><label class="form-label">Titre du document *</label><input type="text" class="form-input" id="nd-title" placeholder="Rapport d'intervention — Mars 2026"></div>
+                    <div class="form-group">
+                        <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
+                            Catégorie *
+                            <button type="button" onclick="addCustomCategory('nd-category')" style="font-size:0.72rem;color:var(--primary);background:none;border:none;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:3px;padding:0">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                Nouvelle catégorie
+                            </button>
+                        </label>
+                        <select class="form-select" id="nd-category">
+                            <option value="Documentation technique">Documentation technique</option>
+                            <option value="Livrables">Livrables</option>
+                            <option value="Factures">Factures</option>
+                            <option value="Devis">Devis</option>
+                            <option value="Contrats">Contrats</option>
+                            <option value="Autres documents">Autres documents</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="nd-desc" rows="2" placeholder="Rapport d'audit PLC — mars 2026, configuration Siemens S7-1500..."></textarea></div>
+                <div class="form-group">
+                    <label class="form-label">Statut</label>
+                    <select class="form-select" id="nd-status">
+                        <option value="disponible">Disponible</option>
+                        <option value="en_attente">En attente de signature</option>
+                        <option value="brouillon">Brouillon</option>
+                        <option value="archive">Archivé</option>
+                    </select>
+                </div>
                 <div class="form-group">
                     <label class="form-label">Fichier *</label>
                     <div id="doc-drop-zone" onclick="document.getElementById('nd-file-input').click()" style="border:2px dashed var(--border);border-radius:10px;padding:1.25rem;text-align:center;cursor:pointer;transition:all 0.15s;background:var(--bg)" onmouseenter="this.style.borderColor='var(--primary)';this.style.background='var(--light-blue)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='var(--bg)'">
@@ -2741,7 +2809,7 @@
             try {
                 const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: v('admin-password') }) });
                 const d = await r.json();
-                if (d.success && d.token) { adminToken = d.token; localStorage.setItem('vnk-admin-token', d.token); document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; var _n = document.getElementById('mobile-bottom-nav'); if (_n && window.innerWidth <= 600) _n.style.display = 'block'; loadAllAdmin().then(() => startAdminPolling()); }
+                if (d.success && d.token) { adminToken = d.token; localStorage.setItem('vnk-admin-token', d.token); document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; var _n = document.getElementById('mobile-bottom-nav'); if (_n && window.innerWidth <= 600) _n.style.display = 'block'; loadAllAdmin().then(() => { startAdminPolling(); restoreAdminState(); }); }
                 else { errEl.textContent = d.message || 'Identifiants incorrects.'; errEl.style.display = 'block'; }
             } catch { errEl.textContent = 'Erreur de connexion.'; errEl.style.display = 'block'; }
         });
@@ -2750,7 +2818,17 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             const saved = localStorage.getItem('vnk-admin-token');
-            if (saved) { adminToken = saved; document.getElementById('admin-login').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; var _na = document.getElementById('mobile-bottom-nav'); if (_na && window.innerWidth <= 600) _na.style.display = 'block'; loadAllAdmin().then(() => startAdminPolling()); }
+            if (saved) {
+                adminToken = saved;
+                document.getElementById('admin-login').style.display = 'none';
+                document.getElementById('admin-app').style.display = 'flex';
+                var _na = document.getElementById('mobile-bottom-nav');
+                if (_na && window.innerWidth <= 600) _na.style.display = 'block';
+                loadAllAdmin().then(() => {
+                    startAdminPolling();
+                    restoreAdminState();
+                });
+            }
             // Pré-remplir courriel sauvegardé
             const savedEmail = localStorage.getItem('vnk-admin-email');
             if (savedEmail) { const el = document.getElementById('admin-email'); if (el) { el.value = savedEmail; const rem = document.getElementById('admin-remember'); if (rem) rem.checked = true; } }
@@ -2759,25 +2837,73 @@
             document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
         });
 
+        function restoreAdminState() {
+            try {
+                // Restaurer la section
+                const lastSection = localStorage.getItem('vnk-admin-section');
+                if (lastSection && lastSection !== 'dashboard') showSection(lastSection);
+                // Restaurer état tris/pages/filtres
+                if (window.VNKState && typeof tState !== 'undefined') {
+                    ['documents', 'quotes', 'invoices', 'mandates', 'contracts', 'clients'].forEach(function (t) {
+                        const p = window.VNKState.get(t + '_page');
+                        const s = window.VNKState.get(t + '_sort');
+                        const d = window.VNKState.get(t + '_dir');
+                        if (tState[t]) {
+                            if (p) tState[t].p = p;
+                            if (s) tState[t].s = s;
+                            if (d !== null && d !== undefined) tState[t].d = d;
+                        }
+                    });
+                    // Restaurer inputs de recherche/filtre
+                    var inputs = {
+                        'documents-search': 'doc_search',
+                        'doc-filter-client': 'doc_client',
+                        'doc-filter-cat': 'doc_cat',
+                        'clients-search': 'clients_search',
+                        'quotes-search': 'quotes_search',
+                        'invoices-search': 'invoices_search'
+                    };
+                    Object.keys(inputs).forEach(function (id) {
+                        var val = window.VNKState.get(inputs[id]);
+                        if (val) { var el = document.getElementById(id); if (el) el.value = val; }
+                    });
+                    // Re-rendre la section active avec l'état restauré
+                    var sec = (localStorage.getItem('vnk-admin-section') || 'dashboard').replace('section-', '');
+                    if (sec !== 'dashboard' && sec !== 'messages') {
+                        if (['documents', 'quotes', 'invoices', 'mandates', 'contracts'].includes(sec)) {
+                            filterTable(sec);
+                        }
+                    }
+                }
+            } catch (e) { console.log('restoreAdminState error:', e); }
+        }
+
         function startAdminPolling() {
             if (adminPollingInterval) return;
             adminPollingInterval = setInterval(async () => {
                 try {
-                    // Recharger les messages complets
+                    // Messages
                     const prevUnread = allMessages.reduce((s, t) => s + (t.unread_count || 0), 0);
                     await loadMessages();
                     const newUnread = allMessages.reduce((s, t) => s + (t.unread_count || 0), 0);
-                    // Notifier si nouveau message
                     if (newUnread > prevUnread && typeof vnkNotif !== 'undefined') {
                         const newThread = allMessages.find(t => (t.unread_count || 0) > 0);
                         vnkNotif.newMessage(newThread?.client_name || 'Client', 'Nouveau message reçu');
                     }
-                    // Si une conversation est ouverte, la re-rendre
                     if (typeof _adminCurrentClient !== 'undefined' && _adminCurrentClient) {
                         adminOpenThread(_adminCurrentClient);
                     }
-                } catch { }
-            }, 15000); // Toutes les 15s
+                    // Recharger factures + devis + contrats + documents toutes les 30s
+                    // pour refléter les changements de statut (facture payée → apparaît dans docs)
+                    await Promise.all([loadInvoices(), loadQuotes(), loadContracts()]);
+                    await loadDocuments();
+                    // Re-rendre la section active si pertinent
+                    const activeSection = localStorage.getItem('vnk-admin-section') || 'dashboard';
+                    if (['invoices', 'quotes', 'documents', 'contracts'].includes(activeSection)) {
+                        renderTable(activeSection);
+                    }
+                } catch (e) { }
+            }, 30000); // Toutes les 30s
         }
 
         function updateAdminFloatBadge(count) {
@@ -2794,7 +2920,12 @@
         }
 
         async function adminRefresh(btn) {
-            if (btn) {
+            // Animer aussi le bouton topbar
+            const topbarBtn = document.getElementById('admin-topbar-refresh');
+            const topbarIcon = document.getElementById('admin-topbar-refresh-icon');
+            if (topbarIcon) topbarIcon.style.animation = 'adminSpin 0.8s linear infinite';
+            if (topbarBtn) topbarBtn.disabled = true;
+            if (btn && btn !== topbarBtn) {
                 btn.disabled = true;
                 const svg = btn.querySelector('svg');
                 if (svg) svg.style.animation = 'adminSpin 0.8s linear infinite';
@@ -2805,7 +2936,9 @@
                     adminOpenThread(_adminCurrentClient);
                 }
             } finally {
-                if (btn) {
+                if (topbarIcon) topbarIcon.style.animation = '';
+                if (topbarBtn) topbarBtn.disabled = false;
+                if (btn && btn !== topbarBtn) {
                     btn.disabled = false;
                     const svg = btn.querySelector('svg');
                     if (svg) svg.style.animation = '';
@@ -2829,7 +2962,10 @@
             // Re-peupler les selects avec toutes les données disponibles
             populateClientSelects();
             // Charger le reste
-            await Promise.all([loadDashboard(), loadDocuments(), loadMessages(), loadPayments(), loadContracts(), loadDisputes(), loadRefunds(), loadExpenses(), loadTaxDecls()]);
+            // Charger contrats EN PREMIER (docs synthétiques en dépendent)
+            await Promise.all([loadContracts(), loadPayments()]);
+            // Puis le reste incluant documents (qui agrège factures+devis+contrats)
+            await Promise.all([loadDashboard(), loadDocuments(), loadMessages(), loadDisputes(), loadRefunds(), loadExpenses(), loadTaxDecls()]);
         }
 
         // DASHBOARD
@@ -3049,20 +3185,99 @@
         async function loadMandates() { const d = await api('/mandates'); if (!d.success) return; allMandates = d.mandates || []; renderTable('mandates'); }
         async function loadQuotes() { const d = await api('/quotes'); if (!d.success) return; allQuotes = d.quotes || []; const p = allQuotes.filter(q => q.status === 'pending').length; const b = document.getElementById('badge-quotes-admin'); b.textContent = p; b.style.display = p ? 'inline' : 'none'; renderTable('quotes'); }
         async function loadInvoices() { const d = await api('/invoices'); if (!d.success) return; allInvoices = d.invoices || []; const u = allInvoices.filter(i => i.status === 'unpaid').length; const b = document.getElementById('badge-invoices-admin'); b.textContent = u; b.style.display = u ? 'inline' : 'none'; renderTable('invoices'); renderTable('payments'); }
-        async function loadDocuments() { const d = await api('/documents'); if (!d.success) return; allDocuments = d.documents || []; renderTable('documents'); }
+        async function loadDocuments() {
+            const d = await api('/documents'); if (!d.success) return;
+            const manualDocs = d.documents || [];
+
+            // Générer aussi les docs synthétiques (factures payées, devis acceptés, contrats signés)
+            const synthDocs = [];
+            const existingIds = new Set(manualDocs.map(doc => doc.id));
+
+            // Factures payées
+            (allInvoices || []).filter(inv => inv.status === 'paid' || inv.status === 'cancelled').forEach(inv => {
+                synthDocs.push({
+                    id: 'inv-' + inv.id, _synth: true,
+                    client_id: inv.client_id, client_name: inv.client_name || '—',
+                    title: inv.invoice_number + (inv.title ? ' — ' + inv.title : ''),
+                    description: 'Facture payée · ' + (inv.amount_ttc ? inv.amount_ttc.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' }) : ''),
+                    category: 'Factures', file_type: 'pdf',
+                    file_url: '/api/invoices/' + inv.id + '/pdf',
+                    created_at: inv.paid_at || inv.created_at,
+                    mandate_title: null
+                });
+            });
+
+            // Devis acceptés
+            (allQuotes || []).filter(q => q.status === 'accepted' || q.status === 'approved').forEach(q => {
+                synthDocs.push({
+                    id: 'q-' + q.id, _synth: true,
+                    client_id: q.client_id, client_name: q.client_name || '—',
+                    title: q.quote_number + (q.title ? ' — ' + q.title : ''),
+                    description: 'Devis accepté · ' + (q.amount_ttc ? q.amount_ttc.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' }) : ''),
+                    category: 'Devis', file_type: 'pdf',
+                    file_url: '/api/quotes/' + q.id + '/pdf',
+                    created_at: q.accepted_at || q.updated_at || q.created_at,
+                    mandate_title: null
+                });
+            });
+
+            // Contrats signés
+            (allContracts || []).filter(c => c.status === 'signed').forEach(c => {
+                synthDocs.push({
+                    id: 'ct-' + c.id, _synth: true,
+                    client_id: c.client_id, client_name: c.client_name || '—',
+                    title: (c.contract_number || 'CT') + (c.title ? ' — ' + c.title : ''),
+                    description: 'Contrat signé le ' + (c.signed_at ? new Date(c.signed_at).toLocaleDateString('fr-CA') : '—'),
+                    category: 'Contrats', file_type: 'pdf',
+                    file_url: c.file_url || null,
+                    created_at: c.signed_at || c.created_at,
+                    mandate_title: null
+                });
+            });
+
+            // Fusionner manuels + synthétiques (éviter doublons)
+            allDocuments = [...manualDocs, ...synthDocs];
+
+            // Peupler le filtre client
+            const sel = document.getElementById('doc-filter-client');
+            if (sel) {
+                const clientsMap = new Map();
+                allDocuments.forEach(doc => { if (doc.client_id) clientsMap.set(doc.client_id, doc.client_name || 'Client #' + doc.client_id); });
+                const clients = [...clientsMap.entries()].sort((a, b) => (a[1] || '').localeCompare(b[1] || ''));
+                const cur = sel.value;
+                sel.innerHTML = '<option value="">Tous les clients (' + clients.length + ')</option>'
+                    + clients.map(([id, name]) => '<option value="' + id + '">' + name + '</option>').join('');
+                sel.value = cur;
+            }
+            renderTable('documents');
+        }
         async function loadPayments() { const d = await api('/payments'); if (!d.success) return; allPaymentsData = d; set('p-total-paid', fmt(d.totalPaid)); set('p-total-unpaid', fmt(d.totalUnpaid)); set('p-total-invoiced', fmt(d.totalInvoiced)); renderFinanceStats(d); }
 
         // RENDER TABLES
         function renderTable(name) {
             const s = tState[name];
-            let list = name === 'payments' ? [...allInvoices] : name === 'mandates' ? [...allMandates] : name === 'quotes' ? [...allQuotes] : name === 'invoices' ? [...allInvoices] : [...allDocuments];
+            let list;
+            if (name === 'payments') list = [...allInvoices];
+            else if (name === 'mandates') list = [...allMandates];
+            else if (name === 'quotes') list = [...allQuotes];
+            else if (name === 'invoices') list = [...allInvoices];
+            else if (name === 'documents') {
+                list = [...allDocuments];
+                const ds = s.docSearch || '';
+                const dc = s.docClient || '';
+                const dcat = s.docCat || '';
+                if (ds) list = list.filter(d => (d.title + ' ' + (d.client_name || '')).toLowerCase().includes(ds.toLowerCase()));
+                if (dc) list = list.filter(d => String(d.client_id) === dc);
+                if (dcat) list = list.filter(d => (d.category || '') === dcat);
+            } else list = [];
             const search = (document.getElementById(name + '-search')?.value || '').toLowerCase();
             if (s.f !== 'all') { if (s.f === 'overdue') list = list.filter(i => i.status === 'unpaid' && new Date(i.due_date) < new Date()); else list = list.filter(i => i.status === s.f); }
             if (search) list = list.filter(i => Object.values(i).join(' ').toLowerCase().includes(search));
             list.sort((a, b) => { const va = a[s.s] || '', vb = b[s.s] || ''; return String(va).localeCompare(String(vb), undefined, { numeric: true }) * s.d; });
-            const total = list.length, pages = Math.max(1, Math.ceil(total / PER_PAGE));
+            const _pp = name === 'documents' ? 10 : PER_PAGE;
+            const total = list.length, pages = Math.max(1, Math.ceil(total / _pp));
             if (s.p > pages) s.p = 1;
-            const paged = list.slice((s.p - 1) * PER_PAGE, s.p * PER_PAGE);
+            const paged = list.slice((s.p - 1) * _pp, s.p * _pp);
             const tbody = document.getElementById(name + '-tbody');
             const svc = { 'plc-support': 'Support PLC', 'audit': 'Audit', 'documentation': 'Documentation', 'refactoring': 'Refactorisation' };
             const tl = { pdf: 'PDF', docx: 'Word', zip: 'ZIP', other: 'Fichier' };
@@ -3083,7 +3298,7 @@
                     <td>${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</td>
                     <td><div class="td-actions"><button onclick="downloadPdf('/api/admin/quotes/${q.id}/pdf', '${q.quote_number}.pdf')" class="btn btn-sm btn-outline">PDF</button><button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.5rem" onclick="openEditQuote(${q.id})" title="Modifier">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            </button>${q.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="acceptQuote(${q.id}, q.quote_number)">✓ Accepter</button><button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
+                            </button>${q.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="acceptQuote(${q.id}, '${q.quote_number}')">✓ Accepter</button><button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
                 </tr>`).join('');
             else if (name === 'invoices' || name === 'payments') tbody.innerHTML = paged.map(inv => {
                 const ov = inv.status === 'unpaid' && new Date(inv.due_date) < new Date();
@@ -3097,33 +3312,105 @@
                     </tr>`;
             }).join('');
             else if (name === 'documents') tbody.innerHTML = paged.map(d => `<tr>
-                    <td>${d.client_name}</td><td><strong>${d.title}</strong>${d.description ? `<br><span style="font-size:0.73rem;color:var(--text-light)">${d.description}</span>` : ''}</td>
-                    <td><span class="badge badge-active">${tl[d.file_type] || d.file_type}</span></td>
+                    <td>${d.client_name}</td><td><strong title="${d.title}">${d.title.length > 40 ? d.title.substring(0, 40) + '…' : d.title}</strong>${d.description ? `<br><span style="font-size:0.73rem;color:var(--text-light)">${d.description.substring(0, 60)}${d.description.length > 60 ? '…' : ''}</span>` : ''}</td>
+                    <td>
+                        <span class="badge badge-active">${tl[d.file_type] || d.file_type || 'PDF'}</span>
+                        <span class="badge" style="background:var(--light-blue);color:var(--primary);margin-left:4px">${d.category || 'Autres documents'}</span>
+                    </td>
                     <td>${d.mandate_title || '—'}</td><td>${fmtDate(d.created_at)}</td>
-                    <td><div class="td-actions">${d.file_url ? `<a href="${d.file_url}" target="_blank" class="btn btn-sm btn-outline">Voir</a>` : ''}<button class="btn btn-sm btn-danger" onclick="deleteDocument(${d.id})">Suppr.</button></div></td>
+                    <td><div class="td-actions">
+                        ${d.file_url ? `<a href="${d.file_url}" target="_blank" class="btn btn-sm btn-outline" title="Télécharger"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>` : ''}
+                        <button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.45rem" onclick="editDocument('${d.id}')"  title="Modifier"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteDocument(${d.id})" title="Supprimer">Suppr.</button>
+                    </div></td>
                 </tr>`).join('');
-            renderPag(name, total, s.p, pages, p => { s.p = p; renderTable(name); });
+            renderPag(name, total, s.p, pages, p => { s.p = p; if (window.VNKState) window.VNKState.save(name + '_page', p); renderTable(name); });
         }
 
-        function filterTable(name) { tState[name].p = 1; renderTable(name); }
+        function filterTable(name) {
+            tState[name].p = 1;
+            if (name === 'documents') {
+                // Sync les inputs dans tState
+                const search = document.getElementById('doc-filter-search')?.value || '';
+                const client = document.getElementById('doc-filter-client')?.value || '';
+                const cat = document.getElementById('doc-filter-cat')?.value || '';
+                tState.documents.docSearch = search;
+                tState.documents.docClient = client;
+                tState.documents.docCat = cat;
+            }
+            renderTable(name);
+        }
         function setFilter(name, f, btn) { tState[name].f = f; tState[name].p = 1; btn.closest('.filter-tabs').querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderTable(name); }
-        function sortTable(name, col) { const s = tState[name]; s.d = s.s === col ? -s.d : 1; s.s = col; s.p = 1; renderTable(name); }
+        function sortTable(name, col) {
+            const s = tState[name];
+            s.d = s.s === col ? -s.d : 1; s.s = col; s.p = 1;
+            if (window.VNKState) { window.VNKState.save(name + '_sort', s.s); window.VNKState.save(name + '_dir', s.d); window.VNKState.save(name + '_page', 1); }
+            renderTable(name);
+        }
+
+        // Stockage global des callbacks de pagination
+        window._pageCbs = window._pageCbs || {};
+
+        // Navigation directe par section — fonctions nommées appelables depuis onclick HTML
+        function _gotoPage(name, p) {
+            if (!tState[name]) return;
+            const _pp = name === 'documents' ? 10 : PER_PAGE;
+            const list = name === 'documents' ? allDocuments : name === 'quotes' ? allQuotes : name === 'invoices' ? allInvoices : name === 'mandates' ? allMandates : name === 'contracts' ? allContracts : [];
+            const total = list.length;
+            const pages = Math.max(1, Math.ceil(total / _pp));
+            tState[name].p = Math.max(1, Math.min(p, pages));
+            if (window.VNKState) window.VNKState.save(name + '_page', tState[name].p);
+            renderTable(name);
+        }
 
         function renderPag(name, total, page, pages, onPage) {
             const info = document.getElementById(name + '-pag-info');
             const btns = document.getElementById(name + '-pag-btns');
             const pag = document.getElementById(name + '-pag');
-            if (!info || !btns || !pag) return;
-            pag.style.display = total ? 'flex' : 'none';
-            info.textContent = total ? `${Math.min((page - 1) * PER_PAGE + 1, total)}–${Math.min(page * PER_PAGE, total)} sur ${total}` : '';
-            if (pages <= 1) { btns.innerHTML = ''; return; }
-            let h = `<button class="page-btn" onclick="(${onPage})(${page - 1})" ${page <= 1 ? 'disabled' : ''}>←</button>`;
-            for (let p = 1; p <= pages; p++) {
-                if (p === 1 || p === pages || Math.abs(p - page) <= 1) h += `<button class="page-btn ${p === page ? 'active' : ''}" onclick="(${onPage})(${p})">${p}</button>`;
-                else if (Math.abs(p - page) === 2) h += `<span style="padding:0 0.2rem;color:var(--text-light)">…</span>`;
+            if (!pag) return;
+
+            // Stocker le callback globalement pour pouvoir l'appeler depuis onclick HTML
+            window._pageCbs[name] = onPage;
+
+            const from = total ? Math.min((page - 1) * 10 + 1, total) : 0;
+            const to = total ? Math.min(page * 10, total) : 0;
+            const infoText = total ? from + '–' + to + ' sur ' + total + ' · Page ' + page + '/' + pages : '';
+            if (info) info.textContent = infoText;
+            pag.style.display = (total && pages > 1) ? 'flex' : 'none';
+
+            const buildBtns = () => {
+                if (pages <= 1) return '';
+                const cb = "_gotoPage('" + name + "'";
+                let h = '<button class="page-btn" onclick="' + cb + ', ' + (page - 1) + ')" ' + (page <= 1 ? 'disabled' : '') + '>&lsaquo;</button>';
+                // Max 3 numéros visibles : page précédente, courante, suivante + ... aux extrêmes
+                const showFirst = page > 2;
+                const showLast = page < pages - 1;
+                if (showFirst) {
+                    h += '<button class="page-btn" onclick="' + cb + ', 1)">1</button>';
+                    if (page > 3) h += '<span style="padding:0 0.15rem;color:var(--text-light)">…</span>';
+                }
+                for (let p = Math.max(1, page - 1); p <= Math.min(pages, page + 1); p++) {
+                    h += '<button class="page-btn ' + (p === page ? 'active' : '') + '" onclick="' + cb + ', ' + p + ')">' + p + '</button>';
+                }
+                if (showLast) {
+                    if (page < pages - 2) h += '<span style="padding:0 0.15rem;color:var(--text-light)">…</span>';
+                    h += '<button class="page-btn" onclick="' + cb + ', ' + pages + ')">' + pages + '</button>';
+                }
+                h += '<button class="page-btn" onclick="' + cb + ', ' + (page + 1) + ')" ' + (page >= pages ? 'disabled' : '') + '>&rsaquo;</button>';
+                return h;
+            };
+
+            if (btns) btns.innerHTML = buildBtns();
+
+            // Pagination bas
+            const infoBottom = document.getElementById(name + '-pag-info-bottom');
+            const btnsBottom = document.getElementById(name + '-pag-btns-bottom');
+            const pagBottom = document.getElementById(name + '-pag-bottom');
+            if (pagBottom) {
+                pagBottom.style.display = (total && pages > 1) ? 'flex' : 'none';
+                if (infoBottom) infoBottom.textContent = infoText;
+                if (btnsBottom) btnsBottom.innerHTML = buildBtns();
             }
-            h += `<button class="page-btn" onclick="(${onPage})(${page + 1})" ${page >= pages ? 'disabled' : ''}>→</button>`;
-            btns.innerHTML = h;
         }
 
         // MESSAGES
@@ -3916,10 +4203,201 @@
         async function createQuote() { const ht = parseFloat(v('nq-amount')); if (!v('nq-client') || !v('nq-title') || !ht) { showToast('Remplissez les champs obligatoires', 'error'); return; } const d = await api('/quotes', 'POST', { client_id: v('nq-client'), title: v('nq-title'), description: v('nq-desc'), amount_ht: ht, expiry_days: parseInt(v('nq-days')) }); if (d.success) { closeModal('modal-new-quote'); loadQuotes(); loadDashboard(); showToast('Devis créé !', 'success'); } else showToast(d.message, 'error'); }
         async function createInvoice() { const ht = parseFloat(v('ni-amount')); if (!v('ni-client') || !v('ni-title') || !ht) { showToast('Remplissez les champs obligatoires', 'error'); return; } const d = await api('/invoices', 'POST', { client_id: v('ni-client'), title: v('ni-title'), description: v('ni-desc'), amount_ht: ht, due_days: parseInt(v('ni-days')) }); if (d.success) { closeModal('modal-new-invoice'); loadInvoices(); loadPayments(); loadDashboard(); showToast('Facture créée !', 'success'); } else showToast(d.message, 'error'); }
         async function loadClientMandates() { const cid = v('nd-client'); const sel = document.getElementById('nd-mandate'); sel.innerHTML = '<option value="">Aucun</option>'; if (!cid) return; const d = await api('/mandates?client_id=' + cid); if (d.success) d.mandates.forEach(m => { sel.innerHTML += `<option value="${m.id}">${m.title}</option>`; }); }
-        async function createDocument() { const clientId = v('nd-client'), title = v('nd-title'), url = v('nd-url'); if (!clientId || !title || !url) { showToast('Client, titre et URL requis', 'error'); return; } const d = await api('/documents', 'POST', { client_id: clientId, mandate_id: v('nd-mandate') || null, title, description: v('nd-desc'), file_type: v('nd-type'), file_name: v('nd-filename') || title, file_url: url }); if (d.success) { closeModal('modal-new-document'); loadDocuments(); showToast('Document déposé !', 'success'); } else showToast(d.message, 'error'); }
+        async function createDocument() {
+            const clientId = v('nd-client'), title = v('nd-title');
+            if (!clientId || !title) { showToast('Client et titre requis', 'error'); return; }
+            const url = v('nd-url');
+            const fileInput = document.getElementById('nd-file-input');
+            const category = v('nd-category') || 'Documentation technique';
+            // Déterminer le type de fichier
+            var fileName = title;
+            var fileUrl = url;
+            // Upload fichier si sélectionné
+            if (fileInput && fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                fileName = file.name;
+                try {
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    fd.append('client_id', clientId);
+                    const r = await fetch('/api/documents/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + adminToken }, body: fd });
+                    if (r.ok) { const ru = await r.json(); if (ru.url) fileUrl = ru.url; }
+                } catch (e) { }
+                if (!fileUrl) { showToast('Upload non configuré — entrez une URL à la place', 'error'); return; }
+            }
+            if (!fileUrl) { showToast('Fichier ou URL requis', 'error'); return; }
+            const ext = fileName.split('.').pop().toLowerCase();
+            const d = await api('/documents', 'POST', {
+                client_id: clientId,
+                mandate_id: v('nd-mandate') || null,
+                title,
+                description: v('nd-desc'),
+                file_type: ext || 'pdf',
+                file_name: fileName,
+                file_url: fileUrl,
+                category: category
+            });
+            if (d.success) {
+                closeModal('modal-new-document');
+                ['nd-title', 'nd-desc', 'nd-url'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                if (fileInput) fileInput.value = '';
+                const lbl = document.getElementById('doc-file-label'); if (lbl) lbl.textContent = 'Cliquer pour sélectionner un fichier';
+                await loadDocuments();
+                // Toast avec catégorie + badge notification
+                const clientOpt = document.querySelector('#nd-client option:checked');
+                const cname = clientOpt?.textContent?.split('—')[0]?.trim() || 'Client';
+                showToast('Document déposé pour ' + cname + ' — catégorie : ' + category, 'success');
+                // Badge rouge dans la sidebar Documents (visible 8s)
+                const docBadge = document.getElementById('badge-docs-admin');
+                if (docBadge) { docBadge.style.display = 'inline-block'; setTimeout(() => { docBadge.style.display = 'none'; }, 8000); }
+            } else showToast(d.message || 'Erreur', 'error');
+        }
         async function markPaid(id) { const ok = await confirm2('Confirmer le paiement', 'Marquer cette facture comme payée (paiement manuel) ?'); if (!ok) return; const d = await api('/invoices/' + id + '/mark-paid', 'PUT'); if (d.success) { loadInvoices(); loadPayments(); loadDashboard(); showToast('Facture payée !', 'success'); } else showToast(d.message, 'error'); }
         async function expireQuote(id) { const ok = await confirm2('Marquer expiré', 'Marquer ce devis comme expiré ?'); if (!ok) return; await api('/quotes/' + id + '/expire', 'PUT'); loadQuotes(); showToast('Devis expiré.'); }
         async function deleteDocument(id) { const ok = await confirm2('Supprimer', 'Supprimer ce document définitivement ?'); if (!ok) return; const d = await api('/documents/' + id, 'DELETE'); if (d.success) { loadDocuments(); showToast('Document supprimé.'); } }
+
+        function editDocument(id) {
+            const idStr = String(id).replace(/^['"]|['"]$/g, ''); // Nettoyer guillemets
+            const doc = (allDocuments || []).find(d => String(d.id) === idStr || String(d._synth_id) === idStr);
+            if (!doc) { showToast('Document introuvable — doc id: ' + id, 'error'); return; }
+            // Récupérer les catégories existantes (custom + fixes)
+            const fixedCats = ['Documentation technique', 'Livrables', 'Factures', 'Devis', 'Contrats', 'Autres documents'];
+            const allCats = [...new Set([...fixedCats, ...(allDocuments || []).map(d => d.category).filter(Boolean)])];
+            const statusOpts = [
+                { v: 'disponible', l: 'Disponible' },
+                { v: 'en_attente', l: 'En attente de signature' },
+                { v: 'brouillon', l: 'Brouillon' },
+                { v: 'archive', l: 'Archivé' }
+            ];
+            const isSynth = doc._synth;
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.cssText = 'display:flex;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:1rem';
+            modal.innerHTML = '<div class="modal" style="max-width:560px;width:100%">'
+                + '<div class="modal-head"><span class="modal-title">Modifier le document</span><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">×</button></div>'
+                + '<div class="modal-body" style="max-height:70vh;overflow-y:auto">'
+                // Titre
+                + '<div class="form-group"><label class="form-label">Titre *</label><input type="text" class="form-input" id="edit-doc-title" value="' + (doc.title || '').replace(/"/g, '&quot;') + '"></div>'
+                // Description
+                + '<div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="edit-doc-desc" rows="2">' + (doc.description || '') + '</textarea></div>'
+                // Catégorie + bouton +
+                + '<div class="form-row">'
+                + '<div class="form-group"><label class="form-label" style="display:flex;align-items:center;justify-content:space-between">Cat&eacute;gorie<button type="button" onclick="addCustomCategory(&quot;edit-doc-cat&quot;)" style="font-size:0.7rem;color:var(--primary);background:none;border:none;cursor:pointer;font-weight:600">+ Nouvelle</button></label>'
+                + '<select class="form-select" id="edit-doc-cat">'
+                + allCats.map(c => '<option value="' + c + '"' + (doc.category === c ? ' selected' : '') + '>' + c + '</option>').join('')
+                + '</select></div>'
+                // Statut
+                + '<div class="form-group"><label class="form-label">Statut</label>'
+                + '<select class="form-select" id="edit-doc-status">'
+                + statusOpts.map(s => '<option value="' + s.v + '"' + (doc.status === s.v || (!doc.status && s.v === 'disponible') ? ' selected' : '') + '>' + s.l + '</option>').join('')
+                + '</select></div>'
+                + '</div>'
+                // Fichier actuel + remplacement
+                + '<div class="form-group"><label class="form-label" style="display:flex;align-items:center;justify-content:space-between">Fichier'
+                + (doc.file_url && !doc._synth ? '<a href="' + doc.file_url + '" target="_blank" style="font-size:0.75rem;color:var(--primary)">Voir actuel</a>' : '')
+                + '</label>'
+                + (isSynth
+                    ? '<p style="font-size:0.78rem;color:#94A3B8;font-style:italic">Document généré automatiquement — non modifiable.</p>'
+                    : '<div id="edit-doc-drop" onclick="document.getElementById(&quot;edit-file-input&quot;).click()" style="border:2px dashed var(--border);border-radius:8px;padding:0.85rem;text-align:center;cursor:pointer;font-size:0.8rem;color:var(--text-light)">'
+                    + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+                    + '<div id="edit-file-label">Cliquer pour remplacer le fichier</div>'
+                    + '<input type="file" id="edit-file-input" accept=".pdf,.docx,.xlsx,.zip,.png,.jpg" style="display:none" onchange="onEditFileSelect(this)">'
+                    + '</div>'
+                    + '<div style="display:flex;align-items:center;gap:0.5rem;margin:0.5rem 0"><div style="flex:1;height:1px;background:var(--border)"></div><span style="font-size:0.72rem;color:var(--text-light)">ou URL</span><div style="flex:1;height:1px;background:var(--border)"></div></div>'
+                    + '<input type="url" class="form-input" id="edit-doc-url" placeholder="https://..." value="' + (doc.file_url && !doc.file_url.startsWith('data:') ? doc.file_url : '') + '" style="font-size:0.82rem">'
+                )
+                + '</div>'
+                + '</div>'
+                + '<div class="modal-footer"><button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">Annuler</button>'
+                + '<button class="btn btn-primary" onclick="saveEditDocument(' + id + ', this)">Enregistrer</button></div></div>';
+            document.body.appendChild(modal);
+        }
+
+        async function saveEditDocument(id, btn) {
+            const title = document.getElementById('edit-doc-title')?.value.trim();
+            const desc = document.getElementById('edit-doc-desc')?.value.trim();
+            const cat = document.getElementById('edit-doc-cat')?.value;
+            const status = document.getElementById('edit-doc-status')?.value;
+            const urlEl = document.getElementById('edit-doc-url');
+            if (!title) { showToast('Titre requis', 'error'); return; }
+            // Vérifier si c'est un doc synthétique (non modifiable via PUT)
+            const docObj = (allDocuments || []).find(d => String(d.id) === String(id));
+            if (docObj && docObj._synth) {
+                // Pour les docs synthétiques, on peut quand même mettre à jour la catégorie/statut
+                // via la source (facture, devis, contrat) — mais ici on signale juste
+                showToast('Document généré automatiquement. Modifiez-le depuis sa source (Factures, Devis ou Contrats).', 'info');
+                btn.closest('.modal-overlay')?.remove();
+                return;
+            }
+            btn.disabled = true; btn.textContent = 'Sauvegarde...';
+
+            let fileUrl = urlEl ? urlEl.value.trim() : undefined;
+
+            // Si un nouveau fichier a été sélectionné, l'encoder en base64
+            const fileInput = document.getElementById('edit-file-input');
+            if (fileInput && fileInput.files && fileInput.files[0]) {
+                try {
+                    fileUrl = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = e => resolve(e.target.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(fileInput.files[0]);
+                    });
+                } catch (e) { showToast('Erreur lecture fichier', 'error'); btn.disabled = false; btn.textContent = 'Enregistrer'; return; }
+            }
+
+            const payload = { title, description: desc, category: cat, status: status };
+            if (fileUrl) payload.file_url = fileUrl;
+
+            const d = await api('/documents/' + id, 'PUT', payload);
+            if (d.success) {
+                btn.closest('.modal-overlay').remove();
+                loadDocuments();
+                showToast('Document modifié', 'success');
+            } else {
+                btn.disabled = false; btn.textContent = 'Enregistrer';
+                showToast(d.message || 'Erreur API: ' + JSON.stringify(d), 'error');
+            }
+        }
+
+        function onEditFileSelect(input) {
+            const file = input?.files?.[0];
+            if (!file) return;
+            const label = document.getElementById('edit-file-label');
+            if (label) label.textContent = file.name + ' (' + (file.size > 1048576 ? (file.size / 1048576).toFixed(1) + ' Mo' : Math.round(file.size / 1024) + ' Ko') + ')';
+            const drop = document.getElementById('edit-doc-drop');
+            if (drop) drop.style.borderColor = 'var(--success)';
+        }
+
+        function addCustomCategory(selectId) {
+            // Modal VNK — pas de prompt() natif
+            var overlay = document.createElement('div');
+            overlay.className = 'modal-cat-overlay'; overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,0.6);display:flex;align-items:center;justify-content:center';
+            overlay.innerHTML = '<div style="background:white;border-radius:14px;padding:1.5rem;width:340px;box-shadow:0 20px 50px rgba(0,0,0,0.3)">'
+                + '<div style="font-size:1rem;font-weight:700;color:#1B4F8A;margin-bottom:1rem">Nouvelle catégorie</div>'
+                + '<input id="custom-cat-input" type="text" class="form-input" placeholder="ex: Rapports de maintenance" style="margin-bottom:1rem">'
+                + '<div style="display:flex;justify-content:flex-end;gap:0.5rem">'
+                + '<button onclick="this.closest(\'.modal-cat-overlay\').remove()" class="btn btn-ghost">Annuler</button>'
+                + '<button id="custom-cat-ok" class="btn btn-primary">Créer</button>'
+                + '</div></div>';
+            document.body.appendChild(overlay);
+            var inp = overlay.querySelector('#custom-cat-input');
+            inp.focus();
+            var doCreate = function () {
+                var clean = inp.value.trim();
+                if (!clean) { inp.style.borderColor = 'var(--error)'; return; }
+                var sel = document.getElementById(selectId);
+                if (sel) {
+                    var exists = [...sel.options].some(o => o.value === clean);
+                    if (!exists) { var opt = document.createElement('option'); opt.value = clean; opt.textContent = clean; sel.appendChild(opt); }
+                    sel.value = clean;
+                    try { var s = JSON.parse(sessionStorage.getItem('vnk_custom_cats') || '[]'); if (!s.includes(clean)) { s.push(clean); sessionStorage.setItem('vnk_custom_cats', JSON.stringify(s)); } } catch (e) { }
+                }
+                overlay.remove();
+            };
+            overlay.querySelector('#custom-cat-ok').onclick = doCreate;
+            inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') doCreate(); if (e.key === 'Escape') overlay.remove(); });
+        }
 
         function calcTaxes(p) { const ht = parseFloat(document.getElementById(p + '-amount').value) || 0; const tps = ht * 0.05; const tvq = ht * 0.09975; const ttc = ht + tps + tvq; document.getElementById(p + '-tax-preview').style.display = ht ? 'block' : 'none'; set(p + '-ht', fmt(ht)); set(p + '-tps', fmt(tps)); set(p + '-tvq', fmt(tvq)); set(p + '-ttc', fmt(ttc)); }
 
@@ -3932,6 +4410,11 @@
             document.querySelectorAll('.sidebar-item').forEach(b => {
                 if (b.getAttribute('onclick') === `showSection('${name}')`) b.classList.add('active');
             });
+            // Sauvegarder la section courante
+            try { localStorage.setItem('vnk-admin-section', name); } catch (e) { }
+            // Mettre à jour le bouton Actualiser flottant
+            const refreshBtn = document.getElementById('admin-topbar-refresh');
+            if (refreshBtn) refreshBtn.style.display = 'flex';
             if (name === 'messages') {
                 const b = document.getElementById('badge-messages-admin');
                 if (b) { b.textContent = '0'; b.style.display = 'none'; }
@@ -4604,12 +5087,11 @@
             if (!ok) return;
             var d = await api('/quotes/' + id + '/accept', 'PUT');
             if (d.success) {
-                loadQuotes(); loadContracts(); loadDashboard();
+                loadQuotes(); loadContracts(); loadDashboard(); loadDocuments();
                 if (d.signature_sent) {
-                    showToast('Devis accepte ! Contrat ' + d.contract_number + ' envoye pour signature.', 'success');
+                    showToast('Devis accepté ! Contrat ' + d.contract_number + ' envoyé pour signature.', 'success');
                 } else {
-                    showToast('Devis accepte ! Contrat ' + d.contract_number + ' cree.', 'success');
-                    setTimeout(function () { showSection('contracts'); }, 1500);
+                    showToast('Devis accepté ! Contrat ' + d.contract_number + ' créé.', 'success');
                 }
             } else {
                 showToast(d.message || 'Erreur', 'error');
@@ -5007,6 +5489,7 @@
         }
 
     </script>
+    <script src="js/state.js"></script>
     <script src="js/notifications.js"></script>
 
     <!-- ══ WIDGET RÉCEPTION FLOTTANT — visible partout dans admin ══ -->
@@ -5052,6 +5535,12 @@
                 if (p) p.style.display = 'none';
             }
         });
+    </script>
+    <script>
+        (function () {
+            var link = document.getElementById('admin-site-link');
+            if (link) link.href = window.location.origin + '/services.html';
+        })();
     </script>
 </body>
 </html>
