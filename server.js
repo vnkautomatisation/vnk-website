@@ -1,87 +1,164 @@
-/* ============================================
-   VNK Automatisation Inc. - Main Server
-   Value. Network. Knowledge.
-   ============================================ */
+/* ============================================================
+   VNK Automatisation Inc. — WebSocket Server
+   ws-server.js — À placer dans backend/
 
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
+   Usage dans server.js :
+     const { initWebSocket, broadcast } = require('./ws-server');
+     const server = app.listen(PORT, ...);
+     initWebSocket(server);
 
-// Load environment variables
-dotenv.config();
+   Depuis n'importe quelle route Express :
+     const { broadcast } = require('./ws-server');
+     broadcast({ type: 'new_invoice', clientId: 5, data: invoice });
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+   Protocole :
+     Client → Serveur : { type: 'auth', token: '...' }
+     Serveur → Client : { type: 'event', event: '...', data: {...} }
+     Serveur → Client : { type: 'pong' }  (réponse aux ping)
+     Client → Serveur : { type: 'ping' }
+============================================================ */
+'use strict';
 
-// ---- Stripe webhook must use raw body ----
-app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+const WebSocket = require('ws');
+const jwt = require('jsonwebtoken');
 
-// ---- Middleware ----
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// ── Map des connexions actives ────────────────────────────────
+// adminClients  : Set<ws>          — tous les admins connectés
+// clientSockets : Map<clientId, Set<ws>> — sockets par client
+const adminClients = new Set();
+const clientSockets = new Map();
 
-// ---- API Routes (AVANT static files — critique) ----
-app.use('/api/auth', require('./backend/routes/auth'));
-app.use('/api/contact', require('./backend/routes/contact'));
-app.use('/api/clients', require('./backend/routes/clients'));
-app.use('/api/quotes', require('./backend/routes/quotes'));
-app.use('/api/invoices', require('./backend/routes/invoices'));
-app.use('/api/payments', require('./backend/routes/payments'));
-app.use('/api/mandates', require('./backend/routes/mandates'));
-app.use('/api/messages', require('./backend/routes/messages'));
-app.use('/api/documents', require('./backend/routes/documents'));
-app.use('/api/contracts', require('./backend/routes/contracts'));
-app.use('/api/calendly', require('./backend/routes/calendly'));
-app.use('/api/admin', require('./backend/routes/admin'));
+let _wss = null;
 
-// Routes admin — le dashboard préfixe avec /api/admin/
-app.use('/api/admin/quotes', require('./backend/routes/quotes'));
-app.use('/api/admin/invoices', require('./backend/routes/invoices'));
-app.use('/api/admin/clients', require('./backend/routes/clients'));
-app.use('/api/admin/mandates', require('./backend/routes/mandates'));
-app.use('/api/admin/messages', require('./backend/routes/messages'));
-app.use('/api/admin/documents', require('./backend/routes/documents'));
-app.use('/api/admin/contracts', require('./backend/routes/contracts'));
-app.use('/api/admin/payments', require('./backend/routes/payments'));
+// ── Initialisation ────────────────────────────────────────────
+function initWebSocket(httpServer) {
+    _wss = new WebSocket.Server({ server: httpServer, path: '/ws' });
 
-// PDF download routes
-app.get('/api/quotes/:id/pdf', require('./backend/routes/pdf').downloadQuotePDF);
-app.get('/api/invoices/:id/pdf', require('./backend/routes/pdf').downloadInvoicePDF);
-app.get('/api/contracts/:id/pdf', require('./backend/routes/pdf').downloadContractPDF);
+    _wss.on('connection', (ws, req) => {
+        ws._authenticated = false;
+        ws._role = null;      // 'admin' | 'client'
+        ws._clientId = null;
+        ws._pingTimeout = null;
 
-// ---- Static files (APRÈS les routes API) ----
-app.use(express.static(path.join(__dirname, 'frontend')));
+        // Délai d'authentification : 10s pour s'identifier
+        const authTimeout = setTimeout(() => {
+            if (!ws._authenticated) {
+                ws.close(4001, 'Auth timeout');
+            }
+        }, 10000);
 
-// ---- Health check route ----
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'VNK Automatisation Inc. — Server operational',
-        version: '1.0.0',
-        environment: process.env.NODE_ENV,
-        timestamp: new Date().toISOString()
+        ws.on('message', (raw) => {
+            let msg;
+            try { msg = JSON.parse(raw); } catch { return; }
+
+            // ── AUTH ──────────────────────────────────────────
+            if (msg.type === 'auth') {
+                clearTimeout(authTimeout);
+                const token = msg.token;
+                if (!token) { ws.close(4002, 'No token'); return; }
+
+                try {
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+                    if (decoded.isAdmin) {
+                        ws._authenticated = true;
+                        ws._role = 'admin';
+                        adminClients.add(ws);
+                        _send(ws, { type: 'authenticated', role: 'admin' });
+                        console.log('[WS] Admin connected');
+                    } else if (decoded.id) {
+                        ws._authenticated = true;
+                        ws._role = 'client';
+                        ws._clientId = decoded.id;
+                        if (!clientSockets.has(decoded.id)) clientSockets.set(decoded.id, new Set());
+                        clientSockets.get(decoded.id).add(ws);
+                        _send(ws, { type: 'authenticated', role: 'client', clientId: decoded.id });
+                        console.log(`[WS] Client ${decoded.id} connected`);
+                    } else {
+                        ws.close(4003, 'Invalid token');
+                    }
+                } catch (e) {
+                    ws.close(4004, 'Token invalid');
+                }
+                return;
+            }
+
+            if (!ws._authenticated) return;
+
+            // ── PING ──────────────────────────────────────────
+            if (msg.type === 'ping') {
+                _send(ws, { type: 'pong' });
+                return;
+            }
+        });
+
+        ws.on('close', () => {
+            clearTimeout(authTimeout);
+            clearTimeout(ws._pingTimeout);
+            adminClients.delete(ws);
+            if (ws._clientId && clientSockets.has(ws._clientId)) {
+                clientSockets.get(ws._clientId).delete(ws);
+                if (clientSockets.get(ws._clientId).size === 0) {
+                    clientSockets.delete(ws._clientId);
+                }
+            }
+            console.log(`[WS] ${ws._role || 'unauthenticated'} disconnected`);
+        });
+
+        ws.on('error', (err) => {
+            console.warn('[WS] Socket error:', err.message);
+        });
     });
-});
 
-// ---- Error handler ----
-const { errorHandler } = require('./backend/middleware/errorHandler');
-app.use(errorHandler);
+    console.log('[WS] WebSocket server initialized at /ws');
+    return _wss;
+}
 
-// ---- Serve frontend for all other routes ----
-app.get('/{*splat}', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
-});
+// ── Envoi utilitaire ─────────────────────────────────────────
+function _send(ws, data) {
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(data));
+    }
+}
 
-// ---- Start server ----
-app.listen(PORT, () => {
-    console.log('============================================');
-    console.log('  VNK Automatisation Inc.');
-    console.log('  Value. Network. Knowledge.');
-    console.log('============================================');
-    console.log(`  Server running on http://localhost:${PORT}`);
-    console.log(`  Environment: ${process.env.NODE_ENV}`);
-    console.log('============================================');
-});
+// ── Broadcast ────────────────────────────────────────────────
+// Envoie un événement à :
+//   - tous les admins si targetRole === 'admin' ou non spécifié
+//   - le client spécifique si clientId est fourni
+//   - les deux si broadcast === true
+//
+// Exemples d'utilisation depuis les routes admin :
+//   broadcast({ event: 'new_message',    clientId: 5,   data: msg });
+//   broadcast({ event: 'quote_accepted', clientId: 5,   data: quote, notifyAdmin: true });
+//   broadcast({ event: 'new_client',                    data: client, adminOnly: true });
+function broadcast({ event, data = {}, clientId = null, adminOnly = false, notifyAdmin = true }) {
+    const payload = JSON.stringify({ type: 'event', event, data });
 
-module.exports = app;
+    // Notifier l'admin
+    if (!clientId || notifyAdmin) {
+        adminClients.forEach(ws => {
+            if (ws.readyState === WebSocket.OPEN) ws.send(payload);
+        });
+    }
+
+    // Notifier le client spécifique
+    if (clientId && !adminOnly) {
+        const sockets = clientSockets.get(clientId);
+        if (sockets) {
+            sockets.forEach(ws => {
+                if (ws.readyState === WebSocket.OPEN) ws.send(payload);
+            });
+        }
+    }
+}
+
+// ── Stats ─────────────────────────────────────────────────────
+function getStats() {
+    return {
+        admins: adminClients.size,
+        clients: clientSockets.size,
+        totalConnections: adminClients.size + [...clientSockets.values()].reduce((s, set) => s + set.size, 0)
+    };
+}
+
+module.exports = { initWebSocket, broadcast, getStats };

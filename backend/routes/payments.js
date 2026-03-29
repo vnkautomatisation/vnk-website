@@ -29,8 +29,8 @@ router.post('/create-intent', authenticateToken, async (req, res) => {
 
         // Get invoice
         const invoiceResult = await pool.query(
-            'SELECT * FROM invoices WHERE id = $1 AND client_id = $2 AND status = $3',
-            [invoice_id, req.user.id, 'unpaid']
+            "SELECT * FROM invoices WHERE id = $1 AND client_id = $2 AND status IN ('unpaid', 'overdue')",
+            [invoice_id, req.user.id]
         );
 
         if (invoiceResult.rows.length === 0) {
