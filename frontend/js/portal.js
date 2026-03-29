@@ -276,7 +276,7 @@ function renderMandates(mandates) {
     const svl = { 'plc-support': 'Support PLC', audit: 'Audit technique', documentation: 'Documentation', refactoring: 'Refactorisation' };
     list.innerHTML = mandates.map(m => '<div class="portal-list-item"><div style="flex:1"><div class="portal-item-title">' + m.title + '</div>' +
         '<div class="portal-item-desc">' + (m.description || '') + '</div>' +
-        '<div class="portal-item-meta">' + (m.service_type ? '<span style="background:var(--color-light-blue);color:var(--color-primary);padding:0.15rem 0.5rem;border-radius:10px;font-size:0.72rem;font-weight:600">' + (svl[m.service_type] || m.service_type) + '</span>' : '') +
+        '<div class="portal-item-meta">' + (m.service_type ? '<span style="background:#EBF5FB;color:#1B4F8A;padding:0.15rem 0.5rem;border-radius:10px;font-size:0.72rem;font-weight:600">' + (svl[m.service_type] || m.service_type) + '</span>' : '') +
         '<span>Début: ' + new Date(m.start_date || m.created_at).toLocaleDateString('fr-CA') + '</span>' + (m.end_date ? '<span>Fin: ' + new Date(m.end_date).toLocaleDateString('fr-CA') + '</span>' : '') + '</div>' +
         '<div class="portal-progress"><div class="portal-progress-label"><span>Progression</span><span>' + (m.progress || 0) + '%</span></div><div class="portal-progress-bar"><div class="portal-progress-fill" style="width:' + (m.progress || 0) + '%"></div></div></div>' +
         (m.notes ? '<div style="margin-top:0.75rem;padding:0.6rem 0.75rem;background:var(--color-light-blue);border-radius:6px;font-size:0.82rem;color:var(--color-primary);border-left:3px solid var(--color-primary)"><strong>Note de VNK :</strong> ' + m.notes + '</div>' : '') +
@@ -289,22 +289,38 @@ function renderQuotes(quotes) {
     if (!quotes.length) { list.innerHTML = '<div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>Aucun devis disponible.</p></div>'; return; }
     const sl = { pending: 'En attente', accepted: 'Accepté', declined: 'Refusé', expired: 'Expiré' };
     const sc = { pending: '#D97706', accepted: '#27AE60', declined: '#E74C3C', expired: '#94A3B8' };
+    const svl = { 'plc-support': 'Support PLC', 'audit': 'Audit technique', 'documentation': 'Documentation', 'refactoring': 'Refactorisation' };
     list.innerHTML = quotes.map(q => {
         const color = sc[q.status] || '#94A3B8';
-        return '<div class="portal-list-item"><div style="flex:1">' +
-            '<div class="portal-item-title">' + q.quote_number + ' — ' + q.title + '</div>' +
-            '<div class="portal-item-desc">' + (q.description || '') + '</div>' +
-            '<div class="portal-item-meta"><span>Émis: ' + new Date(q.created_at).toLocaleDateString('fr-CA') + '</span>' +
-            (q.expiry_date ? '<span>Expire: ' + new Date(q.expiry_date).toLocaleDateString('fr-CA') + '</span>' : '') +
-            (q.service_type ? '<span style="background:#EBF5FB;color:#1B4F8A;padding:1px 6px;border-radius:4px;font-size:0.72rem">' + ({ 'plc-support': 'Support PLC', 'audit': 'Audit', 'documentation': 'Documentation', 'refactoring': 'Refactorisation' }[q.service_type] || q.service_type) + '</span>' : '') +
+        const svc = q.service_type ? (svl[q.service_type] || q.service_type) : null;
+        return '<div style="border:1px solid #E2E8F0;border-radius:10px;padding:1rem 1.25rem;margin-bottom:0.75rem;background:white">' +
+            '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:0.6rem">' +
+            '<div style="flex:1">' +
+            '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.3rem;flex-wrap:wrap">' +
+            '<strong style="font-size:0.9rem;color:#1B4F8A">' + q.quote_number + '</strong>' +
+            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">' + (sl[q.status] || q.status) + '</span>' +
+            (svc ? '<span style="background:#EBF5FB;color:#1B4F8A;font-size:0.72rem;padding:2px 8px;border-radius:4px">' + svc + '</span>' : '') +
+            '</div>' +
+            '<div style="font-size:0.88rem;font-weight:600;color:#1E293B">' + q.title + '</div>' +
+            (q.description ? '<div style="font-size:0.8rem;color:#64748B;margin-top:2px">' + q.description + '</div>' : '') +
+            '</div>' +
+            '<div style="text-align:right;flex-shrink:0">' +
+            '<div style="font-size:1.05rem;font-weight:700;color:#1B4F8A">' + formatCurrency(q.amount_ttc) + '</div>' +
+            '<div style="font-size:0.7rem;color:#94A3B8">TTC</div>' +
             '</div></div>' +
-            '<div class="portal-item-actions">' +
-            '<span class="portal-item-amount">' + formatCurrency(q.amount_ttc) + '</span>' +
-            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:3px 8px;border-radius:4px">' + (sl[q.status] || q.status) + '</span>' +
-            '<div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;justify-content:flex-end">' +
+            '<div style="display:flex;gap:1.5rem;font-size:0.75rem;color:#64748B;margin-bottom:0.6rem;flex-wrap:wrap">' +
+            '<span>Émis : ' + new Date(q.created_at).toLocaleDateString('fr-CA') + '</span>' +
+            (q.expiry_date ? '<span>Expire : ' + new Date(q.expiry_date).toLocaleDateString('fr-CA') + '</span>' : '') +
+            '</div>' +
+            '<div style="background:#F8FAFC;border-radius:6px;padding:0.4rem 0.75rem;display:flex;gap:1.5rem;font-size:0.75rem;color:#64748B;margin-bottom:0.6rem;flex-wrap:wrap">' +
+            '<span>HT : <strong style="color:#1E293B">' + formatCurrency(q.amount_ht) + '</strong></span>' +
+            '<span>TPS : ' + formatCurrency(q.tps_amount) + '</span>' +
+            '<span>TVQ : ' + formatCurrency(q.tvq_amount) + '</span>' +
+            '</div>' +
+            '<div style="display:flex;gap:0.5rem;justify-content:flex-end">' +
             '<button class="btn btn-outline btn-sm" onclick="downloadPDF(\'quotes\',' + q.id + ',\'' + q.quote_number + '\')">PDF</button>' +
             (q.status === 'pending' ? '<button class="btn btn-primary btn-sm" onclick="acceptQuote(' + q.id + ')">Accepter</button>' : '') +
-            '</div></div></div>';
+            '</div></div>';
     }).join('');
 }
 
@@ -325,18 +341,36 @@ function renderInvoices(invoices) {
     const sc = { unpaid: '#D97706', paid: '#27AE60', overdue: '#E74C3C', cancelled: '#94A3B8' };
     list.innerHTML = invoices.map(inv => {
         const color = sc[inv.status] || '#94A3B8';
-        return '<div class="portal-list-item"><div style="flex:1">' +
-            '<div class="portal-item-title">' + inv.invoice_number + ' — ' + inv.title + '</div>' +
-            '<div class="portal-item-desc">' + (inv.description || '') + '</div>' +
-            '<div class="portal-item-meta"><span>Émise: ' + new Date(inv.created_at).toLocaleDateString('fr-CA') + '</span>' +
-            (inv.due_date ? '<span>Échéance: ' + new Date(inv.due_date).toLocaleDateString('fr-CA') + '</span>' : '') + '</div></div>' +
-            '<div class="portal-item-actions">' +
-            '<span class="portal-item-amount">' + formatCurrency(inv.amount_ttc) + '</span>' +
-            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:3px 8px;border-radius:4px">' + (sl[inv.status] || inv.status) + '</span>' +
-            '<div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;justify-content:flex-end">' +
+        const isPaid = inv.status === 'paid';
+        const isOverdue = inv.status === 'overdue';
+        return '<div style="border:1px solid #E2E8F0;border-radius:10px;padding:1rem 1.25rem;margin-bottom:0.75rem;background:white;' + (isPaid ? 'border-left:3px solid #27AE60' : (isOverdue ? 'border-left:3px solid #E74C3C' : '')) + '">' +
+            '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:0.6rem">' +
+            '<div style="flex:1">' +
+            '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.3rem;flex-wrap:wrap">' +
+            '<strong style="font-size:0.9rem;color:#1B4F8A">' + inv.invoice_number + '</strong>' +
+            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">' + (sl[inv.status] || inv.status) + '</span>' +
+            '</div>' +
+            '<div style="font-size:0.88rem;font-weight:600;color:#1E293B">' + inv.title + '</div>' +
+            (inv.description ? '<div style="font-size:0.8rem;color:#64748B;margin-top:2px">' + inv.description + '</div>' : '') +
+            '</div>' +
+            '<div style="text-align:right;flex-shrink:0">' +
+            '<div style="font-size:1.05rem;font-weight:700;color:' + (isPaid ? '#27AE60' : '#1B4F8A') + '">' + formatCurrency(inv.amount_ttc) + '</div>' +
+            '<div style="font-size:0.7rem;color:#94A3B8">TTC</div>' +
+            '</div></div>' +
+            '<div style="display:flex;gap:1.5rem;font-size:0.75rem;color:#64748B;margin-bottom:0.6rem;flex-wrap:wrap">' +
+            '<span>Émise : ' + new Date(inv.created_at).toLocaleDateString('fr-CA') + '</span>' +
+            (inv.due_date ? '<span>Échéance : <strong style="color:' + (isOverdue ? '#E74C3C' : 'inherit') + '">' + new Date(inv.due_date).toLocaleDateString('fr-CA') + '</strong></span>' : '') +
+            (inv.paid_at ? '<span style="color:#27AE60">Payée le : ' + new Date(inv.paid_at).toLocaleDateString('fr-CA') + '</span>' : '') +
+            '</div>' +
+            '<div style="background:#F8FAFC;border-radius:6px;padding:0.4rem 0.75rem;display:flex;gap:1.5rem;font-size:0.75rem;color:#64748B;margin-bottom:0.6rem;flex-wrap:wrap">' +
+            '<span>HT : <strong style="color:#1E293B">' + formatCurrency(inv.amount_ht) + '</strong></span>' +
+            '<span>TPS : ' + formatCurrency(inv.tps_amount) + '</span>' +
+            '<span>TVQ : ' + formatCurrency(inv.tvq_amount) + '</span>' +
+            '</div>' +
+            '<div style="display:flex;gap:0.5rem;justify-content:flex-end">' +
             '<button class="btn btn-outline btn-sm" onclick="downloadPDF(\'invoices\',' + inv.id + ',\'' + inv.invoice_number + '\')">PDF</button>' +
             (inv.status === 'unpaid' || inv.status === 'overdue' ? '<button class="btn btn-primary btn-sm" onclick="payInvoice(' + inv.id + ')">Payer</button>' : '') +
-            '</div></div></div>';
+            '</div></div>';
     }).join('');
 }
 
@@ -353,8 +387,8 @@ function renderPortalContracts(contracts) {
     const list = document.getElementById('contracts-list');
     if (!list) return;
     if (!contracts || !contracts.length) { list.innerHTML = '<div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>Aucun contrat disponible.</p></div>'; return; }
-    const sl = { draft: 'Brouillon', pending_signature: 'En attente de signature', viewed: 'Consulté', signed: 'Signé' };
-    const sc = { draft: '#94A3B8', pending_signature: '#D97706', viewed: '#2E86AB', signed: '#27AE60' };
+    const sl = { draft: 'Brouillon', pending: 'En attente de signature', pending_signature: 'En attente de signature', viewed: 'Consulté', signed: 'Signé' };
+    const sc = { draft: '#94A3B8', pending: '#D97706', pending_signature: '#D97706', viewed: '#2E86AB', signed: '#27AE60' };
     list.innerHTML = contracts.map(c => {
         const color = sc[c.status] || '#94A3B8';
         const ns = c.status === 'pending_signature';
