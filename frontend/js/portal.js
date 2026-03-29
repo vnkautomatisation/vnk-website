@@ -96,7 +96,10 @@ async function loadAllData() {
     const authFetch = async (url) => {
         try {
             const r = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
-            if (r.status === 401 || r.status === 403) { logout(); return null; }
+            if (r.status === 401 || r.status === 403) {
+                logout();
+                return null;
+            }
             if (!r.ok) return null;
             return r.json();
         } catch (e) { return null; }
@@ -123,8 +126,26 @@ async function loadAllData() {
             renderActivity(dash.recentActivity || []);
         }
 
-        if (quotes) { window._allQuotes = quotes.quotes || []; renderQuotes(window._allQuotes); }
-        if (invoices) { window._allInvoices = invoices.invoices || []; renderInvoices(window._allInvoices); }
+        if (quotes) {
+            window._allQuotes = quotes.quotes || [];
+            renderQuotes(window._allQuotes);
+            const total = window._allQuotes.length;
+            if (total > 0) showBadge('badge-quotes', total);
+        } else {
+            // Afficher erreur visible dans l'onglet devis
+            const el = document.getElementById('quotes-list');
+            if (el) el.innerHTML = `<div style="padding:1.5rem;background:#FEF3C7;border-radius:8px;border-left:3px solid #D97706;font-size:0.85rem;color:#92400E">
+                <strong>Impossible de charger les devis.</strong> Veuillez vous déconnecter et vous reconnecter.
+            </div>`;
+        }
+
+        if (invoices) {
+            window._allInvoices = invoices.invoices || [];
+            renderInvoices(window._allInvoices);
+            const unpaid = window._allInvoices.filter(i => i.status === 'unpaid').length;
+            if (unpaid > 0) showBadge('badge-invoices', unpaid);
+        }
+
         if (docs) renderDocuments(docs.documents || []);
         if (mandates) renderMandates(mandates.mandates || []);
 
@@ -133,7 +154,6 @@ async function loadAllData() {
             renderPortalContracts(window._allContracts);
             const pending = window._allContracts.filter(c => c.status === 'pending_signature').length;
             if (pending > 0) showBadge('badge-contracts', pending);
-            document.getElementById('stat-contracts') && (document.getElementById('stat-contracts').textContent = window._allContracts.length);
         }
 
         if (messages) {
@@ -172,103 +192,6 @@ function showTab(tabName) {
     const mobileTitle = document.getElementById('mobile-tab-title');
     if (mobileTitle) mobileTitle.textContent = titles[tabName] || '';
     window.scrollTo(0, 0);
-}
-
-// ─── Profil ──────────────────────────────────
-function renderProfile(user) {
-    const el = document.getElementById('profile-content');
-    if (!el) return;
-    const pRow = (l, v) => `<div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:0.5px solid #E2E8F0;font-size:0.83rem"><span style="color:#64748B">${l}</span><span style="font-weight:600;color:#1E293B">${v || '—'}</span></div>`;
-    el.innerHTML = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1rem">
-            <div style="background:#F8FAFC;border-radius:10px;padding:1.25rem;border:1px solid #E2E8F0">
-                <h4 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;letter-spacing:.05em;margin-bottom:1rem;text-transform:uppercase">Informations personnelles</h4>
-                ${pRow('Nom complet', user.name)}
-                ${pRow('Courriel', user.email)}
-                ${pRow('Entreprise', user.company)}
-            </div>
-            <div style="background:#F8FAFC;border-radius:10px;padding:1.25rem;border:1px solid #E2E8F0">
-                <h4 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;letter-spacing:.05em;margin-bottom:1rem;text-transform:uppercase">Compte VNK</h4>
-                ${pRow('Portail', 'Actif')}
-                ${pRow('Langue', 'Français')}
-                ${pRow('Contrats', (window._allContracts || []).length + ' contrat(s)')}
-            </div>
-        </div>
-        <div style="background:#EBF5FB;border-radius:10px;padding:1rem 1.25rem;border-left:3px solid #1B4F8A;font-size:0.82rem;color:#1B4F8A">
-            Pour modifier vos informations ou changer votre mot de passe, contactez VNK à <strong>yan.verone@vnk.ca</strong>
-        </div>`;
-}
-
-// ─── Filtres devis ────────────────────────────
-function filterQuotes() {
-    const search = (document.getElementById('quote-search')?.value || '').toLowerCase();
-    const status = document.getElementById('quote-filter')?.value || 'all';
-    let list = window._allQuotes || [];
-    if (status !== 'all') list = list.filter(q => q.status === status);
-    if (search) list = list.filter(q => (q.quote_number + ' ' + q.title).toLowerCase().includes(search));
-    renderQuotes(list);
-}
-
-// ─── Filtres factures ─────────────────────────
-function filterInvoices() {
-    const search = (document.getElementById('invoice-search')?.value || '').toLowerCase();
-    const status = document.getElementById('invoice-filter')?.value || 'all';
-    let list = window._allInvoices || [];
-    if (status !== 'all') list = list.filter(i => i.status === status);
-    if (search) list = list.filter(i => (i.invoice_number + ' ' + i.title).toLowerCase().includes(search));
-    renderInvoices(list);
-}
-
-// ─── Filtres contrats ─────────────────────────
-function filterContracts() {
-    const search = (document.getElementById('contract-search')?.value || '').toLowerCase();
-    const status = document.getElementById('contract-filter')?.value || 'all';
-    let list = window._allContracts || [];
-    if (status !== 'all') list = list.filter(c => c.status === status);
-    if (search) list = list.filter(c => (c.contract_number + ' ' + c.title).toLowerCase().includes(search));
-    renderPortalContracts(list);
-}
-
-// ─── Render contrats portail ──────────────────
-function renderPortalContracts(contracts) {
-    const list = document.getElementById('contracts-list');
-    if (!list) return;
-    if (!contracts || !contracts.length) {
-        list.innerHTML = `<div class="portal-empty-state">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <p>Aucun contrat disponible.</p></div>`;
-        return;
-    }
-    const sl = { draft: 'Brouillon', pending_signature: 'En attente de signature', viewed: 'Consulté', signed: 'Signé' };
-    const sc = { draft: '#94A3B8', pending_signature: '#D97706', viewed: '#2E86AB', signed: '#27AE60' };
-    list.innerHTML = contracts.map(c => {
-        const color = sc[c.status] || '#94A3B8';
-        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border:1px solid #E2E8F0;border-radius:10px;margin-bottom:0.75rem;background:white">
-            <div style="flex:1">
-                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem">
-                    <strong style="font-size:0.9rem">${c.contract_number}</strong>
-                    <span style="background:${color}22;color:${color};font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">${sl[c.status] || c.status}</span>
-                </div>
-                <div style="font-size:0.85rem;color:#1E293B;margin-bottom:0.2rem">${c.title}</div>
-                <div style="font-size:0.75rem;color:#94A3B8">
-                    ${c.quote_number ? `Devis ${c.quote_number} · ` : ''}${new Date(c.created_at).toLocaleDateString('fr-CA')}
-                    ${c.signed_at ? ` · Signé le ${new Date(c.signed_at).toLocaleDateString('fr-CA')}` : ''}
-                </div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:0.4rem;margin-left:1rem">
-                <a href="/api/contracts/${c.id}/pdf" target="_blank"
-                   style="display:flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;border:1.5px solid #1B4F8A;border-radius:6px;color:#1B4F8A;font-size:0.78rem;font-weight:600;text-decoration:none;white-space:nowrap">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    Voir
-                </a>
-                ${c.status === 'signed' ? `<a href="/api/contracts/${c.id}/pdf" download
-                    style="display:flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;border:1.5px solid #27AE60;border-radius:6px;color:#27AE60;font-size:0.78rem;font-weight:600;text-decoration:none">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Télécharger
-                </a>` : ''}
-            </div>
-        </div>`;
-    }).join('');
 }
 
 // ---------- Badge helper ----------
@@ -581,6 +504,182 @@ function logout() {
     localStorage.removeItem('vnk-user');
     document.getElementById('login-section').style.display = 'flex';
     document.getElementById('dashboard-section').style.display = 'none';
+}
+
+
+// ─── Profil client ────────────────────────────
+function renderProfile(user) {
+    const el = document.getElementById('profile-content');
+    if (!el) return;
+    const pRow = (l, v) => `<div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:0.5px solid #E2E8F0;font-size:0.83rem"><span style="color:#64748B">${l}</span><span style="font-weight:600;color:#1E293B;text-align:right;max-width:60%">${v || '—'}</span></div>`;
+    el.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1rem">
+            <div style="background:#F8FAFC;border-radius:10px;padding:1.25rem;border:1px solid #E2E8F0">
+                <h4 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.75rem">Informations personnelles</h4>
+                ${pRow('Nom complet', user.name)}
+                ${pRow('Courriel', user.email)}
+                ${pRow('Entreprise', user.company)}
+                ${pRow('Téléphone', user.phone || '—')}
+                ${pRow('Adresse', user.address || '—')}
+                ${pRow('Ville', user.city ? user.city + (user.province ? ', ' + user.province : '') + (user.postal_code ? ' ' + user.postal_code : '') : '—')}
+            </div>
+            <div style="background:#F8FAFC;border-radius:10px;padding:1.25rem;border:1px solid #E2E8F0">
+                <h4 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.75rem">Compte VNK</h4>
+                ${pRow('Portail', 'Actif')}
+                ${pRow('Secteur', user.sector || '—')}
+                ${pRow('Technologies', user.technologies || '—')}
+                ${pRow('Devis', (window._allQuotes || []).length + ' devis')}
+                ${pRow('Contrats', (window._allContracts || []).length + ' contrat(s)')}
+            </div>
+        </div>
+        <div style="background:#F8FAFC;border-radius:10px;padding:1.25rem;border:1px solid #E2E8F0;margin-bottom:1rem">
+            <h4 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.75rem">Changer le mot de passe</h4>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;align-items:end">
+                <div>
+                    <label style="font-size:0.78rem;color:#64748B;display:block;margin-bottom:4px">Mot de passe actuel</label>
+                    <input type="password" id="pw-current" style="width:100%;padding:0.5rem;border:1px solid #E2E8F0;border-radius:6px;font-size:0.85rem">
+                </div>
+                <div>
+                    <label style="font-size:0.78rem;color:#64748B;display:block;margin-bottom:4px">Nouveau mot de passe</label>
+                    <input type="password" id="pw-new" style="width:100%;padding:0.5rem;border:1px solid #E2E8F0;border-radius:6px;font-size:0.85rem">
+                </div>
+                <div>
+                    <label style="font-size:0.78rem;color:#64748B;display:block;margin-bottom:4px">Confirmer</label>
+                    <input type="password" id="pw-confirm" style="width:100%;padding:0.5rem;border:1px solid #E2E8F0;border-radius:6px;font-size:0.85rem">
+                </div>
+            </div>
+            <button onclick="changePassword()" style="margin-top:0.75rem;padding:0.5rem 1.25rem;background:#1B4F8A;color:white;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer">Changer le mot de passe</button>
+            <span id="pw-msg" style="margin-left:0.75rem;font-size:0.8rem"></span>
+        </div>
+        <div style="background:#EBF5FB;border-radius:10px;padding:1rem 1.25rem;border-left:3px solid #1B4F8A;font-size:0.82rem;color:#1B4F8A">
+            Pour modifier vos coordonnées, contactez VNK à <strong>vnkautomatisation@gmail.com</strong>
+        </div>`;
+}
+
+async function changePassword() {
+    const current = document.getElementById('pw-current')?.value;
+    const newPw = document.getElementById('pw-new')?.value;
+    const confirm = document.getElementById('pw-confirm')?.value;
+    const msg = document.getElementById('pw-msg');
+    if (!current || !newPw || !confirm) { msg.textContent = 'Tous les champs sont requis.'; msg.style.color = '#E74C3C'; return; }
+    if (newPw !== confirm) { msg.textContent = 'Les mots de passe ne correspondent pas.'; msg.style.color = '#E74C3C'; return; }
+    if (newPw.length < 8) { msg.textContent = 'Minimum 8 caractères.'; msg.style.color = '#E74C3C'; return; }
+    const token = localStorage.getItem('vnk-token');
+    try {
+        const r = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ currentPassword: current, newPassword: newPw })
+        });
+        const d = await r.json();
+        if (d.success) {
+            msg.textContent = '✓ Mot de passe changé avec succès.';
+            msg.style.color = '#27AE60';
+            document.getElementById('pw-current').value = '';
+            document.getElementById('pw-new').value = '';
+            document.getElementById('pw-confirm').value = '';
+        } else {
+            msg.textContent = d.message || 'Erreur.';
+            msg.style.color = '#E74C3C';
+        }
+    } catch (e) { msg.textContent = 'Erreur de connexion.'; msg.style.color = '#E74C3C'; }
+}
+
+// ─── Filtres devis ────────────────────────────
+function filterQuotes() {
+    const search = (document.getElementById('quote-search')?.value || '').toLowerCase();
+    const status = document.getElementById('quote-filter')?.value || 'all';
+    let list = window._allQuotes || [];
+    if (status !== 'all') list = list.filter(q => q.status === status);
+    if (search) list = list.filter(q => (q.quote_number + ' ' + q.title).toLowerCase().includes(search));
+    renderQuotes(list);
+}
+
+// ─── Filtres factures ─────────────────────────
+function filterInvoices() {
+    const search = (document.getElementById('invoice-search')?.value || '').toLowerCase();
+    const status = document.getElementById('invoice-filter')?.value || 'all';
+    let list = window._allInvoices || [];
+    if (status !== 'all') list = list.filter(i => i.status === status);
+    if (search) list = list.filter(i => (i.invoice_number + ' ' + i.title).toLowerCase().includes(search));
+    renderInvoices(list);
+}
+
+// ─── Filtres contrats ─────────────────────────
+function filterContracts() {
+    const search = (document.getElementById('contract-search')?.value || '').toLowerCase();
+    const status = document.getElementById('contract-filter')?.value || 'all';
+    let list = window._allContracts || [];
+    if (status !== 'all') list = list.filter(c => c.status === status);
+    if (search) list = list.filter(c => (c.contract_number + ' ' + c.title).toLowerCase().includes(search));
+    renderPortalContracts(list);
+}
+
+// ─── Render contrats portail ──────────────────
+function renderPortalContracts(contracts) {
+    const list = document.getElementById('contracts-list');
+    if (!list) return;
+    if (!contracts || !contracts.length) {
+        list.innerHTML = `<div class="portal-empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <p>Aucun contrat disponible.</p></div>`;
+        return;
+    }
+    const sl = { draft: 'Brouillon', pending_signature: 'En attente de signature', viewed: 'Consulté', signed: 'Signé' };
+    const sc = { draft: '#94A3B8', pending_signature: '#D97706', viewed: '#2E86AB', signed: '#27AE60' };
+    list.innerHTML = contracts.map(c => {
+        const color = sc[c.status] || '#94A3B8';
+        const needsSign = c.status === 'pending_signature';
+        const isSigned = c.status === 'signed';
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border:1px solid #E2E8F0;border-radius:10px;margin-bottom:0.75rem;background:white;${needsSign ? 'border-left:3px solid #D97706;' : ''}">
+            <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem">
+                    <strong style="font-size:0.9rem">${c.contract_number}</strong>
+                    <span style="background:${color}22;color:${color};font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">${sl[c.status] || c.status}</span>
+                </div>
+                <div style="font-size:0.85rem;color:#1E293B;margin-bottom:0.25rem">${c.title}</div>
+                <div style="font-size:0.75rem;color:#94A3B8">
+                    ${c.quote_number ? `Devis ${c.quote_number} · ` : ''}${new Date(c.created_at).toLocaleDateString('fr-CA')}
+                    ${c.signed_at ? ` · Signé le ${new Date(c.signed_at).toLocaleDateString('fr-CA')}` : ''}
+                </div>
+                ${needsSign ? `<div style="margin-top:0.5rem;font-size:0.78rem;color:#D97706;font-weight:600">⚠ Ce contrat requiert votre signature</div>` : ''}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.4rem;margin-left:1rem">
+                <a href="/api/contracts/${c.id}/pdf" target="_blank"
+                   style="display:flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;border:1.5px solid #1B4F8A;border-radius:6px;color:#1B4F8A;font-size:0.78rem;font-weight:600;text-decoration:none;white-space:nowrap">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Voir
+                </a>
+                ${needsSign ? `<button onclick="signContract(${c.id})"
+                    style="display:flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;border:none;border-radius:6px;background:#D97706;color:white;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    Signer
+                </button>` : ''}
+                ${isSigned ? `<a href="/api/contracts/${c.id}/pdf" download
+                    style="display:flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;border:1.5px solid #27AE60;border-radius:6px;color:#27AE60;font-size:0.78rem;font-weight:600;text-decoration:none">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Télécharger
+                </a>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function signContract(contractId) {
+    const token = localStorage.getItem('vnk-token');
+    try {
+        const r = await fetch(`/api/contracts/${contractId}/signing-url`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const d = await r.json();
+        if (d.success && d.signingUrl) {
+            window.open(d.signingUrl, '_blank');
+        } else {
+            alert('Lien de signature indisponible. Contactez VNK à vnkautomatisation@gmail.com');
+        }
+    } catch (e) {
+        alert('Erreur. Contactez VNK à vnkautomatisation@gmail.com');
+    }
 }
 
 function togglePortalPw() {

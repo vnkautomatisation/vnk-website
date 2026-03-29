@@ -207,7 +207,7 @@
 
             <!-- TAB: PROFIL -->
             <div class="portal-tab" id="tab-profile">
-                <div class="portal-tab-header"><h2>Mon profil</h2><span class="portal-tab-subtitle">Vos informations de compte</span></div>
+                <div class="portal-tab-header"><h2>Mon profil</h2><span class="portal-tab-subtitle">Vos informations et paramètres de compte</span></div>
                 <div id="profile-content"><p class="portal-empty">Chargement...</p></div>
             </div>
 
@@ -306,18 +306,18 @@
 
             <!-- TAB: CONTRATS -->
             <div class="portal-tab" id="tab-contracts">
-                <div class="portal-tab-header"><h2>Mes contrats</h2><span class="portal-tab-subtitle">Consultez et téléchargez vos contrats de service</span></div>
+                <div class="portal-tab-header"><h2>Mes contrats</h2><span class="portal-tab-subtitle">Consultez et signez vos contrats de service</span></div>
                 <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
                     <input type="text" id="contract-search" placeholder="Rechercher..." oninput="filterContracts()" style="flex:1;min-width:160px;padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.85rem">
                     <select id="contract-filter" onchange="filterContracts()" style="padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.85rem;background:white">
-                        <option value="all">Tous les statuts</option>
+                        <option value="all">Tous</option>
                         <option value="pending_signature">En attente de signature</option>
                         <option value="signed">Signé</option>
                         <option value="draft">Brouillon</option>
                     </select>
                 </div>
                 <div id="contracts-list" class="portal-list">
-                    <div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg><p>Aucun contrat disponible.</p></div>
+                    <div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg><p>Aucun contrat disponible.</p></div>
                 </div>
             </div>
 
