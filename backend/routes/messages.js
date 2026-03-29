@@ -68,4 +68,19 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 });
 
+// POST /api/messages/upload — upload file/audio
+router.post('/upload', authenticateToken, async (req, res) => {
+    try {
+        // Multer non configuré — stocker en base64 dans le content du message
+        // Pour l'instant, retourner une URL blob (le frontend gère localement)
+        res.json({
+            success: false,
+            message: 'Upload serveur non configuré. Utiliser URL locale.'
+        });
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
 module.exports = router;

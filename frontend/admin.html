@@ -42,21 +42,32 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, var(--primary-dark) 0%, #1a3a5c 100%);
+            padding: 2rem 1rem;
+            background: linear-gradient(135deg, #0F2D52 0%, #1B4F8A 100%);
         }
 
         .login-card {
             background: var(--white);
-            border-radius: 16px;
-            padding: 2.5rem;
+            border-radius: 20px;
             width: 100%;
             max-width: 420px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+            overflow: hidden;
         }
 
         .login-logo {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 0;
+        }
+
+        .login-card-top {
+            background: linear-gradient(135deg, #0F2D52 0%, #1B4F8A 100%);
+            padding: 2.25rem 2.5rem 2rem;
+            text-align: center;
+        }
+
+        .login-card-body {
+            padding: 2rem 2.5rem 2.5rem;
         }
 
         .login-badge {
@@ -404,6 +415,11 @@
             .admin-section.active {
                 display: block;
             }
+
+        /* Section messages utilise flex — override nécessaire */
+        #section-messages.active {
+            display: flex !important;
+        }
 
         .section-header {
             display: flex;
@@ -1646,67 +1662,69 @@
     <!-- LOGIN -->
     <div class="admin-login" id="admin-login">
         <div class="login-card">
-            <!-- Logo -->
-            <div class="login-logo">
-                <svg width="52" height="52" viewBox="0 0 60 60">
-                    <polygon points="30,3 54,16 54,44 30,57 6,44 6,16" fill="#1B4F8A" opacity="0.08" />
-                    <polygon points="30,3 54,16 54,44 30,57 6,44 6,16" fill="none" stroke="#1B4F8A" stroke-width="2" />
-                    <text x="30" y="34" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#1B4F8A;font-family:sans-serif">VNK</text>
+            <!-- Haut — fond dégradé sombre -->
+            <div class="login-card-top">
+                <svg width="220" height="42" viewBox="0 0 220 42" style="display:block;margin:0 auto 0.75rem">
+                    <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="rgba(255,255,255,0.12)" />
+                    <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.5" />
+                    <text x="21" y="26" text-anchor="middle" style="font-size:11px;font-weight:800;fill:white;font-family:sans-serif">VNK</text>
+                    <text x="48" y="18" style="font-size:13px;font-weight:700;fill:white;font-family:sans-serif">Automatisation Inc.</text>
+                    <text x="48" y="33" style="font-size:7.5px;fill:rgba(255,255,255,0.6);font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text>
                 </svg>
+                <div style="font-size:0.82rem;color:rgba(255,255,255,0.7);margin-top:0.25rem">Tableau de bord administrateur</div>
             </div>
-            <div style="text-align:center;margin-bottom:1.5rem">
-                <div style="font-size:1.25rem;font-weight:800;color:var(--primary)">VNK Automatisation Inc.</div>
-                <div style="font-size:0.78rem;color:var(--text-light);margin-top:0.25rem">Tableau de bord administrateur</div>
-            </div>
+            <!-- Bas — fond blanc, formulaire -->
+            <div class="login-card-body">
 
-            <!-- SSO Buttons -->
-            <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.25rem">
-                <button onclick="showToast('Google SSO - configuration requise', 'info')" style="width:100%;padding:0.7rem 1rem;border:1.5px solid var(--border);border-radius:10px;background:white;cursor:pointer;font-family:inherit;font-size:0.875rem;font-weight:600;color:var(--text);display:flex;align-items:center;justify-content:center;gap:0.75rem;transition:all 0.15s" onmouseenter="this.style.borderColor='#4285F4';this.style.background='rgba(66,133,244,0.04)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
-                    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
-                    Continuer avec Google
-                </button>
-                <button onclick="showToast('Microsoft SSO - configuration requise', 'info')" style="width:100%;padding:0.7rem 1rem;border:1.5px solid var(--border);border-radius:10px;background:white;cursor:pointer;font-family:inherit;font-size:0.875rem;font-weight:600;color:var(--text);display:flex;align-items:center;justify-content:center;gap:0.75rem;transition:all 0.15s" onmouseenter="this.style.borderColor='#0078D4';this.style.background='rgba(0,120,212,0.04)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
-                    <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#F25022" /><rect x="11" y="1" width="9" height="9" fill="#7FBA00" /><rect x="1" y="11" width="9" height="9" fill="#00A4EF" /><rect x="11" y="11" width="9" height="9" fill="#FFB900" /></svg>
-                    Continuer avec Microsoft
-                </button>
-            </div>
-
-            <!-- Divider -->
-            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem">
-                <div style="flex:1;height:1px;background:var(--border)"></div>
-                <span style="font-size:0.75rem;color:var(--text-light);font-weight:500">ou connexion admin</span>
-                <div style="flex:1;height:1px;background:var(--border)"></div>
-            </div>
-
-            <!-- Email/Password form -->
-            <div id="admin-login-error" class="alert alert-error" style="display:none"></div>
-            <form id="admin-login-form">
-                <div class="form-group" style="margin-bottom:1rem">
-                    <label class="form-label">Courriel</label>
-                    <input type="email" id="admin-email" class="form-input" placeholder="admin@vnk.ca" autocomplete="email" required>
+                <!-- SSO Buttons -->
+                <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.25rem">
+                    <button onclick="showToast('Google SSO - configuration requise', 'info')" style="width:100%;padding:0.7rem 1rem;border:1.5px solid var(--border);border-radius:10px;background:white;cursor:pointer;font-family:inherit;font-size:0.875rem;font-weight:600;color:var(--text);display:flex;align-items:center;justify-content:center;gap:0.75rem;transition:all 0.15s" onmouseenter="this.style.borderColor='#4285F4';this.style.background='rgba(66,133,244,0.04)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
+                        Continuer avec Google
+                    </button>
+                    <button onclick="showToast('Microsoft SSO - configuration requise', 'info')" style="width:100%;padding:0.7rem 1rem;border:1.5px solid var(--border);border-radius:10px;background:white;cursor:pointer;font-family:inherit;font-size:0.875rem;font-weight:600;color:var(--text);display:flex;align-items:center;justify-content:center;gap:0.75rem;transition:all 0.15s" onmouseenter="this.style.borderColor='#0078D4';this.style.background='rgba(0,120,212,0.04)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                        <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#F25022" /><rect x="11" y="1" width="9" height="9" fill="#7FBA00" /><rect x="1" y="11" width="9" height="9" fill="#00A4EF" /><rect x="11" y="11" width="9" height="9" fill="#FFB900" /></svg>
+                        Continuer avec Microsoft
+                    </button>
                 </div>
-                <div class="form-group" style="margin-bottom:1.25rem">
-                    <label class="form-label">Mot de passe</label>
-                    <div style="position:relative">
-                        <input type="password" id="admin-password" class="form-input" placeholder="••••••••" autocomplete="current-password" required style="padding-right:2.75rem">
-                        <button type="button" onclick="togglePw('admin-password',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-light);padding:0.2rem">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                        </button>
+
+                <!-- Divider -->
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem">
+                    <div style="flex:1;height:1px;background:var(--border)"></div>
+                    <span style="font-size:0.75rem;color:var(--text-light);font-weight:500">ou connexion admin</span>
+                    <div style="flex:1;height:1px;background:var(--border)"></div>
+                </div>
+
+                <!-- Email/Password form -->
+                <div id="admin-login-error" class="alert alert-error" style="display:none"></div>
+                <form id="admin-login-form">
+                    <div class="form-group" style="margin-bottom:1rem">
+                        <label class="form-label">Courriel</label>
+                        <input type="email" id="admin-email" class="form-input" placeholder="admin@vnk.ca" autocomplete="email" required>
                     </div>
-                </div>
-                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
-                    <input type="checkbox" id="admin-remember" style="width:15px;height:15px;cursor:pointer;accent-color:#1B4F8A">
-                    <label for="admin-remember" style="font-size:0.82rem;color:var(--text-light);cursor:pointer;user-select:none">Se souvenir de moi</label>
-                </div>
-                <button type="submit" class="btn btn-primary" style="width:100%;padding:0.8rem;font-size:0.925rem">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></svg>
-                    Accéder au tableau de bord
-                </button>
-            </form>
+                    <div class="form-group" style="margin-bottom:1.25rem">
+                        <label class="form-label">Mot de passe</label>
+                        <div style="position:relative">
+                            <input type="password" id="admin-password" class="form-input" placeholder="••••••••" autocomplete="current-password" required style="padding-right:2.75rem">
+                            <button type="button" onclick="togglePw('admin-password',this)" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-light);padding:0.2rem">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+                        <input type="checkbox" id="admin-remember" style="width:15px;height:15px;cursor:pointer;accent-color:#1B4F8A">
+                        <label for="admin-remember" style="font-size:0.82rem;color:var(--text-light);cursor:pointer;user-select:none">Se souvenir de moi</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;padding:0.8rem;font-size:0.925rem">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></svg>
+                        Accéder au tableau de bord
+                    </button>
+                </form>
 
-            <div style="text-align:center;margin-top:1.25rem;font-size:0.75rem;color:var(--text-light)">
-                Accès restreint · VNK Automatisation Inc.
-            </div>
+                <div style="text-align:center;margin-top:1.25rem;font-size:0.75rem;color:var(--text-light)">
+                    Accès restreint · VNK Automatisation Inc.
+                </div>
+            </div><!-- fin login-card-body -->
         </div>
     </div>
 
@@ -1805,11 +1823,12 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>
                         Documents
                     </button>
-                    <button class="sidebar-item" onclick="showSection('messages')">
+                    <button class="sidebar-item" id="sidebar-messages-btn" onclick="showSection('messages')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
                         Messages
                         <span class="sidebar-badge" id="badge-messages-admin" style="background:var(--error);display:none">0</span>
                     </button>
+
                     <div class="sidebar-section">Finance</div>
                     <button class="sidebar-item" onclick="showSection('finance')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
@@ -1849,7 +1868,7 @@
                 <div class="admin-section active" id="section-dashboard">
                     <div class="section-header">
                         <div><div class="section-title">Tableau de bord</div><div class="section-subtitle" id="dash-greeting">Bonjour, Yan Verone</div></div>
-                        <button class="btn btn-ghost btn-sm" onclick="loadAllAdmin()">
+                        <button class="btn btn-ghost btn-sm" id="admin-refresh-btn" onclick="adminRefresh(this)">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg> Actualiser
                         </button>
                     </div>
@@ -2030,18 +2049,84 @@
                 </div>
 
                 <!-- ===== MESSAGES ===== -->
-                <div class="admin-section" id="section-messages">
-                    <div class="section-header">
-                        <div><div class="section-title">Messagerie</div><div class="section-subtitle">Répondez aux messages de vos clients en tant que VNK</div></div>
-                        <button class="btn btn-primary" onclick="openModal('modal-new-conversation')">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                <div class="admin-section" id="section-messages" style="padding:0;height:calc(100vh - 120px);flex-direction:column;overflow:hidden">
+                    <!-- Header -->
+                    <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--white)">
+                        <div>
+                            <div class="section-title">Messagerie</div>
+                            <div class="section-subtitle">Répondez à vos clients en tant que VNK</div>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="openModal('modal-new-conversation')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                             Nouvelle conversation
                         </button>
                     </div>
-                    <div class="toolbar" style="margin-bottom:1rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--white)">
-                        <div class="search-box" style="flex:1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="messages-search" placeholder="Rechercher un client..." oninput="filterMessages()"></div>
+                    <!-- Layout 2 colonnes: liste clients | conversation active -->
+                    <div style="display:grid;grid-template-columns:280px 1fr;flex:1;min-height:0;overflow:hidden">
+                        <!-- Colonne gauche: liste des clients -->
+                        <div style="border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--bg)">
+                            <div style="padding:0.75rem;flex-shrink:0">
+                                <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg><input type="text" id="messages-search" placeholder="Rechercher un client..." oninput="filterMessages()"></div>
+                            </div>
+                            <div id="admin-clients-list" style="flex:1;overflow-y:auto;padding:0 0.5rem 0.5rem"></div>
+                        </div>
+                        <!-- Colonne droite: conversation active -->
+                        <div style="display:flex;flex-direction:column;overflow:hidden;background:#F8FAFC" id="admin-chat-panel">
+                            <!-- Placeholder vide -->
+                            <div id="admin-chat-empty" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;color:#94A3B8">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                                <p style="font-size:0.9rem">Sélectionnez une conversation</p>
+                            </div>
+                            <!-- Header conversation (caché par défaut) -->
+                            <div id="admin-conv-header" style="display:none;padding:1rem 1.5rem;border-bottom:1px solid var(--border);background:var(--white);display:flex;align-items:center;gap:0.75rem;flex-shrink:0">
+                                <div id="admin-conv-avatar" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1B4F8A,#2E75B6);color:white;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;flex-shrink:0">--</div>
+                                <div style="flex:1">
+                                    <div id="admin-conv-name" style="font-weight:700;font-size:0.95rem;color:#0F172A"></div>
+                                    <div id="admin-conv-company" style="font-size:0.78rem;color:#64748B"></div>
+                                </div>
+                                <span id="admin-conv-unread-badge" style="display:none;background:#E74C3C;color:white;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:10px"></span>
+                            </div>
+                            <!-- Messages -->
+                            <div id="admin-chat-messages" style="flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:0.6rem;min-height:0"></div>
+                            <!-- Compose (caché par défaut) -->
+                            <div id="admin-compose" style="display:none;border-top:1px solid var(--border);background:var(--white);padding:0.75rem 1rem">
+                                <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem">
+                                    <!-- Pièce jointe -->
+                                    <button class="btn btn-ghost btn-sm" onclick="adminChatAttach('all')" title="Fichier / PDF" style="padding:6px">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+                                    </button>
+                                    <!-- Photo -->
+                                    <button class="btn btn-ghost btn-sm" onclick="adminChatAttach('image')" title="Photo" style="padding:6px">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+                                    </button>
+                                    <!-- Vocal -->
+                                    <button class="btn btn-ghost btn-sm" id="admin-record-btn" onclick="adminChatToggleRecord()" title="Message vocal" style="padding:6px">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></svg>
+                                    </button>
+                                    <input type="file" id="admin-file-all" style="display:none" accept="image/*,.pdf,.doc,.docx" onchange="adminFileSelected(this,'all')">
+                                    <input type="file" id="admin-file-image" style="display:none" accept="image/*" onchange="adminFileSelected(this,'image')">
+                                    <!-- Indicateur vocal -->
+                                    <div id="admin-record-indicator" style="display:none;align-items:center;gap:6px;font-size:0.78rem;color:#DC2626;font-weight:600;margin-left:auto">
+                                        <span style="width:7px;height:7px;background:#DC2626;border-radius:50%;animation:vnkBlink 1s infinite"></span>
+                                        Enregistrement...
+                                        <button onclick="adminStopRecord(true)" style="border:none;background:#DC2626;color:white;border-radius:5px;padding:2px 8px;cursor:pointer;font-size:0.72rem;font-family:inherit">Envoyer</button>
+                                        <button onclick="adminStopRecord(false)" style="border:none;background:#94A3B8;color:white;border-radius:5px;padding:2px 8px;cursor:pointer;font-size:0.72rem;font-family:inherit">Annuler</button>
+                                    </div>
+                                </div>
+                                <div style="display:flex;gap:0.5rem;align-items:flex-end">
+                                    <textarea id="admin-chat-input" rows="1" placeholder="Répondre en tant que VNK..."
+                                              style="flex:1;padding:0.6rem 0.75rem;border:1.5px solid #E2E8F0;border-radius:10px;font-size:0.875rem;font-family:inherit;resize:none;outline:none;min-height:40px;transition:border-color 0.15s"
+                                              onfocus="this.style.borderColor='#1B4F8A'"
+                                              onblur="this.style.borderColor='#E2E8F0'"
+                                              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();adminChatSend()}"
+                                              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+                                    <button onclick="adminChatSend()" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1B4F8A,#2E75B6);color:white;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(27,79,138,0.3)">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div id="messages-thread"></div>
                 </div>
 
                 <!-- ===== FINANCE ===== -->
@@ -2678,14 +2763,21 @@
             if (adminPollingInterval) return;
             adminPollingInterval = setInterval(async () => {
                 try {
-                    const d = await api('/unread-count');
-                    if (!d.success) return;
-                    const count = d.count;
-                    const b = document.getElementById('badge-messages-admin');
-                    if (b) { b.textContent = count; b.style.display = count ? 'inline' : 'none'; }
-                    updateAdminFloatBadge(count);
+                    // Recharger les messages complets
+                    const prevUnread = allMessages.reduce((s, t) => s + (t.unread_count || 0), 0);
+                    await loadMessages();
+                    const newUnread = allMessages.reduce((s, t) => s + (t.unread_count || 0), 0);
+                    // Notifier si nouveau message
+                    if (newUnread > prevUnread && typeof vnkNotif !== 'undefined') {
+                        const newThread = allMessages.find(t => (t.unread_count || 0) > 0);
+                        vnkNotif.newMessage(newThread?.client_name || 'Client', 'Nouveau message reçu');
+                    }
+                    // Si une conversation est ouverte, la re-rendre
+                    if (typeof _adminCurrentClient !== 'undefined' && _adminCurrentClient) {
+                        adminOpenThread(_adminCurrentClient);
+                    }
                 } catch { }
-            }, 30000);
+            }, 15000); // Toutes les 15s
         }
 
         function updateAdminFloatBadge(count) {
@@ -2699,6 +2791,26 @@
                 document.body.appendChild(badge);
             }
             if (badge) { if (count > 0) { const el = document.getElementById('admin-float-count'); if (el) el.textContent = count; badge.style.display = 'flex'; } else badge.style.display = 'none'; }
+        }
+
+        async function adminRefresh(btn) {
+            if (btn) {
+                btn.disabled = true;
+                const svg = btn.querySelector('svg');
+                if (svg) svg.style.animation = 'adminSpin 0.8s linear infinite';
+            }
+            try {
+                await loadAllAdmin();
+                if (typeof _adminCurrentClient !== 'undefined' && _adminCurrentClient) {
+                    adminOpenThread(_adminCurrentClient);
+                }
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    const svg = btn.querySelector('svg');
+                    if (svg) svg.style.animation = '';
+                }
+            }
         }
 
         function authH() { return { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' }; }
@@ -2734,16 +2846,16 @@
                 const labels = { invoice: 'Facture', quote: 'Devis', mandate: 'Mandat', document: 'Document' };
                 const color = colors[a.type] || 'var(--text-light)';
                 return `<div style="display:flex;align-items:center;gap:0.85rem;padding:0.75rem 0;border-bottom:1px solid var(--border)">
-                    <div style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:${color}"></div>
-                    <div style="flex:1;min-width:0">
-                        <div style="font-size:0.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.description}</div>
-                        <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.15rem">
-                            <span style="font-size:0.7rem;font-weight:700;color:white;background:${color};padding:0.1rem 0.5rem;border-radius:10px">${labels[a.type] || ''}</span>
-                            <span style="font-size:0.73rem;color:var(--text-light)">${a.client_name} · ${fmtDate(a.date)}</span>
+                        <div style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:${color}"></div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-size:0.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.description}</div>
+                            <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.15rem">
+                                <span style="font-size:0.7rem;font-weight:700;color:white;background:${color};padding:0.1rem 0.5rem;border-radius:10px">${labels[a.type] || ''}</span>
+                                <span style="font-size:0.73rem;color:var(--text-light)">${a.client_name} · ${fmtDate(a.date)}</span>
+                            </div>
                         </div>
-                    </div>
-                    ${a.amount ? `<div style="font-size:0.88rem;font-weight:800;color:var(--primary);white-space:nowrap">${fmt(a.amount)}</div>` : ''}
-                </div>`;
+                        ${a.amount ? `<div style="font-size:0.88rem;font-weight:800;color:var(--primary);white-space:nowrap">${fmt(a.amount)}</div>` : ''}
+                    </div>`;
             }).join('');
         }
 
@@ -2802,45 +2914,45 @@
             grid.innerHTML = paged.map(c => {
                 const techs = c.technologies ? c.technologies.split(',').filter(Boolean) : [];
                 return `<div class="client-card" onclick="openCdp(${c.id})">
-                    <div class="client-avatar">${initials(c.full_name)}</div>
-                    <div style="flex:1;min-width:0">
-                        <div class="client-name">${c.full_name} <span class="badge ${isActive(c) ? 'badge-active' : 'badge-expired'}" style="font-size:0.68rem;margin-left:0.3rem">${isActive(c) ? 'Actif' : 'Inactif'}</span></div>
-                        <div class="client-company">${c.company_name || '—'}${c.sector ? ' · ' + c.sector : ''}</div>
-                        <div class="client-meta"><span>${c.email}</span>${c.phone ? '<span>' + c.phone + '</span>' : ''}${c.city ? '<span>' + c.city + (c.province ? ', ' + c.province : '') + '</span>' : ''}<span>Depuis ${fmtDate(c.created_at)}</span></div>
-                        ${techs.length ? `<div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.3rem">${techs.map(t => `<span class="client-pill">${t.trim()}</span>`).join('')}</div>` : ''}
-                    </div>
-                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;flex-shrink:0">
-                        ${mCounts[c.id] ? `<span style="font-size:0.75rem;color:var(--text-light)">${mCounts[c.id]} mandat${mCounts[c.id] > 1 ? 's' : ''}</span>` : ''}
-                        ${iCounts[c.id] ? `<span style="font-size:0.75rem;font-weight:700;color:var(--error)">${iCounts[c.id]} impayée${iCounts[c.id] > 1 ? 's' : ''}</span>` : ''}
-                        <div style="position:relative">
-                            <button class="btn btn-ghost btn-sm" style="padding:0.3rem 0.5rem;font-size:1rem;line-height:1" onclick="event.stopPropagation();toggleClientMenu(${c.id},this)" title="Actions rapides">⋯</button>
-                            <div id="client-menu-${c.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.2);border:1px solid var(--border);min-width:190px;z-index:9999;padding:0.35rem 0">
-                                <div style="padding:0.3rem 0.75rem;font-size:0.68rem;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px">Actions rapides</div>
-                                <button onclick="event.stopPropagation();closeAllClientMenus();prefill('nq-client',${c.id});openModal('modal-new-quote')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                    Nouveau devis
-                                </button>
-                                <button onclick="event.stopPropagation();closeAllClientMenus();prefill('ni-client',${c.id});openModal('modal-new-invoice')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                                    Nouvelle facture
-                                </button>
-                                <button onclick="event.stopPropagation();closeAllClientMenus();prefill('nm-client',${c.id});openModal('modal-new-mandate')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                                    Nouveau mandat
-                                </button>
-                                <div style="height:1px;background:var(--border);margin:0.3rem 0"></div>
-                                <button onclick="event.stopPropagation();closeAllClientMenus();openRefundModal(${c.id},'${c.full_name.replace(/'/g, "\\'")}');" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--success)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.82"/></svg>
-                                    Rembourser via Stripe
-                                </button>
-                                <button onclick="event.stopPropagation();closeAllClientMenus();archiveClient(${c.id},'${c.full_name.replace(/'/g, "\\'")}',isActive(c))" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:${isActive(c) ? 'var(--warning)' : 'var(--success)'}" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/></svg>
-                                    ${isActive(c) ? 'Archiver client' : 'Réactiver client'}
-                                </button>
+                        <div class="client-avatar">${initials(c.full_name)}</div>
+                        <div style="flex:1;min-width:0">
+                            <div class="client-name">${c.full_name} <span class="badge ${isActive(c) ? 'badge-active' : 'badge-expired'}" style="font-size:0.68rem;margin-left:0.3rem">${isActive(c) ? 'Actif' : 'Inactif'}</span></div>
+                            <div class="client-company">${c.company_name || '—'}${c.sector ? ' · ' + c.sector : ''}</div>
+                            <div class="client-meta"><span>${c.email}</span>${c.phone ? '<span>' + c.phone + '</span>' : ''}${c.city ? '<span>' + c.city + (c.province ? ', ' + c.province : '') + '</span>' : ''}<span>Depuis ${fmtDate(c.created_at)}</span></div>
+                            ${techs.length ? `<div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.3rem">${techs.map(t => `<span class="client-pill">${t.trim()}</span>`).join('')}</div>` : ''}
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;flex-shrink:0">
+                            ${mCounts[c.id] ? `<span style="font-size:0.75rem;color:var(--text-light)">${mCounts[c.id]} mandat${mCounts[c.id] > 1 ? 's' : ''}</span>` : ''}
+                            ${iCounts[c.id] ? `<span style="font-size:0.75rem;font-weight:700;color:var(--error)">${iCounts[c.id]} impayée${iCounts[c.id] > 1 ? 's' : ''}</span>` : ''}
+                            <div style="position:relative">
+                                <button class="btn btn-ghost btn-sm" style="padding:0.3rem 0.5rem;font-size:1rem;line-height:1" onclick="event.stopPropagation();toggleClientMenu(${c.id},this)" title="Actions rapides">⋯</button>
+                                <div id="client-menu-${c.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.2);border:1px solid var(--border);min-width:190px;z-index:9999;padding:0.35rem 0">
+                                    <div style="padding:0.3rem 0.75rem;font-size:0.68rem;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px">Actions rapides</div>
+                                    <button onclick="event.stopPropagation();closeAllClientMenus();prefill('nq-client',${c.id});openModal('modal-new-quote')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        Nouveau devis
+                                    </button>
+                                    <button onclick="event.stopPropagation();closeAllClientMenus();prefill('ni-client',${c.id});openModal('modal-new-invoice')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                                        Nouvelle facture
+                                    </button>
+                                    <button onclick="event.stopPropagation();closeAllClientMenus();prefill('nm-client',${c.id});openModal('modal-new-mandate')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                                        Nouveau mandat
+                                    </button>
+                                    <div style="height:1px;background:var(--border);margin:0.3rem 0"></div>
+                                    <button onclick="event.stopPropagation();closeAllClientMenus();openRefundModal(${c.id},'${c.full_name.replace(/'/g, "\\'")}');" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--success)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.82"/></svg>
+                                        Rembourser via Stripe
+                                    </button>
+                                    <button onclick="event.stopPropagation();closeAllClientMenus();archiveClient(${c.id},'${c.full_name.replace(/'/g, "\\'")}',isActive(c))" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:${isActive(c) ? 'var(--warning)' : 'var(--success)'}" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/></svg>
+                                        ${isActive(c) ? 'Archiver client' : 'Réactiver client'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>`;
+                    </div>`;
             }).join('');
             renderPag('clients', total, cPage, pages, p => { cPage = p; renderClients(); });
         }
@@ -2854,54 +2966,54 @@
             set('cdp-sub', (c.company_name || c.email) + (c.city ? ` · ${c.city}` : ''));
             const techs = c.technologies ? c.technologies.split(',').filter(Boolean) : [];
             document.getElementById('cdp-info').innerHTML = `
-                <div class="info-grid">
-                    <div class="info-item"><label>Courriel</label><span>${c.email}</span></div>
-                    <div class="info-item"><label>Téléphone</label><span>${c.phone || '—'}</span></div>
-                    <div class="info-item"><label>Entreprise</label><span>${c.company_name || '—'}</span></div>
-                    <div class="info-item"><label>Secteur</label><span>${c.sector || '—'}</span></div>
-                    <div class="info-item"><label>Adresse</label><span>${c.address || '—'}${c.city ? ', ' + c.city : ''}</span></div>
-                    <div class="info-item"><label>Province / Code postal</label><span>${c.province || '—'} ${c.postal_code || ''}</span></div>
-                    <div class="info-item"><label>Statut</label><span class="badge ${isActive(c) ? 'badge-active' : 'badge-expired'}">${isActive(c) ? 'Actif' : 'Inactif'}</span></div>
-                    <div class="info-item"><label>Dernière connexion</label><span>${c.last_login ? fmtDate(c.last_login) : 'Jamais'}</span></div>
-                </div>
-                ${techs.length ? `<div style="margin-bottom:1rem"><div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-light);margin-bottom:0.4rem">Technologies</div><div style="display:flex;flex-wrap:wrap;gap:0.4rem">${techs.map(t => `<span class="client-pill">${t.trim()}</span>`).join('')}</div></div>` : ''}
-                ${c.internal_notes ? `<div style="background:rgba(224,120,32,0.06);border-radius:8px;padding:0.75rem;border-left:3px solid var(--warning)"><div style="font-size:0.72rem;font-weight:700;color:var(--warning);margin-bottom:0.3rem">NOTES INTERNES</div><div style="font-size:0.85rem">${c.internal_notes}</div></div>` : ''}
-                <div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap">
-                    <button class="btn btn-primary btn-sm" onclick="prefill('nm-client',${c.id});openModal('modal-new-mandate');closeCdp()">+ Mandat</button>
-                    <button class="btn btn-outline btn-sm" onclick="prefill('nq-client',${c.id});openModal('modal-new-quote');closeCdp()">+ Devis</button>
-                    <button class="btn btn-outline btn-sm" onclick="prefill('ni-client',${c.id});openModal('modal-new-invoice');closeCdp()">+ Facture</button>
-                    <button class="btn btn-ghost btn-sm" onclick="prefill('nd-client',${c.id});openModal('modal-new-document');closeCdp()">+ Document</button>
-                    <button class="btn btn-ghost btn-sm" onclick="prefill('conv-client',${c.id});openModal('modal-new-conversation');closeCdp()">+ Message</button>
-                </div>`;
+                    <div class="info-grid">
+                        <div class="info-item"><label>Courriel</label><span>${c.email}</span></div>
+                        <div class="info-item"><label>Téléphone</label><span>${c.phone || '—'}</span></div>
+                        <div class="info-item"><label>Entreprise</label><span>${c.company_name || '—'}</span></div>
+                        <div class="info-item"><label>Secteur</label><span>${c.sector || '—'}</span></div>
+                        <div class="info-item"><label>Adresse</label><span>${c.address || '—'}${c.city ? ', ' + c.city : ''}</span></div>
+                        <div class="info-item"><label>Province / Code postal</label><span>${c.province || '—'} ${c.postal_code || ''}</span></div>
+                        <div class="info-item"><label>Statut</label><span class="badge ${isActive(c) ? 'badge-active' : 'badge-expired'}">${isActive(c) ? 'Actif' : 'Inactif'}</span></div>
+                        <div class="info-item"><label>Dernière connexion</label><span>${c.last_login ? fmtDate(c.last_login) : 'Jamais'}</span></div>
+                    </div>
+                    ${techs.length ? `<div style="margin-bottom:1rem"><div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-light);margin-bottom:0.4rem">Technologies</div><div style="display:flex;flex-wrap:wrap;gap:0.4rem">${techs.map(t => `<span class="client-pill">${t.trim()}</span>`).join('')}</div></div>` : ''}
+                    ${c.internal_notes ? `<div style="background:rgba(224,120,32,0.06);border-radius:8px;padding:0.75rem;border-left:3px solid var(--warning)"><div style="font-size:0.72rem;font-weight:700;color:var(--warning);margin-bottom:0.3rem">NOTES INTERNES</div><div style="font-size:0.85rem">${c.internal_notes}</div></div>` : ''}
+                    <div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap">
+                        <button class="btn btn-primary btn-sm" onclick="prefill('nm-client',${c.id});openModal('modal-new-mandate');closeCdp()">+ Mandat</button>
+                        <button class="btn btn-outline btn-sm" onclick="prefill('nq-client',${c.id});openModal('modal-new-quote');closeCdp()">+ Devis</button>
+                        <button class="btn btn-outline btn-sm" onclick="prefill('ni-client',${c.id});openModal('modal-new-invoice');closeCdp()">+ Facture</button>
+                        <button class="btn btn-ghost btn-sm" onclick="prefill('nd-client',${c.id});openModal('modal-new-document');closeCdp()">+ Document</button>
+                        <button class="btn btn-ghost btn-sm" onclick="prefill('conv-client',${c.id});openModal('modal-new-conversation');closeCdp()">+ Message</button>
+                    </div>`;
             const cms = allMandates.filter(m => m.client_id === clientId);
             document.getElementById('cdp-mandats').innerHTML = cms.length ? cms.map(m => `
-                <div class="cdp-item">
-                    <div class="cdp-item-head"><div class="cdp-item-title">${m.title}</div><span class="badge badge-${m.status}">${statusLabel(m.status)}</span></div>
-                    <div class="cdp-item-meta">${m.service_type || ''} · Début: ${m.start_date ? fmtDate(m.start_date) : '—'}</div>
-                    <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem">
-                        <div class="progress-bg" style="flex:1"><div class="progress-fill" style="width:${m.progress || 0}%"></div></div>
-                        <span style="font-size:0.75rem;color:var(--text-light)">${m.progress || 0}%</span>
-                    </div>
-                    <div style="margin-top:0.5rem"><button class="btn btn-sm btn-outline" onclick="openEditMandate(${m.id},'${m.status}',${m.progress || 0},'${(m.notes || '').replace(/'/g, "\\'")}')">Modifier</button></div>
-                </div>`).join('') : '<div class="empty-state"><p>Aucun mandat.</p></div>';
+                    <div class="cdp-item">
+                        <div class="cdp-item-head"><div class="cdp-item-title">${m.title}</div><span class="badge badge-${m.status}">${statusLabel(m.status)}</span></div>
+                        <div class="cdp-item-meta">${m.service_type || ''} · Début: ${m.start_date ? fmtDate(m.start_date) : '—'}</div>
+                        <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem">
+                            <div class="progress-bg" style="flex:1"><div class="progress-fill" style="width:${m.progress || 0}%"></div></div>
+                            <span style="font-size:0.75rem;color:var(--text-light)">${m.progress || 0}%</span>
+                        </div>
+                        <div style="margin-top:0.5rem"><button class="btn btn-sm btn-outline" onclick="openEditMandate(${m.id},'${m.status}',${m.progress || 0},'${(m.notes || '').replace(/'/g, "\\'")}')">Modifier</button></div>
+                    </div>`).join('') : '<div class="empty-state"><p>Aucun mandat.</p></div>';
             const cqs = allQuotes.filter(q => q.client_id === clientId);
             document.getElementById('cdp-devis').innerHTML = cqs.length ? cqs.map(q => `
-                <div class="cdp-item">
-                    <div class="cdp-item-head"><div class="cdp-item-title">${q.quote_number} — ${q.title}</div><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></div>
-                    <div class="cdp-item-meta">${fmt(q.amount_ttc)} TTC · Exp: ${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</div>
-                    <div style="margin-top:0.5rem"><button onclick="downloadPdf('/api/admin/quotes/${q.id}/pdf', '${q.quote_number}.pdf')" class="btn btn-sm btn-outline">PDF</button></div>
-                </div>`).join('') : '<div class="empty-state"><p>Aucun devis.</p></div>';
+                    <div class="cdp-item">
+                        <div class="cdp-item-head"><div class="cdp-item-title">${q.quote_number} — ${q.title}</div><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></div>
+                        <div class="cdp-item-meta">${fmt(q.amount_ttc)} TTC · Exp: ${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</div>
+                        <div style="margin-top:0.5rem"><button onclick="downloadPdf('/api/admin/quotes/${q.id}/pdf', '${q.quote_number}.pdf')" class="btn btn-sm btn-outline">PDF</button></div>
+                    </div>`).join('') : '<div class="empty-state"><p>Aucun devis.</p></div>';
             const cis = allInvoices.filter(i => i.client_id === clientId);
             document.getElementById('cdp-factures').innerHTML = cis.length ? cis.map(i => {
                 const ov = i.status === 'unpaid' && new Date(i.due_date) < new Date();
                 return `<div class="cdp-item">
-                    <div class="cdp-item-head"><div class="cdp-item-title">${i.invoice_number} — ${i.title}</div><span class="badge badge-${ov ? 'overdue' : i.status}">${ov ? 'En retard' : statusLabel(i.status)}</span></div>
-                    <div class="cdp-item-meta">${fmt(i.amount_ttc)} TTC · Échéance: ${i.due_date ? fmtDate(i.due_date) : '—'}</div>
-                    <div style="display:flex;gap:0.4rem;margin-top:0.5rem">
-                        <button onclick="downloadPdf('/api/admin/invoices/${i.id}/pdf', '${i.invoice_number}.pdf')" class="btn btn-sm btn-outline">PDF</button>
-                        ${i.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${i.id})">Marquer payée</button>` : ''}
-                    </div>
-                </div>`;
+                        <div class="cdp-item-head"><div class="cdp-item-title">${i.invoice_number} — ${i.title}</div><span class="badge badge-${ov ? 'overdue' : i.status}">${ov ? 'En retard' : statusLabel(i.status)}</span></div>
+                        <div class="cdp-item-meta">${fmt(i.amount_ttc)} TTC · Échéance: ${i.due_date ? fmtDate(i.due_date) : '—'}</div>
+                        <div style="display:flex;gap:0.4rem;margin-top:0.5rem">
+                            <button onclick="downloadPdf('/api/admin/invoices/${i.id}/pdf', '${i.invoice_number}.pdf')" class="btn btn-sm btn-outline">PDF</button>
+                            ${i.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${i.id})">Marquer payée</button>` : ''}
+                        </div>
+                    </div>`;
             }).join('') : '<div class="empty-state"><p>Aucune facture.</p></div>';
             await loadCdpMessages(clientId);
             showCdpTab('info');
@@ -2915,11 +3027,11 @@
             const msgs = thread?.messages || [];
             const list = document.getElementById('cdp-msg-list');
             list.innerHTML = msgs.length ? msgs.map(m => `
-                <div class="msg-row ${m.sender === 'client' ? 'msg-row-client' : 'msg-row-vnk'}">
-                    <div style="font-size:0.7rem;color:var(--text-light);margin-bottom:0.12rem;font-weight:600">${m.sender === 'client' ? 'Client' : 'VNK Automatisation'}</div>
-                    <div class="msg-bubble ${m.sender === 'client' ? 'msg-bubble-client' : 'msg-bubble-vnk'}">${m.content}${m.attachment_data ? (function () { var a = []; try { a = typeof m.attachment_data === 'string' ? JSON.parse(m.attachment_data) : m.attachment_data; } catch (e) { } return a.map(function (f) { return '<a href="data:' + f.type + ';base64,' + f.data + '" download="' + f.name + '" style="display:flex;align-items:center;gap:0.3rem;margin-top:0.35rem;font-size:0.73rem;font-weight:600;color:inherit;opacity:0.9"><svg width=\'11\' height=\'11\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\'><path d=\'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\'/><polyline points=\'7 10 12 15 17 10\'/><line x1=\'12\' y1=\'15\' x2=\'12\' y2=\'3\'/></svg>' + f.name + '</a>'; }).join(''); })() : ''}</div>
-                    <div style="font-size:0.68rem;color:var(--text-light);margin-top:0.2rem">${new Date(m.created_at).toLocaleString('fr-CA')}</div>
-                </div>`) : '<p style="color:var(--text-light);font-size:0.85rem;text-align:center;padding:1rem">Aucun message échangé.</p>';
+                    <div class="msg-row ${m.sender === 'client' ? 'msg-row-client' : 'msg-row-vnk'}">
+                        <div style="font-size:0.7rem;color:var(--text-light);margin-bottom:0.12rem;font-weight:600">${m.sender === 'client' ? 'Client' : 'VNK Automatisation'}</div>
+                        <div class="msg-bubble ${m.sender === 'client' ? 'msg-bubble-client' : 'msg-bubble-vnk'}">${m.content}${m.attachment_data ? (function () { var a = []; try { a = typeof m.attachment_data === 'string' ? JSON.parse(m.attachment_data) : m.attachment_data; } catch (e) { } return a.map(function (f) { return '<a href="data:' + f.type + ';base64,' + f.data + '" download="' + f.name + '" style="display:flex;align-items:center;gap:0.3rem;margin-top:0.35rem;font-size:0.73rem;font-weight:600;color:inherit;opacity:0.9"><svg width=\'11\' height=\'11\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\'><path d=\'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\'/><polyline points=\'7 10 12 15 17 10\'/><line x1=\'12\' y1=\'15\' x2=\'12\' y2=\'3\'/></svg>' + f.name + '</a>'; }).join(''); })() : ''}</div>
+                        <div style="font-size:0.68rem;color:var(--text-light);margin-top:0.2rem">${new Date(m.created_at).toLocaleString('fr-CA')}</div>
+                    </div>`) : '<p style="color:var(--text-light);font-size:0.85rem;text-align:center;padding:1rem">Aucun message échangé.</p>';
             setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
         }
 
@@ -2956,40 +3068,40 @@
             const tl = { pdf: 'PDF', docx: 'Word', zip: 'ZIP', other: 'Fichier' };
             if (!paged.length) { tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-light);padding:2.5rem">Aucun résultat.</td></tr>`; }
             else if (name === 'mandates') tbody.innerHTML = paged.map(m => `<tr>
-                <td><strong>${m.client_name}</strong>${m.company_name ? `<br><span style="font-size:0.73rem;color:var(--text-light)">${m.company_name}</span>` : ''}</td>
-                <td>${m.title}${m.notes ? `<br><span style="font-size:0.73rem;color:var(--text-light);font-style:italic">${m.notes}</span>` : ''}</td>
-                <td>${svc[m.service_type] || m.service_type || '—'}</td>
-                <td><span class="badge badge-${m.status}">${statusLabel(m.status)}</span></td>
-                <td><div style="display:flex;align-items:center;gap:0.5rem"><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${m.progress || 0}%;background:linear-gradient(90deg,var(--primary),var(--secondary));border-radius:3px"></div></div><span style="font-size:0.73rem;color:var(--text-light)">${m.progress || 0}%</span></div></td>
-                <td>${m.start_date ? fmtDate(m.start_date) : '—'}</td>
-                <td><button class="btn btn-sm btn-outline" onclick="openEditMandate(${m.id},'${m.status}',${m.progress || 0},'${(m.notes || '').replace(/'/g, "\\'")}')">Modifier</button></td>
-            </tr>`).join('');
+                    <td><strong>${m.client_name}</strong>${m.company_name ? `<br><span style="font-size:0.73rem;color:var(--text-light)">${m.company_name}</span>` : ''}</td>
+                    <td>${m.title}${m.notes ? `<br><span style="font-size:0.73rem;color:var(--text-light);font-style:italic">${m.notes}</span>` : ''}</td>
+                    <td>${svc[m.service_type] || m.service_type || '—'}</td>
+                    <td><span class="badge badge-${m.status}">${statusLabel(m.status)}</span></td>
+                    <td><div style="display:flex;align-items:center;gap:0.5rem"><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${m.progress || 0}%;background:linear-gradient(90deg,var(--primary),var(--secondary));border-radius:3px"></div></div><span style="font-size:0.73rem;color:var(--text-light)">${m.progress || 0}%</span></div></td>
+                    <td>${m.start_date ? fmtDate(m.start_date) : '—'}</td>
+                    <td><button class="btn btn-sm btn-outline" onclick="openEditMandate(${m.id},'${m.status}',${m.progress || 0},'${(m.notes || '').replace(/'/g, "\\'")}')">Modifier</button></td>
+                </tr>`).join('');
             else if (name === 'quotes') tbody.innerHTML = paged.map(q => `<tr>
-                <td><strong>${q.quote_number}</strong></td><td>${q.client_name}</td><td>${q.title}</td>
-                <td>${fmt(q.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(q.amount_ttc)}</td>
-                <td><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></td>
-                <td>${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</td>
-                <td><div class="td-actions"><button onclick="downloadPdf('/api/admin/quotes/${q.id}/pdf', '${q.quote_number}.pdf')" class="btn btn-sm btn-outline">PDF</button><button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.5rem" onclick="openEditQuote(${q.id})" title="Modifier">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        </button>${q.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="acceptQuote(${q.id}, q.quote_number)">✓ Accepter</button><button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
-            </tr>`).join('');
+                    <td><strong>${q.quote_number}</strong></td><td>${q.client_name}</td><td>${q.title}</td>
+                    <td>${fmt(q.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(q.amount_ttc)}</td>
+                    <td><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></td>
+                    <td>${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</td>
+                    <td><div class="td-actions"><button onclick="downloadPdf('/api/admin/quotes/${q.id}/pdf', '${q.quote_number}.pdf')" class="btn btn-sm btn-outline">PDF</button><button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.5rem" onclick="openEditQuote(${q.id})" title="Modifier">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>${q.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="acceptQuote(${q.id}, q.quote_number)">✓ Accepter</button><button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
+                </tr>`).join('');
             else if (name === 'invoices' || name === 'payments') tbody.innerHTML = paged.map(inv => {
                 const ov = inv.status === 'unpaid' && new Date(inv.due_date) < new Date();
                 return `<tr>
-                    <td><strong>${inv.invoice_number}</strong></td><td>${inv.client_name}</td><td>${inv.title || ''}</td>
-                    <td>${fmt(inv.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(inv.amount_ttc)}</td>
-                    <td><span class="badge badge-${ov ? 'overdue' : inv.status}">${ov ? 'En retard' : statusLabel(inv.status)}</span></td>
-                    <td>${inv.due_date ? fmtDate(inv.due_date) : '—'}</td>
-                    <td>${inv.paid_at ? fmtDate(inv.paid_at) : '—'}</td>
-                    <td><div class="td-actions"><button onclick="downloadPdf('/api/admin/invoices/${inv.id}/pdf', '${inv.invoice_number}.pdf')" class="btn btn-sm btn-outline">PDF</button><button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.45rem" onclick="openEditInvoice(${inv.id})" title="Modifier"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">Payée</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</div></td>
-                </tr>`;
+                        <td><strong>${inv.invoice_number}</strong></td><td>${inv.client_name}</td><td>${inv.title || ''}</td>
+                        <td>${fmt(inv.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(inv.amount_ttc)}</td>
+                        <td><span class="badge badge-${ov ? 'overdue' : inv.status}">${ov ? 'En retard' : statusLabel(inv.status)}</span></td>
+                        <td>${inv.due_date ? fmtDate(inv.due_date) : '—'}</td>
+                        <td>${inv.paid_at ? fmtDate(inv.paid_at) : '—'}</td>
+                        <td><div class="td-actions"><button onclick="downloadPdf('/api/admin/invoices/${inv.id}/pdf', '${inv.invoice_number}.pdf')" class="btn btn-sm btn-outline">PDF</button><button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.45rem" onclick="openEditInvoice(${inv.id})" title="Modifier"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">Payée</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</div></td>
+                    </tr>`;
             }).join('');
             else if (name === 'documents') tbody.innerHTML = paged.map(d => `<tr>
-                <td>${d.client_name}</td><td><strong>${d.title}</strong>${d.description ? `<br><span style="font-size:0.73rem;color:var(--text-light)">${d.description}</span>` : ''}</td>
-                <td><span class="badge badge-active">${tl[d.file_type] || d.file_type}</span></td>
-                <td>${d.mandate_title || '—'}</td><td>${fmtDate(d.created_at)}</td>
-                <td><div class="td-actions">${d.file_url ? `<a href="${d.file_url}" target="_blank" class="btn btn-sm btn-outline">Voir</a>` : ''}<button class="btn btn-sm btn-danger" onclick="deleteDocument(${d.id})">Suppr.</button></div></td>
-            </tr>`).join('');
+                    <td>${d.client_name}</td><td><strong>${d.title}</strong>${d.description ? `<br><span style="font-size:0.73rem;color:var(--text-light)">${d.description}</span>` : ''}</td>
+                    <td><span class="badge badge-active">${tl[d.file_type] || d.file_type}</span></td>
+                    <td>${d.mandate_title || '—'}</td><td>${fmtDate(d.created_at)}</td>
+                    <td><div class="td-actions">${d.file_url ? `<a href="${d.file_url}" target="_blank" class="btn btn-sm btn-outline">Voir</a>` : ''}<button class="btn btn-sm btn-danger" onclick="deleteDocument(${d.id})">Suppr.</button></div></td>
+                </tr>`).join('');
             renderPag(name, total, s.p, pages, p => { s.p = p; renderTable(name); });
         }
 
@@ -3020,7 +3132,50 @@
             allMessages = d.threads || [];
             const unread = allMessages.reduce((s, t) => s + (t.unread_count || 0), 0);
             const b = document.getElementById('badge-messages-admin'); b.textContent = unread; b.style.display = unread ? 'inline' : 'none';
+            // Badge widget flottant
+            const wb = document.getElementById('admin-inbox-badge');
+            if (wb) { wb.textContent = unread; wb.style.display = unread ? 'flex' : 'none'; }
             filterMessages();
+            renderSidebarInbox();
+        }
+
+        function renderSidebarInbox() {
+            const list = document.getElementById('admin-inbox-list');
+            if (!list) return;
+            const recent = [...allMessages]
+                .sort((a, b) => {
+                    const la = a.messages?.[a.messages.length - 1]?.created_at || '';
+                    const lb = b.messages?.[b.messages.length - 1]?.created_at || '';
+                    return lb.localeCompare(la);
+                })
+                .slice(0, 5); // 5 dernières conversations
+            if (!recent.length) {
+                list.innerHTML = '<div style="padding:0.75rem;text-align:center;font-size:0.78rem;color:var(--text-light)">Aucun message</div>';
+                return;
+            }
+            list.innerHTML = recent.map(t => {
+                const lastMsg = t.messages?.[t.messages.length - 1];
+                let rawContent = lastMsg?.content || '';
+                let preview = rawContent;
+                if (rawContent.startsWith('[Audio]')) preview = 'Message vocal';
+                else if (rawContent.startsWith('[Image]')) preview = 'Image';
+                else if (rawContent.startsWith('[Fichier]')) {
+                    const m = rawContent.match(/\[Fichier\]\s*(.+?)\s*\(/);
+                    preview = m ? 'Fichier: ' + m[1] : 'Fichier joint';
+                } else preview = rawContent.substring(0, 32) + (rawContent.length > 32 ? '...' : '');
+                const time = lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }) : '';
+                const hasUnread = (t.unread_count || 0) > 0;
+                return `<div onclick="showSection('messages');adminOpenThread(${t.client_id})" style="padding:0.6rem 0.75rem;cursor:pointer;border-bottom:1px solid var(--border);background:${hasUnread ? 'rgba(231,76,60,0.04)' : 'white'};transition:background 0.15s" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='${hasUnread ? 'rgba(231,76,60,0.04)' : 'white'}'">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:2px">
+                            <span style="font-size:0.75rem;font-weight:${hasUnread ? '700' : '600'};color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px">${t.client_name}</span>
+                            <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+                                ${hasUnread ? `<span style="background:var(--error);color:white;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px">${t.unread_count}</span>` : ''}
+                                <span style="font-size:0.65rem;color:var(--text-light)">${time}</span>
+                            </div>
+                        </div>
+                        <div style="font-size:0.72rem;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${preview || 'Aucun message'}</div>
+                    </div>`;
+            }).join('');
         }
 
         function renderBubbles(t) {
@@ -3061,44 +3216,231 @@
             }).join('');
         }
 
+
+        // ═══════════════════════════════════════════════
+        // MESSAGERIE ADMIN — Layout 2 colonnes
+        // ═══════════════════════════════════════════════
+        let _adminCurrentClient = null;
+        let _adminMediaRecorder = null;
+        let _adminAudioChunks = [];
+
         function filterMessages() {
-            const search = document.getElementById('messages-search')?.value.toLowerCase() || '';
+            const search = (document.getElementById('messages-search')?.value || '').toLowerCase();
             const fil = allMessages.filter(t => !search || (t.client_name + ' ' + (t.company_name || '')).toLowerCase().includes(search));
-            const thread = document.getElementById('messages-thread');
-            if (!fil.length) { thread.innerHTML = '<div class="empty-state"><p>Aucun message.</p></div>'; return; }
-            const openIds = new Set([...document.querySelectorAll('[id^="msg-"]')].filter(el => el.style.display !== 'none').map(el => el.id.replace('msg-', '')));
-            thread.innerHTML = fil.map(t => `
-                <div class="msg-client-block">
-                    <div class="msg-client-header" onclick="toggleMsg(${t.client_id})">
-                        <div class="msg-client-name">${t.client_name} <span style="font-weight:400;color:var(--text-light);font-size:0.8rem">— ${t.company_name || ''}</span></div>
-                        <div style="display:flex;align-items:center;gap:0.5rem">
-                            ${t.unread_count ? `<span class="msg-unread-badge">${t.unread_count} non lu${t.unread_count > 1 ? 's' : ''}</span>` : ''}
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                        </div>
-                    </div>
-                    <div id="msg-${t.client_id}" style="display:${openIds.has(String(t.client_id)) ? 'block' : 'none'}">
-                        <div id="mlist-${t.client_id}" style="padding:1rem 1.25rem;display:flex;flex-direction:column;gap:0.65rem;max-height:400px;overflow-y:auto">
-                            ${renderBubbles(t)}
-                        </div>
-                        <div style="padding:0.85rem 1.25rem;border-top:1px solid var(--border)">
-                            <div id="attach-preview-${t.client_id}" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.4rem;min-height:0"></div>
-                            <div style="display:flex;gap:0.5rem;align-items:flex-end">
-                                <textarea id="reply-${t.client_id}" rows="2" style="flex:1;padding:0.6rem 0.85rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;font-family:inherit;resize:none;" placeholder="Répondre en tant que VNK..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg(${t.client_id});}"></textarea>
-                                <label title="Joindre un fichier (image, PDF)" style="cursor:pointer;padding:0.42rem 0.6rem;border-radius:8px;border:1.5px solid var(--border);background:white;display:flex;align-items:center;color:var(--text-light);flex-shrink:0" onmouseenter="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-light)'">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                                    <input type="file" id="attach-${t.client_id}" accept="image/*,.pdf,.docx" style="display:none" multiple onchange="previewAttachment(${t.client_id},this)">
-                                </label>
-                                <button class="btn btn-primary btn-sm" onclick="sendMsg(${t.client_id})" style="flex-shrink:0">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                                    Envoyer
-                                </button>
+            const list = document.getElementById('admin-clients-list');
+            if (!list) {
+                // Fallback ancienne interface
+                const thread = document.getElementById('messages-thread');
+                if (thread) thread.innerHTML = '<div class="empty-state"><p>Aucun message.</p></div>';
+                return;
+            }
+            if (!fil.length) { list.innerHTML = '<div style="padding:1rem;text-align:center;font-size:0.82rem;color:#94A3B8">Aucun message</div>'; return; }
+            list.innerHTML = fil.map(t => {
+                const lastMsg = t.messages?.[t.messages.length - 1];
+                const lastText = lastMsg?.content?.substring(0, 45) || 'Aucun message';
+                const lastTime = lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }) : '';
+                const isActive = _adminCurrentClient === t.client_id;
+                return `<div onclick="adminOpenThread(${t.client_id})"
+                        style="padding:0.85rem 0.75rem;border-radius:10px;cursor:pointer;margin-bottom:2px;background:${isActive ? 'rgba(27,79,138,0.1)' : 'transparent'};border-left:${isActive ? '3px solid #1B4F8A' : '3px solid transparent'};transition:all 0.15s"
+                        onmouseenter="if(${!isActive}) this.style.background='rgba(0,0,0,0.04)'"
+                        onmouseleave="if(${!isActive}) this.style.background='transparent'">
+                        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.25rem">
+                            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1B4F8A,#2E75B6);color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0">
+                                ${t.client_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                            </div>
+                            <div style="flex:1;min-width:0">
+                                <div style="font-size:0.85rem;font-weight:${t.unread_count ? '700' : '600'};color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.client_name}</div>
+                                <div style="font-size:0.72rem;color:#64748B">${t.company_name || ''}</div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
+                                <span style="font-size:0.68rem;color:#94A3B8">${lastTime}</span>
+                                ${t.unread_count ? `<span style="background:#E74C3C;color:white;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center">${t.unread_count}</span>` : ''}
                             </div>
                         </div>
-                    </div>
-                </div>`).join('');
-            openIds.forEach(id => { const l = document.getElementById('mlist-' + id); if (l) l.scrollTop = l.scrollHeight; });
+                        <div style="font-size:0.78rem;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:38px">${lastText}</div>
+                    </div>`;
+            }).join('');
         }
 
+        async function adminOpenThread(clientId) {
+            _adminCurrentClient = clientId;
+            const thread = allMessages.find(t => t.client_id === clientId);
+            if (!thread) return;
+
+            // Afficher header conversation
+            const header = document.getElementById('admin-conv-header');
+            const empty = document.getElementById('admin-chat-empty');
+            const compose = document.getElementById('admin-compose');
+            const msgs = document.getElementById('admin-chat-messages');
+
+            if (empty) empty.style.display = 'none';
+            if (header) {
+                header.style.display = 'flex';
+                const avatar = document.getElementById('admin-conv-avatar');
+                const name = document.getElementById('admin-conv-name');
+                const company = document.getElementById('admin-conv-company');
+                const badge = document.getElementById('admin-conv-unread-badge');
+                if (avatar) avatar.textContent = thread.client_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                if (name) name.textContent = thread.client_name;
+                if (company) company.textContent = thread.company_name || '';
+                if (badge) {
+                    if (thread.unread_count > 0) { badge.textContent = thread.unread_count + ' non lu'; badge.style.display = 'inline'; }
+                    else badge.style.display = 'none';
+                }
+            }
+            if (compose) compose.style.display = 'block';
+
+            // Rendre les messages
+            if (msgs) {
+                msgs.innerHTML = adminRenderBubbles(thread);
+                setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
+            }
+
+            // Marquer comme lu
+            if (adminToken && thread.unread_count > 0) {
+                fetch('/api/admin/messages/' + clientId + '/mark-read', {
+                    method: 'PUT', headers: { Authorization: 'Bearer ' + adminToken }
+                }).then(() => { loadMessages(); });
+            }
+
+            // Re-rendre la liste pour mettre en surbrillance
+            filterMessages();
+        }
+
+        function adminRenderBubbles(thread) {
+            const msgs = thread.messages || [];
+            if (!msgs.length) return '<div style="text-align:center;padding:2rem;color:#94A3B8;font-size:0.85rem">Aucun message</div>';
+            return msgs.map((m, i) => {
+                const isClient = m.sender === 'client';
+                const time = new Date(m.created_at).toLocaleString('fr-CA', { dateStyle: 'short', timeStyle: 'short' });
+                let content = m.content || '';
+
+                // Détecter fichiers/images/audio encodés
+                const fileMatch = content.match(/^\[Fichier\]\s*(.+?)\s*\((.+?)\)\s*\|\|URL:(.+)$/);
+                const imgMatch = content.match(/^\[Image\]\s*(.+?)\s*\|\|URL:(.+)$/);
+                const audioMatch = content.match(/^\[Audio\]\|\|URL:(.+)$/);
+
+                let bubble = content;
+                if (fileMatch) {
+                    const [, name, size, url] = fileMatch;
+                    bubble = `<a href="${url}" download="${name}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.15);border-radius:8px;border:1px solid rgba(255,255,255,0.2);text-decoration:none;color:inherit;font-size:0.82rem;font-weight:600">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            ${name} <span style="opacity:0.7;font-weight:400">${size}</span>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        </a>`;
+                } else if (imgMatch) {
+                    const [, name, url] = imgMatch;
+                    bubble = `<a href="${url}" target="_blank"><img src="${url}" alt="${name}" style="max-width:220px;max-height:180px;border-radius:8px;display:block;cursor:pointer"></a>`;
+                } else if (audioMatch) {
+                    bubble = `<audio controls style="max-width:220px;min-width:180px"><source src="${audioMatch[1]}"></audio>`;
+                } else if (m.attachment_data) {
+                    // Ancien format avec base64 en DB
+                    let atts = [];
+                    try { atts = typeof m.attachment_data === 'string' ? JSON.parse(m.attachment_data) : (m.attachment_data || []); } catch (e) { }
+                    bubble += atts.map(a => {
+                        const dataUrl = 'data:' + (a.type || 'application/octet-stream') + ';base64,' + a.data;
+                        return `<a href="${dataUrl}" download="${a.name}" style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,0.15);text-decoration:none;color:inherit;font-size:0.75rem;font-weight:600">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                ${a.name}
+                            </a>`;
+                    }).join('');
+                }
+
+                const bg = isClient ? '#EBF5FB' : 'linear-gradient(135deg,#1B4F8A,#2E75B6)';
+                const color = isClient ? '#1E293B' : 'white';
+                const align = isClient ? 'flex-start' : 'flex-end';
+                const radius = isClient ? '4px 14px 14px 14px' : '14px 4px 14px 14px';
+
+                return `<div style="display:flex;flex-direction:column;align-items:${align};gap:2px">
+                        <div style="font-size:0.68rem;color:#94A3B8;font-weight:600;padding:0 4px">${isClient ? thread.client_name : 'VNK Automatisation'}</div>
+                        <div style="max-width:75%;padding:0.65rem 1rem;border-radius:${radius};font-size:0.85rem;line-height:1.55;background:${bg};color:${color}">${bubble}</div>
+                        <div style="font-size:0.65rem;color:#94A3B8;padding:0 4px">${time}</div>
+                    </div>`;
+            }).join('');
+        }
+
+        async function adminChatSend() {
+            const input = document.getElementById('admin-chat-input');
+            const content = input?.value.trim();
+            if (!content || !_adminCurrentClient) return;
+            const d = await api('/messages/' + _adminCurrentClient, 'POST', { content });
+            if (d.success) {
+                input.value = '';
+                input.style.height = 'auto';
+                await loadMessages();
+                adminOpenThread(_adminCurrentClient);
+                showToast('Message envoyé', 'success');
+            } else showToast('Erreur: ' + (d.message || ''), 'error');
+        }
+
+        function adminChatAttach(type) {
+            document.getElementById(type === 'image' ? 'admin-file-image' : 'admin-file-all')?.click();
+        }
+
+        async function adminFileSelected(input, type) {
+            const file = input?.files?.[0];
+            if (!file || !_adminCurrentClient) return;
+            const isImg = file.type.startsWith('image/');
+            const sizeFmt = file.size > 1048576 ? (file.size / 1048576).toFixed(1) + ' Mo' : Math.round(file.size / 1024) + ' Ko';
+            input.value = '';
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const b64 = e.target.result;
+                const msgContent = isImg
+                    ? `[Image] ${file.name} ||URL:${b64}`
+                    : `[Fichier] ${file.name} (${sizeFmt}) ||URL:${b64}`;
+                const d = await api('/messages/' + _adminCurrentClient, 'POST', { content: msgContent });
+                if (d.success) {
+                    await loadMessages();
+                    adminOpenThread(_adminCurrentClient);
+                    showToast(isImg ? 'Image envoyée' : 'Fichier envoyé', 'success');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function adminChatToggleRecord() {
+            if (_adminMediaRecorder && _adminMediaRecorder.state === 'recording') { adminStopRecord(true); return; }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                _adminAudioChunks = [];
+                _adminMediaRecorder = new MediaRecorder(stream);
+                _adminMediaRecorder.ondataavailable = e => { if (e.data.size > 0) _adminAudioChunks.push(e.data); };
+                _adminMediaRecorder.onstop = async () => {
+                    stream.getTracks().forEach(t => t.stop());
+                    if (!_adminAudioChunks.length) return;
+                    const blob = new Blob(_adminAudioChunks, { type: 'audio/webm' });
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        const b64 = e.target.result;
+                        const d = await api('/messages/' + _adminCurrentClient, 'POST', { content: `[Audio]||URL:${b64}` });
+                        if (d.success) { await loadMessages(); adminOpenThread(_adminCurrentClient); showToast('Audio envoyé', 'success'); }
+                    };
+                    reader.readAsDataURL(blob);
+                };
+                _adminMediaRecorder.start();
+                document.getElementById('admin-record-indicator').style.display = 'flex';
+                document.getElementById('admin-record-btn').style.color = '#DC2626';
+            } catch (e) { showToast('Microphone non disponible', 'error'); }
+        }
+
+        function adminStopRecord(send) {
+            document.getElementById('admin-record-indicator').style.display = 'none';
+            document.getElementById('admin-record-btn').style.color = '';
+            if (_adminMediaRecorder && _adminMediaRecorder.state === 'recording') {
+                if (!send) _adminAudioChunks = [];
+                _adminMediaRecorder.stop();
+            }
+        }
+
+        // Injecter animation blink si pas déjà présente
+        if (!document.querySelector('#admin-blink-style')) {
+            const s = document.createElement('style');
+            s.id = 'admin-blink-style';
+            s.textContent = '@keyframes vnkBlink{0%,100%{opacity:1}50%{opacity:0.2}}';
+            document.head.appendChild(s);
+        }
         function toggleMsg(id) {
             const el = document.getElementById('msg-' + id);
             if (!el) return;
@@ -3284,34 +3626,34 @@
             const bc = { draft: 'badge-expired', pending: 'badge-pending', signed: 'badge-paid', cancelled: 'badge-overdue' };
             if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun contrat.</td></tr>'; return; }
             tbody.innerHTML = list.map(c => `<tr>
-                <td><strong>${c.contract_number}</strong></td>
-                <td>${c.client_name}<br><span style="font-size:0.73rem;color:var(--text-light)">${c.company_name || ''}</span></td>
-                <td>${c.title}</td>
-                <td>${c.mandate_title || c.quote_number || '—'}</td>
-                <td><span class="badge ${bc[c.status] || 'badge-expired'}">${sl[c.status] || c.status}</span></td>
-                <td>${fmtDate(c.created_at)}</td>
-                <td style="color:var(--success)">${c.signed_at ? fmtDate(c.signed_at) : '—'}</td>
-                <td><div class="td-actions" style="position:relative">
-                    ${c.file_url ? `<a href="${c.file_url}" target="_blank" class="btn btn-sm btn-outline">PDF</a>` : ''}
-                    ${c.status !== 'signed' ? `<button class="btn btn-sm btn-primary" onclick="sendContractForSignature(${c.id})" title="Envoyer pour signature">✉ Signer</button>` : '<span style="color:var(--success);font-size:0.78rem;font-weight:600">✓ Signé</span>'}
-                    <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleContractMenu(${c.id},this)" style="padding:0.35rem 0.5rem;font-size:1rem" title="Plus d'options">⋯</button>
-                    <div id="cmenu-${c.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:180px;z-index:9999;padding:0.35rem 0">
-                        <div style="padding:0.3rem 0.75rem;font-size:0.68rem;font-weight:700;color:var(--text-light);text-transform:uppercase">Contrat ${c.contract_number}</div>
-                        <button onclick="closeContractMenus();openEditContract(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            Modifier / Ajouter URL
-                        </button>
-                        ${c.status !== 'signed' ? `<button onclick="closeContractMenus();signContract(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--success)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            Marquer comme signé
-                        </button>` : ''}
-                        <button onclick="closeContractMenus();viewContractHistory(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            Historique
-                        </button>
-                    </div>
-                </div></td>
-            </tr>`).join('');
+                    <td><strong>${c.contract_number}</strong></td>
+                    <td>${c.client_name}<br><span style="font-size:0.73rem;color:var(--text-light)">${c.company_name || ''}</span></td>
+                    <td>${c.title}</td>
+                    <td>${c.mandate_title || c.quote_number || '—'}</td>
+                    <td><span class="badge ${bc[c.status] || 'badge-expired'}">${sl[c.status] || c.status}</span></td>
+                    <td>${fmtDate(c.created_at)}</td>
+                    <td style="color:var(--success)">${c.signed_at ? fmtDate(c.signed_at) : '—'}</td>
+                    <td><div class="td-actions" style="position:relative">
+                        ${c.file_url ? `<a href="${c.file_url}" target="_blank" class="btn btn-sm btn-outline">PDF</a>` : ''}
+                        ${c.status !== 'signed' ? `<button class="btn btn-sm btn-primary" onclick="sendContractForSignature(${c.id})" title="Envoyer pour signature">✉ Signer</button>` : '<span style="color:var(--success);font-size:0.78rem;font-weight:600">✓ Signé</span>'}
+                        <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleContractMenu(${c.id},this)" style="padding:0.35rem 0.5rem;font-size:1rem" title="Plus d'options">⋯</button>
+                        <div id="cmenu-${c.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:180px;z-index:9999;padding:0.35rem 0">
+                            <div style="padding:0.3rem 0.75rem;font-size:0.68rem;font-weight:700;color:var(--text-light);text-transform:uppercase">Contrat ${c.contract_number}</div>
+                            <button onclick="closeContractMenus();openEditContract(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                Modifier / Ajouter URL
+                            </button>
+                            ${c.status !== 'signed' ? `<button onclick="closeContractMenus();signContract(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--success)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Marquer comme signé
+                            </button>` : ''}
+                            <button onclick="closeContractMenus();viewContractHistory(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                Historique
+                            </button>
+                        </div>
+                    </div></td>
+                </tr>`).join('');
         }
         async function createContract() {
             const clientId = v('nct-client');
@@ -3451,15 +3793,15 @@
             const sLabels = { open: 'Ouvert', in_progress: 'En cours', resolved: 'Résolu', closed: 'Fermé' };
             if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun litige.</td></tr>'; return; }
             tbody.innerHTML = list.map(d => `<tr>
-                <td><strong>${d.client_name}</strong><br><span style="font-size:0.73rem;color:var(--text-light)">${d.company_name || ''}</span></td>
-                <td><div style="font-weight:600">${d.title}</div>${d.resolution ? `<div style="font-size:0.73rem;color:var(--text-light);font-style:italic;margin-top:2px">${d.resolution}</div>` : ''}</td>
-                <td><span style="font-size:0.72rem;font-weight:700;color:${pColors[d.priority] || 'var(--text-light)'}">${pLabels[d.priority] || d.priority}</span></td>
-                <td><span class="badge ${sColors[d.status] || 'badge-expired'}">${sLabels[d.status] || d.status}</span></td>
-                <td>${d.invoice_number || '—'}</td>
-                <td>${fmtDate(d.opened_at)}</td>
-                <td style="color:var(--success)">${d.resolved_at ? fmtDate(d.resolved_at) : '—'}</td>
-                <td>${d.status !== 'resolved' && d.status !== 'closed' ? `<button class="btn btn-sm btn-outline" onclick="openResolveDispute(${d.id})">Traiter</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</td>
-            </tr>`).join('');
+                    <td><strong>${d.client_name}</strong><br><span style="font-size:0.73rem;color:var(--text-light)">${d.company_name || ''}</span></td>
+                    <td><div style="font-weight:600">${d.title}</div>${d.resolution ? `<div style="font-size:0.73rem;color:var(--text-light);font-style:italic;margin-top:2px">${d.resolution}</div>` : ''}</td>
+                    <td><span style="font-size:0.72rem;font-weight:700;color:${pColors[d.priority] || 'var(--text-light)'}">${pLabels[d.priority] || d.priority}</span></td>
+                    <td><span class="badge ${sColors[d.status] || 'badge-expired'}">${sLabels[d.status] || d.status}</span></td>
+                    <td>${d.invoice_number || '—'}</td>
+                    <td>${fmtDate(d.opened_at)}</td>
+                    <td style="color:var(--success)">${d.resolved_at ? fmtDate(d.resolved_at) : '—'}</td>
+                    <td>${d.status !== 'resolved' && d.status !== 'closed' ? `<button class="btn btn-sm btn-outline" onclick="openResolveDispute(${d.id})">Traiter</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</td>
+                </tr>`).join('');
         }
         async function createDispute() { const d = await api('/disputes', 'POST', { client_id: v('nd2-client'), invoice_id: v('nd2-invoice') || null, mandate_id: v('nd2-mandate') || null, title: v('nd2-title'), description: v('nd2-desc'), priority: v('nd2-priority') }); if (d.success) { closeModal('modal-new-dispute'); loadDisputes(); showToast('Litige ouvert !', 'error'); } else showToast(d.message, 'error'); }
         function openResolveDispute(id) { document.getElementById('rd-id').value = id; openModal('modal-resolve-dispute'); }
@@ -3473,13 +3815,13 @@
             const bc = { pending: 'badge-pending', processed: 'badge-paid', cancelled: 'badge-overdue' };
             if (!allRefunds.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun remboursement.</td></tr>'; return; }
             tbody.innerHTML = allRefunds.map(r => `<tr>
-                <td><strong>${r.refund_number}</strong></td><td>${r.client_name}</td>
-                <td style="font-size:0.82rem;max-width:200px">${r.reason}</td>
-                <td>${fmt(r.amount)}</td><td style="font-weight:700;color:var(--error)">${fmt(r.total_amount)}</td>
-                <td><span class="badge ${bc[r.status] || 'badge-expired'}">${sl[r.status] || r.status}</span></td>
-                <td>${fmtDate(r.created_at)}</td>
-                <td>${r.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="processRefund(${r.id})">✓ Confirmer</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</td>
-            </tr>`).join('');
+                    <td><strong>${r.refund_number}</strong></td><td>${r.client_name}</td>
+                    <td style="font-size:0.82rem;max-width:200px">${r.reason}</td>
+                    <td>${fmt(r.amount)}</td><td style="font-weight:700;color:var(--error)">${fmt(r.total_amount)}</td>
+                    <td><span class="badge ${bc[r.status] || 'badge-expired'}">${sl[r.status] || r.status}</span></td>
+                    <td>${fmtDate(r.created_at)}</td>
+                    <td>${r.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="processRefund(${r.id})">✓ Confirmer</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</td>
+                </tr>`).join('');
         }
         function calcRefundTaxes() { const ht = parseFloat(document.getElementById('nr-amount').value) || 0; const tps = ht * 0.05, tvq = ht * 0.09975; document.getElementById('nr-tax-preview').style.display = ht ? 'block' : 'none'; set('nr-ht', fmt(ht)); set('nr-tps', fmt(tps)); set('nr-tvq', fmt(tvq)); set('nr-ttc', fmt(ht + tps + tvq)); }
         async function createRefund() { const d = await api('/refunds', 'POST', { client_id: v('nr-client'), invoice_id: v('nr-invoice') || null, reason: v('nr-reason'), amount: parseFloat(v('nr-amount')), notes: v('nr-notes') }); if (d.success) { closeModal('modal-new-refund'); loadRefunds(); showToast('Remboursement créé !', 'success'); } else showToast(d.message, 'error'); }
@@ -3498,13 +3840,13 @@
             const catLabels = { logiciel: 'Logiciels', materiel: 'Matériel', telecom: 'Télécom', formation: 'Formation', marketing: 'Marketing', transport: 'Transport', bureau: 'Bureau', comptable: 'Comptable/Légal', assurance: 'Assurance', autre: 'Autre' };
             if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucune dépense.</td></tr>'; return; }
             tbody.innerHTML = list.map(e => `<tr>
-                <td>${fmtDate(e.expense_date)}</td><td><strong>${e.title}</strong></td>
-                <td><span class="badge badge-active" style="background:rgba(46,117,182,0.1);color:var(--secondary)">${catLabels[e.category] || e.category || '—'}</span></td>
-                <td>${e.vendor || '—'}</td><td style="font-weight:700">${fmt(e.amount)}</td>
-                <td style="color:var(--success);font-weight:600">${fmt(e.tps_paid)}</td>
-                <td style="color:var(--success);font-weight:600">${fmt(e.tvq_paid)}</td>
-                <td><div class="td-actions">${e.receipt_url ? `<a href="${e.receipt_url}" target="_blank" class="btn btn-sm btn-outline">Reçu</a>` : ''}<button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.45rem" onclick="openEditExpense(${e.id})" title="Modifier"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-sm btn-danger" onclick="deleteExpense(${e.id})">Suppr.</button></div></td>
-            </tr>`).join('');
+                    <td>${fmtDate(e.expense_date)}</td><td><strong>${e.title}</strong></td>
+                    <td><span class="badge badge-active" style="background:rgba(46,117,182,0.1);color:var(--secondary)">${catLabels[e.category] || e.category || '—'}</span></td>
+                    <td>${e.vendor || '—'}</td><td style="font-weight:700">${fmt(e.amount)}</td>
+                    <td style="color:var(--success);font-weight:600">${fmt(e.tps_paid)}</td>
+                    <td style="color:var(--success);font-weight:600">${fmt(e.tvq_paid)}</td>
+                    <td><div class="td-actions">${e.receipt_url ? `<a href="${e.receipt_url}" target="_blank" class="btn btn-sm btn-outline">Reçu</a>` : ''}<button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.45rem" onclick="openEditExpense(${e.id})" title="Modifier"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-sm btn-danger" onclick="deleteExpense(${e.id})">Suppr.</button></div></td>
+                </tr>`).join('');
         }
         async function createExpense() { const d = await api('/expenses', 'POST', { title: v('nex-title'), category: v('nex-category'), amount: parseFloat(v('nex-amount')), tps_paid: parseFloat(v('nex-tps')) || 0, tvq_paid: parseFloat(v('nex-tvq')) || 0, vendor: v('nex-vendor'), receipt_url: v('nex-receipt'), expense_date: v('nex-date'), notes: v('nex-notes') }); if (d.success) { closeModal('modal-new-expense'); loadExpenses(); showToast('Dépense enregistrée !', 'success'); } else showToast(d.message, 'error'); }
         async function deleteExpense(id) { const ok = await confirm2('Supprimer', 'Supprimer cette dépense ?'); if (!ok) return; const d = await api('/expenses/' + id, 'DELETE'); if (d.success) { loadExpenses(); showToast('Dépense supprimée.'); } }
@@ -3528,13 +3870,13 @@
             yearInvoices.forEach(inv => { const q = Math.ceil((new Date(inv.paid_at).getMonth() + 1) / 3) - 1; qData[q].ht += parseFloat(inv.amount_ht || 0); qData[q].tps += parseFloat(inv.tps_amount || 0); qData[q].tvq += parseFloat(inv.tvq_amount || 0); });
             const tbody = document.getElementById('taxdecl-quarters-tbody');
             if (tbody) tbody.innerHTML = qData.map((q, i) => `<tr>
-                <td><strong>${year} — ${qNames[i]}</strong></td>
-                <td>${fmt(q.ht)}</td><td style="color:var(--primary);font-weight:700">${fmt(q.tps)}</td>
-                <td style="color:var(--primary);font-weight:700">${fmt(q.tvq)}</td>
-                <td style="color:var(--primary);font-weight:800">${fmt(q.tps + q.tvq)}</td>
-                <td>${q.ht > 0 ? '<span class="badge badge-active">Données disponibles</span>' : '<span class="badge badge-expired">Aucune donnée</span>'}</td>
-                <td>${q.ht > 0 ? `<button class="btn btn-sm btn-outline" onclick="quickCreateDecl(${year},${q.q},'${qNames[i]}')">Enregistrer</button>` : '—'}</td>
-            </tr>`).join('');
+                    <td><strong>${year} — ${qNames[i]}</strong></td>
+                    <td>${fmt(q.ht)}</td><td style="color:var(--primary);font-weight:700">${fmt(q.tps)}</td>
+                    <td style="color:var(--primary);font-weight:700">${fmt(q.tvq)}</td>
+                    <td style="color:var(--primary);font-weight:800">${fmt(q.tps + q.tvq)}</td>
+                    <td>${q.ht > 0 ? '<span class="badge badge-active">Données disponibles</span>' : '<span class="badge badge-expired">Aucune donnée</span>'}</td>
+                    <td>${q.ht > 0 ? `<button class="btn btn-sm btn-outline" onclick="quickCreateDecl(${year},${q.q},'${qNames[i]}')">Enregistrer</button>` : '—'}</td>
+                </tr>`).join('');
         }
         async function quickCreateDecl(year, quarter, label) {
             const starts = ['01-01', '04-01', '07-01', '10-01'];
@@ -3548,16 +3890,16 @@
             const bc = { draft: 'badge-expired', submitted: 'badge-pending', filed: 'badge-paid' };
             if (!allTaxDecls.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-light);padding:2rem">Aucune déclaration enregistrée.</td></tr>'; return; }
             tbody.innerHTML = allTaxDecls.map(d => `<tr>
-                <td><strong>${d.period_label}</strong></td>
-                <td>${d.period_type === 'quarterly' ? 'Trimestrielle' : 'Annuelle'}</td>
-                <td style="font-weight:700">${fmt(d.total_revenue_ht)}</td>
-                <td style="color:var(--primary);font-weight:700">${fmt(d.total_tps)}</td>
-                <td style="color:var(--primary);font-weight:700">${fmt(d.total_tvq)}</td>
-                <td style="color:var(--primary);font-weight:800">${fmt(d.total_taxes)}</td>
-                <td><span class="badge ${bc[d.status] || 'badge-expired'}">${sl[d.status] || d.status}</span></td>
-                <td>${d.submitted_at ? fmtDate(d.submitted_at) : '—'}</td>
-                <td>${d.status === 'draft' ? `<button class="btn btn-sm btn-success" onclick="submitDecl(${d.id})">Soumettre</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</td>
-            </tr>`).join('');
+                    <td><strong>${d.period_label}</strong></td>
+                    <td>${d.period_type === 'quarterly' ? 'Trimestrielle' : 'Annuelle'}</td>
+                    <td style="font-weight:700">${fmt(d.total_revenue_ht)}</td>
+                    <td style="color:var(--primary);font-weight:700">${fmt(d.total_tps)}</td>
+                    <td style="color:var(--primary);font-weight:700">${fmt(d.total_tvq)}</td>
+                    <td style="color:var(--primary);font-weight:800">${fmt(d.total_taxes)}</td>
+                    <td><span class="badge ${bc[d.status] || 'badge-expired'}">${sl[d.status] || d.status}</span></td>
+                    <td>${d.submitted_at ? fmtDate(d.submitted_at) : '—'}</td>
+                    <td>${d.status === 'draft' ? `<button class="btn btn-sm btn-success" onclick="submitDecl(${d.id})">Soumettre</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</td>
+                </tr>`).join('');
         }
         async function createTaxDecl() { const d = await api('/tax-declarations', 'POST', { period_type: v('ntd-type'), period_label: v('ntd-label'), period_start: v('ntd-start'), period_end: v('ntd-end'), notes: v('ntd-notes') }); if (d.success) { closeModal('modal-new-taxdecl'); loadTaxDecls(); showToast('Déclaration créée !', 'success'); } else showToast(d.message, 'error'); }
         async function submitDecl(id) { const ok = await confirm2('Soumettre la déclaration', 'Marquer comme soumise à Revenu Canada/Québec ?', 'Soumettre'); if (!ok) return; const d = await api('/tax-declarations/' + id + '/submit', 'PUT'); if (d.success) { loadTaxDecls(); showToast('Déclaration soumise !', 'success'); } else showToast(d.message, 'error'); }
@@ -3793,10 +4135,10 @@
             modal.id = 'confirm-modal';
             modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:1rem;';
             modal.innerHTML = `<div style="background:white;border-radius:14px;padding:2rem;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
-                <div style="font-weight:700;font-size:1rem;color:var(--primary);margin-bottom:1rem">Historique du contrat</div>
-                <div style="font-size:0.85rem;line-height:1.6">${lines}</div>
-                <div style="margin-top:1.5rem;text-align:right"><button style="padding:0.55rem 1.25rem;border-radius:8px;border:none;background:var(--primary);color:white;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit" onclick="document.getElementById('confirm-modal').remove()">Fermer</button></div>
-            </div>`;
+                    <div style="font-weight:700;font-size:1rem;color:var(--primary);margin-bottom:1rem">Historique du contrat</div>
+                    <div style="font-size:0.85rem;line-height:1.6">${lines}</div>
+                    <div style="margin-top:1.5rem;text-align:right"><button style="padding:0.55rem 1.25rem;border-radius:8px;border:none;background:var(--primary);color:white;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit" onclick="document.getElementById('confirm-modal').remove()">Fermer</button></div>
+                </div>`;
             document.body.appendChild(modal);
             modal.onclick = e => { if (e.target === modal) modal.remove(); };
         }
@@ -4664,6 +5006,52 @@
             overlay.addEventListener('click', function (ee) { if (ee.target === overlay) overlay.remove(); });
         }
 
+    </script>
+    <script src="js/notifications.js"></script>
+
+    <!-- ══ WIDGET RÉCEPTION FLOTTANT — visible partout dans admin ══ -->
+    <div id="admin-inbox-widget" style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:8000;font-family:inherit">
+        <!-- Bouton toggle -->
+        <button id="admin-inbox-toggle" onclick="toggleInboxWidget()"
+                style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0F2D52,#1B4F8A);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(15,45,82,0.45);position:relative;transition:transform 0.2s"
+                onmouseenter="this.style.transform='scale(1.08)'" onmouseleave="this.style.transform='scale(1)'">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span id="admin-inbox-badge" style="position:absolute;top:-3px;right:-3px;background:#E74C3C;color:white;font-size:0.62rem;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:none;align-items:center;justify-content:center;padding:0 4px;border:2px solid white">0</span>
+        </button>
+        <!-- Panneau déroulant -->
+        <div id="admin-inbox-panel" style="display:none;position:absolute;bottom:60px;right:0;width:300px;background:white;border-radius:16px;box-shadow:0 8px 40px rgba(15,45,82,0.2);border:1px solid #E2E8F0;overflow:hidden">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#0F2D52,#1B4F8A);padding:0.85rem 1rem;display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:0.5rem">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                    <span style="font-size:0.82rem;font-weight:700;color:white">Messages récents</span>
+                </div>
+                <button onclick="showSection('messages');toggleInboxWidget()" style="font-size:0.72rem;color:rgba(255,255,255,0.8);background:none;border:none;cursor:pointer;font-weight:600">Tout voir</button>
+            </div>
+            <!-- Liste -->
+            <div id="admin-inbox-list" style="max-height:320px;overflow-y:auto">
+                <div style="padding:1rem;text-align:center;font-size:0.82rem;color:#94A3B8">Chargement...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var _inboxOpen = false;
+        function toggleInboxWidget() {
+            _inboxOpen = !_inboxOpen;
+            var p = document.getElementById('admin-inbox-panel');
+            if (p) p.style.display = _inboxOpen ? 'block' : 'none';
+        }
+        // Fermer si on clique ailleurs
+        document.addEventListener('click', function (e) {
+            if (_inboxOpen && !e.target.closest('#admin-inbox-widget')) {
+                _inboxOpen = false;
+                var p = document.getElementById('admin-inbox-panel');
+                if (p) p.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>
