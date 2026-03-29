@@ -128,10 +128,22 @@ async function loadAllData() {
             const unpaid = window._allInvoices.filter(i => i.status === 'unpaid' || i.status === 'overdue').length;
             if (unpaid > 0) showBadge('badge-invoices', unpaid);
         }
-        if (docs) renderDocuments(docs.documents || []);
-        if (mandates) renderMandates(mandates.mandates || []);
+        if (docs) {
+            const docsArr = docs.documents || [];
+            renderDocuments(docsArr);
+            if (docsArr.length > 0) showBadge('badge-documents', docsArr.length);
+        }
+        if (mandates) {
+            const mArr = mandates.mandates || [];
+            renderMandates(mArr);
+            const activeMandates = mArr.filter(m => m.status === 'active' || m.status === 'in_progress').length;
+            if (activeMandates > 0) showBadge('badge-mandates', activeMandates);
+        }
         if (contracts) {
             window._allContracts = contracts.contracts || [];
+            // Reset filtre à "Tous" au rechargement auto
+            const cf = document.getElementById('contract-filter');
+            if (cf && cf.value !== 'all') { } // garder le filtre choisi par l'user
             renderPortalContracts(window._allContracts);
             const pending = window._allContracts.filter(c => c.status === 'pending_signature').length;
             if (pending > 0) showBadge('badge-contracts', pending);
@@ -425,10 +437,20 @@ async function acceptQuote(quoteId) {
 async function payInvoice(invoiceId) {
     const token = localStorage.getItem('vnk-token');
     try {
-        const res = await fetch('/api/payments/create-session', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ invoiceId }) });
+        const res = await fetch('/api/payments/create-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ invoiceId })
+        });
         const data = await res.json();
-        if (data.url) window.location.href = data.url;
-    } catch (error) { console.error('Pay invoice error:', error); }
+        if (data.url) {
+            window.location.href = data.url;
+        } else {
+            alert('Paiement en ligne bientôt disponible. Contactez VNK à vnkautomatisation@gmail.com pour arranger le paiement.');
+        }
+    } catch (error) {
+        alert('Paiement en ligne bientôt disponible. Contactez VNK à vnkautomatisation@gmail.com');
+    }
 }
 
 async function downloadPDF(type, id, number) {
