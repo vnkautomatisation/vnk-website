@@ -158,14 +158,15 @@ img {
     left: 0;
     right: 0;
     height: var(--nav-height);
-    background-color: var(--color-white);
-    border-bottom: 1px solid var(--color-border);
+    background: linear-gradient(135deg, #0F2D52 0%, #1B4F8A 100%);
+    border-bottom: none;
     z-index: 1000;
     transition: var(--transition);
+    box-shadow: 0 2px 20px rgba(15, 45, 82, 0.35);
 }
 
     .navbar.scrolled {
-        box-shadow: var(--shadow);
+        box-shadow: 0 4px 24px rgba(15, 45, 82, 0.5);
     }
 
 .nav-container {
@@ -182,18 +183,19 @@ img {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    text-decoration: none;
 }
 
 .logo-vnk {
     font-size: 1.5rem;
     font-weight: 800;
-    color: var(--color-primary);
+    color: var(--color-white);
     letter-spacing: -0.5px;
 }
 
 .logo-text {
     font-size: 0.85rem;
-    color: var(--color-text-light);
+    color: rgba(255,255,255,0.65);
     font-weight: 400;
 }
 
@@ -204,29 +206,41 @@ img {
 }
 
 .nav-link {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 500;
-    color: var(--color-text);
-    padding: 0.25rem 0;
+    color: rgba(255,255,255,0.78);
+    padding: 0.3rem 0;
     border-bottom: 2px solid transparent;
+    transition: var(--transition);
 }
 
     .nav-link:hover,
     .nav-link.active {
-        color: var(--color-primary);
-        border-bottom-color: var(--color-primary);
+        color: var(--color-white);
+        border-bottom-color: var(--color-light-blue);
     }
 
 .nav-portal {
-    background-color: var(--color-primary);
+    background: rgba(255,255,255,0.15) !important;
     color: var(--color-white) !important;
-    padding: 0.5rem 1rem !important;
-    border-radius: var(--border-radius);
-    border-bottom: none !important;
+    padding: 0.45rem 1.1rem !important;
+    border-radius: var(--border-radius) !important;
+    border: 1.5px solid rgba(255,255,255,0.35) !important;
+    font-weight: 600 !important;
+    backdrop-filter: blur(4px);
+    transition: var(--transition) !important;
 }
 
     .nav-portal:hover {
-        background-color: var(--color-secondary);
+        background: rgba(255,255,255,0.28) !important;
+        border-color: rgba(255,255,255,0.65) !important;
+        transform: none;
+    }
+
+    .nav-portal.active {
+        background: var(--color-white) !important;
+        color: var(--color-primary) !important;
+        border-color: var(--color-white) !important;
     }
 
 .nav-actions {
@@ -236,20 +250,21 @@ img {
 }
 
 .lang-toggle {
-    background: none;
-    border: 1px solid var(--color-border);
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.25);
     border-radius: var(--border-radius);
     padding: 0.3rem 0.75rem;
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--color-text);
+    color: rgba(255,255,255,0.85);
     cursor: pointer;
     transition: var(--transition);
 }
 
     .lang-toggle:hover {
-        border-color: var(--color-primary);
-        color: var(--color-primary);
+        background: rgba(255,255,255,0.2);
+        border-color: rgba(255,255,255,0.5);
+        color: var(--color-white);
     }
 
 .nav-toggle {
@@ -1168,9 +1183,10 @@ img {
 .portal-login-card {
     background: var(--color-white);
     border-radius: var(--border-radius-lg);
-    padding: var(--spacing-lg);
-    box-shadow: var(--shadow);
+    padding: 0;
+    box-shadow: 0 20px 60px rgba(15,45,82,0.2);
     border: 1px solid var(--color-border);
+    overflow: hidden;
 }
 
 .portal-logo {
@@ -2731,9 +2747,10 @@ img {
 .portal-login-card {
     background: var(--color-white);
     border-radius: var(--border-radius-lg);
-    padding: var(--spacing-lg);
-    box-shadow: var(--shadow);
+    padding: 0;
+    box-shadow: 0 20px 60px rgba(15,45,82,0.2);
     border: 1px solid var(--color-border);
+    overflow: hidden;
 }
 
 .portal-logo {
@@ -3018,8 +3035,28 @@ img {
 /* Contenu défilant */
 .portal-main-content {
     flex: 1;
+    overflow: hidden;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* Zone gelée en haut du contenu : stats + titre carte */
+.portal-content-frozen {
+    padding: 1.25rem 1.5rem 0;
+    flex-shrink: 0;
+    background: var(--color-bg);
+    z-index: 4;
+}
+
+/* Zone défilante : tout le reste */
+.portal-content-scroll {
+    flex: 1;
     overflow-y: auto;
-    padding: 1.25rem 1.5rem;
+    overflow-x: hidden;
+    padding: 0 1.5rem 1.25rem;
+    min-height: 0;
 }
 
 .portal-tab-subtitle {
@@ -3033,7 +3070,18 @@ img {
 
     .portal-tab.active {
         display: block;
+        padding: 1.25rem 1.5rem;
     }
+
+/* Dashboard: pas de padding direct — géré par frozen/scroll */
+#tab-dashboard.active {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
 
 
 
@@ -3324,8 +3372,6 @@ img {
     border-radius: var(--border-radius-lg);
     border: 1px solid var(--color-border);
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
 }
 
 .portal-card-header {
@@ -3334,11 +3380,6 @@ img {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    position: sticky;
-    top: 0;
-    background: var(--color-white);
-    z-index: 3;
-    flex-shrink: 0;
 }
 
     .portal-card-header h3 {
@@ -3350,8 +3391,6 @@ img {
 .portal-activity-list {
     padding: var(--spacing-sm);
     min-height: 120px;
-    overflow-y: auto;
-    flex: 1;
 }
 
 
@@ -3692,19 +3731,20 @@ img {
 }
 
 .vnk-chat-bubble {
-    width: 56px;
-    height: 56px;
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #1B4F8A, #2E86AB);
+    background: linear-gradient(135deg, #0F2D52, #1B4F8A);
     color: white;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 20px rgba(27,79,138,0.45);
+    box-shadow: 0 6px 24px rgba(15,45,82,0.5);
     transition: transform 0.2s, box-shadow 0.2s;
     position: relative;
+    overflow: hidden;
 }
 
     .vnk-chat-bubble:hover {

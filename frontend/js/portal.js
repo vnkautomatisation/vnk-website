@@ -65,25 +65,68 @@ function showDashboard() {
     const dash = document.getElementById('dashboard-section');
     dash.style.display = 'grid';
 
-    const user = JSON.parse(localStorage.getItem('vnk-user') || '{}');
-    const name = user.name || user.full_name || 'VNK';
-    const initials = name.split(' ').map(n => n[0]).join('').substring(0, 3).toUpperCase();
-    const el = (id) => document.getElementById(id);
+    // Mettre à jour l'UI depuis le localStorage d'abord (rapide)
+    _updateSidebarFromUser(JSON.parse(localStorage.getItem('vnk-user') || '{}'));
 
-    if (el('sidebar-avatar')) el('sidebar-avatar').textContent = initials;
-    if (el('sidebar-name')) el('sidebar-name').textContent = name;
-    if (el('sidebar-company')) el('sidebar-company').textContent = user.company || user.company_name || '';
-    if (el('mobile-avatar')) el('mobile-avatar').textContent = initials.substring(0, 2);
-
-    const hour = new Date().getHours();
-    const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
-    if (el('dashboard-greeting')) el('dashboard-greeting').textContent = greeting + ', ' + name.split(' ')[0] + ' !';
+    // Puis recharger depuis l'API pour avoir les données fraîches + avatar
+    _refreshUserFromAPI();
 
     loadAllData();
     startPolling();
 
     const savedTab = localStorage.getItem('vnk-portal-tab');
     if (savedTab && savedTab !== 'dashboard') showTab(savedTab);
+}
+
+async function _refreshUserFromAPI() {
+    const token = localStorage.getItem('vnk-token');
+    if (!token) return;
+    try {
+        const r = await fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (d.success && d.user) {
+            // Fusionner avec le localStorage
+            const existing = JSON.parse(localStorage.getItem('vnk-user') || '{}');
+            const merged = { ...existing, ...d.user };
+            localStorage.setItem('vnk-user', JSON.stringify(merged));
+            _updateSidebarFromUser(merged);
+        }
+    } catch { }
+}
+
+function _updateSidebarFromUser(user) {
+    const name = user.name || user.full_name || 'VNK';
+    const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    const el = (id) => document.getElementById(id);
+
+    // Avatar — image si disponible, sinon initiales
+    const avatarEl = el('sidebar-avatar');
+    if (avatarEl) {
+        if (user.avatar_url) {
+            avatarEl.style.padding = '0';
+            avatarEl.style.overflow = 'hidden';
+            avatarEl.innerHTML = `<img src="${user.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="${name}">`;
+        } else {
+            avatarEl.style.padding = '';
+            avatarEl.innerHTML = initials;
+        }
+    }
+    if (el('sidebar-name')) el('sidebar-name').textContent = name;
+    if (el('sidebar-company')) el('sidebar-company').textContent = user.company || user.company_name || '';
+    if (el('mobile-avatar')) {
+        const mobileAvatar = el('mobile-avatar');
+        if (user.avatar_url) {
+            mobileAvatar.style.padding = '0';
+            mobileAvatar.style.overflow = 'hidden';
+            mobileAvatar.innerHTML = `<img src="${user.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="${name}">`;
+        } else {
+            mobileAvatar.innerHTML = initials;
+        }
+    }
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
+    if (el('dashboard-greeting')) el('dashboard-greeting').textContent = greeting + ', ' + name.split(' ')[0] + ' !';
 }
 
 async function authFetch(url) {
@@ -162,16 +205,23 @@ async function loadAllData() {
             if (pending > 0) showBadge('badge-contracts', pending);
         }
         if (messages) {
-            const unread = (messages.messages || []).filter(m => !m.is_read && m.sender === 'vnk').length;
+            const msgs = messages.messages || [];
+            const unread = msgs.filter(m => !m.is_read && m.sender === 'vnk').length;
+            const prevUnread = parseInt(el('stat-messages')?.textContent || '0');
             if (el('stat-messages')) el('stat-messages').textContent = unread;
-            if (typeof vnkChatNotify === 'function') vnkChatNotify(messages.messages || [], unread);
+            if (typeof vnkChatNotify === 'function') vnkChatNotify(msgs, unread);
+            // Notification si nouveau message VNK
+            if (unread > prevUnread && typeof vnkNotif !== 'undefined') {
+                const lastVnk = msgs.filter(m => !m.is_read && m.sender === 'vnk').pop();
+                vnkNotif.newMessage('VNK Automatisation', lastVnk?.content?.substring(0, 80));
+            }
         }
 
         // Mettre à jour le panel "Actions requises"
         _updateActionsRequired();
 
-        const user = JSON.parse(localStorage.getItem('vnk-user') || '{}');
-        renderProfile(user);
+        // Mettre à jour l'avatar sidebar seulement (pas toute la page profil)
+        await _refreshUserFromAPI();
     } catch (error) { console.log('Data loading error:', error); }
 }
 
@@ -317,6 +367,7 @@ function showTab(tabName) {
 
     // 5. Titre mobile
     const titles = {
+        profile: 'Mon profil',
         dashboard: 'Tableau de bord',
         mandates: 'Mes mandats',
         quotes: 'Mes devis',
@@ -330,7 +381,15 @@ function showTab(tabName) {
     // 6. Persister l'onglet
     localStorage.setItem('vnk-portal-tab', tabName);
 
-    // 7. Marquer les documents comme vus
+    // 7. Charger le profil quand on l'ouvre — données fraîches
+    if (tabName === 'profile') {
+        renderProfile(JSON.parse(localStorage.getItem('vnk-user') || '{}'));
+        _refreshUserFromAPI().then(() => {
+            renderProfile(JSON.parse(localStorage.getItem('vnk-user') || '{}'));
+        });
+    }
+
+    // 8. Marquer les documents comme vus
     if (tabName === 'documents') {
         (window._allDocuments || []).forEach(d => _markDocRead(d.id));
         const badge = document.getElementById('badge-documents');
@@ -352,35 +411,246 @@ function renderProfile(user) {
     const el = document.getElementById('profile-content');
     if (!el) return;
     const name = user.name || user.full_name || '—';
-    const company = user.company || user.company_name || '—';
-    const pRow = (l, v) => '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.45rem 0;border-bottom:0.5px solid #E2E8F0;font-size:0.83rem"><span style="color:#64748B;min-width:110px">' + l + '</span><span style="font-weight:600;color:#1E293B;text-align:right">' + (v || '—') + '</span></div>';
-    const cityStr = user.city ? (user.city + (user.province ? ', ' + user.province : '') + (user.postal_code ? ' ' + user.postal_code : '')) : null;
-    el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1rem">' +
-        '<div style="background:#F8FAFC;border-radius:10px;padding:1.25rem;border:1px solid #E2E8F0">' +
-        '<h4 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.75rem">Informations personnelles</h4>' +
-        pRow('Nom complet', name) + pRow('Courriel', user.email) + pRow('Entreprise', company) +
-        pRow('Téléphone', user.phone) + pRow('Adresse', user.address) + pRow('Ville', cityStr) + pRow('Secteur', user.sector) +
-        '</div>' +
-        '<div style="background:#F8FAFC;border-radius:10px;padding:1.25rem;border:1px solid #E2E8F0">' +
-        '<h4 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.75rem">Compte VNK</h4>' +
-        pRow('Portail', '<span style="color:#27AE60;font-weight:700">Actif ✓</span>') +
-        pRow('Technologies', user.technologies) +
-        pRow('Devis', (window._allQuotes || []).length + ' devis') +
-        pRow('Contrats', (window._allContracts || []).length + ' contrat(s)') +
-        pRow('Membre depuis', user.created_at ? new Date(user.created_at).toLocaleDateString('fr-CA') : null) +
-        '</div></div>' +
-        '<div style="background:#F8FAFC;border-radius:10px;padding:1.25rem;border:1px solid #E2E8F0;margin-bottom:1rem">' +
-        '<h4 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.75rem">Changer le mot de passe</h4>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;align-items:end">' +
-        '<div><label style="font-size:0.78rem;color:#64748B;display:block;margin-bottom:4px">Mot de passe actuel</label><input type="password" id="pw-current" style="width:100%;padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:6px;font-size:0.85rem;box-sizing:border-box"></div>' +
-        '<div><label style="font-size:0.78rem;color:#64748B;display:block;margin-bottom:4px">Nouveau mot de passe</label><input type="password" id="pw-new" style="width:100%;padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:6px;font-size:0.85rem;box-sizing:border-box"></div>' +
-        '<div><label style="font-size:0.78rem;color:#64748B;display:block;margin-bottom:4px">Confirmer</label><input type="password" id="pw-confirm" style="width:100%;padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:6px;font-size:0.85rem;box-sizing:border-box"></div>' +
-        '</div><div style="display:flex;align-items:center;gap:1rem;margin-top:0.75rem">' +
-        '<button onclick="changePassword()" style="padding:0.5rem 1.25rem;background:#1B4F8A;color:white;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer">Changer le mot de passe</button>' +
-        '<span id="pw-msg" style="font-size:0.8rem"></span></div></div>' +
-        '<div style="background:#EBF5FB;border-radius:10px;padding:1rem 1.25rem;border-left:3px solid #1B4F8A;font-size:0.82rem;color:#1B4F8A">' +
-        'Pour modifier vos coordonnées, contactez VNK à <strong>yan.verone@vnk.ca</strong></div>';
+    const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    const avatarSrc = user.avatar_url;
+
+    el.innerHTML = `
+        <div style="max-width:680px;margin:0 auto">
+
+            <!-- AVATAR + NOM -->
+            <div style="background:white;border-radius:16px;border:1px solid #E2E8F0;padding:2rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:1.5rem">
+                <div style="position:relative;flex-shrink:0">
+                    <div id="profile-avatar-preview" style="width:80px;height:80px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#1B4F8A,#2E75B6);display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:800;color:white;border:3px solid #E2E8F0">
+                        ${avatarSrc
+            ? `<img src="${avatarSrc}" style="width:100%;height:100%;object-fit:cover" alt="${name}">`
+            : initials}
+                    </div>
+                    <label for="avatar-upload" style="position:absolute;bottom:0;right:0;width:26px;height:26px;background:#1B4F8A;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid white" title="Changer l'avatar">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <input type="file" id="avatar-upload" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+                    </label>
+                </div>
+                <div style="flex:1">
+                    <div style="font-size:1.15rem;font-weight:800;color:#0F172A;margin-bottom:0.15rem">${name}</div>
+                    <div style="font-size:0.875rem;color:#64748B;margin-bottom:0.75rem">${user.email || ''}</div>
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                        ${user.company || user.company_name ? `<span style="background:#EBF5FB;color:#1B4F8A;font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:20px">${user.company || user.company_name}</span>` : ''}
+                        ${user.sector ? `<span style="background:#F0FDF4;color:#16A34A;font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:20px">${user.sector}</span>` : ''}
+                    </div>
+                </div>
+                <span id="avatar-upload-status" style="font-size:0.78rem;color:#27AE60;display:none;margin-left:auto">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Sauvegardé
+                </span>
+            </div>
+
+            <!-- INFORMATIONS — mode lecture -->
+            <div id="profile-info-view" style="background:white;border-radius:16px;border:1px solid #E2E8F0;padding:1.5rem;margin-bottom:1.25rem">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+                    <h3 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em">Informations du compte</h3>
+                    <button onclick="showProfileEdit()" style="font-size:0.8rem;color:#1B4F8A;background:none;border:none;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;transition:background 0.15s" onmouseenter="this.style.background='#EBF5FB'" onmouseleave="this.style.background='none'">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Modifier mes informations
+                    </button>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+                    ${_profileRow('Nom complet', name)}
+                    ${_profileRow('Courriel', user.email)}
+                    ${_profileRow('Entreprise', user.company || user.company_name)}
+                    ${_profileRow('Téléphone', user.phone)}
+                    ${_profileRow('Adresse', user.address)}
+                    ${_profileRow('Ville', user.city ? user.city + (user.province ? ', ' + user.province : '') + (user.postal_code ? '  ' + user.postal_code : '') : null)}
+                    ${_profileRow('Secteur', user.sector)}
+                    ${_profileRow('Technologies', user.technologies)}
+                    ${_profileRow('Membre depuis', user.created_at ? new Date(user.created_at).toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' }) : null)}
+                </div>
+            </div>
+
+            <!-- INFORMATIONS — mode édition (caché par défaut) -->
+            <div id="profile-info-edit" style="display:none;background:white;border-radius:16px;border:2px solid #1B4F8A;padding:1.5rem;margin-bottom:1.25rem">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+                    <h3 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em">Modifier mes informations</h3>
+                    <button onclick="hideProfileEdit()" style="font-size:0.8rem;color:#64748B;background:none;border:none;cursor:pointer;font-weight:600;padding:4px 8px;border-radius:6px" onmouseenter="this.style.background='#F1F5F9'" onmouseleave="this.style.background='none'">Annuler</button>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
+                    ${_editField('edit-fname', 'Prénom', (name.split(' ')[0] || ''), 'text')}
+                    ${_editField('edit-lname', 'Nom de famille', (name.split(' ').slice(1).join(' ') || ''), 'text')}
+                    ${_editField('edit-phone', 'Téléphone', user.phone || '', 'tel')}
+                    ${_editField('edit-address', 'Adresse', user.address || '', 'text')}
+                    ${_editField('edit-city', 'Ville', user.city || '', 'text')}
+                    ${_editField('edit-province', 'Province', user.province || 'QC', 'text')}
+                    ${_editField('edit-postal', 'Code postal', user.postal_code || '', 'text')}
+                </div>
+                <div id="profile-edit-msg" style="font-size:0.8rem;margin-bottom:0.75rem;display:none"></div>
+                <div style="display:flex;gap:0.75rem">
+                    <button onclick="saveProfileInfo()" style="padding:0.55rem 1.5rem;background:linear-gradient(135deg,#1B4F8A,#2E75B6);color:white;border:none;border-radius:8px;font-size:0.875rem;font-weight:600;cursor:pointer;font-family:inherit">Enregistrer les modifications</button>
+                    <button onclick="hideProfileEdit()" style="padding:0.55rem 1rem;background:#F1F5F9;color:#64748B;border:none;border-radius:8px;font-size:0.875rem;font-weight:600;cursor:pointer;font-family:inherit">Annuler</button>
+                </div>
+            </div>
+
+            <!-- MOT DE PASSE — mode lecture -->
+            <div id="profile-pw-view" style="background:white;border-radius:16px;border:1px solid #E2E8F0;padding:1.5rem">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                    <div>
+                        <h3 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.25rem">Mot de passe</h3>
+                        <p style="font-size:0.82rem;color:#94A3B8">Dernière modification : inconnue</p>
+                    </div>
+                    <button onclick="showPasswordEdit()" style="font-size:0.8rem;color:#1B4F8A;background:none;border:none;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;transition:background 0.15s" onmouseenter="this.style.background='#EBF5FB'" onmouseleave="this.style.background='none'">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Modifier mon mot de passe
+                    </button>
+                </div>
+            </div>
+
+            <!-- MOT DE PASSE — mode édition (caché par défaut) -->
+            <div id="profile-pw-edit" style="display:none;background:white;border-radius:16px;border:2px solid #1B4F8A;padding:1.5rem;margin-top:0">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+                    <h3 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em">Modifier le mot de passe</h3>
+                    <button onclick="hidePasswordEdit()" style="font-size:0.8rem;color:#64748B;background:none;border:none;cursor:pointer;font-weight:600;padding:4px 8px;border-radius:6px" onmouseenter="this.style.background='#F1F5F9'" onmouseleave="this.style.background='none'">Annuler</button>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;align-items:end;margin-bottom:1rem">
+                    ${_editField('pw-current', 'Mot de passe actuel', '', 'password')}
+                    ${_editField('pw-new', 'Nouveau mot de passe', '', 'password')}
+                    ${_editField('pw-confirm', 'Confirmer', '', 'password')}
+                </div>
+                <div id="pw-msg" style="font-size:0.8rem;margin-bottom:0.75rem;display:none"></div>
+                <div style="display:flex;gap:0.75rem">
+                    <button onclick="changePassword()" style="padding:0.55rem 1.5rem;background:linear-gradient(135deg,#1B4F8A,#2E75B6);color:white;border:none;border-radius:8px;font-size:0.875rem;font-weight:600;cursor:pointer;font-family:inherit">Changer le mot de passe</button>
+                    <button onclick="hidePasswordEdit()" style="padding:0.55rem 1rem;background:#F1F5F9;color:#64748B;border:none;border-radius:8px;font-size:0.875rem;font-weight:600;cursor:pointer;font-family:inherit">Annuler</button>
+                </div>
+            </div>
+        </div>`;
 }
+
+function _profileRow(label, value) {
+    if (!value) return '';
+    return `<div style="background:#F8FAFC;border-radius:8px;padding:0.65rem 0.85rem">
+        <div style="font-size:0.7rem;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">${label}</div>
+        <div style="font-size:0.875rem;font-weight:600;color:#1E293B">${value}</div>
+    </div>`;
+}
+
+function _editField(id, label, value, type) {
+    return `<div>
+        <label style="font-size:0.78rem;color:#64748B;display:block;margin-bottom:4px;font-weight:500">${label}</label>
+        <input id="${id}" type="${type}" value="${value}" style="width:100%;padding:0.55rem 0.75rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.875rem;box-sizing:border-box;font-family:inherit;outline:none;transition:border-color 0.15s" onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'">
+    </div>`;
+}
+
+function showProfileEdit() {
+    document.getElementById('profile-info-view').style.display = 'none';
+    document.getElementById('profile-info-edit').style.display = 'block';
+    document.getElementById('profile-info-edit').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function hideProfileEdit() {
+    document.getElementById('profile-info-edit').style.display = 'none';
+    document.getElementById('profile-info-view').style.display = 'block';
+}
+function showPasswordEdit() {
+    document.getElementById('profile-pw-view').style.display = 'none';
+    document.getElementById('profile-pw-edit').style.display = 'block';
+    document.getElementById('profile-pw-edit').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function hidePasswordEdit() {
+    document.getElementById('profile-pw-edit').style.display = 'none';
+    document.getElementById('profile-pw-view').style.display = 'block';
+}
+
+async function saveProfileInfo() {
+    const token = localStorage.getItem('vnk-token');
+    if (!token) return;
+    const fname = document.getElementById('edit-fname')?.value.trim() || '';
+    const lname = document.getElementById('edit-lname')?.value.trim() || '';
+    const fullName = (fname + ' ' + lname).trim();
+    const payload = {
+        full_name: fullName || undefined,
+        phone: document.getElementById('edit-phone')?.value.trim() || undefined,
+        address: document.getElementById('edit-address')?.value.trim() || undefined,
+        city: document.getElementById('edit-city')?.value.trim() || undefined,
+        province: document.getElementById('edit-province')?.value.trim() || undefined,
+        postal_code: document.getElementById('edit-postal')?.value.trim() || undefined,
+    };
+    const msg = document.getElementById('profile-edit-msg');
+    if (msg) { msg.style.display = 'block'; msg.style.color = '#64748B'; msg.textContent = 'Enregistrement...'; }
+    try {
+        const r = await fetch('/api/auth/update-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify(payload)
+        });
+        const d = await r.json();
+        if (d.success) {
+            const merged = { ...JSON.parse(localStorage.getItem('vnk-user') || '{}'), ...d.user };
+            if (fullName) merged.name = fullName;
+            localStorage.setItem('vnk-user', JSON.stringify(merged));
+            _updateSidebarFromUser(merged);
+            if (msg) { msg.style.color = '#16A34A'; msg.textContent = 'Modifications enregistrées !'; }
+            setTimeout(() => { hideProfileEdit(); renderProfile(merged); }, 1200);
+        } else {
+            if (msg) { msg.style.color = '#DC2626'; msg.textContent = d.message || 'Erreur'; }
+        }
+    } catch {
+        if (msg) { msg.style.color = '#DC2626'; msg.textContent = 'Erreur réseau'; }
+    }
+}
+
+
+function _profileRow(label, value) {
+    if (!value) return '';
+    return `<div style="background:#F8FAFC;border-radius:8px;padding:0.65rem 0.85rem">
+        <div style="font-size:0.7rem;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">${label}</div>
+        <div style="font-size:0.875rem;font-weight:600;color:#1E293B">${value}</div>
+    </div>`;
+}
+
+async function uploadAvatar(input) {
+    const file = input?.files?.[0];
+    if (!file) return;
+    const token = localStorage.getItem('vnk-token');
+    if (!token) return;
+
+    // Redimensionner et encoder en base64
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        // Créer canvas pour redimensionner à 200x200
+        const img = new Image();
+        img.onload = async () => {
+            const canvas = document.createElement('canvas');
+            const size = 200;
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            // Centrer et rogner en carré
+            const scale = Math.max(size / img.width, size / img.height);
+            const x = (size - img.width * scale) / 2;
+            const y = (size - img.height * scale) / 2;
+            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+            const b64 = canvas.toDataURL('image/jpeg', 0.85);
+
+            // Aperçu immédiat
+            const preview = document.getElementById('profile-avatar-preview');
+            if (preview) preview.innerHTML = `<img src="${b64}" style="width:100%;height:100%;object-fit:cover" alt="avatar">`;
+            _updateSidebarFromUser({ ...JSON.parse(localStorage.getItem('vnk-user') || '{}'), avatar_url: b64 });
+
+            try {
+                const r = await fetch('/api/auth/update-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                    body: JSON.stringify({ avatar_url: b64 })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    const merged = { ...JSON.parse(localStorage.getItem('vnk-user') || '{}'), ...d.user, avatar_url: b64 };
+                    localStorage.setItem('vnk-user', JSON.stringify(merged));
+                    const status = document.getElementById('avatar-upload-status');
+                    if (status) { status.style.display = 'block'; setTimeout(() => status.style.display = 'none', 3000); }
+                }
+            } catch { }
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
 
 async function changePassword() {
     const current = document.getElementById('pw-current')?.value;
@@ -394,7 +664,7 @@ async function changePassword() {
     try {
         const r = await fetch('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ currentPassword: current, newPassword: newPw }) });
         const d = await r.json();
-        if (d.success) { msg.textContent = '✓ Mot de passe changé.'; msg.style.color = '#27AE60';['pw-current', 'pw-new', 'pw-confirm'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); }
+        if (d.success) { msg.textContent = 'Mot de passe changé.'; msg.style.color = '#27AE60';['pw-current', 'pw-new', 'pw-confirm'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); }
         else { msg.textContent = d.message || 'Erreur.'; msg.style.color = '#E74C3C'; }
     } catch { msg.textContent = 'Erreur de connexion.'; msg.style.color = '#E74C3C'; }
 }
@@ -709,7 +979,7 @@ function _sortDocs(arr, val) {
 }
 
 function toggleDocSort() {
-    const opts = [['date-desc', 'Date ↓'], ['date-asc', 'Date ↑'], ['name-asc', 'Nom A→Z'], ['name-desc', 'Nom Z→A'], ['unread', 'Non lus en premier']];
+    const opts = [['date-desc', 'Date récente'], ['date-asc', 'Date ancienne'], ['name-asc', 'Nom A'], ['name-desc', 'Nom Z'], ['unread', 'Non lus en premier']];
     const existing = document.getElementById('sort-dropdown-docs');
     if (existing) { existing.remove(); return; }
     const btn = document.getElementById('doc-sort-btn');
@@ -733,7 +1003,7 @@ function applyDocSort(val) {
     window._docSortState = val;
     const dd = document.getElementById('sort-dropdown-docs');
     if (dd) dd.remove();
-    const labelMap = { 'date-desc': 'Date ↓', 'date-asc': 'Date ↑', 'name-asc': 'Nom A→Z', 'name-desc': 'Nom Z→A', 'unread': 'Non lus' };
+    const labelMap = { 'date-desc': 'Date récente', 'date-asc': 'Date ancienne', 'name-asc': 'Nom A', 'name-desc': 'Nom Z', 'unread': 'Non lus' };
     const lbl = document.getElementById('doc-sort-label');
     if (lbl) lbl.textContent = labelMap[val] || val;
     filterDocuments();
@@ -896,18 +1166,141 @@ function togglePortalPw() {
 /* ═══════════════════════════════════════════════
    MODAL MAISON
 ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   SYSTÈME MODAL VNK — Design premium
+═══════════════════════════════════════════════ */
 function _ensureModal() {
     if (document.getElementById('vnk-modal')) return;
+
+    // Injecter les styles du modal
+    const style = document.createElement('style');
+    style.textContent = `
+        #vnk-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: rgba(10, 18, 35, 0.6);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        #vnk-modal-box {
+            background: #fff;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 32px 80px rgba(10,18,35,0.22), 0 0 0 1px rgba(0,0,0,0.04);
+            overflow: hidden;
+            animation: vnkModalIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
+            position: relative;
+        }
+        @keyframes vnkModalIn {
+            from { opacity: 0; transform: scale(0.88) translateY(12px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .vnk-modal-top {
+            padding: 2rem 2rem 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+        .vnk-modal-accent {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            border-radius: 20px 20px 0 0;
+        }
+        .vnk-modal-icon-wrap {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0.5rem auto 1.25rem;
+        }
+        #vnk-modal-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #0F172A;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.01em;
+        }
+        #vnk-modal-msg {
+            font-size: 0.875rem;
+            color: #64748B;
+            line-height: 1.6;
+        }
+        .vnk-modal-footer {
+            padding: 1.25rem 2rem 1.75rem;
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+        .vnk-modal-footer button {
+            flex: 1;
+            max-width: 160px;
+            padding: 0.7rem 1.25rem;
+            border-radius: 10px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: none;
+            font-family: inherit;
+        }
+        .vnk-btn-cancel {
+            background: #F1F5F9 !important;
+            color: #475569 !important;
+            border: 1.5px solid #E2E8F0 !important;
+        }
+        .vnk-btn-cancel:hover {
+            background: #E2E8F0 !important;
+        }
+        .vnk-btn-primary {
+            background: linear-gradient(135deg, #1B4F8A, #2E75B6) !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(27,79,138,0.3) !important;
+        }
+        .vnk-btn-primary:hover {
+            background: linear-gradient(135deg, #154075, #1B4F8A) !important;
+            box-shadow: 0 6px 16px rgba(27,79,138,0.4) !important;
+            transform: translateY(-1px);
+        }
+        .vnk-btn-success {
+            background: linear-gradient(135deg, #16A34A, #22C55E) !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(22,163,74,0.3) !important;
+        }
+        .vnk-btn-danger {
+            background: linear-gradient(135deg, #DC2626, #EF4444) !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(220,38,38,0.3) !important;
+        }
+        #vnk-modal-stripe-wrap {
+            padding: 0 2rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+    `;
+    document.head.appendChild(style);
+
     const el = document.createElement('div');
     el.id = 'vnk-modal';
-    el.style.cssText = 'display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.55);backdrop-filter:blur(3px);align-items:center;justify-content:center';
     el.innerHTML = `
-        <div id="vnk-modal-box" style="background:white;border-radius:16px;padding:2rem;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);position:relative">
-            <div id="vnk-modal-icon" style="text-align:center;margin-bottom:1rem"></div>
-            <h3 id="vnk-modal-title" style="font-size:1.05rem;font-weight:700;color:#0F172A;margin-bottom:0.5rem;text-align:center"></h3>
-            <p id="vnk-modal-msg" style="font-size:0.88rem;color:#64748B;text-align:center;line-height:1.5;margin-bottom:1.5rem"></p>
-            <div id="vnk-modal-stripe" style="margin-bottom:1.25rem;display:none"></div>
-            <div id="vnk-modal-btns" style="display:flex;gap:0.75rem;justify-content:center"></div>
+        <div id="vnk-modal-box">
+            <div class="vnk-modal-top">
+                <div class="vnk-modal-accent" id="vnk-modal-accent"></div>
+                <div class="vnk-modal-icon-wrap" id="vnk-modal-icon-wrap">
+                    <div id="vnk-modal-icon"></div>
+                </div>
+                <div id="vnk-modal-title"></div>
+                <p id="vnk-modal-msg"></p>
+            </div>
+            <div id="vnk-modal-stripe-wrap"><div id="vnk-modal-stripe"></div></div>
+            <div class="vnk-modal-footer" id="vnk-modal-btns"></div>
         </div>`;
     document.body.appendChild(el);
     el.addEventListener('click', e => { if (e.target === el) _closeModal(); });
@@ -915,35 +1308,93 @@ function _ensureModal() {
 
 function _closeModal() {
     const m = document.getElementById('vnk-modal');
-    if (m) m.style.display = 'none';
+    if (m) {
+        const box = document.getElementById('vnk-modal-box');
+        if (box) {
+            box.style.animation = 'none';
+            box.style.transform = 'scale(0.92) translateY(8px)';
+            box.style.opacity = '0';
+            box.style.transition = 'all 0.15s ease';
+        }
+        setTimeout(() => {
+            m.style.display = 'none';
+            if (box) { box.style.transform = ''; box.style.opacity = ''; box.style.transition = ''; }
+        }, 150);
+    }
+}
+
+// Config par type: [couleur accent, couleur fond icône, couleur icône, SVG icône]
+const _modalTypes = {
+    success: {
+        accent: '#16A34A',
+        iconBg: '#DCFCE7',
+        btnClass: 'vnk-btn-success',
+        icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+    },
+    error: {
+        accent: '#DC2626',
+        iconBg: '#FEE2E2',
+        btnClass: 'vnk-btn-danger',
+        icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+    },
+    warning: {
+        accent: '#D97706',
+        iconBg: '#FEF3C7',
+        btnClass: 'vnk-btn-primary',
+        icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+    },
+    info: {
+        accent: '#1B4F8A',
+        iconBg: '#EBF5FB',
+        btnClass: 'vnk-btn-primary',
+        icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+    }
+};
+
+function _applyModalType(type) {
+    const cfg = _modalTypes[type] || _modalTypes.info;
+    const accent = document.getElementById('vnk-modal-accent');
+    const iconWrap = document.getElementById('vnk-modal-icon-wrap');
+    const iconEl = document.getElementById('vnk-modal-icon');
+    if (accent) accent.style.background = cfg.accent;
+    if (iconWrap) iconWrap.style.background = cfg.iconBg;
+    if (iconEl) iconEl.innerHTML = cfg.icon;
+    return cfg;
 }
 
 function showInfo(title, msg, icon) {
     _ensureModal();
-    const icons = {
-        success: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>',
-        error: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#E74C3C" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
-        info: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
-    };
-    document.getElementById('vnk-modal-icon').innerHTML = icons[icon || 'info'] || '';
+    const type = icon === 'success' ? 'success' : icon === 'error' ? 'error' : 'info';
+    _applyModalType(type);
     document.getElementById('vnk-modal-title').textContent = title;
     document.getElementById('vnk-modal-msg').innerHTML = msg;
-    document.getElementById('vnk-modal-stripe').style.display = 'none';
-    document.getElementById('vnk-modal-btns').innerHTML = '<button onclick="_closeModal()" style="padding:0.6rem 1.75rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">OK</button>';
-    document.getElementById('vnk-modal').style.display = 'flex';
+    document.getElementById('vnk-modal-stripe-wrap').style.display = 'none';
+    const cfg = _modalTypes[type];
+    document.getElementById('vnk-modal-btns').innerHTML =
+        `<button onclick="_closeModal()" class="${cfg.btnClass}" style="max-width:200px">OK</button>`;
+    const m = document.getElementById('vnk-modal');
+    const box = document.getElementById('vnk-modal-box');
+    if (box) { box.style.animation = 'none'; void box.offsetWidth; box.style.animation = 'vnkModalIn 0.22s cubic-bezier(0.34,1.56,0.64,1)'; }
+    m.style.display = 'flex';
 }
 
-function showConfirm(title, msg, onConfirm) {
+function showConfirm(title, msg, onConfirm, opts = {}) {
     _ensureModal();
-    document.getElementById('vnk-modal-icon').innerHTML = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+    const type = opts.type || 'warning';
+    _applyModalType(type);
     document.getElementById('vnk-modal-title').textContent = title;
     document.getElementById('vnk-modal-msg').textContent = msg;
-    document.getElementById('vnk-modal-stripe').style.display = 'none';
+    document.getElementById('vnk-modal-stripe-wrap').style.display = 'none';
+    const cfg = _modalTypes[type];
+    const confirmLabel = opts.confirmLabel || 'Confirmer';
     document.getElementById('vnk-modal-btns').innerHTML =
-        '<button onclick="_closeModal()" style="padding:0.6rem 1.5rem;background:white;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">Annuler</button>' +
-        '<button id="vnk-modal-confirm" style="padding:0.6rem 1.5rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">Confirmer</button>';
+        `<button onclick="_closeModal()" class="vnk-btn-cancel">Annuler</button>` +
+        `<button id="vnk-modal-confirm" class="${cfg.btnClass}">${confirmLabel}</button>`;
     document.getElementById('vnk-modal-confirm').onclick = () => { _closeModal(); onConfirm(); };
-    document.getElementById('vnk-modal').style.display = 'flex';
+    const m = document.getElementById('vnk-modal');
+    const box = document.getElementById('vnk-modal-box');
+    if (box) { box.style.animation = 'none'; void box.offsetWidth; box.style.animation = 'vnkModalIn 0.22s cubic-bezier(0.34,1.56,0.64,1)'; }
+    m.style.display = 'flex';
 }
 
 /* ═══════════════════════════════════════════════
@@ -1082,7 +1533,7 @@ async function signContract(contractId, hellosignId, fileUrl) {
     const user = JSON.parse(localStorage.getItem('vnk-user') || '{}');
 
     if (fileUrl) {
-        showConfirm('Signer ce contrat', 'Vous allez être redirigé vers le document pour le lire et le signer en ligne.', () => window.open(fileUrl, '_blank'));
+        showConfirm('Signer ce contrat', 'Vous allez être redirigé vers le document pour le lire et le signer en ligne.', () => window.open(fileUrl, '_blank'), { type: 'info', confirmLabel: 'Ouvrir le document' });
         return;
     }
 
@@ -1091,7 +1542,7 @@ async function signContract(contractId, hellosignId, fileUrl) {
             const r = await fetch('/api/contracts/' + contractId + '/signing-url', { headers: { Authorization: 'Bearer ' + token } });
             const d = await r.json();
             if (d.success && d.signingUrl) {
-                showConfirm('Signer électroniquement', 'Vous allez être redirigé vers HelloSign pour signer ce contrat.', () => window.open(d.signingUrl, '_blank'));
+                showConfirm('Signer électroniquement', 'Vous allez être redirigé vers HelloSign pour signer ce contrat.', () => window.open(d.signingUrl, '_blank'), { type: 'info', confirmLabel: 'Signer maintenant' });
                 return;
             }
         } catch { }
@@ -1104,7 +1555,7 @@ async function signContract(contractId, hellosignId, fileUrl) {
     document.getElementById('vnk-modal-stripe').style.display = 'none';
     document.getElementById('vnk-modal-btns').innerHTML =
         '<button onclick="_closeModal()" style="padding:0.6rem 1.5rem;background:white;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">Fermer</button>' +
-        '<button onclick="_closeAndOpenChat()" style="padding:0.6rem 1.5rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">💬 Envoyer un message</button>';
+        '<button onclick="_closeAndOpenChat()" style="padding:0.6rem 1.5rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">Envoyer un message</button>';
     document.getElementById('vnk-modal').style.display = 'flex';
 }
 
@@ -1119,9 +1570,9 @@ const _sortState = {};
 let _sortDropdownOpen = null;
 
 const _sortOptions = {
-    quotes: [['date-desc', 'Date (récent)'], ['date-asc', 'Date (ancien)'], ['name-asc', 'Nom A→Z'], ['name-desc', 'Nom Z→A'], ['amount-desc', 'Montant ↓'], ['amount-asc', 'Montant ↑']],
-    invoices: [['date-desc', 'Date (récent)'], ['date-asc', 'Date (ancien)'], ['name-asc', 'Nom A→Z'], ['name-desc', 'Nom Z→A'], ['amount-desc', 'Montant ↓'], ['amount-asc', 'Montant ↑']],
-    contracts: [['date-desc', 'Date (récent)'], ['date-asc', 'Date (ancien)'], ['name-asc', 'Nom A→Z'], ['name-desc', 'Nom Z→A']]
+    quotes: [['date-desc', 'Date (récent)'], ['date-asc', 'Date (ancien)'], ['name-asc', 'Nom A'], ['name-desc', 'Nom Z'], ['amount-desc', 'Montant élevé'], ['amount-asc', 'Montant faible']],
+    invoices: [['date-desc', 'Date (récent)'], ['date-asc', 'Date (ancien)'], ['name-asc', 'Nom A'], ['name-desc', 'Nom Z'], ['amount-desc', 'Montant élevé'], ['amount-asc', 'Montant faible']],
+    contracts: [['date-desc', 'Date (récent)'], ['date-asc', 'Date (ancien)'], ['name-asc', 'Nom A'], ['name-desc', 'Nom Z']]
 };
 
 function toggleSort(type) {
@@ -1151,7 +1602,7 @@ function applySort(type, val) {
     _sortState[type] = val;
     const dropdown = document.getElementById('sort-dropdown-' + type);
     if (dropdown) { dropdown.remove(); _sortDropdownOpen = null; }
-    const labelMap = { 'date-desc': 'Date ↓', 'date-asc': 'Date ↑', 'name-asc': 'Nom A→Z', 'name-desc': 'Nom Z→A', 'amount-desc': 'Montant ↓', 'amount-asc': 'Montant ↑' };
+    const labelMap = { 'date-desc': 'Date récente', 'date-asc': 'Date ancienne', 'name-asc': 'Nom A', 'name-desc': 'Nom Z', 'amount-desc': 'Montant élevé', 'amount-asc': 'Montant faible' };
     const labelEl = document.getElementById(type.slice(0, -1) + '-sort-label') || document.getElementById(type + '-sort-label');
     if (labelEl) labelEl.textContent = labelMap[val] || val;
     const btn = document.getElementById(type.slice(0, -1) + '-sort-btn') || document.getElementById(type + '-sort-btn');

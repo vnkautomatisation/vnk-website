@@ -20,15 +20,15 @@
     ═══════════════════════════════════════ -->
     <nav class="navbar" id="navbar">
         <div class="nav-container">
-            <div class="nav-logo">
+            <a href="index.html" class="nav-logo">
                 <svg width="220" height="42" viewBox="0 0 220 42">
-                    <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="#1B4F8A" opacity="0.08" />
-                    <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="none" stroke="#1B4F8A" stroke-width="2" />
-                    <text x="21" y="26" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#1B4F8A;font-family:sans-serif">VNK</text>
-                    <text x="48" y="18" style="font-size:13px;font-weight:700;fill:#333;font-family:sans-serif">Automatisation Inc.</text>
-                    <text x="48" y="33" style="font-size:7.5px;fill:#888;font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text>
+                    <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="rgba(255,255,255,0.12)" />
+                    <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" />
+                    <text x="21" y="26" text-anchor="middle" style="font-size:11px;font-weight:800;fill:white;font-family:sans-serif">VNK</text>
+                    <text x="48" y="18" style="font-size:13px;font-weight:700;fill:white;font-family:sans-serif">Automatisation Inc.</text>
+                    <text x="48" y="33" style="font-size:7.5px;fill:rgba(255,255,255,0.6);font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text>
                 </svg>
-            </div>
+            </a>
             <ul class="nav-links" id="nav-links">
                 <li><a href="index.html" class="nav-link" data-i18n="nav.home">Accueil</a></li>
                 <li><a href="services.html" class="nav-link" data-i18n="nav.services">Services</a></li>
@@ -38,7 +38,7 @@
             </ul>
             <div class="nav-actions">
                 <button class="lang-toggle" id="lang-toggle" onclick="toggleLanguage()">EN</button>
-                <button class="nav-toggle" id="nav-toggle" onclick="toggleMenu()">☰</button>
+                <button class="nav-toggle" id="nav-toggle" onclick="toggleMenu()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg></button>
             </div>
         </div>
     </nav>
@@ -49,50 +49,70 @@
     <section class="portal-login-section" id="login-section">
         <div class="portal-login-container">
             <div class="portal-login-card">
-                <div class="portal-logo">
-                    <svg width="220" height="42" viewBox="0 0 220 42">
-                        <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="#1B4F8A" opacity="0.08" />
-                        <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="none" stroke="#1B4F8A" stroke-width="2" />
-                        <text x="21" y="26" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#1B4F8A;font-family:sans-serif">VNK</text>
-                        <text x="48" y="18" style="font-size:13px;font-weight:700;fill:#333;font-family:sans-serif">Automatisation Inc.</text>
-                        <text x="48" y="33" style="font-size:7.5px;fill:#888;font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text>
+                <!-- Haut — fond dégradé sombre -->
+                <div style="background:linear-gradient(135deg,#0F2D52,#1B4F8A);padding:2rem 2.5rem 1.75rem;text-align:center;border-radius:16px 16px 0 0">
+                    <svg width="220" height="42" viewBox="0 0 220 42" style="display:block;margin:0 auto 0.75rem">
+                        <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="rgba(255,255,255,0.12)" />
+                        <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.5" />
+                        <text x="21" y="26" text-anchor="middle" style="font-size:11px;font-weight:800;fill:white;font-family:sans-serif">VNK</text>
+                        <text x="48" y="18" style="font-size:13px;font-weight:700;fill:white;font-family:sans-serif">Automatisation Inc.</text>
+                        <text x="48" y="33" style="font-size:7.5px;fill:rgba(255,255,255,0.6);font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text>
                     </svg>
+                    <div style="font-size:1.15rem;font-weight:700;color:white;margin-bottom:0.25rem">Connexion au portail</div>
+                    <div style="font-size:0.82rem;color:rgba(255,255,255,0.7)">Accédez à vos mandats, devis et factures</div>
                 </div>
-                <h2>Connexion au portail</h2>
-                <p class="portal-login-subtitle">Accédez à vos mandats, devis et factures</p>
-                <form id="login-form" class="portal-form">
-                    <div class="form-group">
-                        <label class="form-label">Courriel</label>
-                        <div class="form-input-wrap">
-                            <svg class="form-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>
-                            <input type="email" class="form-input form-input-icon-pad" id="login-email" required placeholder="votre@courriel.com">
+                <!-- Bas — fond blanc, formulaire -->
+                <div style="padding:1.75rem 2rem 2rem">
+                    <!-- SSO Buttons -->
+                    <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.25rem">
+                        <button onclick="portalGoogleSSO()" style="width:100%;padding:0.7rem 1rem;border:1.5px solid #E2E8F0;border-radius:10px;background:white;cursor:pointer;font-family:inherit;font-size:0.875rem;font-weight:600;color:#444;display:flex;align-items:center;justify-content:center;gap:0.75rem;transition:all 0.15s" onmouseenter="this.style.borderColor='#4285F4';this.style.background='rgba(66,133,244,0.04)'" onmouseleave="this.style.borderColor='#E2E8F0';this.style.background='white'">
+                            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
+                            Continuer avec Google
+                        </button>
+                        <button onclick="portalMicrosoftSSO()" style="width:100%;padding:0.7rem 1rem;border:1.5px solid #E2E8F0;border-radius:10px;background:white;cursor:pointer;font-family:inherit;font-size:0.875rem;font-weight:600;color:#444;display:flex;align-items:center;justify-content:center;gap:0.75rem;transition:all 0.15s" onmouseenter="this.style.borderColor='#0078D4';this.style.background='rgba(0,120,212,0.04)'" onmouseleave="this.style.borderColor='#E2E8F0';this.style.background='white'">
+                            <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#F25022" /><rect x="11" y="1" width="9" height="9" fill="#7FBA00" /><rect x="1" y="11" width="9" height="9" fill="#00A4EF" /><rect x="11" y="11" width="9" height="9" fill="#FFB900" /></svg>
+                            Continuer avec Microsoft
+                        </button>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem">
+                        <div style="flex:1;height:1px;background:#E2E8F0"></div>
+                        <span style="font-size:0.75rem;color:#94A3B8;font-weight:500">ou connexion client</span>
+                        <div style="flex:1;height:1px;background:#E2E8F0"></div>
+                    </div>
+                    <form id="login-form" class="portal-form">
+                        <div class="form-group">
+                            <label class="form-label">Courriel</label>
+                            <div class="form-input-wrap">
+                                <svg class="form-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>
+                                <input type="email" class="form-input form-input-icon-pad" id="login-email" required placeholder="votre@courriel.com">
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Mot de passe</label>
-                        <div class="form-input-wrap" style="position:relative">
-                            <svg class="form-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                            <input type="password" class="form-input form-input-icon-pad" id="login-password" required placeholder="••••••••" style="padding-right:2.8rem">
-                            <button type="button" onclick="togglePortalPw()" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#aaa;display:flex;align-items:center;padding:0.2rem;z-index:2">
-                                <svg id="eye-portal" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                            </button>
+                        <div class="form-group">
+                            <label class="form-label">Mot de passe</label>
+                            <div class="form-input-wrap" style="position:relative">
+                                <svg class="form-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                                <input type="password" class="form-input form-input-icon-pad" id="login-password" required placeholder="••••••••" style="padding-right:2.8rem">
+                                <button type="button" onclick="togglePortalPw()" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#aaa;display:flex;align-items:center;padding:0.2rem;z-index:2">
+                                    <svg id="eye-portal" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                                </button>
+                            </div>
                         </div>
+                        <div class="portal-form-options">
+                            <label class="portal-remember">
+                                <input type="checkbox" id="remember-me">
+                                <span data-i18n="portal.login.remember">Se souvenir de moi</span>
+                            </label>
+                            <a href="#" class="portal-forgot" data-i18n="portal.login.forgot">Mot de passe oublié ?</a>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width:100%" id="login-btn">Se connecter</button>
+                        <div id="login-error" class="alert alert-error" style="display:none; margin-top:1rem"></div>
+                    </form>
+                    <div class="portal-no-account">
+                        <p>Pas encore de compte ?</p>
+                        <p>Contactez-nous pour démarrer un mandat.</p>
+                        <a href="contact.html" class="btn btn-outline" style="width:100%; margin-top:0.5rem">Nous contacter</a>
                     </div>
-                    <div class="portal-form-options">
-                        <label class="portal-remember">
-                            <input type="checkbox" id="remember-me">
-                            <span data-i18n="portal.login.remember">Se souvenir de moi</span>
-                        </label>
-                        <a href="#" class="portal-forgot" data-i18n="portal.login.forgot">Mot de passe oublié ?</a>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width:100%" id="login-btn">Se connecter</button>
-                    <div id="login-error" class="alert alert-error" style="display:none; margin-top:1rem"></div>
-                </form>
-                <div class="portal-no-account">
-                    <p>Pas encore de compte ?</p>
-                    <p>Contactez-nous pour démarrer un mandat.</p>
-                    <a href="contact.html" class="btn btn-outline" style="width:100%; margin-top:0.5rem">Nous contacter</a>
-                </div>
+                </div><!-- fin bas blanc -->
             </div>
 
             <div class="portal-info">
@@ -133,14 +153,18 @@
 
         <!-- ── ZONE 1 : SIDEBAR GAUCHE — toujours gelée ── -->
         <aside class="portal-sidebar">
-            <div class="portal-sidebar-user" id="sidebar-user">
-                <div class="portal-sidebar-avatar" id="sidebar-avatar">--</div>
+            <div class="portal-sidebar-user" id="sidebar-user" style="cursor:pointer" onclick="showTab('profile')" title="Mon profil">
+                <div class="portal-sidebar-avatar" id="sidebar-avatar" style="overflow:hidden;padding:0">--</div>
                 <div>
                     <strong id="sidebar-name">Chargement...</strong>
                     <span id="sidebar-company"></span>
                 </div>
             </div>
             <nav class="portal-nav">
+                <button class="portal-nav-item" onclick="showTab('profile')" id="nav-profile">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                    Mon profil
+                </button>
                 <button class="portal-nav-item active" onclick="showTab('dashboard')">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
                     Tableau de bord
@@ -198,6 +222,20 @@
 
             <!-- ── HEADER GELÉ — titre + barre recherche/tri ── -->
             <div class="portal-main-header" id="portal-main-header">
+
+                <!-- Profil header -->
+                <div class="portal-tab-header" id="header-profile" style="display:none">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem">
+                        <div>
+                            <h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A;line-height:1.2">Mon profil</h2>
+                            <span class="portal-tab-subtitle">Gérez vos informations personnelles et votre avatar</span>
+                        </div>
+                        <button id="btn-refresh-profile" onclick="refreshPortal(this)" class="portal-refresh-btn">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
+                            Actualiser
+                        </button>
+                    </div>
+                </div>
 
                 <!-- Dashboard header -->
                 <div class="portal-tab-header" id="header-dashboard">
@@ -259,7 +297,7 @@
                         </select>
                         <button class="portal-sort-btn" id="quote-sort-btn" onclick="toggleSort('quotes')" title="Trier">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="9" y1="18" x2="15" y2="18" /></svg>
-                            <span id="quote-sort-label">Date ↓</span>
+                            <span id="quote-sort-label">Date ▾</span>
                         </button>
                     </div>
                 </div>
@@ -289,7 +327,7 @@
                         </select>
                         <button class="portal-sort-btn" id="invoice-sort-btn" onclick="toggleSort('invoices')" title="Trier">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="9" y1="18" x2="15" y2="18" /></svg>
-                            <span id="invoice-sort-label">Date ↓</span>
+                            <span id="invoice-sort-label">Date ▾</span>
                         </button>
                     </div>
                 </div>
@@ -320,7 +358,7 @@
                         </select>
                         <button class="portal-sort-btn" id="contract-sort-btn" onclick="toggleSort('contracts')" title="Trier">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="9" y1="18" x2="15" y2="18" /></svg>
-                            <span id="contract-sort-label">Date ↓</span>
+                            <span id="contract-sort-label">Date ▾</span>
                         </button>
                     </div>
                 </div>
@@ -344,7 +382,7 @@
                         </div>
                         <button class="portal-sort-btn" id="doc-sort-btn" onclick="toggleDocSort()" title="Trier">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="9" y1="18" x2="15" y2="18" /></svg>
-                            <span id="doc-sort-label">Date ↓</span>
+                            <span id="doc-sort-label">Date ▾</span>
                         </button>
                     </div>
                 </div>
@@ -353,29 +391,44 @@
             <!-- ── CONTENU DÉFILANT ── -->
             <div class="portal-main-content">
 
+                <!-- TAB: PROFIL -->
+                <div class="portal-tab" id="tab-profile">
+                    <div id="profile-content">
+                        <div class="portal-empty-state"><div class="spinner"></div><p>Chargement...</p></div>
+                    </div>
+                </div>
+
                 <!-- TAB: TABLEAU DE BORD -->
                 <div class="portal-tab active" id="tab-dashboard">
-                    <div class="portal-stats-row">
-                        <div class="portal-stat-card">
-                            <div class="portal-stat-icon portal-stat-icon-blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg></div>
-                            <div><span class="portal-stat-number" id="stat-mandates">0</span><span class="portal-stat-label">Mandats actifs</span></div>
+                    <!-- ZONE GELÉE : stats + titre activité récente -->
+                    <div class="portal-content-frozen">
+                        <div class="portal-stats-row">
+                            <div class="portal-stat-card">
+                                <div class="portal-stat-icon portal-stat-icon-blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg></div>
+                                <div><span class="portal-stat-number" id="stat-mandates">0</span><span class="portal-stat-label">Mandats actifs</span></div>
+                            </div>
+                            <div class="portal-stat-card">
+                                <div class="portal-stat-icon portal-stat-icon-amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg></div>
+                                <div><span class="portal-stat-number" id="stat-quotes">0</span><span class="portal-stat-label">Devis en attente</span></div>
+                            </div>
+                            <div class="portal-stat-card">
+                                <div class="portal-stat-icon portal-stat-icon-red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg></div>
+                                <div><span class="portal-stat-number" id="stat-invoices">0</span><span class="portal-stat-label">Factures à payer</span></div>
+                            </div>
+                            <div class="portal-stat-card">
+                                <div class="portal-stat-icon portal-stat-icon-green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg></div>
+                                <div><span class="portal-stat-number" id="stat-messages">0</span><span class="portal-stat-label">Messages non lus</span></div>
+                            </div>
                         </div>
-                        <div class="portal-stat-card">
-                            <div class="portal-stat-icon portal-stat-icon-amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg></div>
-                            <div><span class="portal-stat-number" id="stat-quotes">0</span><span class="portal-stat-label">Devis en attente</span></div>
-                        </div>
-                        <div class="portal-stat-card">
-                            <div class="portal-stat-icon portal-stat-icon-red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg></div>
-                            <div><span class="portal-stat-number" id="stat-invoices">0</span><span class="portal-stat-label">Factures à payer</span></div>
-                        </div>
-                        <div class="portal-stat-card">
-                            <div class="portal-stat-icon portal-stat-icon-green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg></div>
-                            <div><span class="portal-stat-number" id="stat-messages">0</span><span class="portal-stat-label">Messages non lus</span></div>
+                        <div style="background:white;border:1px solid var(--color-border);border-bottom:2px solid var(--color-light-blue);border-radius:16px 16px 0 0;margin-top:1.25rem;padding:0.85rem 1rem;display:flex;align-items:center;justify-content:space-between">
+                            <h3 style="font-size:0.95rem;font-weight:700;color:var(--color-primary)">Activité récente</h3>
                         </div>
                     </div>
-                    <div class="portal-card">
-                        <div class="portal-card-header"><h3>Activité récente</h3></div>
-                        <div id="activity-list" class="portal-activity-list"><p class="portal-empty">Aucune activité récente.</p></div>
+                    <!-- ZONE DÉFILANTE : contenu activité récente -->
+                    <div class="portal-content-scroll">
+                        <div class="portal-card" style="border-top:none;border-radius:0 0 16px 16px;margin:0 1.5rem 1.25rem">
+                            <div id="activity-list" class="portal-activity-list"><p class="portal-empty">Aucune activité récente.</p></div>
+                        </div>
                     </div>
                 </div>
 
@@ -480,11 +533,31 @@
         </div>
     </footer>
 
+    <script>
+        function portalGoogleSSO() {
+            // Google OAuth — configuration requise
+            const clientId = ''; // À configurer dans Google Console
+            if (!clientId) {
+                alert('Connexion Google en cours de configuration. Utilisez votre courriel et mot de passe.');
+                return;
+            }
+            window.location.href = `/api/auth/google?redirect=${encodeURIComponent(window.location.href)}`;
+        }
+        function portalMicrosoftSSO() {
+            const clientId = ''; // À configurer dans Azure AD
+            if (!clientId) {
+                alert('Connexion Microsoft en cours de configuration. Utilisez votre courriel et mot de passe.');
+                return;
+            }
+            window.location.href = `/api/auth/microsoft?redirect=${encodeURIComponent(window.location.href)}`;
+        }
+    </script>
     <script src="js/i18n.js"></script>
     <script src="js/main.js"></script>
     <script src="js/stripe-payment.js"></script>
     <script src="js/portal.js"></script>
     <script src="js/chat-widget.js"></script>
 
+    <script src="js/notifications.js"></script>
 </body>
 </html>
