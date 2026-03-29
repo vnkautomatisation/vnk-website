@@ -21,6 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (emailEl) emailEl.value = savedEmail;
         if (rememberEl) rememberEl.checked = true;
     }
+    // Vider le mot de passe — le navigateur ne doit pas le mémoriser
+    const pwEl = document.getElementById('login-password');
+    if (pwEl) pwEl.value = '';
     const token = localStorage.getItem('vnk-token');
     if (token) showDashboard();
 
@@ -1182,9 +1185,8 @@ function filterDocuments() {
     window._docSearch = search;
     window._docFilterCat = catFilter === 'all' ? 'Tous' : catFilter;
     window._docFilterRead = readFilter;
-    // Sauvegarder l'état
+    // Sauvegarder l'état — filtres selects seulement, pas la recherche texte
     if (window.VNKState) {
-        window.VNKState.save('doc_search', search);
         window.VNKState.save('doc_cat', catFilter);
         window.VNKState.save('doc_read', readFilter);
     }
@@ -1351,12 +1353,20 @@ function renderDocuments(documents) {
     if (!window._docCatPage) window._docCatPage = {};
     if (!window._docCatExpanded) window._docCatExpanded = {};
 
-    // Exposer les fonctions toggle/page globalement (pas d'onclick avec strings complexes)
-    window._docToggleCat = function (cat) {
+    // Tableau global des catégories — indexé numériquement pour éviter guillemets dans onclick
+    const allCatKeys = [..._catOrder.filter(c => groups[c]), ...Object.keys(groups).filter(c => !_catOrder.includes(c))];
+    window._docCatNames = allCatKeys; // Exposé globalement pour les callbacks
+
+    // Fonctions globales appelées depuis onclick avec INDEX numérique
+    window._docToggleCatIdx = function (idx) {
+        const cat = window._docCatNames[idx];
+        if (!cat) return;
         window._docCatExpanded[cat] = window._docCatExpanded[cat] === false ? true : false;
         renderDocuments(window._allDocuments || []);
     };
-    window._docSetCatPage = function (cat, p) {
+    window._docSetCatPageIdx = function (idx, p) {
+        const cat = window._docCatNames[idx];
+        if (!cat) return;
         window._docCatPage[cat] = p;
         renderDocuments(window._allDocuments || []);
     };
@@ -1371,10 +1381,10 @@ function renderDocuments(documents) {
         const colors = catColors[cat] || defaultColor;
 
         let statusText = '';
-        if (doc.category === 'Factures' || doc._category === 'Factures') statusText = 'Facture payée';
-        else if (doc.category === 'Devis' || doc._category === 'Devis') statusText = 'Devis accepté';
-        else if (doc.category === 'Contrats' || doc._category === 'Contrats') statusText = 'Contrat signé';
-        else if (doc.description) statusText = doc.description.split('·')[0].trim().substring(0, 35);
+        if (doc.category === 'Factures' || doc._category === 'Factures') statusText = 'Facture pay\u00e9e';
+        else if (doc.category === 'Devis' || doc._category === 'Devis') statusText = 'Devis accept\u00e9';
+        else if (doc.category === 'Contrats' || doc._category === 'Contrats') statusText = 'Contrat sign\u00e9';
+        else if (doc.description) statusText = doc.description.split('\u00b7')[0].trim().substring(0, 35);
 
         let fileUrl = doc.file_url;
         if (!fileUrl && doc._invoice_id) fileUrl = '/api/invoices/' + doc._invoice_id + '/pdf';
@@ -1386,21 +1396,21 @@ function renderDocuments(documents) {
 
         const hasFile = !!fileUrl;
         const date = doc.created_at ? new Date(doc.created_at).toLocaleDateString('fr-CA') : '';
-        const docIdStr = JSON.stringify(doc.id);
+        const docIdStr = String(doc.id).replace(/[^a-zA-Z0-9_-]/g, '');
 
         const readBadge = isRead
             ? '<span style="display:inline-flex;align-items:center;gap:3px;font-size:0.65rem;color:#16A34A;font-weight:600"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Lu</span>'
             : '<span style="display:inline-flex;align-items:center;gap:3px;font-size:0.65rem;color:#DC2626;font-weight:700"><svg width="7" height="7" viewBox="0 0 24 24" fill="#DC2626"><circle cx="12" cy="12" r="10"/></svg>Non lu</span>';
 
         const iconHtml = hasFile
-            ? '<div onclick="openDoc(' + docIdStr + ')" style="width:34px;height:34px;flex-shrink:0;border-radius:7px;background:' + colors.badgeBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity 0.15s" onmouseenter="this.style.opacity=\'0.7\'" onmouseleave="this.style.opacity=\'1\'">'
+            ? '<div onclick="openDoc(\'' + docIdStr + '\')" style="width:34px;height:34px;flex-shrink:0;border-radius:7px;background:' + colors.badgeBg + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity 0.15s" onmouseenter="this.style.opacity=\'0.7\'" onmouseleave="this.style.opacity=\'1\'">'
             + '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="' + colors.icon + '" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>'
             : '<div style="width:34px;height:34px;flex-shrink:0;border-radius:7px;background:' + colors.badgeBg + ';display:flex;align-items:center;justify-content:center">'
             + '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="' + colors.icon + '" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>';
 
         const dlBtn = hasFile
-            ? '<button onclick="downloadDoc(' + docIdStr + ')" style="display:inline-flex;align-items:center;gap:4px;padding:0.35rem 0.7rem;background:' + colors.icon + ';color:white;border:none;border-radius:7px;font-size:0.72rem;font-weight:600;cursor:pointer;font-family:inherit"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Télécharger</button>'
-            : '<span style="font-size:0.7rem;color:#94A3B8;font-style:italic">Bientôt dispo</span>';
+            ? '<button onclick="downloadDoc(\'' + docIdStr + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:0.35rem 0.7rem;background:' + colors.icon + ';color:white;border:none;border-radius:7px;font-size:0.72rem;font-weight:600;cursor:pointer;font-family:inherit"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>T\u00e9l\u00e9charger</button>'
+            : '<span style="font-size:0.7rem;color:#94A3B8;font-style:italic">Bient\u00f4t dispo</span>';
 
         return '<div id="doc-item-' + doc.id + '" style="background:white;border:1.5px solid ' + (isRead ? '#E2E8F0' : colors.icon) + ';border-radius:10px;padding:0.85rem;display:flex;flex-direction:column;gap:0.5rem;position:relative">'
             + (!isRead ? '<span style="position:absolute;top:-7px;left:10px;background:' + colors.icon + ';color:white;font-size:0.58rem;font-weight:700;padding:1px 8px;border-radius:8px;text-transform:uppercase">Nouveau</span>' : '')
@@ -1409,7 +1419,7 @@ function renderDocuments(documents) {
             + '<div style="flex:1;min-width:0">'
             + '<div style="font-size:0.82rem;font-weight:700;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + doc.title + '">' + doc.title + '</div>'
             + '<div style="display:flex;align-items:center;gap:0.4rem;margin-top:2px;flex-wrap:wrap">'
-            + (statusText ? '<span style="font-size:0.7rem;color:' + colors.icon + ';font-weight:500">' + statusText + '</span><span style="color:#E2E8F0">·</span>' : '')
+            + (statusText ? '<span style="font-size:0.7rem;color:' + colors.icon + ';font-weight:500">' + statusText + '</span><span style="color:#E2E8F0">\u00b7</span>' : '')
             + readBadge
             + '</div>'
             + '</div>'
@@ -1421,36 +1431,34 @@ function renderDocuments(documents) {
             + '</div>';
     };
 
-    // ── Bloc accordéon par catégorie ──
-    const renderCategoryBlock = (cat, docs) => {
+    // ── Bloc accordéon par catégorie avec INDEX numérique dans onclick ──
+    const renderCategoryBlock = (cat, docs, catIdx) => {
         const colors = catColors[cat] || defaultColor;
         const unread = docs.filter(d => !readIds.map(String).includes(String(d.id))).length;
-        const isExpanded = window._docCatExpanded[cat] !== false; // Dépli par défaut
+        const isExpanded = window._docCatExpanded[cat] !== false;
         const catPage = window._docCatPage[cat] || 1;
         const totalPages = Math.ceil(docs.length / CAT_PAGE);
         const start = (catPage - 1) * CAT_PAGE;
         const visibleDocs = isExpanded ? docs.slice(start, start + CAT_PAGE) : [];
 
-        // Index numérique stable pour le cat (évite les guillemets dans onclick)
-        const catIdx = Object.keys(window._docCatExpanded).indexOf(cat);
-
-        // Mini-pagination en bas du bloc
+        // Mini-pagination interne
         let pagerHtml = '';
         if (isExpanded && totalPages > 1) {
+            const prevPage = Math.max(1, catPage - 1);
+            const nextPage = Math.min(totalPages, catPage + 1);
             pagerHtml = '<div style="display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-top:0.6rem;padding-top:0.5rem;border-top:1px solid #F1F5F9">'
-                + '<button onclick="event.stopPropagation();window._docSetCatPage(' + JSON.stringify(cat) + ',' + Math.max(1, catPage - 1) + ')" '
-                + (catPage <= 1 ? 'disabled' : '')
-                + ' style="width:28px;height:28px;border:1.5px solid #E2E8F0;border-radius:6px;background:white;cursor:pointer;font-family:inherit">&lsaquo;</button>'
+                + '<button onclick="event.stopPropagation();window._docSetCatPageIdx(' + catIdx + ',' + prevPage + ')" ' + (catPage <= 1 ? 'disabled' : '')
+                + ' style="width:28px;height:28px;border:1.5px solid #E2E8F0;border-radius:6px;background:white;cursor:pointer;font-family:inherit;font-size:1rem">&lsaquo;</button>'
                 + '<span style="font-size:0.75rem;color:#64748B;font-weight:600">' + catPage + ' / ' + totalPages + '</span>'
-                + '<button onclick="event.stopPropagation();window._docSetCatPage(' + JSON.stringify(cat) + ',' + Math.min(totalPages, catPage + 1) + ')" '
-                + (catPage >= totalPages ? 'disabled' : '')
-                + ' style="width:28px;height:28px;border:1.5px solid #E2E8F0;border-radius:6px;background:white;cursor:pointer;font-family:inherit">&rsaquo;</button>'
+                + '<button onclick="event.stopPropagation();window._docSetCatPageIdx(' + catIdx + ',' + nextPage + ')" ' + (catPage >= totalPages ? 'disabled' : '')
+                + ' style="width:28px;height:28px;border:1.5px solid #E2E8F0;border-radius:6px;background:white;cursor:pointer;font-family:inherit;font-size:1rem">&rsaquo;</button>'
                 + '<span style="font-size:0.7rem;color:#94A3B8">' + docs.length + ' fichier' + (docs.length > 1 ? 's' : '') + '</span>'
                 + '</div>';
         }
 
         return '<div style="margin-bottom:0.85rem;border-radius:10px;border:1px solid ' + colors.icon + '28;overflow:hidden">'
-            + '<div onclick="window._docToggleCat(' + JSON.stringify(cat) + ')" style="display:flex;align-items:center;gap:0.6rem;padding:0.7rem 0.9rem;background:' + colors.badgeBg + ';cursor:pointer;user-select:none">'
+            // Header — onclick avec INDEX numérique, aucun guillemet problématique
+            + '<div onclick="window._docToggleCatIdx(' + catIdx + ')" style="display:flex;align-items:center;gap:0.6rem;padding:0.7rem 0.9rem;background:' + colors.badgeBg + ';cursor:pointer;user-select:none">'
             + '<div style="width:26px;height:26px;border-radius:6px;background:' + colors.icon + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">'
             + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
             + '</div>'
@@ -1462,7 +1470,7 @@ function renderDocuments(documents) {
             + (isExpanded
                 ? '<div style="padding:0.75rem;background:white">'
                 + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.6rem">'
-                + (visibleDocs.length ? visibleDocs.map(renderCard).join('') : '<p style="font-size:0.82rem;color:#94A3B8;text-align:center;padding:1rem">Aucun document.</p>')
+                + (visibleDocs.length ? visibleDocs.map(renderCard).join('') : '<p style="color:#94A3B8;font-size:0.82rem;text-align:center;padding:1rem">Aucun document.</p>')
                 + '</div>'
                 + pagerHtml
                 + '</div>'
@@ -1473,16 +1481,15 @@ function renderDocuments(documents) {
     let html = '';
 
     if (activeCat === 'Tous') {
-        const allCatKeys = [..._catOrder.filter(c => groups[c]), ...Object.keys(groups).filter(c => !_catOrder.includes(c))];
         let anyVisible = false;
-        allCatKeys.forEach(cat => {
+        allCatKeys.forEach((cat, idx) => {
             let docs = groups[cat] || [];
             if (search) docs = docs.filter(d => (d.title || '').toLowerCase().includes(search));
             if (readFilter === 'unread') docs = docs.filter(d => !readIds.map(String).includes(String(d.id)));
             else if (readFilter === 'read') docs = docs.filter(d => readIds.map(String).includes(String(d.id)));
-            if (docs.length) { html += renderCategoryBlock(cat, docs); anyVisible = true; }
+            if (docs.length) { html += renderCategoryBlock(cat, docs, idx); anyVisible = true; }
         });
-        if (!anyVisible) html = '<p class="portal-empty">Aucun document trouvé.</p>';
+        if (!anyVisible) html = '<p class="portal-empty">Aucun document trouv\u00e9.</p>';
     } else {
         let docs = groups[activeCat] || [];
         if (search) docs = docs.filter(d => (d.title || '').toLowerCase().includes(search));
@@ -1491,7 +1498,7 @@ function renderDocuments(documents) {
         const total = docs.length;
         const paged = docs.slice((_pageDocuments - 1) * _PAGE_SIZE, _pageDocuments * _PAGE_SIZE);
         html = !paged.length
-            ? '<p class="portal-empty">Aucun document dans cette catégorie.</p>'
+            ? '<p class="portal-empty">Aucun document dans cette cat\u00e9gorie.</p>'
             : '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.7rem">' + paged.map(renderCard).join('') + '</div>';
         if (total > _PAGE_SIZE) {
             list.innerHTML = html;
