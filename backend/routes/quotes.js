@@ -1,188 +1,137 @@
 /* ============================================
-   VNK Automatisation Inc. - Auth Routes
+   VNK Automatisation Inc. - Quotes Routes
    ============================================ */
 
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 
-// POST /api/auth/login
-router.post('/login', async (req, res) => {
+// GET /api/quotes
+router.get('/', authenticateToken, async (req, res) => {
     try {
-        const { email, password } = req.body;
-
-        // Validate input
-        if (!email || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email and password are required.'
-            });
-        }
-
-        // Find client by email
+        const clientId = req.query.client_id || req.user.id;
         const result = await pool.query(
-            'SELECT * FROM clients WHERE email = $1 AND is_active = true',
-            [email.toLowerCase().trim()]
+            `SELECT id, quote_number, title, description, service_type,
+                    amount_ht, tps_amount, tvq_amount, amount_ttc,
+                    status, created_at, expiry_date, accepted_at
+             FROM quotes
+             WHERE client_id = $1
+             ORDER BY created_at DESC`,
+            [clientId]
         );
-
-        if (result.rows.length === 0) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password.'
-            });
-        }
-
-        const client = result.rows[0];
-
-        // Verify password
-        const isValidPassword = await bcrypt.compare(password, client.password_hash);
-
-        if (!isValidPassword) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password.'
-            });
-        }
-
-        // Generate JWT token
-        const token = jwt.sign(
-            {
-                id: client.id,
-                email: client.email,
-                company: client.company_name
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        // Update last login
-        await pool.query(
-            'UPDATE clients SET last_login = NOW() WHERE id = $1',
-            [client.id]
-        );
-
-        res.json({
-            success: true,
-            token,
-            user: {
-                id: client.id,
-                name: client.full_name,
-                email: client.email,
-                company: client.company_name,
-                phone: client.phone,
-                address: client.address,
-                city: client.city,
-                province: client.province,
-                postal_code: client.postal_code,
-                sector: client.sector,
-                technologies: client.technologies,
-                created_at: client.created_at
-            }
-        });
-
+        res.json({ success: true, count: result.rows.length, quotes: result.rows });
     } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error during login.'
-        });
+        console.error('Get quotes error:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
 
-// POST /api/auth/logout
-router.post('/logout', authenticateToken, (req, res) => {
-    // JWT is stateless — client deletes the token
-    res.json({
-        success: true,
-        message: 'Logged out successfully.'
-    });
-});
-
-// GET /api/auth/me
-router.get('/me', authenticateToken, async (req, res) => {
+// GET /api/quotes/:id
+router.get('/:id', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT id, full_name, email, company_name, phone, created_at FROM clients WHERE id = $1',
-            [req.user.id]
+            `SELECT q.*, c.full_name, c.company_name, c.email
+             FROM quotes q
+             JOIN clients c ON q.client_id = c.id
+             WHERE q.id = $1 AND q.client_id = $2`,
+            [req.params.id, req.user.id]
         );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found.'
-            });
-        }
-
-        res.json({
-            success: true,
-            user: result.rows[0]
-        });
-
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Quote not found.' });
+        res.json({ success: true, quote: result.rows[0] });
     } catch (error) {
-        console.error('Get user error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error.'
-        });
+        console.error('Get quote error:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
 
-// POST /api/auth/change-password
-router.post('/change-password', authenticateToken, async (req, res) => {
+// POST /api/quotes (admin)
+router.post('/', async (req, res) => {
     try {
-        const { currentPassword, newPassword } = req.body;
-
-        if (!currentPassword || !newPassword) {
-            return res.status(400).json({
-                success: false,
-                message: 'Current and new password are required.'
-            });
-        }
-
-        if (newPassword.length < 8) {
-            return res.status(400).json({
-                success: false,
-                message: 'New password must be at least 8 characters.'
-            });
-        }
-
-        // Get current password hash
+        const { client_id, title, description, amount_ht, service_type, expiry_days = 30 } = req.body;
+        const tps = parseFloat((amount_ht * 0.05).toFixed(2));
+        const tvq = parseFloat((amount_ht * 0.09975).toFixed(2));
+        const ttc = parseFloat((parseFloat(amount_ht) + tps + tvq).toFixed(2));
+        const year = new Date().getFullYear();
+        const count = await pool.query("SELECT COUNT(*) FROM quotes WHERE EXTRACT(YEAR FROM created_at)=$1", [year]);
+        const num = `D-${year}-${String(parseInt(count.rows[0].count) + 1).padStart(3, '0')}`;
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + expiry_days);
         const result = await pool.query(
-            'SELECT password_hash FROM clients WHERE id = $1',
-            [req.user.id]
+            `INSERT INTO quotes (client_id, quote_number, title, description, service_type, amount_ht, tps_amount, tvq_amount, amount_ttc, status, expiry_date, created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10,NOW()) RETURNING *`,
+            [client_id, num, title, description, service_type, amount_ht, tps, tvq, ttc, expiry]
         );
-
-        const isValid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
-
-        if (!isValid) {
-            return res.status(401).json({
-                success: false,
-                message: 'Current password is incorrect.'
-            });
-        }
-
-        // Hash new password
-        const newHash = await bcrypt.hash(newPassword, 12);
-
-        await pool.query(
-            'UPDATE clients SET password_hash = $1, updated_at = NOW() WHERE id = $2',
-            [newHash, req.user.id]
-        );
-
-        res.json({
-            success: true,
-            message: 'Password updated successfully.'
-        });
-
+        res.status(201).json({ success: true, message: 'Quote created successfully.', quote: result.rows[0] });
     } catch (error) {
-        console.error('Change password error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error.'
-        });
+        console.error('Create quote error:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// PUT /api/quotes/:id/accept
+router.put('/:id/accept', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `UPDATE quotes SET status='accepted', accepted_at=NOW(), updated_at=NOW()
+             WHERE id=$1 AND client_id=$2 AND status='pending' RETURNING *`,
+            [req.params.id, req.user.id]
+        );
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Quote not found or already processed.' });
+        res.json({ success: true, message: 'Quote accepted.', quote: result.rows[0] });
+    } catch (error) {
+        console.error('Accept quote error:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// PUT /api/quotes/:id/decline
+router.put('/:id/decline', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `UPDATE quotes SET status='declined', updated_at=NOW()
+             WHERE id=$1 AND client_id=$2 AND status='pending' RETURNING *`,
+            [req.params.id, req.user.id]
+        );
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Quote not found or already processed.' });
+        res.json({ success: true, message: 'Quote declined.', quote: result.rows[0] });
+    } catch (error) {
+        console.error('Decline quote error:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// PUT /api/quotes/:id (admin update)
+router.put('/:id', async (req, res) => {
+    try {
+        const { title, description, amount_ht, service_type, status, expiry_days } = req.body;
+        const tps = parseFloat((amount_ht * 0.05).toFixed(2));
+        const tvq = parseFloat((amount_ht * 0.09975).toFixed(2));
+        const ttc = parseFloat((parseFloat(amount_ht) + tps + tvq).toFixed(2));
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + (expiry_days || 30));
+        const result = await pool.query(
+            `UPDATE quotes SET title=$1, description=$2, amount_ht=$3, tps_amount=$4, tvq_amount=$5,
+             amount_ttc=$6, service_type=$7, status=$8, expiry_date=$9, updated_at=NOW()
+             WHERE id=$10 RETURNING *`,
+            [title, description, amount_ht, tps, tvq, ttc, service_type, status, expiry, req.params.id]
+        );
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Quote not found.' });
+        res.json({ success: true, quote: result.rows[0] });
+    } catch (error) {
+        console.error('Update quote error:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// DELETE /api/quotes/:id (admin)
+router.delete('/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM quotes WHERE id=$1', [req.params.id]);
+        res.json({ success: true, message: 'Quote deleted.' });
+    } catch (error) {
+        console.error('Delete quote error:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
 
