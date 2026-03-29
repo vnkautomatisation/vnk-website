@@ -580,37 +580,6 @@ function renderDocuments(documents) {
         const ext = (doc.file_name || doc.title || '').split('.').pop().toLowerCase();
         const ftype = ftypes[ext] || 'Fichier';
         const tcolor = { PDF: '#E74C3C', Word: '#1B4F8A', Excel: '#27AE60', Image: '#8E44AD', Fichier: '#64748B' }[ftype] || '#64748B';
-        const hasFile = !!doc.file_url || doc._action === 'pdf-invoice';
-        return '<div style="background:white;border:1px solid ' + (!isRead ? '#1B4F8A' : '#E2E8F0') + ';border-radius:8px;padding:0.75rem;display:flex;flex-direction:column;gap:0.4rem;position:relative" id="doc-item-' + doc.id + '">' +
-            (!isRead ? '<div style="position:absolute;top:0;left:0;width:3px;height:100%;background:#1B4F8A;border-radius:8px 0 0 8px"></div>' : '') +
-            '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.4rem">' +
-            '<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;flex:1;min-width:0">' +
-            '<span style="background:' + tcolor + '22;color:' + tcolor + ';font-size:0.63rem;font-weight:700;padding:1px 5px;border-radius:4px;flex-shrink:0">' + ftype + '</span>' +
-            (!isRead ? '<span style="background:#1B4F8A;color:white;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;flex-shrink:0">NOUVEAU</span>' : '') +
-            '</div>' +
-            (isRead ? '<span style="color:#27AE60;font-size:0.65rem;display:flex;align-items:center;gap:2px;flex-shrink:0"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Lu</span>' : '') +
-            '</div>' +
-            '<div style="font-size:0.82rem;font-weight:600;color:#1E293B;line-height:1.3;word-break:break-word">' + doc.title + '</div>' +
-            (doc.description ? '<div style="font-size:0.72rem;color:#64748B;line-height:1.3">' + doc.description + '</div>' : '') +
-            '<div style="font-size:0.68rem;color:#94A3B8;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-top:0.1rem">' +
-            '<span>' + new Date(doc.created_at).toLocaleDateString('fr-CA') + '</span>' +
-            (size ? '<span>' + size + '</span>' : '') +
-            '</div>' +
-            '<div style="margin-top:0.35rem">' +
-            (doc._action === 'pdf-invoice' ?
-                '<a href="/api/invoices/' + doc._invoice_id + '/pdf" target="_blank" class="btn btn-primary btn-sm" style="font-size:0.72rem;padding:0.25rem 0.6rem;text-decoration:none;display:inline-flex;align-items:center;gap:4px" onclick="_markDocRead(' + JSON.stringify(doc.id) + ');_updateDocItem(' + JSON.stringify(doc.id) + ')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/></svg>Télécharger</a>' :
-                doc.file_url ?
-                    '<button class="btn btn-primary btn-sm" style="font-size:0.72rem;padding:0.25rem 0.6rem;display:inline-flex;align-items:center;gap:4px" onclick="downloadDoc(' + JSON.stringify(doc.id) + ')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/></svg>Télécharger</button>' :
-                    '<span style="font-size:0.7rem;color:#94A3B8">Bientôt dispo</span>') +
-            '</div></div>';
-    };
-
-    const renderDocLine = doc => {
-        const isRead = readIds.map(String).includes(String(doc.id));
-        const size = doc.file_size ? (doc.file_size > 1048576 ? (doc.file_size / 1048576).toFixed(1) + ' Mo' : Math.round(doc.file_size / 1024) + ' Ko') : '';
-        const ext = (doc.file_name || doc.title || '').split('.').pop().toLowerCase();
-        const ftype = ftypes[ext] || 'Fichier';
-        const tcolor = { PDF: '#E74C3C', Word: '#1B4F8A', Excel: '#27AE60', Image: '#8E44AD', Fichier: '#64748B' }[ftype] || '#64748B';
         return '<div style="display:flex;align-items:center;gap:0.6rem;padding:0.45rem 0.5rem;border-bottom:1px solid #F1F5F9;background:white" id="doc-item-' + doc.id + '">' +
             '<span style="background:' + tcolor + '22;color:' + tcolor + ';font-size:0.63rem;font-weight:700;padding:1px 5px;border-radius:4px;flex-shrink:0">' + ftype + '</span>' +
             '<div style="flex:1;min-width:0">' +
