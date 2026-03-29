@@ -4556,37 +4556,153 @@
             await signContractAdmin(_previewContractId);
         }
 
-        // Signer côté admin — ouvre Dropbox Sign si sign_url dispo, sinon marque admin_signed_at
+        // Signer côté admin — ouvre un modal de signature canvas
         async function signContractAdmin(id) {
             const contract = allContracts.find(c => c.id === id);
             if (!contract) return;
+            openAdminSignatureModal(id);
+        }
 
-            // Si Dropbox Sign a un URL de signature, rediriger
-            if (contract.sign_url) {
-                window.open(contract.sign_url, '_blank');
-                return;
+        // ── Modal de signature canvas admin ──────────────────────────
+        let _adminSignCanvas = null, _adminSignCtx = null, _adminSignDrawing = false, _adminSignLastX = 0, _adminSignLastY = 0;
+
+        function openAdminSignatureModal(contractId) {
+            let overlay = document.getElementById('admin-sign-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'admin-sign-overlay';
+                overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;align-items:center;justify-content:center;padding:1rem';
+                overlay.innerHTML = `
+                    <div style="background:white;border-radius:16px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;font-family:inherit">
+                        <div style="background:var(--primary-dark);padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between">
+                            <div>
+                                <div style="font-size:0.95rem;font-weight:700;color:white">Votre signature</div>
+                                <div style="font-size:0.75rem;color:rgba(255,255,255,0.7);margin-top:2px" id="admin-sign-subtitle"></div>
+                            </div>
+                            <button onclick="closeAdminSignModal()" style="background:rgba(255,255,255,0.1);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center">×</button>
+                        </div>
+                        <div style="padding:1.25rem">
+                            <div style="font-size:0.82rem;color:var(--text-light);margin-bottom:0.75rem">
+                                Dessinez votre signature dans la zone ci-dessous
+                            </div>
+                            <div style="border:2px solid var(--primary);border-radius:10px;background:white;position:relative;touch-action:none;overflow:hidden">
+                                <canvas id="admin-sign-canvas" width="432" height="140" style="display:block;width:100%;height:140px;cursor:crosshair"></canvas>
+                                <button onclick="clearAdminCanvas()" style="position:absolute;top:6px;right:6px;background:white;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:0.72rem;color:var(--text-light);cursor:pointer;font-family:inherit">Effacer</button>
+                            </div>
+                            <div style="margin-top:0.75rem;font-size:0.75rem;color:var(--text-light);line-height:1.5">
+                                Cette signature sera injectée dans la page de signatures du contrat PDF.
+                            </div>
+                        </div>
+                        <div style="padding:0.85rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:0.75rem">
+                            <button onclick="closeAdminSignModal()" class="btn btn-ghost">Annuler</button>
+                            <button id="admin-sign-submit" onclick="submitAdminSignature()" class="btn btn-primary">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                Confirmer ma signature
+                            </button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(overlay);
+                // NE PAS init le canvas ici — il est dans display:none, getBoundingClientRect() = 0
             }
 
-            // Sinon confirmation + appel API
-            const ok = await confirm2('Signer le contrat', 'Confirmer votre signature sur le contrat <strong>' + contract.contract_number + '</strong> ?');
-            if (!ok) return;
-            const d = await api('/contracts/' + id + '/admin-sign', 'PUT');
+            overlay._contractId = contractId;
+            const contract = allContracts.find(c => c.id === contractId);
+            document.getElementById('admin-sign-subtitle').textContent = contract ? contract.contract_number + ' — ' + contract.title : '';
+
+            // Afficher le modal D'ABORD
+            overlay.style.display = 'flex';
+
+            // Puis initialiser le canvas (maintenant visible, dimensions correctes)
+            // Réinitialiser à chaque ouverture pour être sûr
+            _adminSignCanvas = null;
+            _adminSignCtx = null;
+            requestAnimationFrame(() => {
+                initAdminSignCanvas();
+                clearAdminCanvas();
+            });
+        }
+
+        function closeAdminSignModal() {
+            const o = document.getElementById('admin-sign-overlay');
+            if (o) o.style.display = 'none';
+        }
+
+        function initAdminSignCanvas() {
+            // Cloner le canvas pour effacer tous les anciens event listeners
+            const old = document.getElementById('admin-sign-canvas');
+            if (!old) return;
+            const fresh = old.cloneNode(true);
+            old.parentNode.replaceChild(fresh, old);
+
+            _adminSignCanvas = fresh;
+            _adminSignCtx = _adminSignCanvas.getContext('2d');
+            _adminSignCtx.strokeStyle = '#0F2D52';
+            _adminSignCtx.lineWidth = 2.5;
+            _adminSignCtx.lineCap = 'round';
+            _adminSignCtx.lineJoin = 'round';
+
+            function getPos(e) {
+                const rect = _adminSignCanvas.getBoundingClientRect();
+                // rect.width peut être 0 si le canvas n'est pas encore rendu — fallback sur width attr
+                const displayW = rect.width || _adminSignCanvas.offsetWidth || 432;
+                const displayH = rect.height || _adminSignCanvas.offsetHeight || 140;
+                const sx = _adminSignCanvas.width / displayW;
+                const sy = _adminSignCanvas.height / displayH;
+                const src = e.touches ? e.touches[0] : e;
+                return { x: (src.clientX - rect.left) * sx, y: (src.clientY - rect.top) * sy };
+            }
+
+            _adminSignCanvas.addEventListener('mousedown', e => { e.preventDefault(); _adminSignDrawing = true; const p = getPos(e); _adminSignLastX = p.x; _adminSignLastY = p.y; });
+            _adminSignCanvas.addEventListener('mousemove', e => { if (!_adminSignDrawing) return; const p = getPos(e); _adminSignCtx.beginPath(); _adminSignCtx.moveTo(_adminSignLastX, _adminSignLastY); _adminSignCtx.lineTo(p.x, p.y); _adminSignCtx.stroke(); _adminSignLastX = p.x; _adminSignLastY = p.y; });
+            _adminSignCanvas.addEventListener('mouseup', () => { _adminSignDrawing = false; });
+            _adminSignCanvas.addEventListener('mouseleave', () => { _adminSignDrawing = false; });
+            _adminSignCanvas.addEventListener('touchstart', e => { e.preventDefault(); _adminSignDrawing = true; const p = getPos(e); _adminSignLastX = p.x; _adminSignLastY = p.y; }, { passive: false });
+            _adminSignCanvas.addEventListener('touchmove', e => { e.preventDefault(); if (!_adminSignDrawing) return; const p = getPos(e); _adminSignCtx.beginPath(); _adminSignCtx.moveTo(_adminSignLastX, _adminSignLastY); _adminSignCtx.lineTo(p.x, p.y); _adminSignCtx.stroke(); _adminSignLastX = p.x; _adminSignLastY = p.y; }, { passive: false });
+            _adminSignCanvas.addEventListener('touchend', () => { _adminSignDrawing = false; });
+        }
+
+        function clearAdminCanvas() {
+            _adminSignCanvas = document.getElementById('admin-sign-canvas');
+            if (!_adminSignCanvas) return;
+            if (!_adminSignCtx) _adminSignCtx = _adminSignCanvas.getContext('2d');
+            _adminSignCtx.clearRect(0, 0, _adminSignCanvas.width, _adminSignCanvas.height);
+        }
+
+        async function submitAdminSignature() {
+            // Toujours prendre la référence fraîche (le canvas est cloné à chaque ouverture)
+            _adminSignCanvas = document.getElementById('admin-sign-canvas');
+            if (!_adminSignCanvas) { showToast('Canvas introuvable.', 'error'); return; }
+            _adminSignCtx = _adminSignCanvas.getContext('2d');
+
+            const data = _adminSignCtx.getImageData(0, 0, _adminSignCanvas.width, _adminSignCanvas.height).data;
+            let empty = true;
+            for (let i = 3; i < data.length; i += 4) { if (data[i] > 0) { empty = false; break; } }
+            if (empty) { showToast('Veuillez dessiner votre signature avant de confirmer.', 'error'); return; }
+
+            const overlay = document.getElementById('admin-sign-overlay');
+            const contractId = overlay?._contractId;
+            if (!contractId) return;
+
+            const btn = document.getElementById('admin-sign-submit');
+            btn.disabled = true;
+            btn.textContent = 'Envoi...';
+
+            const signatureData = _adminSignCanvas.toDataURL('image/png');
+
+            // Appel route admin-sign-canvas (via contracts client route) ou admin route
+            const d = await api('/contracts/' + contractId + '/admin-sign', 'PUT', { signature_data: signatureData });
+
             if (d.success) {
-                // Mettre à jour le bouton dans le modal si ouvert
+                closeAdminSignModal();
+                // Mettre à jour le modal de prévisualisation si ouvert
                 const signBtn = document.getElementById('modal-preview-sign-btn');
                 if (signBtn) signBtn.style.display = 'none';
-                const statusEl = document.getElementById('modal-preview-status');
-                if (statusEl) {
-                    const clientSigned = contract.signed_at || contract.status === 'signed';
-                    statusEl.innerHTML = [
-                        clientSigned ? '<span style="color:var(--success);font-weight:600">✓ Client signé</span>' : '<span style="color:var(--text-light)">Client : en attente</span>',
-                        '<span style="color:var(--success);font-weight:600">✓ Admin signé</span>'
-                    ].join('<span style="margin:0 0.5rem;color:var(--border)">|</span>');
-                }
                 loadContracts();
                 showToast('Contrat signé par vous !', 'success');
             } else {
                 showToast(d.message || 'Erreur lors de la signature', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Confirmer ma signature';
             }
         }
         async function deleteClient(id, name) { const ok = await confirm2('Supprimer le client', 'Supprimer <strong>' + name + '</strong> définitivement ? Toutes ses données (mandats, factures, messages) seront supprimées.'); if (!ok) return; const d = await api('/clients/' + id, 'DELETE'); if (d.success) { loadClients(); loadDashboard(); showToast('Client supprimé.'); } else showToast(d.message || 'Erreur', 'error'); }
