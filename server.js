@@ -22,10 +22,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ---- Static files ----
-app.use(express.static(path.join(__dirname, 'frontend')));
-
-// ---- API Routes ----
+// ---- API Routes (AVANT static files — critique) ----
 app.use('/api/auth', require('./backend/routes/auth'));
 app.use('/api/contact', require('./backend/routes/contact'));
 app.use('/api/clients', require('./backend/routes/clients'));
@@ -48,10 +45,14 @@ app.use('/api/admin/messages', require('./backend/routes/messages'));
 app.use('/api/admin/documents', require('./backend/routes/documents'));
 app.use('/api/admin/contracts', require('./backend/routes/contracts'));
 app.use('/api/admin/payments', require('./backend/routes/payments'));
+
 // PDF download routes
 app.get('/api/quotes/:id/pdf', require('./backend/routes/pdf').downloadQuotePDF);
 app.get('/api/invoices/:id/pdf', require('./backend/routes/pdf').downloadInvoicePDF);
 app.get('/api/contracts/:id/pdf', require('./backend/routes/pdf').downloadContractPDF);
+
+// ---- Static files (APRÈS les routes API) ----
+app.use(express.static(path.join(__dirname, 'frontend')));
 
 // ---- Health check route ----
 app.get('/api/health', (req, res) => {
