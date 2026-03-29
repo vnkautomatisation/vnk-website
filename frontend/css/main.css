@@ -3035,6 +3035,8 @@ img {
         display: block;
     }
 
+
+
 /* Barre recherche */
 .portal-search-bar {
     display: flex;
@@ -3322,6 +3324,8 @@ img {
     border-radius: var(--border-radius-lg);
     border: 1px solid var(--color-border);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .portal-card-header {
@@ -3330,6 +3334,11 @@ img {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--color-white);
+    z-index: 3;
+    flex-shrink: 0;
 }
 
     .portal-card-header h3 {
@@ -3341,7 +3350,10 @@ img {
 .portal-activity-list {
     padding: var(--spacing-sm);
     min-height: 120px;
+    overflow-y: auto;
+    flex: 1;
 }
+
 
 .portal-empty {
     text-align: center;
