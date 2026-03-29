@@ -217,9 +217,11 @@
             }).catch(() => { });
     }
 
-    // Démarrer le polling toutes les 20s
+    // Démarrer le polling toutes les 5s
     _polling = setInterval(vnkChatPoll, 5000);
-    vnkChatPoll(); // Premier appel immédiat
+    // Charger les messages immédiatement au démarrage
+    vnkChatLoad();
+    vnkChatPoll();
 
     // ── Emoji picker ──────────────────────────────
     const _emojis = ['😊', '👍', '🙏', '✅', '📋', '🔧', '⚡', '📞', '📧', '💡', '🏭', '⚙️', '🛠️', '📊', '📈', '❓', '✔️', '🚀', '💼', '📝', '⚠️', '🔴', '🟢', '🟡', '👋', '🎯', '📅', '🕐', '💬', '📎'];
@@ -305,19 +307,19 @@
 
     window.vnkChatExpand = function () {
         const panel = document.getElementById('vnk-chat-panel');
+        const widget = document.getElementById('vnk-chat-widget');
         const menu = document.getElementById('vnk-chat-menu');
         const expandBtn = document.getElementById('vnk-expand-btn');
         if (!panel) return;
         _expanded = !_expanded;
         if (_expanded) {
-            panel.style.cssText += ';width:420px;max-height:700px;bottom:70px';
+            // Mode agrandi — prend tout le côté droit comme Calendly
+            panel.style.cssText = 'display:flex;position:fixed;top:0;right:0;bottom:0;width:400px;max-height:100vh;border-radius:0;z-index:9999;flex-direction:column;background:white;box-shadow:-4px 0 24px rgba(0,0,0,0.15)';
             if (expandBtn) expandBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg> Réduire la fenêtre';
         } else {
-            panel.style.cssText = panel.style.cssText
-                .replace(/width:[^;]+;?/g, '')
-                .replace(/max-height:[^;]+;?/g, '');
-            panel.style.width = '';
-            panel.style.maxHeight = '';
+            // Revenir au mode normal
+            panel.style.cssText = '';
+            panel.classList.add('open');
             if (expandBtn) expandBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg> Agrandir la fenêtre';
         }
         if (menu) menu.style.display = 'none';

@@ -134,8 +134,15 @@ async function loadAllData() {
         }
         if (docs) {
             const docsArr = docs.documents || [];
+            window._allDocuments = docsArr;
             renderDocuments(docsArr);
-            if (docsArr.length > 0) showBadge('badge-documents', docsArr.length);
+            // Badge basé sur les documents non lus
+            const unread = _getUnreadDocs(docsArr);
+            const navBadge = document.getElementById('badge-documents');
+            if (navBadge) {
+                if (unread.length > 0) { navBadge.textContent = unread.length; navBadge.style.display = 'inline-block'; }
+                else navBadge.style.display = 'none';
+            }
         }
         if (mandates) {
             const mArr = mandates.mandates || [];
@@ -188,6 +195,14 @@ function showTab(tabName) {
     const mobileTitle = document.getElementById('mobile-tab-title');
     if (mobileTitle) mobileTitle.textContent = titles[tabName] || '';
     localStorage.setItem('vnk-portal-tab', tabName);
+    // Marquer les documents comme vus
+    if (tabName === 'documents') {
+        (window._allDocuments || []).forEach(d => _markDocRead(d.id));
+        const badge = document.getElementById('badge-documents');
+        if (badge) badge.style.display = 'none';
+        // Re-render pour enlever les badges NOUVEAU
+        if (window._allDocuments?.length) renderDocuments(window._allDocuments);
+    }
     window.scrollTo(0, 0);
 }
 
@@ -421,14 +436,132 @@ function filterContracts() {
     renderPortalContracts(list);
 }
 
+// ── Documents — helpers lu/non-lu ──────────────
+function _getReadDocs() {
+    try { return JSON.parse(localStorage.getItem('vnk-read-docs') || '[]'); } catch { return []; }
+}
+function _markDocRead(id) {
+    const read = _getReadDocs();
+    if (!read.includes(id)) { read.push(id); localStorage.setItem('vnk-read-docs', JSON.stringify(read)); }
+}
+function _getUnreadDocs(docs) {
+    const read = _getReadDocs();
+    return docs.filter(d => !read.includes(d.id));
+}
+
+window._docSortState = 'date-desc';
+window._docSearch = '';
+
+function filterDocuments() {
+    const search = (document.getElementById('doc-search')?.value || '').toLowerCase();
+    window._docSearch = search;
+    let list = window._allDocuments || [];
+    if (search) list = list.filter(d => (d.title || '').toLowerCase().includes(search) || (d.description || '').toLowerCase().includes(search));
+    list = _sortDocs(list, window._docSortState);
+    renderDocuments(list);
+}
+
+function _sortDocs(arr, val) {
+    return [...arr].sort((a, b) => {
+        if (val === 'date-desc') return new Date(b.created_at) - new Date(a.created_at);
+        if (val === 'date-asc') return new Date(a.created_at) - new Date(b.created_at);
+        if (val === 'name-asc') return (a.title || '').localeCompare(b.title || '');
+        if (val === 'name-desc') return (b.title || '').localeCompare(a.title || '');
+        if (val === 'unread') return _getReadDocs().includes(a.id) - _getReadDocs().includes(b.id);
+        return 0;
+    });
+}
+
+function toggleDocSort() {
+    const opts = [['date-desc', 'Date ↓'], ['date-asc', 'Date ↑'], ['name-asc', 'Nom A→Z'], ['name-desc', 'Nom Z→A'], ['unread', 'Non lus en premier']];
+    const existing = document.getElementById('sort-dropdown-docs');
+    if (existing) { existing.remove(); return; }
+    const btn = document.getElementById('doc-sort-btn');
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const dd = document.createElement('div');
+    dd.id = 'sort-dropdown-docs';
+    dd.style.cssText = 'position:fixed;z-index:9999;background:white;border:1.5px solid #E2E8F0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:180px;padding:4px 0;top:' + (rect.bottom + 4) + 'px;right:' + (window.innerWidth - rect.right) + 'px';
+    dd.innerHTML = opts.map(([val, label]) =>
+        '<div onclick="applyDocSort(\'' + val + '\')" class="vnk-menu-item" style="padding:8px 14px;font-size:0.83rem;color:' + (window._docSortState === val ? '#1B4F8A' : '#1E293B') + ';font-weight:' + (window._docSortState === val ? '600' : '400') + ';display:flex;align-items:center;gap:8px">' +
+        (window._docSortState === val ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '<span style="width:13px"></span>') +
+        label + '</div>'
+    ).join('');
+    document.body.appendChild(dd);
+    setTimeout(() => document.addEventListener('click', function _c(e) {
+        if (!dd.contains(e.target) && e.target !== btn) { dd.remove(); document.removeEventListener('click', _c); }
+    }), 0);
+}
+
+function applyDocSort(val) {
+    window._docSortState = val;
+    const dd = document.getElementById('sort-dropdown-docs');
+    if (dd) dd.remove();
+    const labelMap = { 'date-desc': 'Date ↓', 'date-asc': 'Date ↑', 'name-asc': 'Nom A→Z', 'name-desc': 'Nom Z→A', 'unread': 'Non lus' };
+    const lbl = document.getElementById('doc-sort-label');
+    if (lbl) lbl.textContent = labelMap[val] || val;
+    filterDocuments();
+}
+
 function renderDocuments(documents) {
     const list = document.getElementById('documents-list');
     if (!list) return;
-    if (!documents.length) { list.innerHTML = '<div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg><p>Aucun document disponible pour l\'instant.</p><p style="font-size:0.8rem;color:var(--color-text-light)">Les rapports et livrables apparaîtront ici une fois votre mandat démarré.</p></div>'; return; }
+    if (!documents.length) {
+        list.innerHTML = '<div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>' +
+            '<p>Aucun document disponible pour l\'instant.</p>' +
+            '<p style="font-size:0.8rem;color:var(--color-text-light)">Les rapports et livrables apparaîtront ici une fois votre mandat démarré.</p></div>';
+        return;
+    }
+    const readIds = _getReadDocs();
+    const ftypes = { pdf: 'PDF', doc: 'Word', docx: 'Word', xls: 'Excel', xlsx: 'Excel', png: 'Image', jpg: 'Image', jpeg: 'Image' };
     list.innerHTML = documents.map(doc => {
+        const isRead = readIds.includes(doc.id);
         const size = doc.file_size ? (doc.file_size > 1048576 ? (doc.file_size / 1048576).toFixed(1) + ' Mo' : Math.round(doc.file_size / 1024) + ' Ko') : '';
-        return '<div class="portal-list-item"><div style="flex:1"><div class="portal-item-title">' + doc.title + '</div><div class="portal-item-meta"><span>' + new Date(doc.created_at).toLocaleDateString('fr-CA') + '</span>' + (size ? '<span>' + size + '</span>' : '') + '</div></div><div class="portal-item-actions">' + (doc.file_url ? '<a href="' + doc.file_url + '" target="_blank" class="btn btn-primary btn-sm">Télécharger</a>' : '<span style="font-size:0.78rem;color:var(--color-text-light)">Bientôt disponible</span>') + '</div></div>';
+        const ext = (doc.file_name || doc.title || '').split('.').pop().toLowerCase();
+        const ftype = ftypes[ext] || 'Fichier';
+        const typeColors = { PDF: '#E74C3C', Word: '#1B4F8A', Excel: '#27AE60', Image: '#8E44AD', Fichier: '#64748B' };
+        const tcolor = typeColors[ftype] || '#64748B';
+        return '<div class="portal-list-item" style="' + (!isRead ? 'border-left:3px solid #1B4F8A;background:#F8FBFF' : '') + '" id="doc-item-' + doc.id + '">' +
+            '<div style="flex:1">' +
+            '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.25rem;flex-wrap:wrap">' +
+            '<div class="portal-item-title" style="margin-bottom:0">' + doc.title + '</div>' +
+            (!isRead ? '<span style="background:#EBF5FB;color:#1B4F8A;font-size:0.68rem;font-weight:700;padding:1px 7px;border-radius:10px">NOUVEAU</span>' : '') +
+            '<span style="background:' + tcolor + '22;color:' + tcolor + ';font-size:0.68rem;font-weight:600;padding:1px 7px;border-radius:4px">' + ftype + '</span>' +
+            '</div>' +
+            (doc.description ? '<div class="portal-item-desc">' + doc.description + '</div>' : '') +
+            (doc.mandate_title ? '<div style="font-size:0.75rem;color:#94A3B8">Mandat : ' + doc.mandate_title + '</div>' : '') +
+            '<div class="portal-item-meta">' +
+            '<span>' + new Date(doc.created_at).toLocaleDateString('fr-CA') + '</span>' +
+            (size ? '<span>' + size + '</span>' : '') +
+            (isRead ? '<span style="color:#27AE60;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Lu</span>' : '') +
+            '</div>' +
+            '</div>' +
+            '<div class="portal-item-actions">' +
+            (doc.file_url ?
+                '<a href="' + doc.file_url + '" target="_blank" class="btn btn-primary btn-sm" onclick="_markDocRead(' + doc.id + ');_updateDocItem(' + doc.id + ')">Télécharger</a>' :
+                '<span style="font-size:0.78rem;color:var(--color-text-light)">Bientôt disponible</span>') +
+            '</div></div>';
     }).join('');
+}
+
+function _updateDocItem(id) {
+    // Mettre à jour visuellement l'item après lecture
+    setTimeout(() => {
+        const item = document.getElementById('doc-item-' + id);
+        if (item) {
+            item.style.borderLeft = '';
+            item.style.background = '';
+            const badge = item.querySelector('span[style*="NOUVEAU"]');
+            if (badge) badge.remove();
+        }
+        // Recalculer le badge
+        const unread = _getUnreadDocs(window._allDocuments || []);
+        const navBadge = document.getElementById('badge-documents');
+        if (navBadge) {
+            if (unread.length > 0) { navBadge.textContent = unread.length; navBadge.style.display = 'inline-block'; }
+            else navBadge.style.display = 'none';
+        }
+    }, 100);
 }
 
 
