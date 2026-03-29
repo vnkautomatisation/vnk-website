@@ -146,6 +146,7 @@ async function loadAllData() {
         }
         if (mandates) {
             const mArr = mandates.mandates || [];
+            window._allMandates = mArr;
             renderMandates(mArr);
             const activeMandates = mArr.filter(m => m.status === 'active' || m.status === 'in_progress').length;
             if (activeMandates > 0) showBadge('badge-mandates', activeMandates);
@@ -286,7 +287,10 @@ function renderActivity(activities) {
 function renderMandates(mandates) {
     const list = document.getElementById('mandates-list');
     if (!list) return;
-    if (!mandates.length) { list.innerHTML = '<div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><p>Aucun mandat actif pour l\'instant.</p><a href="contact.html" class="btn btn-outline btn-sm">Démarrer un projet</a></div>'; return; }
+    // Bouton "Démarrer un projet" toujours visible dans le header
+    const startBtn = document.getElementById('mandate-start-btn');
+    if (startBtn) startBtn.style.display = 'inline-flex';
+    if (!mandates.length) { list.innerHTML = '<div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><p>Aucun mandat actif pour l\'instant.</p></div>'; return; }
     const stl = { active: 'En cours', in_progress: 'En cours', pending: 'En attente', completed: 'Complété', paused: 'En pause' };
     const svl = { 'plc-support': 'Support PLC', audit: 'Audit technique', documentation: 'Documentation', refactoring: 'Refactorisation' };
     list.innerHTML = mandates.map(m => '<div class="portal-list-item"><div style="flex:1"><div class="portal-item-title">' + m.title + '</div>' +
