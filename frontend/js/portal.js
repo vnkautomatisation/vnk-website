@@ -296,9 +296,17 @@ function showTab(tabName) {
     if (activeHeader) activeHeader.style.display = 'block';
 
     // 3. Panel actions rapides — visible seulement sur dashboard
+    // On cache aussi la colonne de grille pour éviter le vide blanc
     const actionPanel = document.getElementById('portal-action-panel');
+    const dashboardGrid = document.getElementById('dashboard-section');
     if (actionPanel) {
-        actionPanel.style.display = tabName === 'dashboard' ? '' : 'none';
+        if (tabName === 'dashboard') {
+            actionPanel.style.display = 'flex';
+            if (dashboardGrid) dashboardGrid.style.gridTemplateColumns = '240px 1fr 320px';
+        } else {
+            actionPanel.style.display = 'none';
+            if (dashboardGrid) dashboardGrid.style.gridTemplateColumns = '240px 1fr';
+        }
     }
 
     // 4. Fermer sidebar mobile
