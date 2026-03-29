@@ -119,8 +119,9 @@ async function loadAllData() {
         }
         if (quotes) {
             window._allQuotes = quotes.quotes || [];
+            const pendingQuotes = window._allQuotes.filter(q => q.status === 'pending');
             renderQuotes(window._allQuotes);
-            if (window._allQuotes.length > 0) showBadge('badge-quotes', window._allQuotes.length);
+            if (pendingQuotes.length > 0) showBadge('badge-quotes', pendingQuotes.length);
         } else {
             const qlist = el('quotes-list');
             if (qlist) qlist.innerHTML = '<div style="padding:1rem;background:#FEF3C7;border-radius:8px;border-left:3px solid #D97706;font-size:0.85rem;color:#92400E"><strong>Session expirée.</strong> <a href="#" onclick="logout()" style="color:#92400E">Reconnectez-vous</a> pour voir vos devis.</div>';
@@ -148,7 +149,7 @@ async function loadAllData() {
             const cf = document.getElementById('contract-filter');
             if (cf && cf.value !== 'all') { } // garder le filtre choisi par l'user
             renderPortalContracts(window._allContracts);
-            const pending = window._allContracts.filter(c => c.status === 'pending_signature').length;
+            const pending = window._allContracts.filter(c => c.status === 'pending_signature' || c.status === 'pending').length;
             if (pending > 0) showBadge('badge-contracts', pending);
         }
         if (messages) {
@@ -386,25 +387,41 @@ function filterInvoices() {
 function renderPortalContracts(contracts) {
     const list = document.getElementById('contracts-list');
     if (!list) return;
-    if (!contracts || !contracts.length) { list.innerHTML = '<div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>Aucun contrat disponible.</p></div>'; return; }
-    const sl = { draft: 'Brouillon', pending: 'En attente de signature', pending_signature: 'En attente de signature', viewed: 'Consulté', signed: 'Signé' };
-    const sc = { draft: '#94A3B8', pending: '#D97706', pending_signature: '#D97706', viewed: '#2E86AB', signed: '#27AE60' };
-    list.innerHTML = contracts.map(c => {
+    // Masquer les brouillons — le client ne les voit pas
+    const visible = (contracts || []).filter(c => c.status !== 'draft');
+    if (!visible.length) { list.innerHTML = '<div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>Aucun contrat disponible.</p></div>'; return; }
+    const sl = { pending: 'En attente de signature', pending_signature: 'En attente de signature', viewed: 'Consulté', signed: 'Signé' };
+    const sc = { pending: '#D97706', pending_signature: '#D97706', viewed: '#2E86AB', signed: '#27AE60' };
+    list.innerHTML = visible.map(c => {
         const color = sc[c.status] || '#94A3B8';
-        const ns = c.status === 'pending_signature';
-        const is = c.status === 'signed';
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border:1px solid #E2E8F0;border-radius:10px;margin-bottom:0.75rem;background:white;' + (ns ? 'border-left:3px solid #D97706;' : '') + '">' +
-            '<div style="flex:1"><div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem">' +
-            '<strong style="font-size:0.9rem">' + c.contract_number + '</strong>' +
-            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">' + (sl[c.status] || c.status) + '</span></div>' +
-            '<div style="font-size:0.85rem;color:#1E293B;margin-bottom:0.2rem">' + c.title + '</div>' +
-            '<div style="font-size:0.75rem;color:#94A3B8">' + (c.quote_number ? 'Devis ' + c.quote_number + ' · ' : '') + new Date(c.created_at).toLocaleDateString('fr-CA') + (c.signed_at ? ' · Signé le ' + new Date(c.signed_at).toLocaleDateString('fr-CA') : '') + '</div>' +
-            (ns ? '<div style="margin-top:0.4rem;font-size:0.78rem;color:#D97706;font-weight:600">⚠ Ce contrat requiert votre signature</div>' : '') +
-            '</div><div style="display:flex;flex-direction:column;gap:0.4rem;margin-left:1rem">' +
-            '<a href="/api/contracts/' + c.id + '/pdf" target="_blank" style="display:flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;border:1.5px solid #1B4F8A;border-radius:6px;color:#1B4F8A;font-size:0.78rem;font-weight:600;text-decoration:none;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Voir</a>' +
-            (ns ? '<button onclick="signContract(' + c.id + ')" style="display:flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;border:none;border-radius:6px;background:#D97706;color:white;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Signer</button>' : '') +
-            (is ? '<a href="/api/contracts/' + c.id + '/pdf" download style="display:flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;border:1.5px solid #27AE60;border-radius:6px;color:#27AE60;font-size:0.78rem;font-weight:600;text-decoration:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Télécharger</a>' : '') +
-            '</div></div>';
+        // needsSign = en attente de signature (pending ou pending_signature)
+        const needsSign = c.status === 'pending' || c.status === 'pending_signature';
+        const isSigned = c.status === 'signed';
+        return '<div style="border:1px solid #E2E8F0;border-radius:10px;padding:1rem 1.25rem;margin-bottom:0.75rem;background:white;' + (needsSign ? 'border-left:3px solid #D97706;' : isSigned ? 'border-left:3px solid #27AE60;' : '') + '">' +
+            '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem">' +
+            '<div style="flex:1">' +
+            '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.3rem;flex-wrap:wrap">' +
+            '<strong style="font-size:0.9rem;color:#1B4F8A">' + c.contract_number + '</strong>' +
+            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">' + (sl[c.status] || c.status) + '</span>' +
+            '</div>' +
+            '<div style="font-size:0.88rem;font-weight:600;color:#1E293B;margin-bottom:0.2rem">' + c.title + '</div>' +
+            '<div style="font-size:0.75rem;color:#94A3B8">' +
+            (c.quote_number ? 'Devis ' + c.quote_number + ' · ' : '') +
+            new Date(c.created_at).toLocaleDateString('fr-CA') +
+            (c.signed_at ? ' · Signé le ' + new Date(c.signed_at).toLocaleDateString('fr-CA') : '') +
+            '</div>' +
+            (needsSign ? '<div style="margin-top:0.5rem;font-size:0.8rem;color:#D97706;font-weight:600;display:flex;align-items:center;gap:5px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Ce contrat requiert votre signature</div>' : '') +
+            (isSigned ? '<div style="margin-top:0.5rem;font-size:0.8rem;color:#27AE60;font-weight:600;display:flex;align-items:center;gap:5px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Contrat signé</div>' : '') +
+            '</div>' +
+            '<div style="display:flex;flex-direction:column;gap:0.4rem;flex-shrink:0">' +
+            // Bouton SIGNER — seulement si en attente de signature
+            (needsSign ?
+                '<button onclick="signContract(' + c.id + ',' + JSON.stringify(c.hellosign_request_id || '') + ',' + JSON.stringify(c.file_url || '') + ')" style="display:flex;align-items:center;gap:5px;padding:0.5rem 1rem;border:none;border-radius:8px;background:#D97706;color:white;font-size:0.82rem;font-weight:600;cursor:pointer;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Signer</button>' : '') +
+            // Bouton VOIR PDF signé — seulement si signé
+            (isSigned ?
+                '<a href="/api/contracts/' + c.id + '/pdf" target="_blank" style="display:flex;align-items:center;gap:5px;padding:0.5rem 1rem;border:1.5px solid #27AE60;border-radius:8px;color:#27AE60;font-size:0.82rem;font-weight:600;text-decoration:none;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Voir le contrat</a>' +
+                '<a href="/api/contracts/' + c.id + '/pdf" download style="display:flex;align-items:center;gap:5px;padding:0.5rem 1rem;border:1.5px solid #E2E8F0;border-radius:8px;color:#64748B;font-size:0.82rem;font-weight:600;text-decoration:none;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Télécharger</a>' : '') +
+            '</div></div></div>';
     }).join('');
 }
 
@@ -576,29 +593,72 @@ async function payInvoice(invoiceId, amountTtc) {
     _initStripe();
     if (!_stripe) { showInfo('Paiement indisponible', 'Stripe n\'est pas chargé. Rechargez la page.', 'error'); return; }
     const token = localStorage.getItem('vnk-token');
+    const user = JSON.parse(localStorage.getItem('vnk-user') || '{}');
+    const amount = amountTtc ? formatCurrency(amountTtc) : '...';
 
     _ensureModal();
-    const amount = amountTtc ? formatCurrency(amountTtc) : '...';
     document.getElementById('vnk-modal-icon').innerHTML = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
     document.getElementById('vnk-modal-title').textContent = 'Paiement sécurisé';
-    document.getElementById('vnk-modal-msg').textContent = 'Montant : ' + amount + ' CAD (TTC)';
+    document.getElementById('vnk-modal-msg').innerHTML =
+        '<strong style="font-size:1rem;color:#1B4F8A">' + amount + ' CAD</strong> · TTC · Traitement sécurisé via Stripe';
     document.getElementById('vnk-modal-stripe').style.display = 'block';
     document.getElementById('vnk-card-error').textContent = '';
+
+    // Formulaire de facturation
+    document.getElementById('vnk-modal-stripe').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.75rem">
+            <div>
+                <label style="font-size:0.75rem;color:#64748B;display:block;margin-bottom:3px">Nom sur la carte</label>
+                <input id="vnk-card-name" value="${user.name || ''}" placeholder="Jean Tremblay" style="width:100%;padding:0.5rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:7px;font-size:0.85rem;box-sizing:border-box">
+            </div>
+            <div>
+                <label style="font-size:0.75rem;color:#64748B;display:block;margin-bottom:3px">Courriel</label>
+                <input id="vnk-card-email" value="${user.email || ''}" placeholder="jean@example.com" style="width:100%;padding:0.5rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:7px;font-size:0.85rem;box-sizing:border-box">
+            </div>
+        </div>
+        <div style="margin-bottom:0.75rem">
+            <label style="font-size:0.75rem;color:#64748B;display:block;margin-bottom:3px">Numéro de carte</label>
+            <div id="vnk-card-element" style="padding:0.65rem 0.75rem;border:1.5px solid #E2E8F0;border-radius:7px;background:white"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.75rem">
+            <div>
+                <label style="font-size:0.75rem;color:#64748B;display:block;margin-bottom:3px">Code postal</label>
+                <input id="vnk-card-postal" value="${user.postal_code || ''}" placeholder="G1A 1A1" style="width:100%;padding:0.5rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:7px;font-size:0.85rem;box-sizing:border-box">
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:6px;padding-bottom:2px">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span style="font-size:0.72rem;color:#64748B">Paiement sécurisé SSL / Stripe</span>
+            </div>
+        </div>
+        <div id="vnk-card-error" style="color:#E74C3C;font-size:0.8rem;min-height:1.2em"></div>`;
+
     document.getElementById('vnk-modal-btns').innerHTML =
         '<button onclick="_closeModal()" style="padding:0.6rem 1.5rem;background:white;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">Annuler</button>' +
-        '<button id="vnk-pay-btn" style="padding:0.6rem 1.5rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer">Payer maintenant</button>';
+        '<button id="vnk-pay-btn" style="padding:0.6rem 1.5rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Payer ' + amount + '</button>';
     document.getElementById('vnk-modal').style.display = 'flex';
 
     // Monter le widget Stripe
     const elements = _stripe.elements();
-    _cardElement = elements.create('card', { style: { base: { fontSize: '15px', color: '#1E293B', '::placeholder': { color: '#CBD5E0' } } } });
+    _cardElement = elements.create('card', {
+        hidePostalCode: true,
+        style: { base: { fontSize: '15px', color: '#1E293B', fontFamily: 'system-ui, sans-serif', '::placeholder': { color: '#CBD5E0' } } }
+    });
     _cardElement.mount('#vnk-card-element');
 
     document.getElementById('vnk-pay-btn').onclick = async () => {
         const btn = document.getElementById('vnk-pay-btn');
-        btn.disabled = true; btn.textContent = 'Traitement...';
+        const cardName = document.getElementById('vnk-card-name')?.value.trim();
+        const cardEmail = document.getElementById('vnk-card-email')?.value.trim();
+        const cardPostal = document.getElementById('vnk-card-postal')?.value.trim();
+        const errEl = document.getElementById('vnk-card-error');
+
+        if (!cardName) { errEl.textContent = 'Veuillez entrer le nom sur la carte.'; return; }
+        if (!cardEmail) { errEl.textContent = 'Veuillez entrer votre courriel.'; return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Traitement...';
+
         try {
-            // Créer le payment intent
             const r = await fetch('/api/payments/create-intent', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
@@ -606,24 +666,30 @@ async function payInvoice(invoiceId, amountTtc) {
             });
             const d = await r.json();
             if (!d.success || !d.clientSecret) {
-                document.getElementById('vnk-card-error').textContent = d.message || 'Erreur création paiement.';
-                btn.disabled = false; btn.textContent = 'Payer maintenant'; return;
+                errEl.textContent = d.message || 'Erreur lors de la création du paiement.';
+                btn.disabled = false;
+                btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Payer ' + amount;
+                return;
             }
-            // Confirmer avec Stripe
             const { error, paymentIntent } = await _stripe.confirmCardPayment(d.clientSecret, {
-                payment_method: { card: _cardElement }
+                payment_method: {
+                    card: _cardElement,
+                    billing_details: { name: cardName, email: cardEmail, address: { postal_code: cardPostal, country: 'CA' } }
+                }
             });
             if (error) {
-                document.getElementById('vnk-card-error').textContent = error.message;
-                btn.disabled = false; btn.textContent = 'Payer maintenant';
+                errEl.textContent = error.message;
+                btn.disabled = false;
+                btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Payer ' + amount;
             } else if (paymentIntent.status === 'succeeded') {
                 _closeModal();
-                showInfo('Paiement réussi !', 'Votre paiement a été traité avec succès. La facture sera mise à jour sous peu.', 'success');
+                showInfo('Paiement réussi !', 'Votre paiement de ' + amount + ' a été traité avec succès. Un reçu sera envoyé à ' + cardEmail + '.', 'success');
                 setTimeout(() => loadAllData(), 2000);
             }
         } catch (e) {
-            document.getElementById('vnk-card-error').textContent = 'Erreur de connexion.';
-            btn.disabled = false; btn.textContent = 'Payer maintenant';
+            errEl.textContent = 'Erreur de connexion. Réessayez.';
+            btn.disabled = false;
+            btn.innerHTML = 'Payer ' + amount;
         }
     };
 }
@@ -645,17 +711,26 @@ async function acceptQuote(quoteId) {
     );
 }
 
-async function signContract(contractId) {
+async function signContract(contractId, hellosignId, fileUrl) {
+    // Si on a un lien direct (HelloSign ou PDF), ouvrir directement
     const token = localStorage.getItem('vnk-token');
-    try {
-        const r = await fetch('/api/contracts/' + contractId + '/signing-url', { headers: { Authorization: 'Bearer ' + token } });
-        const d = await r.json();
-        if (d.success && d.signingUrl) {
-            showConfirm('Signer ce contrat', 'Vous allez être redirigé vers HelloSign pour signer ce contrat électroniquement.', () => window.open(d.signingUrl, '_blank'));
-        } else {
-            showInfo('Signature indisponible', 'Le lien de signature n\'est pas encore disponible. Contactez VNK à vnkautomatisation@gmail.com', 'info');
-        }
-    } catch { showInfo('Erreur', 'Impossible d\'obtenir le lien de signature.', 'error'); }
+    if (fileUrl) {
+        showConfirm('Signer ce contrat', 'Vous allez être redirigé vers le document pour le lire et le signer.', () => window.open(fileUrl, '_blank'));
+        return;
+    }
+    if (hellosignId) {
+        // Obtenir le lien de signature HelloSign
+        try {
+            const r = await fetch('/api/contracts/' + contractId + '/signing-url', { headers: { Authorization: 'Bearer ' + token } });
+            const d = await r.json();
+            if (d.success && d.signingUrl) {
+                showConfirm('Signer ce contrat', 'Vous allez être redirigé vers HelloSign pour signer ce contrat électroniquement.', () => window.open(d.signingUrl, '_blank'));
+                return;
+            }
+        } catch { }
+    }
+    // Fallback — contacter VNK
+    showInfo('Signature en attente', 'Le lien de signature sera disponible sous peu. Vous recevrez un courriel à ' + (JSON.parse(localStorage.getItem('vnk-user') || '{}').email || 'votre adresse') + ' dès que le document est prêt.', 'info');
 }
 
 // ═══════════════════════════════════════════════
