@@ -365,23 +365,39 @@
 
                 <!-- Documents header -->
                 <div class="portal-tab-header" id="header-documents" style="display:none">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem">
-                        <div style="display:flex;align-items:baseline;gap:0.75rem">
-                            <h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A">Mes documents</h2>
-                            <span style="font-size:0.82rem;color:#94A3B8">Rapports, documentation et livrables déposés par VNK</span>
+                    <!-- Ligne 1 : titre + actualiser -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+                        <div>
+                            <h2 style="font-size:1.2rem;font-weight:700;color:#1B4F8A;margin:0">Mes documents</h2>
+                            <span style="font-size:0.78rem;color:#94A3B8">Rapports, livrables et documentation déposés par VNK</span>
                         </div>
                         <button id="btn-refresh-documents" onclick="refreshPortal(this)" class="portal-refresh-btn">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
                             Actualiser
                         </button>
                     </div>
-                    <div class="portal-search-bar">
-                        <div class="portal-search-input-wrap">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-                            <input type="text" id="doc-search" class="portal-search-input" placeholder="Rechercher un document..." oninput="filterDocuments()">
+                    <!-- Ligne 2 : recherche + filtres -->
+                    <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+                        <div style="flex:1;min-width:180px;display:flex;align-items:center;gap:0.5rem;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:8px;padding:0 0.75rem">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                            <input type="text" id="doc-search" style="border:none;background:none;outline:none;font-size:0.83rem;color:#334155;width:100%;padding:0.5rem 0;font-family:inherit" placeholder="Rechercher un document..." oninput="filterDocuments()">
                         </div>
-                        <button class="portal-sort-btn" id="doc-sort-btn" onclick="toggleDocSort()" title="Trier">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="9" y1="18" x2="15" y2="18" /></svg>
+                        <select id="doc-cat-filter" class="portal-filter-select" onchange="filterDocuments()" style="font-size:0.8rem;padding:0.45rem 0.6rem;border:1.5px solid #E2E8F0;border-radius:8px;background:white;color:#475569;cursor:pointer;font-family:inherit">
+                            <option value="all">Toutes catégories</option>
+                            <option value="Documentation technique">Documentation</option>
+                            <option value="Factures">Factures</option>
+                            <option value="Contrats">Contrats</option>
+                            <option value="Devis">Devis</option>
+                            <option value="Livrables">Livrables</option>
+                            <option value="Autres documents">Autres</option>
+                        </select>
+                        <select id="doc-read-filter" class="portal-filter-select" onchange="filterDocuments()" style="font-size:0.8rem;padding:0.45rem 0.6rem;border:1.5px solid #E2E8F0;border-radius:8px;background:white;color:#475569;cursor:pointer;font-family:inherit">
+                            <option value="all">Tous</option>
+                            <option value="unread">Non lus</option>
+                            <option value="read">Lus</option>
+                        </select>
+                        <button onclick="toggleDocSort()" style="display:flex;align-items:center;gap:5px;padding:0.45rem 0.75rem;border:1.5px solid #E2E8F0;border-radius:8px;background:white;color:#475569;font-size:0.8rem;cursor:pointer;font-family:inherit;font-weight:500">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="9" y1="18" x2="15" y2="18" /></svg>
                             <span id="doc-sort-label">Date ▾</span>
                         </button>
                     </div>
@@ -434,6 +450,17 @@
 
                 <!-- TAB: MANDATS -->
                 <div class="portal-tab" id="tab-mandates">
+                    <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
+                        <input type="text" id="mandate-search" class="portal-search-input" placeholder="Rechercher un mandat..." oninput="filterMandates()" style="flex:1;min-width:200px">
+                        <select id="mandate-filter" class="portal-filter-select" onchange="filterMandates()">
+                            <option value="all">Tous les statuts</option>
+                            <option value="active">En cours</option>
+                            <option value="in_progress">En progression</option>
+                            <option value="pending">En attente</option>
+                            <option value="completed">Complété</option>
+                            <option value="paused">En pause</option>
+                        </select>
+                    </div>
                     <div id="mandates-list" class="portal-list">
                         <div class="portal-empty-state">
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
@@ -555,6 +582,7 @@
     <script src="js/i18n.js"></script>
     <script src="js/main.js"></script>
     <script src="js/stripe-payment.js"></script>
+    <script src="js/state.js"></script>
     <script src="js/portal.js"></script>
     <script src="js/chat-widget.js"></script>
 
