@@ -544,3 +544,58 @@ function updateMessageBadge(count) {
     if (countEl) countEl.textContent = count;
     badge.style.display = count > 0 ? 'flex' : 'none';
 }
+
+// ─── Tri et filtres ───────────────────────────
+const _sortState = { quotes: 'desc', invoices: 'desc', contracts: 'desc' };
+
+function toggleSort(type) {
+    const dir = _sortState[type] === 'desc' ? 'asc' : 'desc';
+    _sortState[type] = dir;
+    const label = document.getElementById(type.replace('s', '') + '-sort-label') ||
+        document.getElementById(type.slice(0, -1) + '-sort-label');
+    const btn = document.getElementById(type.slice(0, -1) + '-sort-btn') ||
+        document.getElementById(type + '-sort-btn');
+    if (label) label.textContent = 'Date ' + (dir === 'desc' ? '↓' : '↑');
+    if (btn) btn.classList.toggle('active', dir === 'asc');
+    if (type === 'quotes') filterQuotes();
+    else if (type === 'invoices') filterInvoices();
+    else if (type === 'contracts') filterContracts();
+}
+
+function sortByDate(arr, field, dir) {
+    return [...arr].sort((a, b) => {
+        const da = new Date(a[field] || a.created_at);
+        const db = new Date(b[field] || b.created_at);
+        return dir === 'desc' ? db - da : da - db;
+    });
+}
+
+function filterQuotes() {
+    const search = (document.getElementById('quote-search')?.value || '').toLowerCase();
+    const status = document.getElementById('quote-filter')?.value || 'all';
+    let list = window._allQuotes || [];
+    if (status !== 'all') list = list.filter(q => q.status === status);
+    if (search) list = list.filter(q => ((q.quote_number || '') + ' ' + (q.title || '')).toLowerCase().includes(search));
+    list = sortByDate(list, 'created_at', _sortState.quotes);
+    renderQuotes(list);
+}
+
+function filterInvoices() {
+    const search = (document.getElementById('invoice-search')?.value || '').toLowerCase();
+    const status = document.getElementById('invoice-filter')?.value || 'all';
+    let list = window._allInvoices || [];
+    if (status !== 'all') list = list.filter(i => i.status === status);
+    if (search) list = list.filter(i => ((i.invoice_number || '') + ' ' + (i.title || '')).toLowerCase().includes(search));
+    list = sortByDate(list, 'created_at', _sortState.invoices);
+    renderInvoices(list);
+}
+
+function filterContracts() {
+    const search = (document.getElementById('contract-search')?.value || '').toLowerCase();
+    const status = document.getElementById('contract-filter')?.value || 'all';
+    let list = window._allContracts || [];
+    if (status !== 'all') list = list.filter(c => c.status === status || (status === 'pending_signature' && c.status === 'pending'));
+    if (search) list = list.filter(c => ((c.contract_number || '') + ' ' + (c.title || '')).toLowerCase().includes(search));
+    list = sortByDate(list, 'created_at', _sortState.contracts);
+    renderPortalContracts(list);
+}

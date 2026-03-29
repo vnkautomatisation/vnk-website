@@ -140,10 +140,6 @@
                 </div>
             </div>
             <nav class="portal-nav">
-                <button class="portal-nav-item" onclick="showTab('profile')">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-                    Mon profil
-                </button>
                 <button class="portal-nav-item active" onclick="showTab('dashboard')">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
                     Tableau de bord
@@ -164,7 +160,7 @@
                     <span class="portal-nav-badge" id="badge-invoices" style="display:none">0</span>
                 </button>
                 <button class="portal-nav-item" onclick="showTab('contracts')">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
                     Contrats
                     <span class="portal-nav-badge" id="badge-contracts" style="display:none">0</span>
                 </button>
@@ -199,12 +195,6 @@
                 <div class="portal-mobile-avatar" id="mobile-avatar">JT</div>
             </div>
             <div class="portal-overlay" id="portal-overlay" onclick="togglePortalSidebar()"></div>
-
-            <!-- TAB: PROFIL -->
-            <div class="portal-tab" id="tab-profile">
-                <div class="portal-tab-header"><h2>Mon profil</h2><span class="portal-tab-subtitle">Vos informations et paramètres de compte</span></div>
-                <div id="profile-content"><p class="portal-empty">Chargement...</p></div>
-            </div>
 
             <!-- TAB: TABLEAU DE BORD -->
             <div class="portal-tab active" id="tab-dashboard">
@@ -258,53 +248,87 @@
 
             <!-- TAB: DEVIS -->
             <div class="portal-tab" id="tab-quotes">
-                <div class="portal-tab-header"><h2>Mes devis</h2><span class="portal-tab-subtitle">Consultez et acceptez vos devis</span></div>
-                <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
-                    <input type="text" id="quote-search" placeholder="Rechercher un devis..." oninput="filterQuotes()" style="flex:1;min-width:160px;padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.85rem;outline:none">
-                    <select id="quote-filter" onchange="filterQuotes()" style="padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.85rem;background:white;cursor:pointer">
-                        <option value="all">Tous les statuts</option>
-                        <option value="pending">En attente</option>
-                        <option value="accepted">Accepté</option>
-                        <option value="declined">Refusé</option>
-                        <option value="expired">Expiré</option>
-                    </select>
+                <div class="portal-toolbar">
+                    <div class="portal-toolbar-title"><h2>Mes devis</h2><span>Consultez et acceptez vos devis</span></div>
+                    <div class="portal-search-bar">
+                        <div class="portal-search-input-wrap">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                            <input type="text" id="quote-search" class="portal-search-input" placeholder="Rechercher un devis..." oninput="filterQuotes()">
+                        </div>
+                        <select id="quote-filter" class="portal-filter-select" onchange="filterQuotes()">
+                            <option value="all">Tous les statuts</option>
+                            <option value="pending">En attente</option>
+                            <option value="accepted">Accepté</option>
+                            <option value="declined">Refusé</option>
+                            <option value="expired">Expiré</option>
+                        </select>
+                        <button class="portal-sort-btn" id="quote-sort-btn" onclick="toggleSort('quotes')" title="Trier">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="9" y1="18" x2="15" y2="18" /></svg>
+                            <span id="quote-sort-label">Date ↓</span>
+                        </button>
+                    </div>
                 </div>
-                <div id="quotes-list" class="portal-list">
-                    <div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg><p>Aucun devis en attente.</p></div>
+                <div class="portal-tab-content">
+                    <div id="quotes-list" class="portal-list">
+                        <div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg><p>Aucun devis en attente.</p></div>
+                    </div>
                 </div>
             </div>
 
             <!-- TAB: FACTURES -->
             <div class="portal-tab" id="tab-invoices">
-                <div class="portal-tab-header"><h2>Mes factures</h2><span class="portal-tab-subtitle">Téléchargez et payez vos factures</span></div>
-                <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
-                    <input type="text" id="invoice-search" placeholder="Rechercher une facture..." oninput="filterInvoices()" style="flex:1;min-width:160px;padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.85rem;outline:none">
-                    <select id="invoice-filter" onchange="filterInvoices()" style="padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.85rem;background:white;cursor:pointer">
-                        <option value="all">Toutes</option>
-                        <option value="unpaid">Non payée</option>
-                        <option value="paid">Payée</option>
-                        <option value="overdue">En retard</option>
-                    </select>
+                <div class="portal-toolbar">
+                    <div class="portal-toolbar-title"><h2>Mes factures</h2><span>Téléchargez et payez vos factures</span></div>
+                    <div class="portal-search-bar">
+                        <div class="portal-search-input-wrap">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                            <input type="text" id="invoice-search" class="portal-search-input" placeholder="Rechercher une facture..." oninput="filterInvoices()">
+                        </div>
+                        <select id="invoice-filter" class="portal-filter-select" onchange="filterInvoices()">
+                            <option value="all">Toutes</option>
+                            <option value="unpaid">Non payée</option>
+                            <option value="paid">Payée</option>
+                            <option value="overdue">En retard</option>
+                        </select>
+                        <button class="portal-sort-btn" id="invoice-sort-btn" onclick="toggleSort('invoices')" title="Trier">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="9" y1="18" x2="15" y2="18" /></svg>
+                            <span id="invoice-sort-label">Date ↓</span>
+                        </button>
+                    </div>
                 </div>
-                <div id="invoices-list" class="portal-list">
-                    <div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg><p>Aucune facture disponible.</p></div>
+                <div class="portal-tab-content">
+                    <div id="invoices-list" class="portal-list">
+                        <div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg><p>Aucune facture disponible.</p></div>
+                    </div>
                 </div>
             </div>
 
             <!-- TAB: CONTRATS -->
             <div class="portal-tab" id="tab-contracts">
-                <div class="portal-tab-header"><h2>Mes contrats</h2><span class="portal-tab-subtitle">Consultez et signez vos contrats de service</span></div>
-                <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
-                    <input type="text" id="contract-search" placeholder="Rechercher un contrat..." oninput="filterContracts()" style="flex:1;min-width:160px;padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.85rem;outline:none">
-                    <select id="contract-filter" onchange="filterContracts()" style="padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.85rem;background:white;cursor:pointer">
-                        <option value="all">Tous</option>
-                        <option value="pending_signature">En attente de signature</option>
-                        <option value="signed">Signé</option>
-                        <option value="draft">Brouillon</option>
-                    </select>
+                <div class="portal-toolbar">
+                    <div class="portal-toolbar-title"><h2>Mes contrats</h2><span>Consultez et signez vos contrats de service</span></div>
+                    <div class="portal-search-bar">
+                        <div class="portal-search-input-wrap">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                            <input type="text" id="contract-search" class="portal-search-input" placeholder="Rechercher un contrat..." oninput="filterContracts()">
+                        </div>
+                        <select id="contract-filter" class="portal-filter-select" onchange="filterContracts()">
+                            <option value="all">Tous</option>
+                            <option value="pending_signature">En attente de signature</option>
+                            <option value="pending">En attente</option>
+                            <option value="signed">Signé</option>
+                            <option value="draft">Brouillon</option>
+                        </select>
+                        <button class="portal-sort-btn" id="contract-sort-btn" onclick="toggleSort('contracts')" title="Trier">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="9" y1="18" x2="15" y2="18" /></svg>
+                            <span id="contract-sort-label">Date ↓</span>
+                        </button>
+                    </div>
                 </div>
-                <div id="contracts-list" class="portal-list">
-                    <div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg><p>Aucun contrat disponible.</p></div>
+                <div class="portal-tab-content">
+                    <div id="contracts-list" class="portal-list">
+                        <div class="portal-empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg><p>Aucun contrat disponible.</p></div>
+                    </div>
                 </div>
             </div>
 
