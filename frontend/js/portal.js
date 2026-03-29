@@ -313,28 +313,27 @@ function renderQuotes(quotes) {
     const renderQ = q => {
         const color = sc[q.status] || '#94A3B8';
         const svc = q.service_type ? (svl[q.service_type] || q.service_type) : null;
-        return '<div class="portal-list-item">' +
-            '<div style="flex:1">' +
-            '<div class="portal-item-title">' + q.quote_number + ' — ' + q.title + '</div>' +
-            (q.description ? '<div class="portal-item-desc">' + q.description + '</div>' : '') +
-            '<div class="portal-item-meta">' +
-            (svc ? '<span style="background:#EBF5FB;color:#1B4F8A;padding:1px 6px;border-radius:4px;font-weight:600">' + svc + '</span>' : '') +
-            '<span>Émis : ' + new Date(q.created_at).toLocaleDateString('fr-CA') + '</span>' +
-            (q.expiry_date ? '<span>Expire : ' + new Date(q.expiry_date).toLocaleDateString('fr-CA') + '</span>' : '') +
+        const isExpired = q.expiry_date && new Date(q.expiry_date) < new Date();
+        return '<div style="display:grid;grid-template-columns:130px 1fr auto 60px 70px;align-items:center;gap:0.6rem;padding:0.55rem 0.85rem;border:1px solid #E2E8F0;border-radius:8px;margin-bottom:0.3rem;background:white;transition:box-shadow 0.15s" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.08)\'" onmouseout="this.style.boxShadow=\'none\'">' +
+            '<div style="display:flex;flex-direction:column;gap:2px">' +
+            '<strong style="font-size:0.82rem;color:#1B4F8A">' + q.quote_number + '</strong>' +
+            '<span style="background:' + color + '22;color:' + color + ';font-size:0.67rem;font-weight:600;padding:1px 5px;border-radius:8px;width:fit-content">' + (sl[q.status] || q.status) + '</span>' +
             '</div>' +
-            '<div class="portal-item-meta" style="margin-top:0.3rem;background:#F8FAFC;padding:3px 6px;border-radius:4px">' +
-            '<span>HT : <strong>' + formatCurrency(q.amount_ht) + '</strong></span>' +
-            '<span>TPS : ' + formatCurrency(q.tps_amount) + '</span>' +
-            '<span>TVQ : ' + formatCurrency(q.tvq_amount) + '</span>' +
+            '<div style="min-width:0">' +
+            '<div style="font-size:0.84rem;font-weight:600;color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + q.title + (svc ? ' <span style="font-weight:400;color:#94A3B8;font-size:0.75rem">· ' + svc + '</span>' : '') + '</div>' +
+            '<div style="font-size:0.71rem;color:#94A3B8;margin-top:1px">' +
+            'Émis ' + new Date(q.created_at).toLocaleDateString('fr-CA') +
+            (q.expiry_date ? ' · <span style="color:' + (isExpired ? '#E74C3C' : 'inherit') + '">Expire ' + new Date(q.expiry_date).toLocaleDateString('fr-CA') + '</span>' : '') +
+            '</div></div>' +
+            '<div style="text-align:right">' +
+            '<div style="font-size:0.88rem;font-weight:700;color:#1B4F8A">' + formatCurrency(q.amount_ttc) + '</div>' +
+            '<div style="font-size:0.67rem;color:#94A3B8">HT ' + formatCurrency(q.amount_ht) + '</div>' +
             '</div>' +
-            '</div>' +
-            '<div class="portal-item-actions">' +
-            '<span class="portal-item-amount">' + formatCurrency(q.amount_ttc) + '</span>' +
-            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">' + (sl[q.status] || q.status) + '</span>' +
-            '<div style="display:flex;gap:0.4rem;margin-top:0.3rem">' +
-            '<button class="btn btn-outline btn-sm" onclick="downloadPDF(\'quotes\',' + q.id + ',\'' + q.quote_number + '\')">PDF</button>' +
-            (q.status === 'pending' ? '<button class="btn btn-primary btn-sm" onclick="acceptQuote(' + q.id + ')">Accepter</button>' : '') +
-            '</div></div></div>';
+            '<button class="btn btn-outline btn-sm" style="font-size:0.75rem;padding:0.25rem 0.5rem" onclick="downloadPDF(`quotes`,' + q.id + ',`' + q.quote_number + '`)">PDF</button>'
+                (q.status === 'pending' ?
+                    '<button class="btn btn-primary btn-sm" style="font-size:0.75rem;padding:0.25rem 0.5rem" onclick="acceptQuote(' + q.id + ')">Accepter</button>' :
+                    '<div></div>') +
+                '</div>';
     };
 
     // Séparer actifs / archivés
@@ -394,28 +393,28 @@ function renderInvoices(invoices) {
         const color = sc[inv.status] || '#94A3B8';
         const isPaid = inv.status === 'paid';
         const isOverdue = inv.status === 'overdue';
-        return '<div class="portal-list-item" style="' + (isPaid ? 'border-left:3px solid #27AE60' : isOverdue ? 'border-left:3px solid #E74C3C' : '') + '">' +
-            '<div style="flex:1">' +
-            '<div class="portal-item-title">' + inv.invoice_number + ' — ' + inv.title + '</div>' +
-            (inv.description ? '<div class="portal-item-desc">' + inv.description + '</div>' : '') +
-            '<div class="portal-item-meta">' +
-            '<span>Émise : ' + new Date(inv.created_at).toLocaleDateString('fr-CA') + '</span>' +
-            (inv.due_date ? '<span>Échéance : <strong style="color:' + (isOverdue ? '#E74C3C' : 'inherit') + '">' + new Date(inv.due_date).toLocaleDateString('fr-CA') + '</strong></span>' : '') +
-            (inv.paid_at ? '<span style="color:#27AE60">Payée le : ' + new Date(inv.paid_at).toLocaleDateString('fr-CA') + '</span>' : '') +
+        const lb = isPaid ? 'border-left:3px solid #27AE60;' : isOverdue ? 'border-left:3px solid #E74C3C;' : '';
+        return '<div style="display:grid;grid-template-columns:130px 1fr auto 60px 70px;align-items:center;gap:0.6rem;padding:0.55rem 0.85rem;border:1px solid #E2E8F0;border-radius:8px;margin-bottom:0.3rem;background:white;' + lb + 'transition:box-shadow 0.15s" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.08)\'" onmouseout="this.style.boxShadow=\'none\'">' +
+            '<div style="display:flex;flex-direction:column;gap:2px">' +
+            '<strong style="font-size:0.82rem;color:#1B4F8A">' + inv.invoice_number + '</strong>' +
+            '<span style="background:' + color + '22;color:' + color + ';font-size:0.67rem;font-weight:600;padding:1px 5px;border-radius:8px;width:fit-content">' + (sl[inv.status] || inv.status) + '</span>' +
             '</div>' +
-            '<div class="portal-item-meta" style="margin-top:0.3rem;background:#F8FAFC;padding:3px 6px;border-radius:4px">' +
-            '<span>HT : <strong>' + formatCurrency(inv.amount_ht) + '</strong></span>' +
-            '<span>TPS : ' + formatCurrency(inv.tps_amount) + '</span>' +
-            '<span>TVQ : ' + formatCurrency(inv.tvq_amount) + '</span>' +
+            '<div style="min-width:0">' +
+            '<div style="font-size:0.84rem;font-weight:600;color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + inv.title + '</div>' +
+            '<div style="font-size:0.71rem;color:#94A3B8;margin-top:1px">' +
+            'Émise ' + new Date(inv.created_at).toLocaleDateString('fr-CA') +
+            (inv.due_date ? ' · <span style="color:' + (isOverdue ? '#E74C3C' : 'inherit') + '">Échéance ' + new Date(inv.due_date).toLocaleDateString('fr-CA') + '</span>' : '') +
+            (inv.paid_at ? ' · <span style="color:#27AE60">Payée ' + new Date(inv.paid_at).toLocaleDateString('fr-CA') + '</span>' : '') +
+            '</div></div>' +
+            '<div style="text-align:right">' +
+            '<div style="font-size:0.88rem;font-weight:700;color:' + (isPaid ? '#27AE60' : '#1B4F8A') + '">' + formatCurrency(inv.amount_ttc) + '</div>' +
+            '<div style="font-size:0.67rem;color:#94A3B8">HT ' + formatCurrency(inv.amount_ht) + '</div>' +
             '</div>' +
-            '</div>' +
-            '<div class="portal-item-actions">' +
-            '<span class="portal-item-amount" style="color:' + (isPaid ? '#27AE60' : 'var(--color-primary)') + '">' + formatCurrency(inv.amount_ttc) + '</span>' +
-            '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">' + (sl[inv.status] || inv.status) + '</span>' +
-            '<div style="display:flex;gap:0.4rem;margin-top:0.3rem">' +
-            '<button class="btn btn-outline btn-sm" onclick="downloadPDF(\'invoices\',' + inv.id + ',\'' + inv.invoice_number + '\')">PDF</button>' +
-            (inv.status === 'unpaid' || inv.status === 'overdue' ? '<button class="btn btn-primary btn-sm" onclick="payInvoice(' + inv.id + ',' + inv.amount_ttc + ')">Payer</button>' : '') +
-            '</div></div></div>';
+            '<button class="btn btn-outline btn-sm" style="font-size:0.75rem;padding:0.25rem 0.5rem" onclick="downloadPDF(`invoices`,' + inv.id + ',`' + inv.invoice_number + '`)">PDF</button>'
+                (inv.status === 'unpaid' || inv.status === 'overdue' ?
+                    '<button class="btn btn-primary btn-sm" style="font-size:0.75rem;padding:0.25rem 0.5rem" onclick="payInvoice(' + inv.id + ',' + inv.amount_ttc + ')">Payer</button>' :
+                    '<div></div>') +
+                '</div>';
     };
 
     // Séparer actives / historique
