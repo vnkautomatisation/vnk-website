@@ -44,7 +44,7 @@
             </div>
             <div class="vnk-chat-messages" id="vnk-chat-messages">
                 <div class="vnk-chat-msg vnk">
-                    <div class="vnk-chat-msg-bubble">Bonjour 👋 Comment puis-je vous aider aujourd&#39;hui ?</div>
+                    <div class="vnk-chat-msg-bubble">Bonjour ! Comment puis-je vous aider ?</div>
                     <div class="vnk-chat-msg-time">VNK Automatisation</div>
                 </div>
             </div>
@@ -271,8 +271,8 @@
         // Afficher aperçu immédiatement
         const isImg = file.type.startsWith('image/');
         const preview = isImg
-            ? '<em>📸 ' + file.name + ' (envoi en cours...)</em>'
-            : '<em>📎 ' + file.name + ' (envoi en cours...)</em>';
+            ? '<em>[Image] ' + file.name + ' (envoi en cours...)</em>'
+            : '<em>[Fichier] ' + file.name + ' (envoi en cours...)</em>';
         vnkChatAddMsg(preview, 'client');
         input.value = '';
 
@@ -281,7 +281,7 @@
             await fetch('/api/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-                body: JSON.stringify({ content: '📎 Fichier joint : ' + file.name + ' (' + (file.size > 1048576 ? (file.size / 1048576).toFixed(1) + 'Mo' : Math.round(file.size / 1024) + 'Ko') + ')' })
+                body: JSON.stringify({ content: '[Pièce jointe] ' + file.name + ' (' + (file.size > 1048576 ? (file.size / 1048576).toFixed(1) + 'Mo' : Math.round(file.size / 1024) + 'Ko') + ')' })
             });
             await vnkChatLoad();
         } catch { }
@@ -328,7 +328,7 @@
     window.vnkChatClear = function () {
         _messages = [];
         const container = document.getElementById('vnk-chat-messages');
-        if (container) container.innerHTML = '<div class="vnk-chat-msg vnk"><div class="vnk-chat-msg-bubble">Bonjour 👋 Comment puis-je vous aider aujourd&#39;hui ?</div><div class="vnk-chat-msg-time">VNK Automatisation</div></div>';
+        if (container) container.innerHTML = '<div class="vnk-chat-msg vnk"><div class="vnk-chat-msg-bubble">Bonjour ! Comment puis-je vous aider ?</div><div class="vnk-chat-msg-time">VNK Automatisation</div></div>';
         const menu = document.getElementById('vnk-chat-menu');
         if (menu) menu.style.display = 'none';
     };

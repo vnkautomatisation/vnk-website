@@ -440,6 +440,41 @@ function filterContracts() {
 function _getReadDocs() {
     try { return JSON.parse(localStorage.getItem('vnk-read-docs') || '[]'); } catch { return []; }
 }
+// Téléchargement robuste — gère data: URI et URL normale
+function downloadDoc(id) {
+    const doc = (window._allDocuments || []).find(d => d.id === id);
+    if (!doc || !doc.file_url) return;
+    _markDocRead(id);
+    _updateDocItem(id);
+    if (doc.file_url.startsWith('data:')) {
+        // Convertir data: URI en blob pour download
+        try {
+            const arr = doc.file_url.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            const u8arr = new Uint8Array(bstr.length);
+            for (let i = 0; i < bstr.length; i++) u8arr[i] = bstr.charCodeAt(i);
+            const blob = new Blob([u8arr], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = doc.file_name || doc.title + '.pdf';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+        } catch (e) { console.error('Download error:', e); }
+    } else {
+        // URL normale
+        const a = document.createElement('a');
+        a.href = doc.file_url;
+        a.download = doc.file_name || doc.title;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+}
+
 function _markDocRead(id) {
     const read = _getReadDocs();
     if (!read.includes(id)) { read.push(id); localStorage.setItem('vnk-read-docs', JSON.stringify(read)); }
@@ -514,34 +549,55 @@ function renderDocuments(documents) {
     }
     const readIds = _getReadDocs();
     const ftypes = { pdf: 'PDF', doc: 'Word', docx: 'Word', xls: 'Excel', xlsx: 'Excel', png: 'Image', jpg: 'Image', jpeg: 'Image' };
-    list.innerHTML = documents.map(doc => {
+
+    // Grouper par catégorie
+    const groups = {};
+    documents.forEach(doc => {
+        const cat = _docCategory(doc);
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(doc);
+    });
+
+    const renderDoc = doc => {
         const isRead = readIds.includes(doc.id);
         const size = doc.file_size ? (doc.file_size > 1048576 ? (doc.file_size / 1048576).toFixed(1) + ' Mo' : Math.round(doc.file_size / 1024) + ' Ko') : '';
         const ext = (doc.file_name || doc.title || '').split('.').pop().toLowerCase();
         const ftype = ftypes[ext] || 'Fichier';
-        const typeColors = { PDF: '#E74C3C', Word: '#1B4F8A', Excel: '#27AE60', Image: '#8E44AD', Fichier: '#64748B' };
-        const tcolor = typeColors[ftype] || '#64748B';
-        return '<div class="portal-list-item" style="' + (!isRead ? 'border-left:3px solid #1B4F8A;background:#F8FBFF' : '') + '" id="doc-item-' + doc.id + '">' +
-            '<div style="flex:1">' +
-            '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.25rem;flex-wrap:wrap">' +
-            '<div class="portal-item-title" style="margin-bottom:0">' + doc.title + '</div>' +
-            (!isRead ? '<span style="background:#EBF5FB;color:#1B4F8A;font-size:0.68rem;font-weight:700;padding:1px 7px;border-radius:10px">NOUVEAU</span>' : '') +
-            '<span style="background:' + tcolor + '22;color:' + tcolor + ';font-size:0.68rem;font-weight:600;padding:1px 7px;border-radius:4px">' + ftype + '</span>' +
+        const tcolor = { PDF: '#E74C3C', Word: '#1B4F8A', Excel: '#27AE60', Image: '#8E44AD', Fichier: '#64748B' }[ftype] || '#64748B';
+        return '<div class="portal-list-item" style="' + (!isRead ? 'border-left:3px solid #1B4F8A;background:#F8FBFF;' : '') + 'margin-bottom:0.5rem" id="doc-item-' + doc.id + '">' +
+            '<div style="flex:1;min-width:0">' +
+            '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.2rem">' +
+            '<div class="portal-item-title" style="margin-bottom:0;font-size:0.88rem">' + doc.title + '</div>' +
+            (!isRead ? '<span style="background:#1B4F8A;color:white;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:10px">NOUVEAU</span>' : '') +
+            '<span style="background:' + tcolor + '22;color:' + tcolor + ';font-size:0.68rem;font-weight:600;padding:1px 6px;border-radius:4px">' + ftype + '</span>' +
             '</div>' +
-            (doc.description ? '<div class="portal-item-desc">' + doc.description + '</div>' : '') +
-            (doc.mandate_title ? '<div style="font-size:0.75rem;color:#94A3B8">Mandat : ' + doc.mandate_title + '</div>' : '') +
-            '<div class="portal-item-meta">' +
-            '<span>' + new Date(doc.created_at).toLocaleDateString('fr-CA') + '</span>' +
+            (doc.description ? '<div class="portal-item-desc" style="font-size:0.78rem">' + doc.description + '</div>' : '') +
+            '<div class="portal-item-meta" style="font-size:0.73rem">' +
+            (doc.mandate_title ? '<span style="display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> ' + doc.mandate_title + '</span>' : '') +
+            '<span style="display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ' + new Date(doc.created_at).toLocaleDateString('fr-CA') + '</span>' +
             (size ? '<span>' + size + '</span>' : '') +
-            (isRead ? '<span style="color:#27AE60;display:flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Lu</span>' : '') +
-            '</div>' +
-            '</div>' +
+            (isRead ? '<span style="color:#27AE60;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Lu</span>' : '<span style="color:#D97706;display:inline-flex;align-items:center;gap:3px"><svg width="8" height="8" viewBox="0 0 24 24" fill="#D97706"><circle cx="12" cy="12" r="10"/></svg>Non lu</span>') +
+            '</div></div>' +
             '<div class="portal-item-actions">' +
-            (doc.file_url ?
-                '<a href="' + doc.file_url + '" target="_blank" class="btn btn-primary btn-sm" onclick="_markDocRead(' + doc.id + ');_updateDocItem(' + doc.id + ')">Télécharger</a>' :
-                '<span style="font-size:0.78rem;color:var(--color-text-light)">Bientôt disponible</span>') +
+            (doc.file_url ? '<button class="btn btn-primary btn-sm" onclick="downloadDoc(' + doc.id + ')">⬇ Télécharger</button>' : '<span style="font-size:0.75rem;color:#94A3B8">Bientôt dispo</span>') +
             '</div></div>';
-    }).join('');
+    };
+
+    list.innerHTML = _catOrder
+        .filter(cat => groups[cat])
+        .map(cat => {
+            const docs = groups[cat];
+            const unread = docs.filter(d => !readIds.includes(d.id)).length;
+            return '<div style="margin-bottom:1.5rem">' +
+                '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;padding-bottom:0.5rem;border-bottom:2px solid #E2E8F0">' +
+                '<span style="color:#1B4F8A">' + (_catIcons[cat] || '') + '</span>' +
+                '<h3 style="font-size:0.88rem;font-weight:700;color:#1B4F8A;margin:0">' + cat + '</h3>' +
+                '<span style="font-size:0.75rem;color:#94A3B8">' + docs.length + ' fichier' + (docs.length > 1 ? 's' : '') + '</span>' +
+                (unread > 0 ? '<span style="background:#1B4F8A;color:white;font-size:0.68rem;font-weight:700;padding:1px 7px;border-radius:10px">' + unread + ' nouveau' + (unread > 1 ? 'x' : '') + '</span>' : '') +
+                '</div>' +
+                docs.map(renderDoc).join('') +
+                '</div>';
+        }).join('');
 }
 
 function _updateDocItem(id) {
