@@ -403,7 +403,7 @@
 
         .admin-main {
             flex: 1;
-            padding: 1.5rem 2rem;
+            padding: 1.5rem 2rem 5rem 2rem; /* padding-bottom: espace pour le widget flottant */
             overflow-y: auto;
             min-width: 0;
         }
@@ -2036,6 +2036,7 @@
                             <thead><tr><th>Date</th><th>Client</th><th>Facture</th><th>Montant</th><th>Méthode</th><th>Statut</th><th>Stripe ID</th><th>Actions</th></tr></thead>
                             <tbody id="transactions-tbody"></tbody>
                         </table>
+                        <div class="pagination" id="transactions-pag" style="display:none"><span id="transactions-pag-info"></span><div class="page-btns" id="transactions-pag-btns"></div></div>
                     </div>
                 </div>
 
@@ -2213,6 +2214,7 @@
                                 </div>
                             </div>
                             <table><thead><tr><th>Facture</th><th>Client</th><th>Montant HT</th><th>TTC</th><th>Statut</th><th>Échéance</th><th>Payée le</th><th>Actions</th></tr></thead><tbody id="payments-tbody"></tbody></table>
+                            <div class="pagination" id="payments-pag" style="display:none"><span id="payments-pag-info"></span><div class="page-btns" id="payments-pag-btns"></div></div>
                         </div>
                     </div>
                     <div class="fin-section" id="fin-stats">
@@ -2264,7 +2266,20 @@
                                 <button class="filter-tab" onclick="setContractFilter('pending',this)">En attente</button>
                             </div>
                         </div>
-                        <table><thead><tr><th>Numéro</th><th>Client</th><th>Titre</th><th>Mandat/Devis</th><th>Statut</th><th>Créé le</th><th>Signé le</th><th>Actions</th></tr></thead><tbody id="contracts-tbody"></tbody></table>
+                        <table style="table-layout:fixed;width:100%">
+                            <thead>
+                                <tr>
+                                    <th style="width:120px">Numéro</th>
+                                    <th style="width:160px">Client</th>
+                                    <th>Titre</th>
+                                    <th style="width:120px">Statut</th>
+                                    <th style="width:90px">Créé le</th>
+                                    <th style="width:90px">Signé le</th>
+                                    <th style="width:160px">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contracts-tbody"></tbody>
+                        </table>
                         <div class="pagination" id="contracts-pag" style="display:none"><span id="contracts-pag-info"></span><div class="page-btns" id="contracts-pag-btns"></div></div>
                     </div>
                 </div>
@@ -2298,6 +2313,7 @@
                             </div>
                         </div>
                         <table><thead><tr><th>Client</th><th>Titre</th><th>Priorité</th><th>Statut</th><th>Facture</th><th>Ouvert le</th><th>Résolu le</th><th>Actions</th></tr></thead><tbody id="disputes-tbody"></tbody></table>
+                        <div class="pagination" id="disputes-pag" style="display:none"><span id="disputes-pag-info"></span><div class="page-btns" id="disputes-pag-btns"></div></div>
                     </div>
                 </div>
 
@@ -2319,6 +2335,7 @@
                     </div>
                     <div class="table-wrap">
                         <table><thead><tr><th>Réf.</th><th>Client</th><th>Facture</th><th>Raison</th><th>Montant</th><th>Statut Stripe</th><th>Date</th><th>Actions</th></tr></thead><tbody id="refunds-tbody"></tbody></table>
+                        <div class="pagination" id="refunds-pag" style="display:none"><span id="refunds-pag-info"></span><div class="page-btns" id="refunds-pag-btns"></div></div>
                     </div>
                 </div>
 
@@ -2352,6 +2369,7 @@
                             </select>
                         </div>
                         <table><thead><tr><th>Date</th><th>Titre</th><th>Catégorie</th><th>Fournisseur</th><th>Montant HT</th><th>TPS payée</th><th>TVQ payée</th><th>Actions</th></tr></thead><tbody id="expenses-tbody"></tbody></table>
+                        <div class="pagination" id="expenses-pag" style="display:none"><span id="expenses-pag-info"></span><div class="page-btns" id="expenses-pag-btns"></div></div>
                     </div>
                 </div>
 
@@ -2386,6 +2404,7 @@
                     <div class="table-wrap">
                         <div class="table-header"><div class="table-title">Déclarations enregistrées</div></div>
                         <table><thead><tr><th>Période</th><th>Type</th><th>Revenus HT</th><th>TPS</th><th>TVQ</th><th>Total taxes</th><th>Statut</th><th>Soumise le</th><th>Actions</th></tr></thead><tbody id="taxdecl-tbody"></tbody></table>
+                        <div class="pagination" id="taxdecl-pag" style="display:none"><span id="taxdecl-pag-info"></span><div class="page-btns" id="taxdecl-pag-btns"></div></div>
                     </div>
                 </div>
 
@@ -2440,7 +2459,7 @@
 
     <!-- ===== MODALS ===== -->
     <div class="modal-overlay" id="modal-new-client">
-        <div class="modal" autocomplete="off" autocomplete="off">
+        <div class="modal" autocomplete="off">
             <div class="modal-head"><span class="modal-title">Nouveau client</span><button class="modal-close" onclick="closeModal('modal-new-client')">×</button></div>
             <div class="modal-body">
                 <div class="form-row">
@@ -2486,7 +2505,7 @@
     </div>
 
     <div class="modal-overlay" id="modal-new-mandate">
-        <div class="modal" autocomplete="off" autocomplete="off">
+        <div class="modal" autocomplete="off">
             <div class="modal-head"><span class="modal-title">Nouveau mandat</span><button class="modal-close" onclick="closeModal('modal-new-mandate')">×</button></div>
             <div class="modal-body">
                 <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nm-client"><option value="">Sélectionner un client</option></select></div>
@@ -2512,7 +2531,7 @@
     </div>
 
     <div class="modal-overlay" id="modal-edit-mandate">
-        <div class="modal" autocomplete="off" autocomplete="off">
+        <div class="modal" autocomplete="off">
             <div class="modal-head"><span class="modal-title">Modifier le mandat</span><button class="modal-close" onclick="closeModal('modal-edit-mandate')">×</button></div>
             <div class="modal-body">
                 <input type="hidden" id="em-id">
@@ -2529,7 +2548,7 @@
     </div>
 
     <div class="modal-overlay" id="modal-new-quote">
-        <div class="modal" autocomplete="off" autocomplete="off">
+        <div class="modal" autocomplete="off">
             <div class="modal-head"><span class="modal-title">Nouveau devis</span><button class="modal-close" onclick="closeModal('modal-new-quote')">×</button></div>
             <div class="modal-body">
                 <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="nq-client"><option value="">Sélectionner un client</option></select></div>
@@ -2551,7 +2570,7 @@
     </div>
 
     <div class="modal-overlay" id="modal-new-invoice">
-        <div class="modal" autocomplete="off" autocomplete="off">
+        <div class="modal" autocomplete="off">
             <div class="modal-head"><span class="modal-title">Nouvelle facture</span><button class="modal-close" onclick="closeModal('modal-new-invoice')">×</button></div>
             <div class="modal-body">
                 <div class="form-group"><label class="form-label">Client *</label><select class="form-select" id="ni-client"><option value="">Sélectionner un client</option></select></div>
@@ -2573,7 +2592,7 @@
     </div>
 
     <div class="modal-overlay" id="modal-new-document">
-        <div class="modal" autocomplete="off" autocomplete="off">
+        <div class="modal" autocomplete="off">
             <div class="modal-head"><span class="modal-title">Déposer un document</span><button class="modal-close" onclick="closeModal('modal-new-document')">×</button></div>
             <div class="modal-body">
                 <div class="form-row">
@@ -2642,7 +2661,7 @@
     </div>
 
     <div class="modal-overlay" id="modal-new-contract">
-        <div class="modal" autocomplete="off" autocomplete="off">
+        <div class="modal" autocomplete="off">
             <div class="modal-head"><span class="modal-title">Nouveau contrat</span><button class="modal-close" onclick="closeModal('modal-new-contract')">×</button></div>
             <div class="modal-body">
                 <div class="form-row">
@@ -2659,7 +2678,7 @@
     </div>
 
     <div class="modal-overlay" id="modal-new-dispute">
-        <div class="modal" autocomplete="off" autocomplete="off">
+        <div class="modal" autocomplete="off">
             <div class="modal-head"><span class="modal-title">Nouveau litige</span><button class="modal-close" onclick="closeModal('modal-new-dispute')">×</button></div>
             <div class="modal-body">
                 <div class="form-row">
@@ -2690,7 +2709,7 @@
     </div>
 
     <div class="modal-overlay" id="modal-new-refund">
-        <div class="modal" autocomplete="off" autocomplete="off">
+        <div class="modal" autocomplete="off">
             <div class="modal-head"><span class="modal-title">Nouveau remboursement / Note de crédit</span><button class="modal-close" onclick="closeModal('modal-new-refund')">×</button></div>
             <div class="modal-body">
                 <div class="form-row">
@@ -2712,7 +2731,7 @@
     </div>
 
     <div class="modal-overlay" id="modal-new-expense">
-        <div class="modal" autocomplete="off" autocomplete="off">
+        <div class="modal" autocomplete="off">
             <div class="modal-head"><span class="modal-title">Nouvelle dépense professionnelle</span><button class="modal-close" onclick="closeModal('modal-new-expense')">×</button></div>
             <div class="modal-body">
                 <div class="form-row">
@@ -2764,7 +2783,24 @@
         let allClients = [], allMandates = [], allQuotes = [], allInvoices = [], allDocuments = [], allMessages = [], allPaymentsData = {};
         let currentCdpClientId = null;
         let confirmCb = null;
-        const PER_PAGE = 20;
+        // PER_PAGE adapté à chaque section pour éviter le scrollbar
+        // Valeurs calculées selon la hauteur disponible (viewport ~900px utile)
+        const PP = {
+            clients: 8,   // cards hautes (~90px chacune)
+            mandates: 10,  // lignes avec barre de progression
+            quotes: 12,
+            invoices: 12,
+            payments: 12,
+            documents: 10,  // double toolbar en haut
+            contracts: 10,
+            disputes: 8,   // bandeau info en haut
+            refunds: 8,   // bandeau info en haut
+            expenses: 8,   // 3 stat cards en haut
+            transactions: 10,  // 3 stat cards en haut
+            taxdecl: 5,   // résumé annuel + tableau trimestriel
+        };
+        const PER_PAGE = 10; // fallback
+        function getPP(name) { return PP[name] || PER_PAGE; }
         const tState = {
             mandates: { f: 'all', s: 'client_name', d: 1, p: 1 },
             quotes: { f: 'all', s: 'quote_number', d: 1, p: 1 },
@@ -2919,7 +2955,7 @@
             if (!badge && count > 0) {
                 badge = document.createElement('div');
                 badge.id = 'admin-float-badge';
-                badge.style.cssText = 'position:fixed;bottom:5rem;right:1.5rem;z-index:9000;background:#E74C3C;color:white;border-radius:50px;padding:0.6rem 1rem;font-size:0.82rem;font-weight:700;display:flex;align-items:center;gap:0.5rem;box-shadow:0 4px 16px rgba(231,76,60,0.35);cursor:pointer;';
+                badge.style.cssText = 'position:fixed;bottom:1.5rem;right:5.5rem;z-index:9000;background:#E74C3C;color:white;border-radius:50px;padding:0.6rem 1rem;font-size:0.82rem;font-weight:700;display:flex;align-items:center;gap:0.5rem;box-shadow:0 4px 16px rgba(231,76,60,0.35);cursor:pointer;';
                 badge.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span id="admin-float-count">${count}</span> nouveau${count > 1 ? 'x' : ''} message${count > 1 ? 's' : ''}`;
                 badge.onclick = () => { showSection('messages'); badge.style.display = 'none'; };
                 document.body.appendChild(badge);
@@ -3047,9 +3083,9 @@
             if (cS === 'company') list.sort((a, b) => (a.company_name || '').localeCompare(b.company_name || ''));
             if (cS === 'recent') list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             if (cS === 'login') list.sort((a, b) => new Date(b.last_login || 0) - new Date(a.last_login || 0));
-            const total = list.length, pages = Math.max(1, Math.ceil(total / PER_PAGE));
+            const _pp = getPP('clients'); const total = list.length, pages = Math.max(1, Math.ceil(total / _pp));
             if (cPage > pages) cPage = 1;
-            const paged = list.slice((cPage - 1) * PER_PAGE, cPage * PER_PAGE);
+            const paged = list.slice((cPage - 1) * _pp, cPage * _pp);
             const grid = document.getElementById('clients-grid');
             const mCounts = {}, iCounts = {};
             allMandates.forEach(m => { mCounts[m.client_id] = (mCounts[m.client_id] || 0) + 1; });
@@ -3092,6 +3128,11 @@
                                         <button onclick="event.stopPropagation();closeAllClientMenus();archiveClient(${c.id},'${c.full_name.replace(/'/g, "\\'")}',isActive(c))" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:${isActive(c) ? 'var(--warning)' : 'var(--success)'}" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/></svg>
                                             ${isActive(c) ? 'Archiver client' : 'Réactiver client'}
+                                        </button>
+                                        <div style="height:1px;background:var(--border);margin:0.3rem 0.75rem"></div>
+                                        <button onclick="event.stopPropagation();closeAllClientMenus();deleteClient(${c.id},'${c.full_name.replace(/'/g, "\\'")}')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'">
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                                            Supprimer définitivement
                                         </button>
                                     </div>
                                 </div>
@@ -3282,7 +3323,7 @@
             if (s.f !== 'all') { if (s.f === 'overdue') list = list.filter(i => i.status === 'unpaid' && new Date(i.due_date) < new Date()); else list = list.filter(i => i.status === s.f); }
             if (search) list = list.filter(i => Object.values(i).join(' ').toLowerCase().includes(search));
             list.sort((a, b) => { const va = a[s.s] || '', vb = b[s.s] || ''; return String(va).localeCompare(String(vb), undefined, { numeric: true }) * s.d; });
-            const _pp = name === 'documents' ? 10 : PER_PAGE;
+            const _pp = getPP(name);
             const total = list.length, pages = Math.max(1, Math.ceil(total / _pp));
             if (s.p > pages) s.p = 1;
             const paged = list.slice((s.p - 1) * _pp, s.p * _pp);
@@ -3297,7 +3338,7 @@
                         <td><span class="badge badge-${m.status}">${statusLabel(m.status)}</span></td>
                         <td><div style="display:flex;align-items:center;gap:0.5rem"><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${m.progress || 0}%;background:linear-gradient(90deg,var(--primary),var(--secondary));border-radius:3px"></div></div><span style="font-size:0.73rem;color:var(--text-light)">${m.progress || 0}%</span></div></td>
                         <td>${m.start_date ? fmtDate(m.start_date) : '—'}</td>
-                        <td><button class="btn btn-sm btn-outline" onclick="openEditMandate(${m.id},'${m.status}',${m.progress || 0},'${(m.notes || '').replace(/'/g, "\\'")}')">Modifier</button></td>
+                        <td><div class="td-actions"><button class="btn btn-sm btn-outline" onclick="openEditMandate(${m.id},'${m.status}',${m.progress || 0},'${(m.notes || '').replace(/'/g, "\\'")}')">Modifier</button><button class="btn btn-sm btn-danger" onclick="deleteMandate(${m.id})">Suppr.</button></div></td>
                     </tr>`).join('');
             else if (name === 'quotes') tbody.innerHTML = paged.map(q => `<tr>
                         <td><strong>${q.quote_number}</strong></td><td>${q.client_name}</td><td>${q.title}</td>
@@ -3306,7 +3347,7 @@
                         <td>${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</td>
                         <td><div class="td-actions"><button onclick="downloadPdf('/api/admin/quotes/${q.id}/pdf', '${q.quote_number}.pdf')" class="btn btn-sm btn-outline">PDF</button><button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.5rem" onclick="openEditQuote(${q.id})" title="Modifier">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                </button>${q.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="acceptQuote(${q.id}, '${q.quote_number}')">✓ Accepter</button><button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}</div></td>
+                                </button>${q.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="acceptQuote(${q.id}, '${q.quote_number}')">✓ Accepter</button><button class="btn btn-sm btn-ghost" onclick="expireQuote(${q.id})">Expirer</button>` : ''}<button class="btn btn-sm btn-danger" onclick="deleteQuote(${q.id})">Suppr.</button></div></td>
                     </tr>`).join('');
             else if (name === 'invoices' || name === 'payments') tbody.innerHTML = paged.map(inv => {
                 const ov = inv.status === 'unpaid' && new Date(inv.due_date) < new Date();
@@ -3316,7 +3357,7 @@
                             <td><span class="badge badge-${ov ? 'overdue' : inv.status}">${ov ? 'En retard' : statusLabel(inv.status)}</span></td>
                             <td>${inv.due_date ? fmtDate(inv.due_date) : '—'}</td>
                             <td>${inv.paid_at ? fmtDate(inv.paid_at) : '—'}</td>
-                            <td><div class="td-actions"><button onclick="downloadPdf('/api/admin/invoices/${inv.id}/pdf', '${inv.invoice_number}.pdf')" class="btn btn-sm btn-outline">PDF</button><button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.45rem" onclick="openEditInvoice(${inv.id})" title="Modifier"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">Payée</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</div></td>
+                            <td><div class="td-actions"><button onclick="downloadPdf('/api/admin/invoices/${inv.id}/pdf', '${inv.invoice_number}.pdf')" class="btn btn-sm btn-outline">PDF</button><button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.45rem" onclick="openEditInvoice(${inv.id})" title="Modifier"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>${inv.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${inv.id})">Payée</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}<button class="btn btn-sm btn-danger" onclick="deleteInvoice(${inv.id})">Suppr.</button></div></td>
                         </tr>`;
             }).join('');
             else if (name === 'documents') tbody.innerHTML = paged.map(d => `<tr>
@@ -3362,7 +3403,7 @@
         // Navigation directe par section — fonctions nommées appelables depuis onclick HTML
         function _gotoPage(name, p) {
             if (!tState[name]) return;
-            const _pp = name === 'documents' ? 10 : PER_PAGE;
+            const _pp = getPP(name);
             const list = name === 'documents' ? allDocuments : name === 'quotes' ? allQuotes : name === 'invoices' ? allInvoices : name === 'mandates' ? allMandates : name === 'contracts' ? allContracts : [];
             const total = list.length;
             const pages = Math.max(1, Math.ceil(total / _pp));
@@ -3380,8 +3421,9 @@
             // Stocker le callback globalement pour pouvoir l'appeler depuis onclick HTML
             window._pageCbs[name] = onPage;
 
-            const from = total ? Math.min((page - 1) * 10 + 1, total) : 0;
-            const to = total ? Math.min(page * 10, total) : 0;
+            const _rpp = PP[name] || PER_PAGE;
+            const from = total ? Math.min((page - 1) * _rpp + 1, total) : 0;
+            const to = total ? Math.min(page * _rpp, total) : 0;
             const infoText = total ? from + '–' + to + ' sur ' + total + ' · Page ' + page + '/' + pages : '';
             if (info) info.textContent = infoText;
             pag.style.display = (total && pages > 1) ? 'flex' : 'none';
@@ -3904,12 +3946,15 @@
         async function loadContracts() {
             const d = await api('/contracts').catch(() => ({ success: false }));
             if (!d.success) return;
+            const prevPage = tState.contracts ? tState.contracts.p : 1;
             allContracts = d.contracts || [];
             const pending = allContracts.filter(c => c.status === 'draft' || c.status === 'pending').length;
             const b = document.getElementById('badge-contracts'); if (b) { b.textContent = pending; b.style.display = pending ? 'inline' : 'none'; }
+            if (!tState.contracts) tState.contracts = { p: 1 };
+            tState.contracts.p = prevPage; // Préserver la page courante
             renderContracts();
         }
-        function filterContracts() { renderContracts(); }
+        function filterContracts() { if (tState.contracts) tState.contracts.p = 1; renderContracts(); }
         function setContractFilter(f, btn) { contractFilter = f; btn.closest('.filter-tabs').querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderContracts(); }
         function renderContracts() {
             const search = (document.getElementById('contracts-search')?.value || '').toLowerCase();
@@ -3919,15 +3964,19 @@
             const tbody = document.getElementById('contracts-tbody');
             const sl = { draft: 'Brouillon', pending: 'En attente signature', signed: 'Signé', cancelled: 'Annulé' };
             const bc = { draft: 'badge-expired', pending: 'badge-pending', signed: 'badge-paid', cancelled: 'badge-overdue' };
-            if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun contrat.</td></tr>'; return; }
-            tbody.innerHTML = list.map(c => `<tr>
-                        <td><strong>${c.contract_number}</strong></td>
-                        <td>${c.client_name}<br><span style="font-size:0.73rem;color:var(--text-light)">${c.company_name || ''}</span></td>
-                        <td>${c.title}</td>
-                        <td>${c.mandate_title || c.quote_number || '—'}</td>
-                        <td><span class="badge ${bc[c.status] || 'badge-expired'}">${sl[c.status] || c.status}</span></td>
-                        <td>${fmtDate(c.created_at)}</td>
-                        <td style="color:var(--success)">${c.signed_at ? fmtDate(c.signed_at) : '—'}</td>
+            const total = list.length;
+            if (!tState.contracts) tState.contracts = { p: 1 };
+            const _pp = getPP('contracts'); const pages = Math.max(1, Math.ceil(total / _pp));
+            if (tState.contracts.p > pages) tState.contracts.p = 1;
+            const paged = list.slice((tState.contracts.p - 1) * _pp, tState.contracts.p * _pp);
+            if (!paged.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:2rem">Aucun contrat.</td></tr>'; renderPag('contracts', 0, 1, 1, () => { }); return; }
+            tbody.innerHTML = paged.map(c => `<tr>
+                        <td><strong style="font-size:0.82rem">${c.contract_number}</strong></td>
+                        <td style="font-size:0.83rem">${c.client_name}<br><span style="font-size:0.7rem;color:var(--text-light)">${c.company_name || ''}</span></td>
+                        <td style="font-size:0.83rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${c.title}">${c.title}</td>
+                        <td><span class="badge ${bc[c.status] || 'badge-expired'}" style="font-size:0.68rem">${sl[c.status] || c.status}</span></td>
+                        <td style="font-size:0.78rem">${fmtDate(c.created_at)}</td>
+                        <td style="font-size:0.78rem;color:var(--success)">${c.signed_at ? fmtDate(c.signed_at) : '—'}</td>
                         <td><div class="td-actions" style="position:relative">
                             ${c.file_url ? `<a href="${c.file_url}" target="_blank" class="btn btn-sm btn-outline">PDF</a>` : ''}
                             ${c.status !== 'signed' ? `<button class="btn btn-sm btn-primary" onclick="sendContractForSignature(${c.id})" title="Envoyer pour signature">✉ Signer</button>` : '<span style="color:var(--success);font-size:0.78rem;font-weight:600">✓ Signé</span>'}
@@ -3946,9 +3995,15 @@
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                     Historique
                                 </button>
+                                <div style="height:1px;background:var(--border);margin:0.3rem 0.75rem"></div>
+                                <button onclick="closeContractMenus();deleteContract(${c.id},'${c.contract_number}')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                                    Supprimer
+                                </button>
                             </div>
                         </div></td>
                     </tr>`).join('');
+            renderPag('contracts', total, tState.contracts.p, pages, p => { tState.contracts.p = p; renderContracts(); });
         }
         async function createContract() {
             const clientId = v('nct-client');
@@ -4081,13 +4136,17 @@
             let list = [...allDisputes];
             if (disputeFilter !== 'all') list = list.filter(d => d.status === disputeFilter);
             if (search) list = list.filter(d => (d.client_name + ' ' + d.title).toLowerCase().includes(search));
+            const _pp = getPP('disputes'); const total = list.length, pages = Math.max(1, Math.ceil(total / _pp));
+            if (!tState.disputes) tState.disputes = { p: 1 };
+            if (tState.disputes.p > pages) tState.disputes.p = 1;
+            const paged = list.slice((tState.disputes.p - 1) * _pp, tState.disputes.p * _pp);
             const tbody = document.getElementById('disputes-tbody');
             const pColors = { low: 'var(--success)', medium: 'var(--warning)', high: 'var(--error)' };
             const pLabels = { low: 'Faible', medium: 'Moyenne', high: 'Élevée' };
             const sColors = { open: 'badge-overdue', in_progress: 'badge-pending', resolved: 'badge-paid', closed: 'badge-expired' };
             const sLabels = { open: 'Ouvert', in_progress: 'En cours', resolved: 'Résolu', closed: 'Fermé' };
-            if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun litige.</td></tr>'; return; }
-            tbody.innerHTML = list.map(d => `<tr>
+            if (!paged.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun litige.</td></tr>'; }
+            else tbody.innerHTML = paged.map(d => `<tr>
                         <td><strong>${d.client_name}</strong><br><span style="font-size:0.73rem;color:var(--text-light)">${d.company_name || ''}</span></td>
                         <td><div style="font-weight:600">${d.title}</div>${d.resolution ? `<div style="font-size:0.73rem;color:var(--text-light);font-style:italic;margin-top:2px">${d.resolution}</div>` : ''}</td>
                         <td><span style="font-size:0.72rem;font-weight:700;color:${pColors[d.priority] || 'var(--text-light)'}">${pLabels[d.priority] || d.priority}</span></td>
@@ -4095,36 +4154,43 @@
                         <td>${d.invoice_number || '—'}</td>
                         <td>${fmtDate(d.opened_at)}</td>
                         <td style="color:var(--success)">${d.resolved_at ? fmtDate(d.resolved_at) : '—'}</td>
-                        <td>${d.status !== 'resolved' && d.status !== 'closed' ? `<button class="btn btn-sm btn-outline" onclick="openResolveDispute(${d.id})">Traiter</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</td>
+                        <td>${d.status !== 'resolved' && d.status !== 'closed' ? `<button class="btn btn-sm btn-outline" onclick="openResolveDispute(${d.id})">Traiter</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}<button class="btn btn-sm btn-danger" onclick="deleteDispute(${d.id})">Suppr.</button></td>
                     </tr>`).join('');
+            renderPag('disputes', total, tState.disputes.p, pages, p => { tState.disputes.p = p; renderDisputes(); });
         }
         async function createDispute() { const d = await api('/disputes', 'POST', { client_id: v('nd2-client'), invoice_id: v('nd2-invoice') || null, mandate_id: v('nd2-mandate') || null, title: v('nd2-title'), description: v('nd2-desc'), priority: v('nd2-priority') }); if (d.success) { closeModal('modal-new-dispute'); loadDisputes(); showToast('Litige ouvert !', 'error'); } else showToast(d.message, 'error'); }
         function openResolveDispute(id) { document.getElementById('rd-id').value = id; openModal('modal-resolve-dispute'); }
         async function resolveDispute() { const id = v('rd-id'); const d = await api('/disputes/' + id, 'PUT', { status: v('rd-status'), resolution: v('rd-resolution') }); if (d.success) { closeModal('modal-resolve-dispute'); loadDisputes(); showToast('Litige mis à jour !', 'success'); } else showToast(d.message, 'error'); }
 
         // REMBOURSEMENTS
-        async function loadRefunds() { const d = await api('/refunds').catch(() => ({ success: false })); if (!d.success) return; allRefunds = d.refunds || []; renderRefunds(); }
+        async function loadRefunds() { const d = await api('/refunds').catch(() => ({ success: false })); if (!d.success) return; const _p = tState.refunds ? tState.refunds.p : 1; allRefunds = d.refunds || []; if (!tState.refunds) tState.refunds = { p: 1 }; tState.refunds.p = _p; renderRefunds(); }
         function renderRefunds() {
+            const total_list = allRefunds.length;
+            const _pp = getPP('refunds'); const pages = Math.max(1, Math.ceil(total_list / _pp));
+            if (!tState.refunds) tState.refunds = { p: 1 };
+            if (tState.refunds.p > pages) tState.refunds.p = 1;
+            const paged = allRefunds.slice((tState.refunds.p - 1) * _pp, tState.refunds.p * _pp);
             const tbody = document.getElementById('refunds-tbody');
             const sl = { pending: 'En attente', processed: 'Traité', cancelled: 'Annulé' };
             const bc = { pending: 'badge-pending', processed: 'badge-paid', cancelled: 'badge-overdue' };
-            if (!allRefunds.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun remboursement.</td></tr>'; return; }
-            tbody.innerHTML = allRefunds.map(r => `<tr>
+            if (!paged.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun remboursement.</td></tr>'; }
+            else tbody.innerHTML = paged.map(r => `<tr>
                         <td><strong>${r.refund_number}</strong></td><td>${r.client_name}</td>
                         <td style="font-size:0.82rem;max-width:200px">${r.reason}</td>
                         <td>${fmt(r.amount)}</td><td style="font-weight:700;color:var(--error)">${fmt(r.total_amount)}</td>
                         <td><span class="badge ${bc[r.status] || 'badge-expired'}">${sl[r.status] || r.status}</span></td>
                         <td>${fmtDate(r.created_at)}</td>
-                        <td>${r.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="processRefund(${r.id})">✓ Confirmer</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</td>
+                        <td>${r.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="processRefund(${r.id})">✓ Confirmer</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}<button class="btn btn-sm btn-danger" onclick="deleteRefund(${r.id})">Suppr.</button></td>
                     </tr>`).join('');
+            renderPag('refunds', total_list, tState.refunds.p, pages, p => { tState.refunds.p = p; renderRefunds(); });
         }
         function calcRefundTaxes() { const ht = parseFloat(document.getElementById('nr-amount').value) || 0; const tps = ht * 0.05, tvq = ht * 0.09975; document.getElementById('nr-tax-preview').style.display = ht ? 'block' : 'none'; set('nr-ht', fmt(ht)); set('nr-tps', fmt(tps)); set('nr-tvq', fmt(tvq)); set('nr-ttc', fmt(ht + tps + tvq)); }
         async function createRefund() { const d = await api('/refunds', 'POST', { client_id: v('nr-client'), invoice_id: v('nr-invoice') || null, reason: v('nr-reason'), amount: parseFloat(v('nr-amount')), notes: v('nr-notes') }); if (d.success) { closeModal('modal-new-refund'); loadRefunds(); showToast('Remboursement créé !', 'success'); } else showToast(d.message, 'error'); }
         async function processRefund(id) { const ok = await confirm2('Confirmer remboursement', 'Marquer ce remboursement comme traité ?'); if (!ok) return; const d = await api('/refunds/' + id + '/process', 'PUT'); if (d.success) { loadRefunds(); showToast('Remboursement confirmé !', 'success'); } else showToast(d.message, 'error'); }
 
         // DÉPENSES
-        async function loadExpenses() { const d = await api('/expenses').catch(() => ({ success: false })); if (!d.success) return; allExpenses = d.expenses || []; const t = d.totals || {}; set('exp-total', fmt(t.total_ht)); set('exp-tps', fmt(t.total_tps)); set('exp-tvq', fmt(t.total_tvq)); renderExpenses(); }
-        function filterExpenses() { renderExpenses(); }
+        async function loadExpenses() { const d = await api('/expenses').catch(() => ({ success: false })); if (!d.success) return; const _p = tState.expenses ? tState.expenses.p : 1; allExpenses = d.expenses || []; const t = d.totals || {}; set('exp-total', fmt(t.total_ht)); set('exp-tps', fmt(t.total_tps)); set('exp-tvq', fmt(t.total_tvq)); if (!tState.expenses) tState.expenses = { p: 1 }; tState.expenses.p = _p; renderExpenses(); }
+        function filterExpenses() { if (tState.expenses) tState.expenses.p = 1; renderExpenses(); }
         function renderExpenses() {
             const search = (document.getElementById('expenses-search')?.value || '').toLowerCase();
             const year = document.getElementById('exp-year-filter')?.value || '';
@@ -4133,8 +4199,13 @@
             if (year) list = list.filter(e => e.expense_date && e.expense_date.startsWith(year));
             const tbody = document.getElementById('expenses-tbody');
             const catLabels = { logiciel: 'Logiciels', materiel: 'Matériel', telecom: 'Télécom', formation: 'Formation', marketing: 'Marketing', transport: 'Transport', bureau: 'Bureau', comptable: 'Comptable/Légal', assurance: 'Assurance', autre: 'Autre' };
-            if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucune dépense.</td></tr>'; return; }
-            tbody.innerHTML = list.map(e => `<tr>
+            const total = list.length;
+            if (!tState.expenses) tState.expenses = { p: 1 };
+            const _pp = getPP('expenses'); const pages = Math.max(1, Math.ceil(total / _pp));
+            if (tState.expenses.p > pages) tState.expenses.p = 1;
+            const paged = list.slice((tState.expenses.p - 1) * _pp, tState.expenses.p * _pp);
+            if (!paged.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucune dépense.</td></tr>'; renderPag('expenses', 0, 1, 1, () => { }); return; }
+            tbody.innerHTML = paged.map(e => `<tr>
                         <td>${fmtDate(e.expense_date)}</td><td><strong>${e.title}</strong></td>
                         <td><span class="badge badge-active" style="background:rgba(46,117,182,0.1);color:var(--secondary)">${catLabels[e.category] || e.category || '—'}</span></td>
                         <td>${e.vendor || '—'}</td><td style="font-weight:700">${fmt(e.amount)}</td>
@@ -4142,6 +4213,7 @@
                         <td style="color:var(--success);font-weight:600">${fmt(e.tvq_paid)}</td>
                         <td><div class="td-actions">${e.receipt_url ? `<a href="${e.receipt_url}" target="_blank" class="btn btn-sm btn-outline">Reçu</a>` : ''}<button class="btn btn-sm btn-ghost" style="padding:0.35rem 0.45rem" onclick="openEditExpense(${e.id})" title="Modifier"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-sm btn-danger" onclick="deleteExpense(${e.id})">Suppr.</button></div></td>
                     </tr>`).join('');
+            renderPag('expenses', total, tState.expenses.p, pages, p => { tState.expenses.p = p; renderExpenses(); });
         }
         async function createExpense() { const d = await api('/expenses', 'POST', { title: v('nex-title'), category: v('nex-category'), amount: parseFloat(v('nex-amount')), tps_paid: parseFloat(v('nex-tps')) || 0, tvq_paid: parseFloat(v('nex-tvq')) || 0, vendor: v('nex-vendor'), receipt_url: v('nex-receipt'), expense_date: v('nex-date'), notes: v('nex-notes') }); if (d.success) { closeModal('modal-new-expense'); loadExpenses(); showToast('Dépense enregistrée !', 'success'); } else showToast(d.message, 'error'); }
         async function deleteExpense(id) { const ok = await confirm2('Supprimer', 'Supprimer cette dépense ?'); if (!ok) return; const d = await api('/expenses/' + id, 'DELETE'); if (d.success) { loadExpenses(); showToast('Dépense supprimée.'); } }
@@ -4183,8 +4255,13 @@
             const tbody = document.getElementById('taxdecl-tbody');
             const sl = { draft: 'Brouillon', submitted: 'Soumise', filed: 'Déposée' };
             const bc = { draft: 'badge-expired', submitted: 'badge-pending', filed: 'badge-paid' };
-            if (!allTaxDecls.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-light);padding:2rem">Aucune déclaration enregistrée.</td></tr>'; return; }
-            tbody.innerHTML = allTaxDecls.map(d => `<tr>
+            const total = allTaxDecls.length;
+            if (!tState.taxdecl) tState.taxdecl = { p: 1 };
+            const _pp = getPP('taxdecl'); const pages = Math.max(1, Math.ceil(total / _pp));
+            if (tState.taxdecl.p > pages) tState.taxdecl.p = 1;
+            const paged = allTaxDecls.slice((tState.taxdecl.p - 1) * _pp, tState.taxdecl.p * _pp);
+            if (!paged.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-light);padding:2rem">Aucune déclaration enregistrée.</td></tr>'; renderPag('taxdecl', 0, 1, 1, () => { }); return; }
+            tbody.innerHTML = paged.map(d => `<tr>
                         <td><strong>${d.period_label}</strong></td>
                         <td>${d.period_type === 'quarterly' ? 'Trimestrielle' : 'Annuelle'}</td>
                         <td style="font-weight:700">${fmt(d.total_revenue_ht)}</td>
@@ -4193,8 +4270,9 @@
                         <td style="color:var(--primary);font-weight:800">${fmt(d.total_taxes)}</td>
                         <td><span class="badge ${bc[d.status] || 'badge-expired'}">${sl[d.status] || d.status}</span></td>
                         <td>${d.submitted_at ? fmtDate(d.submitted_at) : '—'}</td>
-                        <td>${d.status === 'draft' ? `<button class="btn btn-sm btn-success" onclick="submitDecl(${d.id})">Soumettre</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}</td>
+                        <td>${d.status === 'draft' ? `<button class="btn btn-sm btn-success" onclick="submitDecl(${d.id})">Soumettre</button>` : '<span style="color:var(--success);font-size:0.78rem">✓</span>'}<button class="btn btn-sm btn-danger" onclick="deleteTaxDecl(${d.id})">Suppr.</button></td>
                     </tr>`).join('');
+            renderPag('taxdecl', total, tState.taxdecl.p, pages, p => { tState.taxdecl.p = p; renderTaxDecls(); });
         }
         async function createTaxDecl() { const d = await api('/tax-declarations', 'POST', { period_type: v('ntd-type'), period_label: v('ntd-label'), period_start: v('ntd-start'), period_end: v('ntd-end'), notes: v('ntd-notes') }); if (d.success) { closeModal('modal-new-taxdecl'); loadTaxDecls(); showToast('Déclaration créée !', 'success'); } else showToast(d.message, 'error'); }
         async function submitDecl(id) { const ok = await confirm2('Soumettre la déclaration', 'Marquer comme soumise à Revenu Canada/Québec ?', 'Soumettre'); if (!ok) return; const d = await api('/tax-declarations/' + id + '/submit', 'PUT'); if (d.success) { loadTaxDecls(); showToast('Déclaration soumise !', 'success'); } else showToast(d.message, 'error'); }
@@ -4263,6 +4341,14 @@
         async function markPaid(id) { const ok = await confirm2('Confirmer le paiement', 'Marquer cette facture comme payée (paiement manuel) ?'); if (!ok) return; const d = await api('/invoices/' + id + '/mark-paid', 'PUT'); if (d.success) { loadInvoices(); loadPayments(); loadDashboard(); showToast('Facture payée !', 'success'); } else showToast(d.message, 'error'); }
         async function expireQuote(id) { const ok = await confirm2('Marquer expiré', 'Marquer ce devis comme expiré ?'); if (!ok) return; await api('/quotes/' + id + '/expire', 'PUT'); loadQuotes(); showToast('Devis expiré.'); }
         async function deleteDocument(id) { const ok = await confirm2('Supprimer', 'Supprimer ce document définitivement ?'); if (!ok) return; const d = await api('/documents/' + id, 'DELETE'); if (d.success) { loadDocuments(); showToast('Document supprimé.'); } }
+        async function deleteQuote(id) { const ok = await confirm2('Supprimer le devis', 'Supprimer ce devis définitivement ? Cette action est irréversible.'); if (!ok) return; const d = await api('/quotes/' + id, 'DELETE'); if (d.success) { loadQuotes(); loadDashboard(); showToast('Devis supprimé.'); } else showToast(d.message || 'Erreur', 'error'); }
+        async function deleteInvoice(id) { const ok = await confirm2('Supprimer la facture', 'Supprimer cette facture définitivement ? Cette action est irréversible.'); if (!ok) return; const d = await api('/invoices/' + id, 'DELETE'); if (d.success) { loadInvoices(); loadPayments(); loadDashboard(); showToast('Facture supprimée.'); } else showToast(d.message || 'Erreur', 'error'); }
+        async function deleteMandate(id) { const ok = await confirm2('Supprimer le mandat', 'Supprimer ce mandat définitivement ? Cette action est irréversible.'); if (!ok) return; const d = await api('/mandates/' + id, 'DELETE'); if (d.success) { loadMandates(); loadDashboard(); showToast('Mandat supprimé.'); } else showToast(d.message || 'Erreur', 'error'); }
+        async function deleteContract(id, num) { const ok = await confirm2('Supprimer le contrat', 'Supprimer le contrat ' + num + ' définitivement ?'); if (!ok) return; const d = await api('/contracts/' + id, 'DELETE'); if (d.success) { loadContracts(); showToast('Contrat supprimé.'); } else showToast(d.message || 'Erreur', 'error'); }
+        async function deleteClient(id, name) { const ok = await confirm2('Supprimer le client', 'Supprimer <strong>' + name + '</strong> définitivement ? Toutes ses données (mandats, factures, messages) seront supprimées.'); if (!ok) return; const d = await api('/clients/' + id, 'DELETE'); if (d.success) { loadClients(); loadDashboard(); showToast('Client supprimé.'); } else showToast(d.message || 'Erreur', 'error'); }
+        async function deleteDispute(id) { const ok = await confirm2('Supprimer le litige', 'Supprimer ce litige définitivement ?'); if (!ok) return; const d = await api('/disputes/' + id, 'DELETE'); if (d.success) { loadDisputes(); showToast('Litige supprimé.'); } else showToast(d.message || 'Erreur', 'error'); }
+        async function deleteRefund(id) { const ok = await confirm2('Supprimer le remboursement', 'Supprimer ce remboursement définitivement ?'); if (!ok) return; const d = await api('/refunds/' + id, 'DELETE'); if (d.success) { loadRefunds(); showToast('Remboursement supprimé.'); } else showToast(d.message || 'Erreur', 'error'); }
+        async function deleteTaxDecl(id) { const ok = await confirm2('Supprimer la déclaration', 'Supprimer cette déclaration fiscale définitivement ?'); if (!ok) return; const d = await api('/tax-declarations/' + id, 'DELETE'); if (d.success) { loadTaxDecls(); showToast('Déclaration supprimée.'); } else showToast(d.message || 'Erreur', 'error'); }
 
         function editDocument(id) {
             const idStr = String(id).replace(/^['"]|['"]$/g, ''); // Nettoyer guillemets
@@ -4856,21 +4942,27 @@
             });
             var tbody = document.getElementById('transactions-tbody');
             if (!tbody) return;
-            if (!list.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucune transaction.</td></tr>'; return; }
+            var total = list.length;
+            if (!tState.transactions) tState.transactions = { p: 1 };
+            var _pp = getPP('transactions'); var pages = Math.max(1, Math.ceil(total / _pp));
+            if (tState.transactions.p > pages) tState.transactions.p = 1;
+            var paged = list.slice((tState.transactions.p - 1) * _pp, tState.transactions.p * _pp);
+            if (!paged.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucune transaction.</td></tr>'; renderPag('transactions', 0, 1, 1, function () { }); return; }
             var statusColors = { paid: 'badge-paid', refunded: 'badge-overdue', pending: 'badge-pending', failed: 'badge-expired' };
             var statusLabels2 = { paid: 'Payée', refunded: 'Remboursée', pending: 'En attente', failed: 'Échouée' };
-            tbody.innerHTML = list.map(function (t) {
+            tbody.innerHTML = paged.map(function (t) {
                 return '<tr><td>' + fmtDate(t.paid_at || t.created_at) + '</td><td>' + (t.client_name || '—') + '</td><td>' + (t.invoice_number || '—') + '</td><td style="font-weight:700;color:var(--primary)">' + fmt(t.amount) + '</td><td style="font-size:0.8rem">Stripe</td><td><span class="badge ' + (statusColors[t.status] || 'badge-expired') + '">' + (statusLabels2[t.status] || t.status) + '</span></td><td style="font-size:0.72rem;color:var(--text-light);max-width:120px;overflow:hidden;text-overflow:ellipsis">' + (t.stripe_id || '—') + '</td><td>' + (t.stripe_id ? '<a href="https://dashboard.stripe.com/payments/' + t.stripe_id + '" target="_blank" class="btn btn-sm btn-ghost" style="font-size:0.72rem">Stripe ↗</a>' : '') + '</td></tr>';
             }).join('');
-            // Update stats from local data
+            // Update stats from filtered list (all pages)
             var totalPaid = list.filter(function (t) { return t.status === 'paid'; }).reduce(function (s, t) { return s + parseFloat(t.amount || 0); }, 0);
             var totalRef = list.filter(function (t) { return t.status === 'refunded'; }).reduce(function (s, t) { return s + parseFloat(t.amount || 0); }, 0);
             var el1 = document.getElementById('txn-total-paid'); if (el1) el1.textContent = fmt(totalPaid);
             var el2 = document.getElementById('txn-total-refunded'); if (el2) el2.textContent = fmt(totalRef);
-            var el3 = document.getElementById('txn-count'); if (el3) el3.textContent = list.length;
+            var el3 = document.getElementById('txn-count'); if (el3) el3.textContent = total;
+            renderPag('transactions', total, tState.transactions.p, pages, function (p) { tState.transactions.p = p; renderTransactions(); });
         }
 
-        function filterTransactions() { renderTransactions(); }
+        function filterTransactions() { if (tState.transactions) tState.transactions.p = 1; renderTransactions(); }
         function setTxnFilter(f, btn) {
             txnFilter = f;
             btn.closest('.filter-tabs').querySelectorAll('.filter-tab').forEach(function (b) { b.classList.remove('active'); });

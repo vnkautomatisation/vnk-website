@@ -579,9 +579,10 @@ router.get('/documents', authenticateAdmin, async (req, res) => {
 
 router.post('/documents', authenticateAdmin, async (req, res) => {
     try {
-        const { client_id, mandate_id, title, description, file_type, file_name, file_url, file_data, file_size, category, status } = req.body;
+        const { client_id, mandate_id, title, description, file_type, file_name, file_url, file_data, file_size } = req.body;
         if (!client_id || !title) return res.status(400).json({ success: false, message: 'client_id et title requis.' });
         let finalUrl = file_url || null;
+        // If base64 data provided (direct upload), store as data URL
         if (file_data && !finalUrl) {
             const mimes = {
                 pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -592,36 +593,14 @@ router.post('/documents', authenticateAdmin, async (req, res) => {
             finalUrl = 'data:' + (mimes[ext] || 'application/octet-stream') + ';base64,' + file_data;
         }
         const result = await pool.query(
-            `INSERT INTO documents (client_id, mandate_id, title, description, file_type, file_name, file_url, file_size, category, status, created_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW()) RETURNING *`,
+            `INSERT INTO documents (client_id, mandate_id, title, description, file_type, file_name, file_url, file_size, created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING *`,
             [client_id, mandate_id || null, title, description || null, file_type || 'other',
-                file_name || title, finalUrl, file_size || null, category || null, status || 'disponible']
+                file_name || title, finalUrl, file_size || null]
         );
         res.status(201).json({ success: true, document: result.rows[0] });
     } catch (err) {
         console.error('POST document error:', err);
-        res.status(500).json({ success: false, message: 'Server error.' });
-    }
-});
-
-// PUT /api/admin/documents/:id — modifier titre, catégorie, statut, fichier
-router.put('/documents/:id', authenticateAdmin, async (req, res) => {
-    try {
-        const { title, description, category, file_url, status } = req.body;
-        if (!title) return res.status(400).json({ success: false, message: 'title requis.' });
-        const fields = ['title=$1', 'description=$2', 'category=$3'];
-        const values = [title, description || null, category || null];
-        if (file_url !== undefined) { fields.push('file_url=$' + (values.length + 1)); values.push(file_url); }
-        if (status !== undefined) { fields.push('status=$' + (values.length + 1)); values.push(status); }
-        values.push(req.params.id);
-        const result = await pool.query(
-            'UPDATE documents SET ' + fields.join(', ') + ', updated_at=NOW() WHERE id=$' + values.length + ' RETURNING *',
-            values
-        );
-        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Document non trouvé.' });
-        res.json({ success: true, document: result.rows[0] });
-    } catch (err) {
-        console.error('PUT document error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
@@ -1105,6 +1084,34 @@ router.put('/expenses/:id', authenticateAdmin, async (req, res) => {
         console.error('PUT expense:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
     }
+});
+
+// ============================================
+// DELETE — Suppression complète sans restriction
+// ============================================
+router.delete('/quotes/:id', authenticateAdmin, async (req, res) => {
+    try { await pool.query('DELETE FROM quotes WHERE id=$1', [req.params.id]); res.json({ success: true }); }
+    catch (err) { res.status(500).json({ success: false, message: 'Server error.' }); }
+});
+
+router.delete('/invoices/:id', authenticateAdmin, async (req, res) => {
+    try { await pool.query('DELETE FROM invoices WHERE id=$1', [req.params.id]); res.json({ success: true }); }
+    catch (err) { res.status(500).json({ success: false, message: 'Server error.' }); }
+});
+
+router.delete('/mandates/:id', authenticateAdmin, async (req, res) => {
+    try { await pool.query('DELETE FROM mandates WHERE id=$1', [req.params.id]); res.json({ success: true }); }
+    catch (err) { res.status(500).json({ success: false, message: 'Server error.' }); }
+});
+
+router.delete('/contracts/:id', authenticateAdmin, async (req, res) => {
+    try { await pool.query('DELETE FROM contracts WHERE id=$1', [req.params.id]); res.json({ success: true }); }
+    catch (err) { res.status(500).json({ success: false, message: 'Server error.' }); }
+});
+
+router.delete('/clients/:id', authenticateAdmin, async (req, res) => {
+    try { await pool.query('DELETE FROM clients WHERE id=$1', [req.params.id]); res.json({ success: true }); }
+    catch (err) { res.status(500).json({ success: false, message: 'Server error.' }); }
 });
 
 module.exports = router;
