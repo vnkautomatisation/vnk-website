@@ -43,7 +43,6 @@ const C = {
     email: 'yan.verone@vnk.ca',
     phone: '(819) 290-8686',
     address: 'Québec, QC, Canada',
-    addressFull: 'Québec, QC, Canada',
     tps: 'À compléter (Revenu Canada)',
     tvq: 'À compléter (Revenu Québec)',
     site: 'vnk-website-production.up.railway.app',
@@ -490,8 +489,111 @@ async function generateInvoicePDF(res, invoice, client) {
 
 
 // ─────────────────────────────────────────────
-// TEMPLATE 3 — CONTRAT DE SERVICE
-// Header bicolore split · clauses numérotées · double signature propre
+// HELPERS CONTRAT — mise en page multi-pages
+// ─────────────────────────────────────────────
+
+// Vérifie l'espace dispo et saute de page si nécessaire
+function ensureSpace(doc, needed) {
+    if (doc.y + needed > doc.page.height - 54) {
+        doc.addPage();
+        doc.y = 36;
+    }
+}
+
+// Écrit un titre de section avec saut de page auto
+function contractSection(doc, title, cw) {
+    ensureSpace(doc, 40);
+    const y = doc.y;
+    doc.rect(C.marginL, y, cw, 20).fillColor(C.blue).fill();
+    doc.fillColor(C.white).fontSize(8).font('Helvetica-Bold')
+        .text(title.toUpperCase(), C.marginL + 8, y + 6, { width: cw - 16, characterSpacing: 0.5 });
+    doc.y = y + 26;
+}
+
+// Écrit un sous-titre
+function contractSubtitle(doc, text, cw) {
+    ensureSpace(doc, 24);
+    doc.fillColor(C.blue).fontSize(8.5).font('Helvetica-Bold')
+        .text(text, C.marginL, doc.y, { width: cw });
+    doc.y += 13;
+}
+
+// Écrit un paragraphe avec saut de page auto
+function contractPara(doc, text, cw, opts) {
+    opts = opts || {};
+    const indent = opts.indent || 0;
+    const h = doc.heightOfString(text, { width: cw - indent, lineGap: 2 }) + 6;
+    ensureSpace(doc, h);
+    doc.fillColor(opts.color || C.text).fontSize(opts.size || 7.5).font(opts.bold ? 'Helvetica-Bold' : 'Helvetica')
+        .text(text, C.marginL + indent, doc.y, { width: cw - indent, lineGap: 2 });
+    doc.y += h;
+}
+
+// Ligne de tableau
+function tableRow(doc, cols, widths, isHeader, cw, y) {
+    const rowH = 18;
+    const bg = isHeader ? C.blue : C.grayLight;
+    let x = C.marginL;
+    doc.rect(C.marginL, y, cw, rowH).fillColor(bg).fill();
+    doc.rect(C.marginL, y, cw, rowH).lineWidth(0.5).strokeColor(C.border).strokeOpacity(0.5).stroke();
+    cols.forEach((col, i) => {
+        doc.fillColor(isHeader ? C.white : C.text).fontSize(7.5)
+            .font(isHeader ? 'Helvetica-Bold' : 'Helvetica')
+            .text(col, x + 4, y + 5, { width: widths[i] - 8 });
+        x += widths[i];
+    });
+    return y + rowH;
+}
+
+// Tableau complet avec header
+function contractTable(doc, headers, rows, widths, cw) {
+    ensureSpace(doc, (rows.length + 1) * 18 + 8);
+    let y = doc.y;
+    y = tableRow(doc, headers, widths, true, cw, y);
+    rows.forEach((row, i) => {
+        if (i % 2 === 1) {
+            doc.rect(C.marginL, y, cw, 18).fillColor('#EEF4FB').fill();
+            doc.rect(C.marginL, y, cw, 18).lineWidth(0.5).strokeColor(C.border).strokeOpacity(0.5).stroke();
+            let x2 = C.marginL;
+            row.forEach((col, j) => {
+                doc.fillColor(C.text).fontSize(7.5).font('Helvetica')
+                    .text(col, x2 + 4, y + 5, { width: widths[j] - 8 });
+                x2 += widths[j];
+            });
+            y += 18;
+        } else {
+            y = tableRow(doc, row, widths, false, cw, y);
+        }
+    });
+    doc.y = y + 8;
+}
+
+// Puce item
+function bulletItem(doc, text, cw) {
+    const h = doc.heightOfString(text, { width: cw - 14, lineGap: 2 }) + 5;
+    ensureSpace(doc, h);
+    doc.fillColor(C.blue).fontSize(8).font('Helvetica-Bold')
+        .text('•', C.marginL, doc.y, { width: 10 });
+    doc.fillColor(C.text).fontSize(7.5).font('Helvetica')
+        .text(text, C.marginL + 12, doc.y - (doc.currentLineHeight() + 2), { width: cw - 14, lineGap: 2 });
+    doc.y += h;
+}
+
+// Header de page répété (compact, pour pages suivantes)
+function miniHeader(doc, contractNumber, pageNum) {
+    const w = pageWidth(doc);
+    doc.rect(0, 0, w, 28).fillColor(C.navy).fill();
+    doc.fillColor(C.white).fontSize(7.5).font('Helvetica-Bold')
+        .text(C.name, C.marginL, 10, { width: w / 2 });
+    doc.fillColor('#B8CDD8').fontSize(7).font('Helvetica')
+        .text(`${contractNumber}  ·  Page ${pageNum}`, w / 2, 10, { width: w / 2 - C.marginR, align: 'right' });
+    doc.y = 36;
+}
+
+
+// ─────────────────────────────────────────────
+// TEMPLATE 3 — CONTRAT DE SERVICE COMPLET
+// Contrat principal + Annexes A–D avec tarifs du site
 // ─────────────────────────────────────────────
 async function generateContractPDF(res, contract, client, quote) {
     const doc = new PDFDocument({ size: 'LETTER', margin: 0, bufferPages: true });
@@ -502,38 +604,29 @@ async function generateContractPDF(res, contract, client, quote) {
     const w = pageWidth(doc);
     const cw = contentWidth(doc);
 
-    // ── HEADER bicolore ──────────────────────
-    // Moitié gauche bleue (prestataire), moitié droite marine (client)
-    doc.rect(0, 0, w / 2, 100).fillColor(C.blue).fill();
-    doc.rect(w / 2, 0, w / 2, 100).fillColor(C.navy).fill();
-    // Bande déco
-    doc.rect(0, 97, w, 3).fillColor(C.blueMid).fillOpacity(0.7).fill().fillOpacity(1);
+    // ════════════════════════════════════════════
+    // PAGE 1 — EN-TÊTE + PARTIES + OBJET
+    // ════════════════════════════════════════════
+    doc.rect(0, 0, w / 2, 88).fillColor(C.blue).fill();
+    doc.rect(w / 2, 0, w / 2, 88).fillColor(C.navy).fill();
+    doc.rect(0, 85, w, 3).fillColor(C.blueMid).fillOpacity(0.8).fill().fillOpacity(1);
+    drawHexLogo(doc, w / 2, 44, 24, C.white, C.white);
 
-    // Logo centré sur la coupure
-    drawHexLogo(doc, w / 2, 50, 26, C.white, C.white);
+    doc.fillColor(C.white).fontSize(11).font('Helvetica-Bold').text(C.name, 16, 18, { width: w / 2 - 36 });
+    doc.fillColor('#B8CDD8').fontSize(7).font('Helvetica').text('VALUE · NETWORK · KNOWLEDGE', 16, 32, { characterSpacing: 0.8 });
+    doc.fillColor('#B8CDD8').fontSize(6.5).text(`NEQ : ${C.neq}  ·  ${C.email}  ·  ${C.phone}`, 16, 43);
+    doc.fillColor('#B8CDD8').fontSize(6.5).text(C.address, 16, 53);
 
-    // Côté gauche — prestataire
-    doc.fillColor(C.white).fontSize(12).font('Helvetica-Bold')
-        .text(C.name, 18, 24, { width: w / 2 - 40 });
-    doc.fillColor(C.white).fontSize(7.5).font('Helvetica')
-        .text('VALUE · NETWORK · KNOWLEDGE', 18, 40, { characterSpacing: 0.8 });
-    doc.fillColor('#B8CDD8').fontSize(7)
-        .text(`NEQ : ${C.neq}`, 18, 54)
-        .text(`${C.email}  ·  ${C.phone}`, 18, 65);
+    doc.fillColor(C.white).fontSize(9).font('Helvetica-Bold').text('CONTRAT DE SERVICES', w / 2 + 28, 16, { width: w / 2 - 46 });
+    doc.fillColor(C.white).fontSize(8.5).font('Helvetica').text('EN AUTOMATISATION INDUSTRIELLE', w / 2 + 28, 28, { width: w / 2 - 46 });
+    doc.fillColor('#B8CDD8').fontSize(8).text(contract.contract_number, w / 2 + 28, 42, { width: w / 2 - 46 });
+    doc.fillColor('#B8CDD8').fontSize(7.5).text(`Daté du ${dateCA(contract.created_at)}`, w / 2 + 28, 54, { width: w / 2 - 46 });
 
-    // Côté droit — type document
-    doc.fillColor(C.white).fontSize(10).font('Helvetica-Bold')
-        .text('CONTRAT DE SERVICE', w / 2 + 32, 24, { width: w / 2 - 50 });
-    doc.fillColor(C.white).fontSize(9).font('Helvetica')
-        .text(contract.contract_number, w / 2 + 32, 42, { width: w / 2 - 50 });
-    doc.fillColor('#B8CDD8').fontSize(7.5)
-        .text(dateCA(contract.created_at), w / 2 + 32, 57, { width: w / 2 - 50 });
+    doc.y = 100;
 
-    doc.y = 116;
-
-    // ── PARTIES ──────────────────────────────
+    // Blocs parties
     const halfW = (cw - 12) / 2;
-    const infoH = 116;
+    const infoH = 118;
     const infoY = doc.y;
 
     infoBox(doc, C.marginL, infoY, halfW, infoH, C.blue, 'PRESTATAIRE', [
@@ -544,7 +637,6 @@ async function generateContractPDF(res, contract, client, quote) {
         ['Courriel', C.email],
         ['Téléphone', C.phone],
     ]);
-
     infoBox(doc, C.marginL + halfW + 12, infoY, halfW, infoH, C.navy, 'CLIENT', [
         ['Nom', client.full_name],
         ['Entreprise', client.company_name || '—'],
@@ -553,147 +645,372 @@ async function generateContractPDF(res, contract, client, quote) {
         ['Courriel', client.email],
         ['Téléphone', client.phone || '—'],
     ]);
+    doc.y = infoY + infoH + 12;
 
-    doc.y = infoY + infoH + 14;
+    // Objet
+    contractSection(doc, '1.  Objet du contrat', cw);
+    contractPara(doc, 'Le présent contrat définit les modalités selon lesquelles VNK Automatisation Inc. (le « Prestataire ») fournit au Client des services professionnels en automatisation industrielle, incluant notamment :', cw);
+    bulletItem(doc, 'Support PLC à distance ou sur site (diagnostic, dépannage, optimisation)', cw);
+    bulletItem(doc, 'Audit technique, documentation et modernisation de systèmes automatisés', cw);
+    bulletItem(doc, 'Mise à disposition de ressources techniques spécialisées', cw);
+    contractPara(doc, 'Les modalités spécifiques de chaque mandat sont précisées dans un devis ou une annexe signée par les Parties.', cw);
+    doc.y += 4;
 
-    // ── OBJET ────────────────────────────────
-    sectionBar(doc, 'Objet du contrat');
-    doc.fillColor(C.text).fontSize(9.5).font('Helvetica-Bold')
-        .text(contract.title, C.marginL, doc.y, { width: cw });
-    doc.y += 14;
-    if (quote) {
-        doc.fillColor(C.gray).fontSize(8).font('Helvetica')
-            .text(`Référence devis : ${quote.quote_number}  —  Montant total : ${fmt(quote.amount_ttc)} (TTC)`,
-                C.marginL, doc.y, { width: cw });
-        doc.y += 14;
+    if (contract.title) {
+        contractSection(doc, '2.  Mandat visé par ce contrat', cw);
+        contractPara(doc, contract.title, cw, { bold: true });
+        if (quote) contractPara(doc, `Référence devis : ${quote.quote_number}  —  Montant total : ${fmt(quote.amount_ttc)} (TTC)`, cw, { color: C.gray });
+        const serviceText = contract.content || (quote ? `${quote.description || ''}` : 'Services d\'automatisation industrielle selon entente préalable.');
+        if (serviceText) contractPara(doc, serviceText, cw);
+        doc.y += 4;
     }
-    doc.y += 6;
 
-    // ── DESCRIPTION SERVICES ─────────────────
-    sectionBar(doc, 'Description des services');
-    const serviceText = contract.content ||
-        (quote ? `Services d'automatisation industrielle conformément au devis ${quote.quote_number}.\n\n${quote.description || ''}` :
-            'Services d\'automatisation industrielle selon entente préalable.');
-    doc.fillColor(C.text).fontSize(8).font('Helvetica')
-        .text(serviceText, C.marginL, doc.y, { width: cw, lineGap: 3 });
-    doc.y += 16;
-
-    // ── CONDITIONS GÉNÉRALES ─────────────────
-    sectionBar(doc, 'Conditions générales');
-
+    // ════════════════════════════════════════════
+    // CONDITIONS GÉNÉRALES (clauses 3 à 17)
+    // ════════════════════════════════════════════
     const clauses = [
-        ['RÉMUNÉRATION ET CONDITIONS DE PAIEMENT',
-            `Le Client s'engage à payer VNK Automatisation Inc. les montants convenus selon le devis annexé au présent contrat. Un acompte de 50 % du montant total (TTC) est exigible à la signature du présent contrat ; le solde est dû au plus tard 30 jours suivant la livraison des travaux ou l'émission de la facture finale. Tout retard de paiement au-delà de 30 jours entraîne des intérêts de retard au taux de 2 % par mois sur le solde impayé, calculés à compter de la date d'échéance. VNK Automatisation Inc. se réserve le droit de suspendre les travaux en cours en cas de non-paiement de l'acompte ou de tout versement échu, sans engager sa responsabilité pour les conséquences de cette suspension.`],
+        ['3.  Documents contractuels',
+            `Le présent contrat comprend, par ordre de priorité : (a) le présent contrat et ses annexes ; (b) le devis accepté par le Client ; (c) les bons de commande émis par le Client ; (d) toute entente écrite signée entre les Parties.`],
 
-        ['PÉRIMÈTRE DES SERVICES ET OBLIGATIONS DU CLIENT',
-            `Les services couverts par ce contrat sont strictement délimités par le devis annexé. Toute demande additionnelle fera l'objet d'un avenant écrit et signé par les deux parties. Le Client s'engage à : (a) fournir à VNK Automatisation Inc. un accès distant sécurisé et fonctionnel aux systèmes concernés, ainsi que tous les documents techniques nécessaires (schémas électriques, programmes PLC existants, manuels d'équipements) ; (b) désigner un interlocuteur technique disponible pour répondre aux questions et valider les interventions ; (c) informer VNK Automatisation Inc. de toute contrainte particulière liée à la sécurité, aux processus en cours ou aux fenêtres de maintenance disponibles ; (d) s'assurer que les systèmes cibles sont accessibles et en état permettant l'intervention. Tout délai ou surcoût résultant d'un manquement du Client à ces obligations sera imputé au Client.`],
+        ['4.  Rémunération et conditions de paiement',
+            `Le Client s'engage à payer les montants prévus au devis. Un acompte de 50 % est exigible à la signature. Le solde est payable dans les 30 jours suivant l'émission de la facture finale. Tout retard entraîne des intérêts de 2 % par mois (24 % par an). Le Prestataire peut suspendre les services en cas de non-paiement. Les montants sont exclusifs de TPS et TVQ. Le Prestataire se réserve le droit de réviser ses tarifs annuellement moyennant un préavis écrit de 30 jours.`],
 
-        ['DÉLAIS D\'EXÉCUTION',
-            `VNK Automatisation Inc. s'engage à fournir les services dans les délais convenus au devis, sous réserve : (a) d'imprévus techniques majeurs découverts lors de l'intervention et non prévisibles au moment de la signature ; (b) de retards imputables au Client (accès refusé, information manquante, validation tardive) ; (c) de cas de force majeure tels que définis à l'article 14 du présent contrat. En cas de dépassement de délai du fait exclusif de VNK Automatisation Inc., le Client devra le notifier par écrit. Les parties s'entendront alors sur un nouveau calendrier raisonnable avant tout recours.`],
+        ['5.  Frais et remboursements',
+            `Le Client rembourse les frais raisonnables : déplacements (0,70 $/km), hébergement, repas lors d'interventions sur site, matériel ou licences nécessaires. Les acomptes ne sont pas remboursables sauf annulation imputable exclusivement au Prestataire. Toute annulation par le Client après début des travaux est facturée au prorata. Annulation tardive (moins de 5 jours ouvrables) : 50 % du montant prévu peut être facturé.`],
 
-        ['SÉCURITÉ — INTERVENTIONS À DISTANCE ET SUR SITE',
-            `Les interventions à distance sur des systèmes de contrôle industriels (PLC, SCADA, HMI) présentent des risques inhérents pour la sécurité des personnes, des équipements et des processus. En conséquence : (a) Le Client est seul responsable de s'assurer que les systèmes de sécurité physiques (arrêts d'urgence, verrouillages, LOTO — Lockout/Tagout) sont correctement activés avant et pendant toute intervention sur des équipements en production ; (b) Toute modification de programme PLC sera testée hors ligne dans la mesure du possible, puis en mode manuel ou en simulation avant mise en production ; (c) Le Client s'engage à avoir du personnel qualifié sur site lors de toute intervention à distance sur des systèmes en production ou potentiellement dangereux ; (d) Pour les interventions physiques sur site, le technicien de VNK Automatisation Inc. se conformera aux règles de sécurité internes du Client et exige d'en être informé par écrit avant l'intervention ; (e) VNK Automatisation Inc. ne modifiera jamais les fonctions de sécurité homologuées (safety PLC, relais de sécurité, arrêts d'urgence) sans autorisation écrite explicite du Client et documentation préalable.`],
+        ['6.  Obligations du client',
+            `Le Client s'engage à : (a) fournir un accès sécurisé et fonctionnel aux systèmes et tous les documents techniques nécessaires ; (b) désigner un interlocuteur technique qualifié et disponible ; (c) informer le Prestataire de toute contrainte de sécurité et des fenêtres de maintenance ; (d) s'assurer que les systèmes sont accessibles et en état permettant l'intervention ; (e) respecter les normes de sécurité et les procédures internes. Tout retard imputable au Client entraîne des frais supplémentaires et un ajustement des délais.`],
 
-        ['SAUVEGARDE ET INTÉGRITÉ DES PROGRAMMES',
-            `Avant toute modification, VNK Automatisation Inc. procédera à la sauvegarde complète des programmes PLC, HMI et SCADA existants. Une copie de cette sauvegarde sera remise au Client. En cas d'incident entraînant la perte ou la corruption du programme lors de l'intervention, VNK Automatisation Inc. s'engage à restaurer le programme à partir de la sauvegarde réalisée. Le Client reconnaît avoir la responsabilité de maintenir ses propres sauvegardes à jour indépendamment des interventions de VNK Automatisation Inc. VNK Automatisation Inc. ne saurait être tenu responsable de la perte de données préexistantes non sauvegardées par le Client.`],
+        ['7.  Délais d\'exécution',
+            `Le Prestataire s'engage à respecter les délais du devis, sauf : (a) imprévus techniques non prévisibles à la signature ; (b) retards imputables au Client ; (c) cas de force majeure. En cas de dépassement du fait exclusif du Prestataire, le Client notifie par écrit et les parties s'entendent sur un nouveau calendrier avant tout recours.`],
 
-        ['ACCÈS DISTANT — CYBERSÉCURITÉ',
-            `L'accès distant aux systèmes industriels du Client sera effectué exclusivement via des canaux sécurisés (VPN, connexion chiffrée) convenus avec le Client. VNK Automatisation Inc. s'engage à : (a) n'utiliser les accès fournis que pour les besoins stricts du mandat ; (b) ne pas partager, transférer ou stocker les identifiants d'accès sur des supports non sécurisés ; (c) informer immédiatement le Client de tout incident de sécurité détecté lors de l'intervention ; (d) révoquer ou notifier le Client de révoquer les accès dès la fin du mandat. Le Client est responsable de mettre en place une segmentation réseau adéquate isolant les systèmes de contrôle industriels des réseaux corporatifs, conformément aux bonnes pratiques IEC 62443.`],
+        ['8.  Sécurité des interventions',
+            `Les interventions sur systèmes PLC/SCADA/HMI présentent des risques inhérents. En conséquence : (a) Le Client est seul responsable de l'activation des systèmes de sécurité physiques (LOTO, arrêts d'urgence) avant et pendant toute intervention ; (b) les modifications de programme seront testées hors ligne puis en mode manuel avant mise en production ; (c) le Client doit avoir du personnel qualifié sur site lors d'interventions à distance sur des systèmes en production ; (d) pour les interventions sur site, le technicien se conformera aux règles internes du Client, à recevoir par écrit avant l'intervention ; (e) le Prestataire ne modifiera jamais les fonctions de sécurité homologuées (safety PLC, relais, arrêts d'urgence) sans autorisation écrite et documentation préalable.`],
 
-        ['LIMITATION DE RESPONSABILITÉ',
-            `La responsabilité totale de VNK Automatisation Inc. au titre du présent contrat est expressément limitée au montant total facturé pour le mandat concerné. VNK Automatisation Inc. ne saurait en aucun cas être tenu responsable : (a) des pertes d'exploitation, arrêts de production, manque à gagner ou pertes de profits, même si informé de leur possibilité ; (b) des dommages indirects, consécutifs ou immatériels ; (c) des dommages résultant de modifications non autorisées apportées aux systèmes par le Client ou un tiers après livraison ; (d) des défaillances d'équipements ou de composants matériels préexistants ; (e) des conséquences d'une utilisation non conforme des livrables. Cette limitation de responsabilité s'applique dans toute la mesure permise par le droit québécois.`],
+        ['9.  Cybersécurité et accès distant',
+            `L'accès aux systèmes s'effectue exclusivement via des canaux sécurisés (VPN, connexion chiffrée). Le Prestataire s'engage à : (a) n'utiliser les accès que pour les besoins stricts du mandat ; (b) protéger les identifiants ; (c) signaler immédiatement tout incident de sécurité détecté ; (d) notifier le Client de révoquer les accès dès la fin du mandat. Le Client est responsable de la segmentation réseau isolant ses systèmes industriels, conformément à IEC 62443.`],
 
-        ['EXCLUSION DE RESPONSABILITÉ — SYSTÈMES DE SÉCURITÉ',
-            `VNK Automatisation Inc. ne pourra être tenu responsable de dommages corporels, matériels ou environnementaux résultant de : (a) la défaillance de systèmes de sécurité physiques (arrêts d'urgence, barrières immatérielles, relais de sécurité) qui n'ont pas fait l'objet du mandat ; (b) l'activation ou la désactivation par le Client de systèmes de sécurité en dehors des procédures convenues ; (c) l'utilisation des systèmes modifiés dans des conditions différentes de celles décrites dans le devis ; (d) tout manquement du Client aux règles de sécurité applicables (LSST, RSST, NFPA 70E, IEC 61508, ISO 13849). Le Client reconnaît que les systèmes PLC/SCADA/HMI contrôlant des équipements potentiellement dangereux nécessitent une validation complète par une personne compétente avant toute remise en service.`],
+        ['10.  Sauvegarde et intégrité des données',
+            `Avant toute modification, le Prestataire procède à la sauvegarde complète des programmes PLC, HMI et SCADA. Une copie est remise au Client. En cas d'incident lors de l'intervention, le Prestataire s'engage à restaurer depuis cette sauvegarde. Le Client demeure responsable de maintenir ses propres sauvegardes indépendamment. Le Prestataire ne peut être tenu responsable des données préexistantes non sauvegardées par le Client.`],
 
-        ['PROPRIÉTÉ INTELLECTUELLE ET LIVRABLES',
-            `Les programmes PLC, HMI, SCADA et toute documentation produits spécifiquement dans le cadre de ce contrat deviennent la propriété exclusive du Client après paiement intégral. Les méthodes, outils et savoir-faire génériques de VNK Automatisation Inc. demeurent sa propriété exclusive. VNK Automatisation Inc. conserve le droit de référencer l'existence du mandat (type de service, secteur d'activité) à des fins de portfolio ou de démarchage commercial, sans jamais divulguer d'informations techniques, commerciales ou confidentielles appartenant au Client.`],
+        ['11.  Assurance',
+            `Le Prestataire déclare maintenir une assurance responsabilité professionnelle adéquate couvrant ses activités. Une preuve d'assurance peut être fournie sur demande.`],
 
-        ['CONFIDENTIALITÉ ET PROTECTION DES INFORMATIONS',
-            `Les parties s'engagent mutuellement à traiter comme strictement confidentiels tous les renseignements échangés dans le cadre de ce contrat, incluant sans s'y limiter : les programmes PLC, les schémas électriques, les procédés industriels, les informations commerciales et financières, ainsi que les données de production. Cette obligation de confidentialité survit à l'expiration ou à la résiliation du présent contrat pour une durée de cinq (5) ans. Un accord de non-divulgation (NDA) distinct peut être signé sur demande du Client pour les mandats impliquant des informations particulièrement sensibles.`],
+        ['12.  Sous-traitance',
+            `Le Prestataire peut recourir à des sous-traitants qualifiés. Il demeure responsable de la qualité des services et du respect des obligations contractuelles.`],
 
-        ['GARANTIE ET RECTIFICATION',
-            `VNK Automatisation Inc. garantit que les livrables fournis sont conformes aux spécifications du devis et aux règles de l'art en matière d'automatisation industrielle, pour une période de 90 jours suivant la réception des travaux. Durant cette période, VNK Automatisation Inc. s'engage à corriger sans frais supplémentaires tout dysfonctionnement directement imputable à l'intervention effectuée. Cette garantie ne couvre pas : (a) les défaillances résultant de modifications apportées par le Client ou un tiers ; (b) l'usure normale des équipements matériels ; (c) les problèmes préexistants à l'intervention non signalés dans le rapport de livraison.`],
+        ['13.  Propriété intellectuelle et livrables',
+            `Les programmes PLC, HMI, SCADA et toute documentation développés spécifiquement deviennent la propriété exclusive du Client après paiement intégral. Les méthodes, outils et savoir-faire génériques du Prestataire demeurent sa propriété exclusive. Le Prestataire peut référencer l'existence du mandat à des fins commerciales, sans divulguer d'informations confidentielles.`],
 
-        ['RAPPORT D\'INTERVENTION',
-            `À la conclusion de chaque mandat, VNK Automatisation Inc. remettra au Client un rapport d'intervention écrit détaillant : (a) les travaux réalisés et les modifications effectuées ; (b) les tests effectués et leurs résultats ; (c) l'état du système avant et après intervention ; (d) les recommandations pour la maintenance préventive ou les améliorations futures ; (e) une liste des sauvegardes réalisées. Ce rapport constitue le document officiel de réception des travaux. En l'absence d'objection écrite du Client dans les 10 jours ouvrables suivant la remise du rapport, les travaux sont réputés acceptés.`],
+        ['14.  Confidentialité',
+            `Les Parties traitent comme strictement confidentiels tous les renseignements échangés (programmes PLC, schémas, procédés industriels, informations financières). Cette obligation survit à la fin du contrat pour cinq (5) ans. Un NDA distinct peut être signé sur demande pour les mandats à information sensible.`],
 
-        ['RÉSILIATION',
-            `Chaque partie peut résilier ce contrat avec un préavis écrit de 30 jours. En cas de résiliation par le Client, les travaux réalisés jusqu'à la date effective de résiliation seront facturés au prorata du temps et des ressources engagés, majorés des frais directs non récupérables engagés par VNK Automatisation Inc. En cas de résiliation pour faute grave et non rectifiée dans un délai de 15 jours suivant une mise en demeure écrite, la partie lésée peut résilier sans préavis. En aucun cas VNK Automatisation Inc. ne quittera un système en état instable ou dangereux lors d'une résiliation ; une phase de stabilisation minimale sera complétée avant la fin des travaux.`],
+        ['15.  Garantie et rectification',
+            `Le Prestataire garantit la conformité des livrables pour 90 jours suivant la réception. Durant cette période, il corrige sans frais tout dysfonctionnement directement imputable à l'intervention. La garantie exclut : (a) modifications par le Client ou un tiers ; (b) usure matérielle ; (c) problèmes préexistants non signalés.`],
 
-        ['FORCE MAJEURE',
-            `Aucune des parties ne sera tenue responsable des retards ou de l'inexécution de ses obligations résultant de circonstances hors de son contrôle raisonnable, incluant notamment : catastrophes naturelles, pannes d'infrastructure Internet ou de réseau, cyberattaques de tiers, épidémies, grèves générales ou décisions gouvernementales. La partie affectée devra notifier l'autre dans les 48 heures et les parties s'entendront sur un délai de reprise raisonnable.`],
+        ['16.  Rapport d\'intervention',
+            `À chaque fin de mandat, le Prestataire remet un rapport écrit détaillant : (a) les travaux réalisés et modifications effectuées ; (b) les tests et leurs résultats ; (c) l'état avant/après ; (d) les recommandations de maintenance ; (e) la liste des sauvegardes. Faute d'objection écrite du Client dans les 10 jours ouvrables, les travaux sont réputés acceptés.`],
 
-        ['DROIT APPLICABLE ET RÈGLEMENT DES DIFFÉRENDS',
-            `Le présent contrat est régi exclusivement par les lois de la province de Québec et les lois fédérales du Canada applicables. En cas de différend, les parties s'engagent à tenter de résoudre le litige de bonne foi par voie de négociation dans un délai de 30 jours. À défaut de règlement amiable, le différend sera soumis aux tribunaux de droit commun compétents du Québec. Le présent contrat constitue l'intégralité de l'entente entre les parties et remplace tout accord verbal ou écrit antérieur portant sur le même objet.`],
+        ['17.  Limitation de responsabilité',
+            `La responsabilité totale du Prestataire est limitée au montant total facturé pour le mandat. Le Prestataire ne peut être tenu responsable : (a) des pertes d'exploitation, arrêts de production, manque à gagner ; (b) des dommages indirects ou consécutifs ; (c) des dommages résultant de modifications non autorisées après livraison ; (d) des défaillances matérielles préexistantes ; (e) des conséquences d'une utilisation non conforme. Cette limitation s'applique dans toute la mesure permise par le droit québécois.`],
+
+        ['18.  Exclusion — systèmes de sécurité',
+            `Le Prestataire ne peut être tenu responsable de dommages corporels, matériels ou environnementaux résultant de : (a) défaillance de systèmes de sécurité hors périmètre du mandat ; (b) activation/désactivation par le Client hors procédures convenues ; (c) utilisation dans des conditions différentes de celles du devis ; (d) manquement du Client aux règles de sécurité applicables (LSST, RSST, NFPA 70E, IEC 61508, ISO 13849). Le Client reconnaît que tout système PLC/SCADA/HMI contrôlant des équipements dangereux nécessite une validation complète avant remise en service.`],
+
+        ['19.  Non-sollicitation',
+            `Le Client s'engage à ne pas embaucher directement ou indirectement toute ressource fournie par le Prestataire pendant la durée du contrat et pour 12 mois suivant sa fin. En cas de non-respect, une indemnité équivalente à 12 mois de rémunération de la ressource concernée sera due.`],
+
+        ['20.  Non-exclusivité',
+            `Le présent contrat n'accorde aucune exclusivité au Client. Le Prestataire demeure libre de fournir des services similaires à d'autres clients.`],
+
+        ['21.  Résiliation',
+            `Chaque Partie peut résilier avec un préavis écrit de 30 jours. Les travaux réalisés et frais engagés sont facturés au prorata. En cas de manquement grave non corrigé dans les 15 jours suivant une mise en demeure, la résiliation peut être immédiate. Le Prestataire ne quittera jamais un système en état instable ou dangereux ; une phase de stabilisation minimale sera complétée avant la fin des travaux.`],
+
+        ['22.  Force majeure',
+            `Aucune Partie ne sera tenue responsable en cas de force majeure : catastrophes naturelles, cyberattaques de tiers, pannes d'infrastructure Internet, épidémies, grèves générales ou décisions gouvernementales. La partie affectée notifie l'autre dans les 48 heures.`],
+
+        ['23.  Droit applicable et règlement des différends',
+            `Le présent contrat est régi par les lois de la province de Québec et les lois fédérales du Canada. En cas de différend, les parties tentent de régler à l'amiable dans les 30 jours. À défaut, le différend est soumis aux tribunaux compétents du Québec. Le présent contrat constitue l'intégralité de l'entente entre les Parties et remplace tout accord antérieur. Toute modification doit être faite par écrit et signée par les deux Parties.`],
     ];
 
-    clauses.forEach(([title, text], i) => {
-        // Estimer la hauteur nécessaire
+    clauses.forEach(([title, text]) => {
         const titleH = 14;
-        const textH = doc.heightOfString(text, { width: cw - 12, lineGap: 2 }) + 10;
-        const needed = titleH + textH + 8;
-        // Saut de page si pas assez d'espace (garder 54px pour footer)
-        if (doc.y + needed > doc.page.height - 54) {
-            doc.addPage();
-            doc.y = 36;
-        }
-        doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
-            .text(`${i + 1}.  ${title}`, C.marginL, doc.y, { width: cw });
-        doc.y += 11;
+        const textH = doc.heightOfString(text, { width: cw - 12, lineGap: 2 }) + 8;
+        ensureSpace(doc, titleH + textH);
+        doc.fillColor(C.blue).fontSize(8).font('Helvetica-Bold')
+            .text(title, C.marginL, doc.y, { width: cw });
+        doc.y += 12;
         doc.fillColor(C.text).fontSize(7.5).font('Helvetica')
-            .text(text, C.marginL + 12, doc.y, { width: cw - 12, lineGap: 2 });
-        doc.y += textH + 6;
+            .text(text, C.marginL + 8, doc.y, { width: cw - 8, lineGap: 2 });
+        doc.y += textH;
     });
 
-    // Saut de page forcé avant signatures pour qu'elles soient propres
+    // ════════════════════════════════════════════
+    // SIGNATURES — toujours sur nouvelle page
+    // ════════════════════════════════════════════
     doc.addPage();
     doc.y = 36;
 
-    // ── SIGNATURES ───────────────────────────
-    sectionBar(doc, 'Signatures');
-    doc.fillColor(C.gray).fontSize(8).font('Helvetica')
-        .text(`Les soussignés déclarent avoir lu, compris et accepté les termes du présent contrat daté du ${dateCA(contract.created_at)}.`,
-            C.marginL, doc.y, { width: cw, lineGap: 3 });
-    doc.y += 18;
+    contractSection(doc, '24.  Signatures', cw);
+    contractPara(doc, `Fait en deux exemplaires originaux. Les soussignés déclarent avoir lu, compris et accepté les termes du présent contrat daté du ${dateCA(contract.created_at)}.`, cw);
+    doc.y += 12;
 
     const sigY = doc.y;
-    const sigW = (cw - 20) / 2;
+    const sigW = (cw - 16) / 2;
 
-    // Bloc VNK (gauche)
-    doc.rect(C.marginL, sigY, sigW, 72).fillColor(C.grayLight).fill();
-    doc.rect(C.marginL, sigY, 3, 72).fillColor(C.blue).fill();
-    doc.rect(C.marginL, sigY, sigW, 72).lineWidth(0.5).strokeColor(C.border).stroke();
-    doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
-        .text('VNK AUTOMATISATION INC.', C.marginL + 10, sigY + 8);
+    // VNK
+    doc.rect(C.marginL, sigY, sigW, 80).fillColor(C.grayLight).fill();
+    doc.rect(C.marginL, sigY, 3, 80).fillColor(C.blue).fill();
+    doc.rect(C.marginL, sigY, sigW, 80).lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.fillColor(C.blue).fontSize(8).font('Helvetica-Bold').text('VNK AUTOMATISATION INC.', C.marginL + 10, sigY + 8);
     doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
-        .text(`${C.founder}, ${C.title}`, C.marginL + 10, sigY + 22);
-    doc.moveTo(C.marginL + 10, sigY + 50).lineTo(C.marginL + sigW - 10, sigY + 50)
+        .text(`${C.founder}`, C.marginL + 10, sigY + 22)
+        .text(`${C.title}`, C.marginL + 10, sigY + 33);
+    doc.moveTo(C.marginL + 10, sigY + 58).lineTo(C.marginL + sigW - 10, sigY + 58)
         .lineWidth(0.5).strokeColor(C.border).stroke();
-    doc.fillColor(C.gray).fontSize(7).font('Helvetica')
-        .text('Signature  ·  Date', C.marginL + 10, sigY + 54);
+    doc.fillColor(C.gray).fontSize(7).text('Signature', C.marginL + 10, sigY + 62);
+    doc.moveTo(C.marginL + 10, sigY + 74).lineTo(C.marginL + sigW - 10, sigY + 74)
+        .lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.fillColor(C.gray).fontSize(7).text('Date', C.marginL + 10, sigY + 78 - 2);
 
-    // Bloc Client (droite)
-    const cx2 = C.marginL + sigW + 20;
-    doc.rect(cx2, sigY, sigW, 72).fillColor(C.grayLight).fill();
-    doc.rect(cx2, sigY, 3, 72).fillColor(C.navy).fill();
-    doc.rect(cx2, sigY, sigW, 72).lineWidth(0.5).strokeColor(C.border).stroke();
-    doc.fillColor(C.navy).fontSize(7.5).font('Helvetica-Bold')
-        .text((client.company_name || client.full_name || '').toUpperCase(),
-            cx2 + 10, sigY + 8, { width: sigW - 20 });
+    // Client
+    const cx2 = C.marginL + sigW + 16;
+    doc.rect(cx2, sigY, sigW, 80).fillColor(C.grayLight).fill();
+    doc.rect(cx2, sigY, 3, 80).fillColor(C.navy).fill();
+    doc.rect(cx2, sigY, sigW, 80).lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.fillColor(C.navy).fontSize(8).font('Helvetica-Bold')
+        .text((client.company_name || client.full_name || '').toUpperCase(), cx2 + 10, sigY + 8, { width: sigW - 20 });
     doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
-        .text(client.full_name || '', cx2 + 10, sigY + 22);
-    doc.moveTo(cx2 + 10, sigY + 50).lineTo(cx2 + sigW - 10, sigY + 50)
+        .text(client.full_name || '', cx2 + 10, sigY + 22)
+        .text('Titre / Fonction :', cx2 + 10, sigY + 33);
+    doc.moveTo(cx2 + 10, sigY + 58).lineTo(cx2 + sigW - 10, sigY + 58)
         .lineWidth(0.5).strokeColor(C.border).stroke();
-    doc.fillColor(C.gray).fontSize(7).font('Helvetica')
-        .text('Signature  ·  Date', cx2 + 10, sigY + 54);
+    doc.fillColor(C.gray).fontSize(7).text('Signature', cx2 + 10, sigY + 62);
+    doc.moveTo(cx2 + 10, sigY + 74).lineTo(cx2 + sigW - 10, sigY + 74)
+        .lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.fillColor(C.gray).fontSize(7).text('Date', cx2 + 10, sigY + 78 - 2);
 
-    doc.y = sigY + 72;
+    doc.y = sigY + 80 + 16;
+
+    // Table annexes
+    contractPara(doc, 'Le présent contrat inclut les annexes suivantes, intégrées et faisant partie intégrante de l\'entente :', cw, { color: C.gray });
+    doc.y += 4;
+    const annexes = [
+        ['Annexe A', 'Accord de niveau de service (SLA)'],
+        ['Annexe B', 'Contrat de support mensuel récurrent'],
+        ['Annexe C', 'Grille tarifaire officielle VNK'],
+        ['Annexe D', 'Mise à disposition de ressources techniques'],
+    ];
+    contractTable(doc, ['Annexe', 'Description'], annexes, [cw * 0.2, cw * 0.8], cw);
 
     drawFooter(doc, contract.contract_number, C.navy);
+
+    // ════════════════════════════════════════════
+    // ANNEXE A — SLA
+    // ════════════════════════════════════════════
+    doc.addPage();
+    doc.y = 36;
+
+    contractSection(doc, 'Annexe A — Accord de niveau de service (SLA)', cw);
+    contractPara(doc, 'La présente annexe définit les niveaux de service applicables aux prestations de support technique fournies par VNK Automatisation Inc. dans le cadre des services d\'automatisation industrielle.', cw);
+    doc.y += 6;
+
+    contractSubtitle(doc, 'Périmètre des services couverts', cw);
+    ['Support PLC, HMI et SCADA', 'Diagnostic et dépannage à distance ou sur site', 'Assistance technique lors de mises en service', 'Support réseau industriel et cybersécurité de base'].forEach(t => bulletItem(doc, t, cw));
+    doc.y += 6;
+
+    contractSubtitle(doc, 'Niveaux de service et délais de réponse', cw);
+    contractTable(doc,
+        ['Niveau', 'Disponibilité', 'Délai de réponse', 'Délai prise en charge'],
+        [
+            ['Standard', 'Lun–Ven, 8h–17h', '24 h ouvrables', '48 h'],
+            ['Prioritaire', 'Lun–Ven, 8h–20h', '8 h ouvrables', '24 h'],
+            ['Urgence', '24/7', '2 heures', 'Immédiat selon dispo'],
+        ],
+        [cw * 0.18, cw * 0.26, cw * 0.28, cw * 0.28], cw
+    );
+    doc.y += 4;
+
+    contractSubtitle(doc, 'Classification des incidents', cw);
+    contractTable(doc,
+        ['Niveau', 'Description', 'Exemple'],
+        [
+            ['Critique', 'Arrêt complet de production', 'PLC hors service'],
+            ['Majeur', 'Fonctionnement dégradé', 'Défaut réseau ou communication'],
+            ['Mineur', 'Problème non bloquant', 'Ajustement paramétrique'],
+        ],
+        [cw * 0.18, cw * 0.44, cw * 0.38], cw
+    );
+    doc.y += 4;
+
+    contractSubtitle(doc, 'Exclusions du SLA', cw);
+    ['Pannes matérielles non liées aux services fournis', 'Modifications non autorisées par le Client ou un tiers', 'Événements de force majeure', 'Systèmes non couverts par le mandat en cours'].forEach(t => bulletItem(doc, t, cw));
+
+    drawFooter(doc, contract.contract_number + ' — Annexe A', C.navy);
+
+    // ════════════════════════════════════════════
+    // ANNEXE B — SUPPORT MENSUEL
+    // ════════════════════════════════════════════
+    doc.addPage();
+    doc.y = 36;
+
+    contractSection(doc, 'Annexe B — Contrat de support mensuel récurrent', cw);
+    contractPara(doc, 'La présente annexe définit les modalités de support technique récurrent en automatisation industrielle. Le Client choisit l\'un des forfaits ci-dessous selon ses besoins.', cw);
+    doc.y += 6;
+
+    contractSubtitle(doc, 'Forfaits mensuels disponibles', cw);
+    contractTable(doc,
+        ['Forfait', 'Heures incluses', 'Délai de réponse', 'Tarif mensuel'],
+        [
+            ['Essentiel', '5 heures', '24 h ouvrables', '1 000 CAD'],
+            ['Professionnel', '10 heures', '8 h ouvrables', '1 800 CAD'],
+            ['Premium', '20 heures', '4 h ouvrables', '3 200 CAD'],
+        ],
+        [cw * 0.22, cw * 0.22, cw * 0.26, cw * 0.30], cw
+    );
+    contractPara(doc, 'Les heures supplémentaires au-delà du forfait sont facturées selon la grille tarifaire officielle (Annexe C). Les heures non utilisées dans le mois ne sont pas reportées.', cw, { color: C.gray });
+    doc.y += 6;
+
+    contractSubtitle(doc, 'Durée et renouvellement', cw);
+    contractPara(doc, 'Durée initiale de 12 mois. Renouvellement automatique sauf avis écrit de résiliation 30 jours avant l\'échéance. Facturation mensuelle payable dans un délai de 30 jours.', cw);
+    doc.y += 6;
+
+    contractSubtitle(doc, 'Conditions particulières', cw);
+    ['Le forfait est activé dès réception de l\'acompte du premier mois.',
+        'Le niveau de service (délai de réponse) est garanti dans les limites du forfait choisi.',
+        'Les interventions d\'urgence hors forfait sont majorées de 25 % (voir Annexe C).',
+        'Le Client peut changer de forfait avec un préavis écrit de 30 jours.'].forEach(t => bulletItem(doc, t, cw));
+
+    drawFooter(doc, contract.contract_number + ' — Annexe B', C.navy);
+
+    // ════════════════════════════════════════════
+    // ANNEXE C — GRILLE TARIFAIRE
+    // ════════════════════════════════════════════
+    doc.addPage();
+    doc.y = 36;
+
+    contractSection(doc, 'Annexe C — Grille tarifaire officielle VNK Automatisation Inc.', cw);
+    contractPara(doc, `Tarifs en vigueur au ${dateCA(new Date())}. Tous les prix sont en dollars canadiens (CAD), taxes en sus (TPS 5 % + TVQ 9,975 %).`, cw, { color: C.gray });
+    doc.y += 6;
+
+    contractSubtitle(doc, 'Services techniques', cw);
+    contractTable(doc,
+        ['Service', 'Tarif'],
+        [
+            ['Support PLC à distance', '120 – 150 CAD / heure'],
+            ['Intervention sur site', '140 – 180 CAD / heure'],
+            ['Banque d\'heures prépayée (10 h)', '1 100 CAD (économie de 400 CAD)'],
+            ['Forfait mensuel standard', '1 200 CAD / mois'],
+            ['Forfait mensuel prioritaire', '2 500 CAD / mois (réponse garantie)'],
+        ],
+        [cw * 0.62, cw * 0.38], cw
+    );
+    doc.y += 4;
+
+    contractSubtitle(doc, 'Audit technique', cw);
+    contractTable(doc,
+        ['Type d\'audit', 'Tarif', 'Description'],
+        [
+            ['Audit standard', '1 500 – 2 500 CAD', 'Système simple — 1 à 2 automates'],
+            ['Audit complet', '2 500 – 4 000 CAD', 'Système complexe — multiples automates'],
+        ],
+        [cw * 0.28, cw * 0.28, cw * 0.44], cw
+    );
+    doc.y += 4;
+
+    contractSubtitle(doc, 'Documentation industrielle', cw);
+    contractTable(doc,
+        ['Type', 'Tarif', 'Description'],
+        [
+            ['Documentation de base', '800 – 2 000 CAD', 'Procédures opérateur et maintenance'],
+            ['Documentation complète', '2 000 – 5 000 CAD', 'Tout inclus — code, procédures, schémas'],
+        ],
+        [cw * 0.28, cw * 0.28, cw * 0.44], cw
+    );
+    doc.y += 4;
+
+    contractSubtitle(doc, 'Refactorisation PLC', cw);
+    contractTable(doc,
+        ['Type', 'Tarif', 'Description'],
+        [
+            ['Refactorisation partielle', '3 000 – 10 000 CAD', 'Modules ou sections ciblées'],
+            ['Refactorisation complète', '10 000 – 25 000 CAD', 'Programme complet restructuré'],
+            ['Nouvelle implémentation', '5 000 – 50 000 CAD', 'Réécriture complète ou nouveau projet'],
+        ],
+        [cw * 0.30, cw * 0.30, cw * 0.40], cw
+    );
+    doc.y += 4;
+
+    contractSubtitle(doc, 'Frais supplémentaires', cw);
+    contractTable(doc,
+        ['Type de frais', 'Tarif'],
+        [
+            ['Déplacement', '0,70 CAD / km'],
+            ['Temps de déplacement', '50 % du tarif horaire'],
+            ['Intervention d\'urgence', 'Majoration de 25 %'],
+            ['Intervention hors heures ouvrables', 'Majoration de 50 %'],
+        ],
+        [cw * 0.55, cw * 0.45], cw
+    );
+
+    drawFooter(doc, contract.contract_number + ' — Annexe C', C.navy);
+
+    // ════════════════════════════════════════════
+    // ANNEXE D — RESSOURCES TECHNIQUES
+    // ════════════════════════════════════════════
+    doc.addPage();
+    doc.y = 36;
+
+    contractSection(doc, 'Annexe D — Mise à disposition de ressources techniques', cw);
+    contractPara(doc, 'La présente annexe encadre la fourniture de ressources techniques spécialisées par VNK Automatisation Inc. auprès du Client pour des mandats temporaires ou récurrents en automatisation industrielle.', cw);
+    doc.y += 6;
+
+    contractSubtitle(doc, 'Types de ressources disponibles', cw);
+    ['Programmeurs PLC (Siemens, Rockwell, B&R, Schneider)',
+        'Techniciens en automatisation industrielle',
+        'Spécialistes HMI / SCADA (WinCC, FactoryTalk, Wonderware)',
+        'Experts en réseaux industriels (Profinet, EtherNet/IP, Modbus)'].forEach(t => bulletItem(doc, t, cw));
+    doc.y += 6;
+
+    contractSubtitle(doc, 'Tarification indicative', cw);
+    contractTable(doc,
+        ['Profil', 'Tarif journalier (8 h)'],
+        [
+            ['Technicien en automatisation', '700 – 900 CAD / jour'],
+            ['Programmeur PLC', '900 – 1 200 CAD / jour'],
+            ['Expert senior', '1 200 – 1 600 CAD / jour'],
+        ],
+        [cw * 0.55, cw * 0.45], cw
+    );
+    contractPara(doc, 'Les frais de déplacement, d\'hébergement et autres dépenses autorisées sont facturés en sus selon la grille tarifaire (Annexe C).', cw, { color: C.gray });
+    doc.y += 6;
+
+    contractSubtitle(doc, 'Modalités d\'intervention', cw);
+    ['Les ressources demeurent sous la responsabilité contractuelle et administrative du Prestataire.',
+        'Le Client assure la supervision opérationnelle quotidienne des ressources mises à disposition.',
+        'Le Client s\'engage à fournir un environnement de travail conforme aux normes de santé et sécurité applicables.',
+        'Facturation mensuelle ou selon les modalités du devis, payable dans les 30 jours.'].forEach(t => bulletItem(doc, t, cw));
+    doc.y += 6;
+
+    contractSubtitle(doc, 'Non-sollicitation', cw);
+    contractPara(doc, 'Le Client s\'engage à ne pas embaucher directement ou indirectement toute ressource fournie par le Prestataire pendant la durée du contrat et pour une période de douze (12) mois suivant sa fin. En cas de non-respect, une indemnité équivalente à douze (12) mois de rémunération de la ressource concernée sera due.', cw);
+    doc.y += 6;
+
+    contractSubtitle(doc, 'Résiliation', cw);
+    contractPara(doc, 'Préavis minimal de 15 jours ouvrables par écrit. Les services rendus jusqu\'à la date effective de résiliation sont facturés au prorata.', cw);
+
+    drawFooter(doc, contract.contract_number + ' — Annexe D', C.navy);
+
+    // Numéros de page sur toutes les pages
+    const range = doc.bufferedPageRange();
+    for (let i = 0; i < range.count; i++) {
+        doc.switchToPage(range.start + i);
+        doc.fillColor('#94A3B8').fontSize(6.5).font('Helvetica')
+            .text(`Page ${i + 1} / ${range.count}`, C.marginL, doc.page.height - 10, { width: cw, align: 'right' });
+    }
+
     doc.end();
 }
-
 
 // ─────────────────────────────────────────────
 // FLUX AUTO : Devis accepté → Contrat en DB
