@@ -258,6 +258,24 @@ function stopPolling() {
 }
 
 /* ─────────────────────────────────────────────
+   refreshPortal — bouton Actualiser fonctionnel
+   Anime le bouton, recharge les données, retire l'animation
+───────────────────────────────────────────── */
+async function refreshPortal(btn) {
+    if (!btn || btn.classList.contains('loading')) return;
+    btn.classList.add('loading');
+    btn.disabled = true;
+    try {
+        await loadAllData();
+    } finally {
+        setTimeout(() => {
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }, 600);
+    }
+}
+
+/* ─────────────────────────────────────────────
    showTab — gère les headers gelés + panel droit
 ───────────────────────────────────────────── */
 function showTab(tabName) {

@@ -3160,6 +3160,13 @@ img {
     overflow-y: auto;
     padding: 1.25rem;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Responsive — ajuster la grille pour 320px */
+.portal-dashboard {
+    grid-template-columns: 240px 1fr 320px;
 }
 
 .portal-action-panel-title {
@@ -3237,14 +3244,59 @@ img {
             background: #B45309;
         }
 
+/* Bouton Actualiser — présent sur tous les onglets */
+.portal-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.38rem 0.85rem;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 7px;
+    background: white;
+    color: #64748B;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    font-family: inherit;
+    flex-shrink: 0;
+}
+
+    .portal-refresh-btn:hover {
+        border-color: #1B4F8A;
+        color: #1B4F8A;
+        background: #EBF5FB;
+    }
+
+    .portal-refresh-btn.loading svg {
+        animation: spin-refresh 0.7s linear infinite;
+    }
+
+@keyframes spin-refresh {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* ─────────────────────────────────────────────
-   STATS ROW — tableau de bord
+   STATS ROW — tableau de bord, gelées en haut du contenu
 ───────────────────────────────────────────── */
 .portal-stats-row {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-md);
+    grid-template-columns: repeat(2, minmax(0, 210px));
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: var(--color-bg);
+    padding-top: 0.15rem;
+    padding-bottom: 0.5rem;
 }
 
 .portal-stat-card {
@@ -3541,7 +3593,7 @@ img {
 ───────────────────────────────────────────── */
 
 /* Tablet — masquer le panel droit */
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
     .portal-dashboard {
         grid-template-columns: 240px 1fr;
     }
@@ -3551,7 +3603,7 @@ img {
     }
 
     .portal-stats-row {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 210px));
     }
 }
 

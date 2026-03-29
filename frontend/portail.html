@@ -206,7 +206,7 @@
                             <h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A;line-height:1.2">Tableau de bord</h2>
                             <span class="portal-tab-subtitle" id="dashboard-greeting">Bonjour</span>
                         </div>
-                        <button onclick="loadAllData()" style="display:flex;align-items:center;gap:0.4rem;padding:0.4rem 0.85rem;border:1.5px solid #E2E8F0;border-radius:7px;background:white;color:#64748B;font-size:0.8rem;font-weight:600;cursor:pointer">
+                        <button id="btn-refresh-dashboard" onclick="refreshPortal(this)" class="portal-refresh-btn">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
                             Actualiser
                         </button>
@@ -215,23 +215,35 @@
 
                 <!-- Mandats header -->
                 <div class="portal-tab-header" id="header-mandates" style="display:none">
-                    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.6rem">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.6rem">
                         <div style="display:flex;align-items:baseline;gap:0.75rem">
                             <h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A">Mes mandats</h2>
                             <span style="font-size:0.82rem;color:#94A3B8">Suivi de vos projets en cours</span>
                         </div>
-                        <a href="contact.html" id="mandate-start-btn" class="btn btn-outline btn-sm" style="display:inline-flex;align-items:center;gap:6px;font-size:0.82rem">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                            Démarrer un projet
-                        </a>
+                        <div style="display:flex;align-items:center;gap:0.5rem">
+                            <button id="btn-refresh-mandates" onclick="refreshPortal(this)" class="portal-refresh-btn">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
+                                Actualiser
+                            </button>
+                            <a href="contact.html" id="mandate-start-btn" class="btn btn-outline btn-sm" style="display:inline-flex;align-items:center;gap:6px;font-size:0.82rem">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                Démarrer un projet
+                            </a>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Devis header -->
                 <div class="portal-tab-header" id="header-quotes" style="display:none">
-                    <div style="display:flex;align-items:baseline;gap:0.75rem;margin-bottom:0.6rem">
-                        <h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A">Mes devis</h2>
-                        <span style="font-size:0.82rem;color:#94A3B8">Consultez et acceptez vos devis</span>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem">
+                        <div style="display:flex;align-items:baseline;gap:0.75rem">
+                            <h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A">Mes devis</h2>
+                            <span style="font-size:0.82rem;color:#94A3B8">Consultez et acceptez vos devis</span>
+                        </div>
+                        <button id="btn-refresh-quotes" onclick="refreshPortal(this)" class="portal-refresh-btn">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
+                            Actualiser
+                        </button>
                     </div>
                     <div class="portal-search-bar">
                         <div class="portal-search-input-wrap">
@@ -254,9 +266,15 @@
 
                 <!-- Factures header -->
                 <div class="portal-tab-header" id="header-invoices" style="display:none">
-                    <div style="display:flex;align-items:baseline;gap:0.75rem;margin-bottom:0.6rem">
-                        <h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A">Mes factures</h2>
-                        <span style="font-size:0.82rem;color:#94A3B8">Téléchargez et payez vos factures</span>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem">
+                        <div style="display:flex;align-items:baseline;gap:0.75rem">
+                            <h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A">Mes factures</h2>
+                            <span style="font-size:0.82rem;color:#94A3B8">Téléchargez et payez vos factures</span>
+                        </div>
+                        <button id="btn-refresh-invoices" onclick="refreshPortal(this)" class="portal-refresh-btn">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
+                            Actualiser
+                        </button>
                     </div>
                     <div class="portal-search-bar">
                         <div class="portal-search-input-wrap">
@@ -278,9 +296,15 @@
 
                 <!-- Contrats header -->
                 <div class="portal-tab-header" id="header-contracts" style="display:none">
-                    <div style="display:flex;align-items:baseline;gap:0.75rem;margin-bottom:0.6rem">
-                        <h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A">Mes contrats</h2>
-                        <span style="font-size:0.82rem;color:#94A3B8">Consultez et signez vos contrats de service</span>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem">
+                        <div style="display:flex;align-items:baseline;gap:0.75rem">
+                            <h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A">Mes contrats</h2>
+                            <span style="font-size:0.82rem;color:#94A3B8">Consultez et signez vos contrats de service</span>
+                        </div>
+                        <button id="btn-refresh-contracts" onclick="refreshPortal(this)" class="portal-refresh-btn">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
+                            Actualiser
+                        </button>
                     </div>
                     <div class="portal-search-bar">
                         <div class="portal-search-input-wrap">
@@ -303,9 +327,15 @@
 
                 <!-- Documents header -->
                 <div class="portal-tab-header" id="header-documents" style="display:none">
-                    <div style="display:flex;align-items:baseline;gap:0.75rem;margin-bottom:0.6rem">
-                        <h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A">Mes documents</h2>
-                        <span style="font-size:0.82rem;color:#94A3B8">Rapports, documentation et livrables déposés par VNK</span>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem">
+                        <div style="display:flex;align-items:baseline;gap:0.75rem">
+                            <h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A">Mes documents</h2>
+                            <span style="font-size:0.82rem;color:#94A3B8">Rapports, documentation et livrables déposés par VNK</span>
+                        </div>
+                        <button id="btn-refresh-documents" onclick="refreshPortal(this)" class="portal-refresh-btn">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
+                            Actualiser
+                        </button>
                     </div>
                     <div class="portal-search-bar">
                         <div class="portal-search-input-wrap">
