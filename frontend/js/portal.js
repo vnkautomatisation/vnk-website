@@ -85,7 +85,9 @@ async function authFetch(url) {
         const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
         if (r.status === 401 || r.status === 403) { logout(); return null; }
         if (!r.ok) return null;
-        return r.json();
+        const text = await r.text();
+        if (!text.trim().startsWith('{') && !text.trim().startsWith('[')) return null;
+        return JSON.parse(text);
     } catch (e) { return null; }
 }
 
