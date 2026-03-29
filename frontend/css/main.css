@@ -2875,7 +2875,7 @@ img {
 .portal-dashboard {
     display: grid;
     grid-template-columns: 240px 1fr;
-    min-height: calc(100vh - var(--nav-height));
+    height: calc(100vh - var(--nav-height));
     margin-top: var(--nav-height);
     overflow: hidden;
 }
@@ -3010,6 +3010,7 @@ img {
 .portal-main {
     padding: var(--spacing-md);
     overflow-y: auto;
+    height: 100%;
 }
 
 .portal-tab {
@@ -3027,6 +3028,11 @@ img {
     display: flex;
     align-items: baseline;
     gap: var(--spacing-sm);
+    position: sticky;
+    top: 0;
+    background: var(--color-bg, #F8FAFC);
+    z-index: 10;
+    padding-top: 0.25rem;
 }
 
     .portal-tab-header h2 {
