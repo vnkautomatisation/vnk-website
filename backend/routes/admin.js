@@ -227,6 +227,11 @@ router.get('/quotes', authenticateAdmin, async (req, res) => {
 
 router.post('/quotes', authenticateAdmin, async (req, res) => {
     try {
+        // Migration douce — colonnes potentiellement manquantes
+        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS service_type VARCHAR(100)`).catch(() => { });
+        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMP`).catch(() => { });
+        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP`).catch(() => { });
+
         const { client_id, title, description, amount_ht, service_type, expiry_days = 30 } = req.body;
         if (!client_id || !title || !amount_ht) return res.status(400).json({ success: false, message: 'Champs requis manquants.' });
         const tps = parseFloat((amount_ht * 0.05).toFixed(2));
@@ -242,7 +247,8 @@ router.post('/quotes', authenticateAdmin, async (req, res) => {
         );
         res.status(201).json({ success: true, quote: result.rows[0] });
     } catch (err) {
-        res.status(500).json({ success: false, message: 'Server error.' });
+        console.error('POST /quotes error:', err.message);
+        res.status(500).json({ success: false, message: 'Server error: ' + err.message });
     }
 });
 
