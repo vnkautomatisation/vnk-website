@@ -542,6 +542,26 @@ function applyDocSort(val) {
     filterDocuments();
 }
 
+function _docCategory(doc) {
+    const t = (doc.file_type || doc.file_name || '').toLowerCase();
+    const title = (doc.title || '').toLowerCase();
+    if (title.includes('facture') || title.includes('invoice') || t.includes('facture')) return 'Factures';
+    if (title.includes('contrat') || title.includes('contract') || t.includes('contrat')) return 'Contrats';
+    if (title.includes('devis') || title.includes('quote')) return 'Devis';
+    if (title.includes('rapport') || title.includes('audit') || title.includes('documentation') || title.includes('doc')) return 'Documentation technique';
+    return 'Autres documents';
+}
+
+const _catOrder = ['Documentation technique', 'Factures', 'Contrats', 'Devis', 'Autres documents'];
+const _catIcons = {
+    'Documentation technique': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+    'Factures': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+    'Contrats': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>',
+    'Devis': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+    'Autres documents': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>'
+};
+
+
 function renderDocuments(documents) {
     const list = document.getElementById('documents-list');
     if (!list) return;
