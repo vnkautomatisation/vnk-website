@@ -382,7 +382,7 @@ CREATE INDEX idx_ws_connected         ON ws_connections(connected_at DESC);
 -- ============================================================
 INSERT INTO admins (email, password_hash, full_name)
 VALUES (
-    'vnkautomatisation@gmail.com',
+    'admin@vnk.ca',
     '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TqrqMGwsyMkBUFJsqVVvSxzBPvYK',
     'Yan Verone Kengne'
 );

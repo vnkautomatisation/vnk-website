@@ -7,6 +7,8 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+let _email = null;
+try { _email = require('../email'); } catch (e) { }
 const { authenticateToken } = require('../middleware/auth');
 
 // ── WebSocket broadcast ──
@@ -90,6 +92,12 @@ router.post('/', authenticateToken, async (req, res) => {
         });
 
         res.json({ success: true, message: msg });
+        // Notifier admin par email
+        if (_email) {
+            pool.query('SELECT * FROM clients WHERE id=$1', [req.user.id]).then(r => {
+                if (r.rows[0]) _email.notifyAdmin(_email.tplAdminNewMessage(r.rows[0], msg)).catch(() => { });
+            }).catch(() => { });
+        }
     } catch (e) {
         console.error('POST /api/messages error:', e);
         res.status(500).json({ success: false, message: 'Erreur serveur.' });

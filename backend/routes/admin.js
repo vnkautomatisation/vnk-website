@@ -17,87 +17,6 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const pdfTemplates = require('./pdf-templates');
 
-// ── WebSocket broadcast (optionnel) ──
-let _wsBroadcast = null;
-let _email = null;
-try { _email = require('../email'); } catch (e) { console.warn('[email] Module non disponible:', e.message); }
-try { _wsBroadcast = require('../ws-server').broadcast; } catch (e) { }
-const wsBroadcast = (opts) => { if (_wsBroadcast) { try { _wsBroadcast(opts); } catch (e) { } } };
-
-// ── Notification client interne ──
-
-async function _autoCreateInvoice(pool, contract) {
-    try {
-        await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS contract_id INTEGER`).catch(() => { });
-        const existing = await pool.query(`SELECT id FROM invoices WHERE contract_id=$1`, [contract.id]).catch(() => ({ rows: [] }));
-        if (existing.rows.length) return;
-        const year = new Date().getFullYear();
-        const count = await pool.query("SELECT COUNT(*) FROM invoices WHERE EXTRACT(YEAR FROM created_at)=$1", [year]);
-        const num = parseInt(count.rows[0].count) + 1;
-        const invoice_number = `F-${year}-${String(num).padStart(3, '0')}`;
-        const due = new Date(); due.setDate(due.getDate() + 30);
-        let amount_ht = 0, tps = 0, tvq = 0, amount_ttc = 0;
-        if (contract.quote_id) {
-            const q = await pool.query('SELECT * FROM quotes WHERE id=$1', [contract.quote_id]).catch(() => ({ rows: [] }));
-            if (q.rows[0]) { amount_ht = q.rows[0].amount_ht || 0; tps = q.rows[0].tps_amount || 0; tvq = q.rows[0].tvq_amount || 0; amount_ttc = q.rows[0].amount_ttc || 0; }
-        }
-        await pool.query(
-            `INSERT INTO invoices (client_id,contract_id,invoice_number,title,description,amount_ht,tps_amount,tvq_amount,amount_ttc,status,due_date,created_at,updated_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'unpaid',$10,NOW(),NOW())`,
-            [contract.client_id, contract.id, invoice_number,
-            `Contrat de service — ${contract.title || contract.contract_number}`,
-            `Conformément au contrat ${contract.contract_number}`,
-                amount_ht, tps, tvq, amount_ttc, due.toISOString().split('T')[0]]
-        );
-        console.log(`[workflow] Facture ${invoice_number} créée pour contrat ${contract.contract_number}`);
-        if (_email) {
-            pool.query('SELECT * FROM invoices WHERE invoice_number=$1', [invoice_number]).then(r => {
-                const invRow = r.rows[0];
-                pool.query('SELECT * FROM clients WHERE id=$1', [contract.client_id]).then(cr => {
-                    const cl = cr.rows[0];
-                    if (invRow && cl) {
-                        _email.sendEmail(cl.email, _email.tplNewInvoice(cl, invRow)).catch(() => { });
-                        pool.query(`INSERT INTO messages (client_id, sender, content, is_read, created_at) VALUES ($1, 'vnk', $2, false, NOW())`,
-                            [contract.client_id, `Votre facture ${invoice_number} a été générée suite à la signature du contrat ${contract.contract_number}. Réglez-la depuis votre portail.`]).catch(() => { });
-                        wsBroadcast({ event: 'new_invoice', clientId: contract.client_id, data: { invoice: invRow } });
-                    }
-                }).catch(() => { });
-            }).catch(() => { });
-        }
-    } catch (e) { console.warn('[workflow] Facture auto error:', e.message); }
-}
-
-async function _notifyFull(pool, clientId, { chatMsg, wsEvent, wsData, emailFn }) {
-    // 1. Message chat (portail)
-    if (chatMsg) {
-        try {
-            await pool.query(`INSERT INTO messages (client_id, sender, content, is_read, created_at) VALUES ($1, 'vnk', $2, false, NOW())`, [clientId, chatMsg]);
-        } catch (e) { console.warn('[notify] chat error:', e.message); }
-    }
-    // 2. WebSocket (notification temps réel)
-    if (wsEvent) {
-        try { wsBroadcast({ event: wsEvent, clientId, data: wsData || {} }); } catch (_) { }
-    }
-    // 3. Email
-    if (emailFn && _email) {
-        try {
-            const cl = await pool.query('SELECT * FROM clients WHERE id=$1', [clientId]);
-            if (cl.rows.length) await _email.sendEmail(cl.rows[0].email, emailFn(cl.rows[0]));
-        } catch (e) { console.warn('[notify] email error:', e.message); }
-    }
-}
-
-async function notifyClient(pool, clientId, content) {
-    try {
-        await pool.query(
-            `INSERT INTO messages (client_id, sender, content, is_read, created_at) VALUES ($1, 'vnk', $2, false, NOW())`,
-            [clientId, content]
-        );
-    } catch (e) {
-        console.warn('[notify] failed:', e.message);
-    }
-}
-
 // ---------- Middleware admin auth ----------
 function authenticateAdmin(req, res, next) {
     const auth = req.headers['authorization'];
@@ -274,13 +193,7 @@ router.post('/mandates', authenticateAdmin, async (req, res) => {
             `INSERT INTO mandates (client_id, title, description, service_type, status, progress, start_date, end_date, notes, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),NOW()) RETURNING *`,
             [client_id, title, description || null, service_type || 'plc-support', status || 'active', progress || 0, start_date || null, end_date || null, notes || null]
         );
-        const mNew = result.rows[0];
-        res.status(201).json({ success: true, mandate: mNew });
-        _notifyFull(pool, mNew.client_id, {
-            chatMsg: 'Nouveau mandat créé : ' + mNew.title + '. Suivez son avancement depuis votre portail.',
-            wsEvent: 'new_mandate', wsData: { mandate: mNew },
-            emailFn: null
-        });
+        res.status(201).json({ success: true, mandate: result.rows[0] });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error.' });
     }
@@ -294,15 +207,7 @@ router.put('/mandates/:id', authenticateAdmin, async (req, res) => {
             [status, progress, notes || null, req.params.id]
         );
         if (!result.rows.length) return res.status(404).json({ success: false, message: 'Mandat non trouvé.' });
-        const mUpd = result.rows[0];
-        res.json({ success: true, mandate: mUpd });
-        if (mUpd && _email) {
-            _notifyFull(pool, mUpd.client_id, {
-                chatMsg: 'Mise à jour du mandat ' + mUpd.title + ' — Progression : ' + (mUpd.progress || 0) + '%' + (mUpd.notes ? ' — ' + mUpd.notes : ''),
-                wsEvent: 'mandate_update', wsData: { mandate: mUpd },
-                emailFn: (cl) => _email.tplMandateUpdate(cl, mUpd)
-            });
-        }
+        res.json({ success: true, mandate: result.rows[0] });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error.' });
     }
@@ -322,7 +227,15 @@ router.get('/quotes', authenticateAdmin, async (req, res) => {
 
 router.post('/quotes', authenticateAdmin, async (req, res) => {
     try {
-        const { client_id, title, description, amount_ht, service_type, expiry_days = 30 } = req.body;
+        // Migrations douces pour colonnes plan de paiement
+        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_plan VARCHAR(30) DEFAULT 'split_50_50'`).catch(() => { });
+        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_pct1 INT DEFAULT 50`).catch(() => { });
+        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_pct2 INT DEFAULT 50`).catch(() => { });
+        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_conditions TEXT`).catch(() => { });
+
+        const { client_id, title, description, amount_ht, service_type, expiry_days = 30,
+            payment_plan = 'split_50_50', payment_pct1 = 50, payment_pct2 = 50,
+            payment_conditions = '' } = req.body;
         if (!client_id || !title || !amount_ht) return res.status(400).json({ success: false, message: 'Champs requis manquants.' });
         const tps = parseFloat((amount_ht * 0.05).toFixed(2));
         const tvq = parseFloat((amount_ht * 0.09975).toFixed(2));
@@ -332,19 +245,42 @@ router.post('/quotes', authenticateAdmin, async (req, res) => {
         const num = `D-${year}-${String(parseInt(count.rows[0].count) + 1).padStart(3, '0')}`;
         const expiry = new Date(); expiry.setDate(expiry.getDate() + parseInt(expiry_days));
         const result = await pool.query(
-            `INSERT INTO quotes (client_id,quote_number,title,description,service_type,amount_ht,tps_amount,tvq_amount,amount_ttc,status,expiry_date,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10,NOW()) RETURNING *`,
-            [client_id, num, title, description || null, service_type || null, amount_ht, tps, tvq, ttc, expiry]
+            `INSERT INTO quotes (client_id,quote_number,title,description,service_type,amount_ht,tps_amount,tvq_amount,amount_ttc,status,expiry_date,payment_plan,payment_pct1,payment_pct2,payment_conditions,created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10,$11,$12,$13,$14,NOW()) RETURNING *`,
+            [client_id, num, title, description || null, service_type || null,
+                amount_ht, tps, tvq, ttc, expiry,
+                payment_plan, payment_pct1, payment_pct2, payment_conditions || null]
         );
-        const q = result.rows[0];
-        res.status(201).json({ success: true, quote: q });
-        // Notification chat + email
-        _notifyFull(pool, q.client_id, {
-            chatMsg: `📋 Nouveau devis *${q.quote_number}* — ${parseFloat(q.amount_ttc).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })} — Valide jusqu'au ${q.expiry_date ? new Date(q.expiry_date).toLocaleDateString('fr-CA') : '—'}. Acceptez-le depuis votre portail.`,
-            wsEvent: 'new_quote',
-            wsData: { quote: q },
-            emailFn: (cl) => _email.tplNewQuote(cl, q)
-        });
+        res.status(201).json({ success: true, quote: result.rows[0] });
     } catch (err) {
+        console.error('Create quote error:', err);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// POST /invoices/:id/release — libérer une facture draft (2e versement)
+router.post('/invoices/:id/release', authenticateAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `UPDATE invoices SET status='unpaid', updated_at=NOW() WHERE id=$1 AND status='draft' RETURNING *`,
+            [req.params.id]
+        );
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Facture introuvable ou déjà libérée.' });
+        const inv = result.rows[0];
+        // Notifier le client par email + message chat
+        try {
+            const cl = await pool.query('SELECT * FROM clients WHERE id=$1', [inv.client_id]);
+            if (cl.rows[0] && _email) {
+                _email.sendEmail(cl.rows[0].email, _email.tplNewInvoice(cl.rows[0], inv)).catch(() => { });
+            }
+            await pool.query(
+                `INSERT INTO messages (client_id, sender, content, is_read, created_at) VALUES ($1, 'vnk', $2, false, NOW())`,
+                [inv.client_id, `Votre facture ${inv.invoice_number} (${new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(inv.amount_ttc)}) est maintenant disponible.`]
+            ).catch(() => { });
+        } catch (notifErr) { console.warn('Release notif error:', notifErr.message); }
+        res.json({ success: true, invoice: inv });
+    } catch (err) {
+        console.error('Release invoice error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
@@ -385,14 +321,7 @@ router.post('/invoices', authenticateAdmin, async (req, res) => {
             `INSERT INTO invoices (client_id,invoice_number,title,description,amount_ht,tps_amount,tvq_amount,amount_ttc,status,due_date,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'unpaid',$9,NOW()) RETURNING *`,
             [client_id, num, title, description || null, amount_ht, tps, tvq, ttc, due]
         );
-        const inv = result.rows[0];
-        res.status(201).json({ success: true, invoice: inv });
-        _notifyFull(pool, inv.client_id, {
-            chatMsg: `🧾 Nouvelle facture *${inv.invoice_number}* — ${parseFloat(inv.amount_ttc).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}. Réglez-la depuis votre portail.`,
-            wsEvent: 'new_invoice',
-            wsData: { invoice: inv },
-            emailFn: (cl) => _email && _email.tplNewInvoice(cl, inv)
-        });
+        res.status(201).json({ success: true, invoice: result.rows[0] });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error.' });
     }
@@ -400,9 +329,11 @@ router.post('/invoices', authenticateAdmin, async (req, res) => {
 
 router.put('/invoices/:id/mark-paid', authenticateAdmin, async (req, res) => {
     try {
-        const result = await pool.query(`UPDATE invoices SET status='paid', paid_at=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *`, [req.params.id]);
+        await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50)`).catch(() => { });
+        const payment_method = (req.body && req.body.payment_method) ? req.body.payment_method : 'virement';
+        const result = await pool.query(`UPDATE invoices SET status='paid', paid_at=NOW(), payment_method=$2, updated_at=NOW() WHERE id=$1 RETURNING *`, [req.params.id, payment_method]);
         if (!result.rows.length) return res.status(404).json({ success: false, message: 'Facture non trouvée.' });
-        await pool.query(`INSERT INTO payments (invoice_id, amount, status, paid_at) VALUES ($1,$2,'completed',NOW())`, [req.params.id, result.rows[0].amount_ttc]);
+        await pool.query(`INSERT INTO payments (invoice_id, amount, status, payment_method, paid_at) VALUES ($1,$2,'completed',$3,NOW())`, [req.params.id, result.rows[0].amount_ttc, payment_method]);
         res.json({ success: true, invoice: result.rows[0] });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -539,16 +470,15 @@ router.get('/contracts', authenticateAdmin, async (req, res) => {
 
 router.post('/contracts', authenticateAdmin, async (req, res) => {
     try {
-        const { client_id, mandate_id, quote_id, title, content, file_url, status } = req.body;
+        const { client_id, mandate_id, quote_id, title, content, file_url } = req.body;
         if (!client_id || !title) return res.status(400).json({ success: false, message: 'Champs requis manquants.' });
-        const contractStatus = ['draft', 'pending', 'pending_signature'].includes(status) ? status : 'pending';
         const year = new Date().getFullYear();
         const count = await pool.query("SELECT COUNT(*) FROM contracts WHERE EXTRACT(YEAR FROM created_at)=$1", [year]);
         const num = `CT-${year}-${String(parseInt(count.rows[0].count) + 1).padStart(3, '0')}`;
         const result = await pool.query(
             `INSERT INTO contracts (client_id, mandate_id, quote_id, contract_number, title, content, file_url, status, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW()) RETURNING *`,
-            [client_id, mandate_id || null, quote_id || null, num, title, content || null, file_url || null, contractStatus]
+             VALUES ($1,$2,$3,$4,$5,$6,$7,'draft',NOW(),NOW()) RETURNING *`,
+            [client_id, mandate_id || null, quote_id || null, num, title, content || null, file_url || null]
         );
         res.status(201).json({ success: true, contract: result.rows[0] });
     } catch (err) {
@@ -558,74 +488,14 @@ router.post('/contracts', authenticateAdmin, async (req, res) => {
 
 router.put('/contracts/:id/sign', authenticateAdmin, async (req, res) => {
     try {
-        const current = await pool.query('SELECT * FROM contracts WHERE id=$1', [req.params.id]);
-        if (!current.rows.length) return res.status(404).json({ success: false, message: 'Contrat non trouvé.' });
-        const c = current.rows[0];
-        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS admin_signed_at TIMESTAMPTZ`).catch(() => { });
-        const bothSigned = !!c.signed_at;
         const result = await pool.query(
-            `UPDATE contracts SET admin_signed_at=NOW(), status=$1, updated_at=NOW() WHERE id=$2 RETURNING *`,
-            [bothSigned ? 'signed' : 'pending', req.params.id]
+            `UPDATE contracts SET status='signed', signed_at=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *`,
+            [req.params.id]
         );
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Contrat non trouvé.' });
         res.json({ success: true, contract: result.rows[0] });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error.' });
-    }
-});
-
-// PUT /contracts/:id/admin-sign — signature canvas admin
-router.put('/contracts/:id/admin-sign', authenticateAdmin, async (req, res) => {
-    try {
-        const { signature_data } = req.body;
-        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS admin_signed_at TIMESTAMPTZ`).catch(() => { });
-        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS admin_signature_data TEXT`).catch(() => { });
-        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS signed_at TIMESTAMP`).catch(() => { });
-        // Récupérer l'état actuel
-        const current = await pool.query('SELECT * FROM contracts WHERE id=$1', [req.params.id]);
-        if (!current.rows.length) return res.status(404).json({ success: false, message: 'Contrat non trouvé.' });
-        const c = current.rows[0];
-        // Status = signed seulement si le CLIENT a aussi signé
-        const bothSigned = !!c.signed_at;
-        let query, params;
-        if (signature_data && signature_data.startsWith('data:image/')) {
-            query = `UPDATE contracts SET admin_signed_at=NOW(), admin_signature_data=$1, status=$2, updated_at=NOW() WHERE id=$3 RETURNING *`;
-            params = [signature_data, bothSigned ? 'signed' : 'pending', req.params.id];
-        } else {
-            query = `UPDATE contracts SET admin_signed_at=NOW(), status=$1, updated_at=NOW() WHERE id=$2 RETURNING *`;
-            params = [bothSigned ? 'signed' : 'pending', req.params.id];
-        }
-        const result = await pool.query(query, params);
-        const contract = result.rows[0];
-        // Notifier le client — silencieux si erreur
-        try {
-            await notifyClient(pool, contract.client_id,
-                `Votre contrat ${contract.contract_number} — « ${contract.title} » a été signé par l'administrateur.\n\n${!bothSigned ? 'Il ne reste plus que votre signature pour finaliser le contrat.' : 'Le contrat est maintenant signé des deux parties.'}\n\nÉquipe VNK Automatisation Inc.`
-            );
-        } catch (notifErr) {
-            console.warn('admin-sign notify error:', notifErr.message);
-        }
-        // Broadcast WS avant res.json pour éviter ERR_HTTP_HEADERS_SENT
-        if (bothSigned) {
-            _autoCreateInvoice(pool, contract);
-            // Notifier contrat signé des deux parties
-            _notifyFull(pool, contract.client_id, {
-                chatMsg: `✅ Contrat *${contract.contract_number}* signé des deux parties ! Les travaux peuvent démarrer. Votre facture a été générée.`,
-                wsEvent: 'contract_signed',
-                wsData: { contract },
-                emailFn: (cl) => _email.tplContractSigned(cl, contract)
-            });
-        } else {
-            // Notifier que l'admin a signé, en attente client
-            _notifyFull(pool, contract.client_id, {
-                chatMsg: `✍️ VNK Automatisation a signé le contrat *${contract.contract_number}*. Votre signature est maintenant requise pour démarrer les travaux.`,
-                wsEvent: 'contract_signed',
-                wsData: { contract }
-            });
-        }
-        return res.json({ success: true, contract, message: bothSigned ? 'Contrat signé des deux parties.' : 'Signature admin enregistrée — en attente du client.' });
-    } catch (err) {
-        console.error('admin-sign error:', err.message);
-        if (!res.headersSent) res.status(500).json({ success: false, message: 'Server error: ' + err.message });
     }
 });
 
@@ -750,9 +620,10 @@ router.get('/documents', authenticateAdmin, async (req, res) => {
 
 router.post('/documents', authenticateAdmin, async (req, res) => {
     try {
-        const { client_id, mandate_id, title, description, file_type, file_name, file_url, file_data, file_size, category, status } = req.body;
+        const { client_id, mandate_id, title, description, file_type, file_name, file_url, file_data, file_size } = req.body;
         if (!client_id || !title) return res.status(400).json({ success: false, message: 'client_id et title requis.' });
         let finalUrl = file_url || null;
+        // If base64 data provided (direct upload), store as data URL
         if (file_data && !finalUrl) {
             const mimes = {
                 pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -762,32 +633,13 @@ router.post('/documents', authenticateAdmin, async (req, res) => {
             const ext = (file_type || 'other').toLowerCase();
             finalUrl = 'data:' + (mimes[ext] || 'application/octet-stream') + ';base64,' + file_data;
         }
-        // Catégorie : exactement ce que l'admin a choisi
-        const finalCategory = (category && category.trim()) ? category.trim() : null;
-        // Statut : disponible_lu = déjà lu, sinon non lu (notifie le client)
-        const finalStatus = (status === 'disponible_lu') ? 'disponible' : (status || 'disponible');
-        const isRead = (status === 'disponible_lu');
-        await pool.query(`ALTER TABLE documents ADD COLUMN IF NOT EXISTS category VARCHAR(100)`).catch(() => { });
-        await pool.query(`ALTER TABLE documents ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'disponible'`).catch(() => { });
-        await pool.query(`ALTER TABLE documents ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false`).catch(() => { });
         const result = await pool.query(
-            `INSERT INTO documents (client_id, mandate_id, title, description, file_type, file_name, file_url, file_size, category, status, is_read, created_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW()) RETURNING *`,
+            `INSERT INTO documents (client_id, mandate_id, title, description, file_type, file_name, file_url, file_size, created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING *`,
             [client_id, mandate_id || null, title, description || null, file_type || 'other',
-                file_name || title, finalUrl, file_size || null, finalCategory, finalStatus, isRead]
+                file_name || title, finalUrl, file_size || null]
         );
-        const doc = result.rows[0];
-        res.status(201).json({ success: true, document: doc });
-        // Notification chat + email (seulement si non lu = nouveau pour le client)
-        if (!isRead) {
-            const catLabel = finalCategory || 'document';
-            _notifyFull(pool, client_id, {
-                chatMsg: `📄 Nouveau document disponible : *${title}*${finalCategory ? ' (' + finalCategory + ')' : ''}. Consultez-le dans votre portail, section Documents.`,
-                wsEvent: 'new_document',
-                wsData: { document: doc },
-                emailFn: (cl) => _email.tplNewDocument(cl, doc)
-            });
-        }
+        res.status(201).json({ success: true, document: result.rows[0] });
     } catch (err) {
         console.error('POST document error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -815,7 +667,7 @@ router.get('/messages', authenticateAdmin, async (req, res) => {
              ORDER BY c.full_name`
         );
         const threads = await Promise.all(allClients.rows.map(async (c) => {
-            const msgs = await pool.query(`SELECT id, client_id, sender, content, attachment_data, is_read, channel, created_at FROM messages WHERE client_id=$1 ORDER BY created_at ASC`, [c.id]);
+            const msgs = await pool.query(`SELECT id, client_id, sender, content, attachment_data, is_read, created_at FROM messages WHERE client_id=$1 ORDER BY created_at ASC`, [c.id]);
             const unread = await pool.query(`SELECT COUNT(*) FROM messages WHERE client_id=$1 AND sender='client' AND is_read=false`, [c.id]);
             return {
                 client_id: c.id,
@@ -833,110 +685,20 @@ router.get('/messages', authenticateAdmin, async (req, res) => {
 
 router.post('/messages/:clientId', authenticateAdmin, async (req, res) => {
     try {
-        const { content, channel = 'chat' } = req.body;
+        const { content } = req.body;
         if (!content) return res.status(400).json({ success: false, message: 'Message vide.' });
-
-        // Ajouter colonne channel si pas encore présente
-        await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS channel VARCHAR(30) DEFAULT 'chat'`).catch(() => { });
-
-        let msg = null;
-        // Insérer dans le chat seulement si canal = chat ou both
-        if (channel === 'chat' || channel === 'both') {
-            const result = await pool.query(
-                `INSERT INTO messages (client_id, sender, content, is_read, channel, created_at) VALUES ($1, 'vnk', $2, false, $3, NOW()) RETURNING *`,
-                [req.params.clientId, content.trim(), channel]
-            );
-            msg = result.rows[0];
-        }
-        // Marquer les messages du client comme lus
+        const result = await pool.query(
+            `INSERT INTO messages (client_id, sender, content, is_read, created_at) VALUES ($1, 'vnk', $2, false, NOW()) RETURNING *`,
+            [req.params.clientId, content.trim()]
+        );
+        // Marquer les messages du client comme lus en même temps
         await pool.query(
             `UPDATE messages SET is_read=true WHERE client_id=$1 AND sender='client' AND is_read=false`,
             [req.params.clientId]
         );
-
-        // Récupérer infos client pour email
-        const clR = await pool.query('SELECT * FROM clients WHERE id=$1', [req.params.clientId]).catch(() => ({ rows: [] }));
-        const client = clR.rows[0];
-
-        // Envoyer email si canal = email ou both
-        if ((channel === 'email' || channel === 'both') && _email && client) {
-            const msgObj = msg || { content: content.trim(), channel, created_at: new Date() };
-            await _email.sendEmail(client.email, _email.tplNewMessage(client, msgObj)).catch(e => {
-                console.warn('[email] Message send error:', e.message);
-            });
-            // Si canal email uniquement → insérer quand même en DB avec channel='email' pour garder trace
-            if (channel === 'email' && !msg) {
-                const result = await pool.query(
-                    `INSERT INTO messages (client_id, sender, content, is_read, channel, created_at) VALUES ($1, 'vnk', $2, false, 'email', NOW()) RETURNING *`,
-                    [req.params.clientId, content.trim()]
-                );
-                msg = result.rows[0];
-            }
-        }
-
-        if (!msg) {
-            return res.status(201).json({ success: true, message: { client_id: parseInt(req.params.clientId), content, channel } });
-        }
-
-        res.status(201).json({ success: true, message: msg });
-        // WS push (seulement si chat ou both)
-        if (channel !== 'email') {
-            wsBroadcast({ event: 'new_message', clientId: parseInt(req.params.clientId), data: { message: msg } });
-        }
+        res.status(201).json({ success: true, message: result.rows[0] });
     } catch (err) {
-        console.error('[messages POST]', err.message);
         res.status(500).json({ success: false, message: 'Server error.' });
-    }
-});
-
-// POST /api/admin/email-inbound — Recevoir un email entrant (webhook)
-// Compatible SendGrid Inbound Parse, Mailgun, Postmark
-// Mappe l'email à un client via son adresse email
-router.post('/email-inbound', async (req, res) => {
-    try {
-        // Support SendGrid, Mailgun, Postmark formats
-        const from = req.body.from || req.body.sender || req.body.From || '';
-        const subject = req.body.subject || req.body.Subject || '(Sans objet)';
-        const text = req.body.text || req.body['body-plain'] || req.body.TextBody || '';
-        const html = req.body.html || req.body['body-html'] || req.body.HtmlBody || '';
-
-        // Extraire l'adresse email de l'expéditeur
-        const emailMatch = from.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-        if (!emailMatch) return res.status(200).json({ success: false, message: 'Email invalide.' });
-        const fromEmail = emailMatch[0].toLowerCase();
-
-        // Trouver le client correspondant
-        const cl = await pool.query('SELECT * FROM clients WHERE LOWER(email)=$1', [fromEmail]);
-        if (!cl.rows.length) {
-            console.log('[email-inbound] Email inconnu:', fromEmail, '—', subject);
-            return res.status(200).json({ success: false, message: 'Client non trouvé.' });
-        }
-        const client = cl.rows[0];
-
-        // Nettoyer le contenu texte
-        const body = text.trim() || html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-        const content = subject && subject !== '(Sans objet)'
-            ? `**${subject}**\n\n${body}`.substring(0, 2000)
-            : body.substring(0, 2000);
-
-        // Ajouter colonne channel si pas encore présente
-        await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS channel VARCHAR(30) DEFAULT 'chat'`).catch(() => { });
-
-        // Insérer comme message client avec channel='email_received'
-        const result = await pool.query(
-            `INSERT INTO messages (client_id, sender, content, is_read, channel, created_at) VALUES ($1, 'client', $2, false, 'email_received', NOW()) RETURNING *`,
-            [client.id, content]
-        );
-        const msg = result.rows[0];
-        console.log(`[email-inbound] Email reçu de ${fromEmail} (${client.full_name}) — ${subject}`);
-
-        // WS push vers admin
-        wsBroadcast({ event: 'new_message_client', clientId: client.id, data: { message: msg, from: fromEmail } });
-
-        res.status(200).json({ success: true });
-    } catch (err) {
-        console.error('[email-inbound]', err.message);
-        res.status(200).json({ success: false }); // Toujours 200 pour les webhooks
     }
 });
 

@@ -34,6 +34,30 @@ ORDER BY created_at DESC`,
 });
 
 // GET /api/invoices/:id — get single invoice
+// GET /:id/pdf — générer PDF facture (portail client)
+router.get('/:id/pdf', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT i.*, cl.full_name, cl.company_name, cl.email, cl.phone,
+                    cl.address, cl.city, cl.province, cl.postal_code
+             FROM invoices i
+             JOIN clients cl ON i.client_id = cl.id
+             WHERE i.id = $1 AND i.client_id = $2`,
+            [req.params.id, req.user.id]
+        );
+        if (!result.rows.length)
+            return res.status(404).json({ success: false, message: 'Facture introuvable.' });
+        const row = result.rows[0];
+        const invoice = { ...row };
+        const client = { full_name: row.full_name, email: row.email, phone: row.phone, company_name: row.company_name, address: row.address, city: row.city, province: row.province, postal_code: row.postal_code };
+        const { generateInvoicePDF } = require('./pdf-templates');
+        await generateInvoicePDF(res, invoice, client);
+    } catch (e) {
+        console.error('Invoice PDF client error:', e);
+        if (!res.headersSent) res.status(500).json({ success: false, message: 'Erreur PDF.' });
+    }
+});
+
 router.get('/:id', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(

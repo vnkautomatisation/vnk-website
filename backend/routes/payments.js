@@ -167,6 +167,7 @@ router.post('/confirm', authenticateToken, async (req, res) => {
             if (invFull.rows[0] && clFull.rows[0]) {
                 const paidInv = { ...invFull.rows[0], stripe_payment_intent_id: payment_intent_id };
                 _email.sendEmail(clFull.rows[0].email, _email.tplInvoicePaid(clFull.rows[0], paidInv)).catch(() => { });
+                _email.notifyAdmin(_email.tplAdminPaymentReceived(clFull.rows[0], paidInv)).catch(() => { });
             }
         }
     } catch (err) {

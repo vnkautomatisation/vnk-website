@@ -220,6 +220,38 @@
         } catch { }
     };
 
+
+    // ── Formater le contenu d'un message ──
+    // Supporte : **gras**, *italique*, __souligné__, `code`
+    // Détecte le type de message pour afficher un tag coloré
+    function _fmtMsg(raw) {
+        if (!raw) return { html: '', tag: null };
+        let text = raw
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/__(.+?)__/g, '<u>$1</u>')
+            .replace(/`(.+?)`/g, '<code style="background:rgba(0,0,0,0.08);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:0.85em">$1</code>')
+            .replace(/\n/g, '<br>');
+
+        // Détecter le type pour le tag
+        const lower = raw.toLowerCase();
+        let tag = null;
+        if (/facture|invoice|F-\d{4}-\d{3}/.test(raw))
+            tag = { label: 'Facture', bg: '#FFF7ED', color: '#C2410C', icon: '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>' };
+        else if (/devis|quote|D-\d{4}-\d{3}/.test(raw))
+            tag = { label: 'Devis', bg: '#EFF6FF', color: '#1D4ED8', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' };
+        else if (/contrat|contract|CT-\d{4}-\d{3}/.test(raw))
+            tag = { label: 'Contrat', bg: '#F5F3FF', color: '#6D28D9', icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>' };
+        else if (/document|rapport|fichier/.test(lower))
+            tag = { label: 'Document', bg: '#F0FDF4', color: '#15803D', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' };
+        else if (/paiement|payé|payment/.test(lower))
+            tag = { label: 'Paiement', bg: '#DCFCE7', color: '#15803D', icon: '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>' };
+        else if (/mandat|mandate/.test(lower))
+            tag = { label: 'Mandat', bg: '#FEF9C3', color: '#854D0E', icon: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>' };
+        return { html: text, tag };
+    }
+
     function vnkChatRender(msgs) {
         const container = document.getElementById('vnk-chat-messages');
         if (!container || !msgs.length) return;
@@ -227,36 +259,51 @@
             const isClient = m.sender === 'client';
             const time = new Date(m.created_at).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
             const isLast = i === msgs.length - 1;
-            let bubble = m.content || '';
-            const fileMatch = bubble.match(/^\[Fichier\]\s*(.+?)\s*\((.+?)\)\s*\|\|URL:(.+)$/);
-            const imgMatch = bubble.match(/^\[Image\]\s*(.+?)\s*\|\|URL:(.+)$/);
-            const audioMatch = bubble.match(/^\[Audio\]\|\|URL:(.+)$/);
+            const raw = m.content || '';
+            let bubble = '';
+
+            const fileMatch = raw.match(/^\[Fichier\]\s*(.+?)\s*\((.+?)\)\s*\|\|URL:(.+)$/);
+            const imgMatch = raw.match(/^\[Image\]\s*(.+?)\s*\|\|URL:(.+)$/);
+            const audioMatch = raw.match(/^\[Audio\]\|\|URL:(.+)$/);
+            let tag = null;
             if (fileMatch) {
                 const [, name, size, url] = fileMatch;
-                bubble = `<a href="${url}" download="${name}" target="_blank" class="vnk-file-msg">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    <span>${name}</span><span style="font-weight:400;color:#64748B;font-size:0.75rem">${size}</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                </a>`;
+                bubble = '<a href="' + url + '" download="' + name + '" target="_blank" class="vnk-file-msg">'
+                    + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+                    + '<span>' + name + '</span><span style="opacity:0.6;font-size:0.75rem">' + size + '</span>'
+                    + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
+                    + '</a>';
             } else if (imgMatch) {
                 const [, name, url] = imgMatch;
-                bubble = `<a href="${url}" target="_blank"><img src="${url}" alt="${name}" style="max-width:200px;max-height:160px;border-radius:8px;display:block"></a>`;
+                bubble = '<a href="' + url + '" target="_blank"><img src="' + url + '" alt="' + name + '" style="max-width:200px;max-height:160px;border-radius:8px;display:block"></a>';
             } else if (audioMatch) {
-                bubble = `<audio controls style="max-width:200px"><source src="${audioMatch[1]}"></audio>`;
+                bubble = '<audio controls style="max-width:200px"><source src="' + audioMatch[1] + '"></audio>';
+            } else {
+                const fmt = _fmtMsg(raw);
+                bubble = fmt.html;
+                tag = fmt.tag;
             }
+
+            const tagHtml = (!isClient && tag)
+                ? '<div style="display:flex;align-items:center;gap:4px;margin-bottom:5px">'
+                + '<span style="display:inline-flex;align-items:center;gap:4px;background:' + tag.bg + ';color:' + tag.color + ';font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px;letter-spacing:0.3px">'
+                + '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="' + tag.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + tag.icon + '</svg>'
+                + tag.label + '</span></div>'
+                : '';
+
             let readInd = '';
             if (isClient && isLast) {
-                const seen = m.is_read;
-                readInd = `<div class="vnk-msg-read ${seen ? 'seen' : ''}">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">${seen ? '<polyline points="1 12 7 18 23 6"/>' : '<polyline points="9 12 11 14 15 10"/>'}</svg>
-                    ${seen ? 'Lu' : 'Envoyé'}
-                </div>`;
+                readInd = '<div class="vnk-msg-read ' + (m.is_read ? 'seen' : '') + '">'
+                    + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">'
+                    + (m.is_read ? '<polyline points="1 12 7 18 23 6"/>' : '<polyline points="9 12 11 14 15 10"/>')
+                    + '</svg>' + (m.is_read ? 'Lu' : 'Envoyé') + '</div>';
             }
-            return `<div class="vnk-chat-msg ${isClient ? 'client' : 'vnk'}">
-                <div class="vnk-chat-msg-bubble">${bubble}</div>
-                <div class="vnk-chat-msg-time">${isClient ? 'Vous' : 'VNK'} · ${time}</div>
-                ${isClient ? readInd : ''}
-            </div>`;
+
+            return '<div class="vnk-chat-msg ' + (isClient ? 'client' : 'vnk') + '">'
+                + '<div class="vnk-chat-msg-bubble">' + tagHtml + bubble + '</div>'
+                + '<div class="vnk-chat-msg-time">' + (isClient ? 'Vous' : 'VNK') + ' · ' + time + '</div>'
+                + (isClient ? readInd : '')
+                + '</div>';
         }).join('');
         container.scrollTop = container.scrollHeight;
     }
@@ -400,7 +447,11 @@
                         if (bbl) bbl.classList.remove('has-unread');
                     }
                 }
-                if (_isOpen && msgs.length !== _messages.length) { _messages = msgs; vnkChatRender(msgs); }
+                // Mettre à jour si nouveau message ou premier chargement
+                if (msgs.length !== _messages.length || (!_messages.length && msgs.length)) {
+                    _messages = msgs;
+                    if (_isOpen) vnkChatRender(msgs);
+                }
             }).catch(() => { });
     }
 
@@ -411,6 +462,8 @@
         _polling = setInterval(vnkChatPoll, 15000); // 15s fallback
     }
     _startChatPolling();
+    // Charger les messages immédiatement au démarrage pour le badge et l'historique
+    setTimeout(() => vnkChatLoad(true), 800);
 
     // Si le WS portal est actif, désactiver le polling du chat (vnkChatNotify gère tout)
     // Vérification toutes les 3s au démarrage, puis stop si WS connecté
