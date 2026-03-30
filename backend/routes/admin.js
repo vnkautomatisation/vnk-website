@@ -1,6 +1,11 @@
 /* ============================================
    VNK Automatisation Inc. - Admin Routes
-   Version Phase 3 — WebSocket temps réel
+   Version Phase 2 — Toutes fonctionnalités
+   + Toggle archive client
+   + Mark messages as read (thread + all)
+   + Export CSV (via frontend)
+   + Contrats, Litiges, Remboursements,
+     Dépenses, Déclarations fiscales
    ============================================ */
 
 const express = require('express');
@@ -12,15 +17,76 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const pdfTemplates = require('./pdf-templates');
 
-// ── WebSocket broadcast (optionnel — gracieux si ws-server absent) ──
+// ── WebSocket broadcast (optionnel) ──
 let _wsBroadcast = null;
+let _email = null;
+try { _email = require('../email'); } catch (e) { console.warn('[email] Module non disponible:', e.message); }
 try { _wsBroadcast = require('../ws-server').broadcast; } catch (e) { }
-const wsBroadcast = (opts) => { if (_wsBroadcast) { try { _wsBroadcast(opts); } catch (e) { console.warn('[WS] broadcast error:', e.message); } } };
+const wsBroadcast = (opts) => { if (_wsBroadcast) { try { _wsBroadcast(opts); } catch (e) { } } };
 
-// ============================================================
-// WORKFLOW HELPER — Notification client interne
-// Envoie un message automatique dans la messagerie du client
-// ============================================================
+// ── Notification client interne ──
+
+async function _autoCreateInvoice(pool, contract) {
+    try {
+        await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS contract_id INTEGER`).catch(() => { });
+        const existing = await pool.query(`SELECT id FROM invoices WHERE contract_id=$1`, [contract.id]).catch(() => ({ rows: [] }));
+        if (existing.rows.length) return;
+        const year = new Date().getFullYear();
+        const count = await pool.query("SELECT COUNT(*) FROM invoices WHERE EXTRACT(YEAR FROM created_at)=$1", [year]);
+        const num = parseInt(count.rows[0].count) + 1;
+        const invoice_number = `F-${year}-${String(num).padStart(3, '0')}`;
+        const due = new Date(); due.setDate(due.getDate() + 30);
+        let amount_ht = 0, tps = 0, tvq = 0, amount_ttc = 0;
+        if (contract.quote_id) {
+            const q = await pool.query('SELECT * FROM quotes WHERE id=$1', [contract.quote_id]).catch(() => ({ rows: [] }));
+            if (q.rows[0]) { amount_ht = q.rows[0].amount_ht || 0; tps = q.rows[0].tps_amount || 0; tvq = q.rows[0].tvq_amount || 0; amount_ttc = q.rows[0].amount_ttc || 0; }
+        }
+        await pool.query(
+            `INSERT INTO invoices (client_id,contract_id,invoice_number,title,description,amount_ht,tps_amount,tvq_amount,amount_ttc,status,due_date,created_at,updated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'unpaid',$10,NOW(),NOW())`,
+            [contract.client_id, contract.id, invoice_number,
+            `Contrat de service — ${contract.title || contract.contract_number}`,
+            `Conformément au contrat ${contract.contract_number}`,
+                amount_ht, tps, tvq, amount_ttc, due.toISOString().split('T')[0]]
+        );
+        console.log(`[workflow] Facture ${invoice_number} créée pour contrat ${contract.contract_number}`);
+        if (_email) {
+            pool.query('SELECT * FROM invoices WHERE invoice_number=$1', [invoice_number]).then(r => {
+                const invRow = r.rows[0];
+                pool.query('SELECT * FROM clients WHERE id=$1', [contract.client_id]).then(cr => {
+                    const cl = cr.rows[0];
+                    if (invRow && cl) {
+                        _email.sendEmail(cl.email, _email.tplNewInvoice(cl, invRow)).catch(() => { });
+                        pool.query(`INSERT INTO messages (client_id, sender, content, is_read, created_at) VALUES ($1, 'vnk', $2, false, NOW())`,
+                            [contract.client_id, `Votre facture ${invoice_number} a été générée suite à la signature du contrat ${contract.contract_number}. Réglez-la depuis votre portail.`]).catch(() => { });
+                        wsBroadcast({ event: 'new_invoice', clientId: contract.client_id, data: { invoice: invRow } });
+                    }
+                }).catch(() => { });
+            }).catch(() => { });
+        }
+    } catch (e) { console.warn('[workflow] Facture auto error:', e.message); }
+}
+
+async function _notifyFull(pool, clientId, { chatMsg, wsEvent, wsData, emailFn }) {
+    // 1. Message chat (portail)
+    if (chatMsg) {
+        try {
+            await pool.query(`INSERT INTO messages (client_id, sender, content, is_read, created_at) VALUES ($1, 'vnk', $2, false, NOW())`, [clientId, chatMsg]);
+        } catch (e) { console.warn('[notify] chat error:', e.message); }
+    }
+    // 2. WebSocket (notification temps réel)
+    if (wsEvent) {
+        try { wsBroadcast({ event: wsEvent, clientId, data: wsData || {} }); } catch (_) { }
+    }
+    // 3. Email
+    if (emailFn && _email) {
+        try {
+            const cl = await pool.query('SELECT * FROM clients WHERE id=$1', [clientId]);
+            if (cl.rows.length) await _email.sendEmail(cl.rows[0].email, emailFn(cl.rows[0]));
+        } catch (e) { console.warn('[notify] email error:', e.message); }
+    }
+}
+
 async function notifyClient(pool, clientId, content) {
     try {
         await pool.query(
@@ -28,25 +94,11 @@ async function notifyClient(pool, clientId, content) {
             [clientId, content]
         );
     } catch (e) {
-        console.warn('[Workflow] Notification client failed:', e.message);
+        console.warn('[notify] failed:', e.message);
     }
 }
 
-// Helper : générer numéro de facture séquentiel
-async function nextInvoiceNumber(pool) {
-    const year = new Date().getFullYear();
-    const r = await pool.query("SELECT COUNT(*) FROM invoices WHERE EXTRACT(YEAR FROM created_at)=$1", [year]);
-    return `F-${year}-${String(parseInt(r.rows[0].count) + 1).padStart(3, '0')}`;
-}
-
-// Helper : générer numéro de contrat séquentiel
-async function nextContractNumber(pool) {
-    const year = new Date().getFullYear();
-    const r = await pool.query("SELECT COUNT(*) FROM contracts WHERE EXTRACT(YEAR FROM created_at)=$1", [year]);
-    return `CT-${year}-${String(parseInt(r.rows[0].count) + 1).padStart(3, '0')}`;
-}
-
-
+// ---------- Middleware admin auth ----------
 function authenticateAdmin(req, res, next) {
     const auth = req.headers['authorization'];
     if (!auth || !auth.startsWith('Bearer ')) {
@@ -173,7 +225,6 @@ router.post('/clients', authenticateAdmin, async (req, res) => {
             [full_name, email.toLowerCase().trim(), hash, company_name || null, phone || null, address || null, city || null, province || 'QC', postal_code || null, sector || null, technologies || null, internal_notes || null]
         );
         res.status(201).json({ success: true, client: result.rows[0] });
-        wsBroadcast({ event: 'new_client', data: result.rows[0], adminOnly: true });
     } catch (err) {
         console.error('Admin create client error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -223,17 +274,14 @@ router.post('/mandates', authenticateAdmin, async (req, res) => {
             `INSERT INTO mandates (client_id, title, description, service_type, status, progress, start_date, end_date, notes, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),NOW()) RETURNING *`,
             [client_id, title, description || null, service_type || 'plc-support', status || 'active', progress || 0, start_date || null, end_date || null, notes || null]
         );
-        const mandate = result.rows[0];
-
-        // Workflow — notifier le client de l'ouverture du mandat
-        await notifyClient(pool, client_id,
-            `Bonjour,\n\nVotre mandat « ${title} » a été ouvert et est maintenant actif sur votre portail.\n\nVous pouvez suivre l'avancement en temps réel dans la section Mandats de votre espace client.\n\nÀ votre disposition pour toute question.\n\nÉquipe VNK Automatisation Inc.`
-        );
-
-        res.status(201).json({ success: true, mandate, workflow: 'Mandat créé — client notifié.' });
-        wsBroadcast({ event: 'mandate_created', clientId: parseInt(client_id), data: mandate });
+        const mNew = result.rows[0];
+        res.status(201).json({ success: true, mandate: mNew });
+        _notifyFull(pool, mNew.client_id, {
+            chatMsg: 'Nouveau mandat créé : ' + mNew.title + '. Suivez son avancement depuis votre portail.',
+            wsEvent: 'new_mandate', wsData: { mandate: mNew },
+            emailFn: null
+        });
     } catch (err) {
-        console.error('POST mandate error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
@@ -241,39 +289,21 @@ router.post('/mandates', authenticateAdmin, async (req, res) => {
 router.put('/mandates/:id', authenticateAdmin, async (req, res) => {
     try {
         const { status, progress, notes } = req.body;
-        const prev = await pool.query('SELECT * FROM mandates WHERE id=$1', [req.params.id]);
         const result = await pool.query(
             `UPDATE mandates SET status=$1, progress=$2, notes=$3, updated_at=NOW() WHERE id=$4 RETURNING *`,
             [status, progress, notes || null, req.params.id]
         );
         if (!result.rows.length) return res.status(404).json({ success: false, message: 'Mandat non trouvé.' });
-        const mandate = result.rows[0];
-
-        // Workflow — notifier le client si changement significatif
-        if (prev.rows.length) {
-            const old = prev.rows[0];
-            const statusLabels = { active: 'Actif', in_progress: 'En cours', completed: 'Complété', paused: 'En pause', cancelled: 'Annulé' };
-            if (old.status !== status) {
-                await notifyClient(pool, mandate.client_id,
-                    `Mise à jour de votre mandat « ${mandate.title} ».\n\nStatut : ${statusLabels[status] || status}${progress !== undefined ? `\nAvancement : ${progress}%` : ''}\n\nÉquipe VNK Automatisation Inc.`
-                );
-            } else if (progress !== undefined && Math.abs((old.progress || 0) - progress) >= 25) {
-                await notifyClient(pool, mandate.client_id,
-                    `Avancement de votre mandat « ${mandate.title} » mis à jour : ${progress}% complété.\n\nÉquipe VNK Automatisation Inc.`
-                );
-            }
-            // Workflow : si mandat complété → proposer clôture
-            if (status === 'completed' && old.status !== 'completed') {
-                await notifyClient(pool, mandate.client_id,
-                    `Félicitations ! Votre mandat « ${mandate.title} » est maintenant complété à 100%.\n\nUne facture finale sera émise sous peu. Merci de votre confiance.\n\nÉquipe VNK Automatisation Inc.`
-                );
-            }
+        const mUpd = result.rows[0];
+        res.json({ success: true, mandate: mUpd });
+        if (mUpd && _email) {
+            _notifyFull(pool, mUpd.client_id, {
+                chatMsg: 'Mise à jour du mandat ' + mUpd.title + ' — Progression : ' + (mUpd.progress || 0) + '%' + (mUpd.notes ? ' — ' + mUpd.notes : ''),
+                wsEvent: 'mandate_update', wsData: { mandate: mUpd },
+                emailFn: (cl) => _email.tplMandateUpdate(cl, mUpd)
+            });
         }
-
-        res.json({ success: true, mandate });
-        wsBroadcast({ event: 'mandate_updated', clientId: mandate.client_id, data: mandate });
     } catch (err) {
-        console.error('PUT mandate error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
@@ -292,14 +322,7 @@ router.get('/quotes', authenticateAdmin, async (req, res) => {
 
 router.post('/quotes', authenticateAdmin, async (req, res) => {
     try {
-        // Migration douce — colonnes potentiellement manquantes
-        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS service_type VARCHAR(100)`).catch(() => { });
-        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMP`).catch(() => { });
-        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP`).catch(() => { });
-
-        const { client_id, title, description, amount_ht, service_type } = req.body;
-        // Sanitize expiry_days: vide, NaN ou 0 → défaut 30 jours
-        const expiryDays = (parseInt(req.body.expiry_days) > 0) ? parseInt(req.body.expiry_days) : 30;
+        const { client_id, title, description, amount_ht, service_type, expiry_days = 30 } = req.body;
         if (!client_id || !title || !amount_ht) return res.status(400).json({ success: false, message: 'Champs requis manquants.' });
         const tps = parseFloat((amount_ht * 0.05).toFixed(2));
         const tvq = parseFloat((amount_ht * 0.09975).toFixed(2));
@@ -307,24 +330,22 @@ router.post('/quotes', authenticateAdmin, async (req, res) => {
         const year = new Date().getFullYear();
         const count = await pool.query("SELECT COUNT(*) FROM quotes WHERE EXTRACT(YEAR FROM created_at)=$1", [year]);
         const num = `D-${year}-${String(parseInt(count.rows[0].count) + 1).padStart(3, '0')}`;
-        const expiry = new Date(); expiry.setDate(expiry.getDate() + expiryDays);
+        const expiry = new Date(); expiry.setDate(expiry.getDate() + parseInt(expiry_days));
         const result = await pool.query(
             `INSERT INTO quotes (client_id,quote_number,title,description,service_type,amount_ht,tps_amount,tvq_amount,amount_ttc,status,expiry_date,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10,NOW()) RETURNING *`,
             [client_id, num, title, description || null, service_type || null, amount_ht, tps, tvq, ttc, expiry]
         );
-        const quote = result.rows[0];
-
-        // Workflow — notifier le client qu'un devis est disponible
-        const fmtCA = (v) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(v);
-        await notifyClient(pool, client_id,
-            `Un nouveau devis est disponible sur votre portail.\n\nDossier : ${num} — ${title}\nMontant HT : ${fmtCA(amount_ht)}\nTPS (5%) : ${fmtCA(tps)}\nTVQ (9,975%) : ${fmtCA(tvq)}\nTotal TTC : ${fmtCA(ttc)}\nValide jusqu'au : ${expiry.toLocaleDateString('fr-CA')}\n\nVeuillez consulter et accepter ou refuser ce devis depuis votre espace client.\n\nÉquipe VNK Automatisation Inc.`
-        );
-
-        res.status(201).json({ success: true, quote, workflow: 'Devis créé — client notifié.' });
-        wsBroadcast({ event: 'new_quote', clientId: parseInt(client_id), data: quote });
+        const q = result.rows[0];
+        res.status(201).json({ success: true, quote: q });
+        // Notification chat + email
+        _notifyFull(pool, q.client_id, {
+            chatMsg: `📋 Nouveau devis *${q.quote_number}* — ${parseFloat(q.amount_ttc).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })} — Valide jusqu'au ${q.expiry_date ? new Date(q.expiry_date).toLocaleDateString('fr-CA') : '—'}. Acceptez-le depuis votre portail.`,
+            wsEvent: 'new_quote',
+            wsData: { quote: q },
+            emailFn: (cl) => _email.tplNewQuote(cl, q)
+        });
     } catch (err) {
-        console.error('POST /quotes error:', err.message);
-        res.status(500).json({ success: false, message: 'Server error: ' + err.message });
+        res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
 
@@ -351,61 +372,39 @@ router.get('/invoices', authenticateAdmin, async (req, res) => {
 
 router.post('/invoices', authenticateAdmin, async (req, res) => {
     try {
-        const { client_id, title, description, amount_ht } = req.body;
-        // Sanitize due_days: vide, NaN ou 0 → défaut 30 jours
-        const dueDays = (parseInt(req.body.due_days) > 0) ? parseInt(req.body.due_days) : 30;
+        const { client_id, title, description, amount_ht, due_days = 30 } = req.body;
         if (!client_id || !title || !amount_ht) return res.status(400).json({ success: false, message: 'Champs requis manquants.' });
         const tps = parseFloat((amount_ht * 0.05).toFixed(2));
         const tvq = parseFloat((amount_ht * 0.09975).toFixed(2));
         const ttc = parseFloat((parseFloat(amount_ht) + tps + tvq).toFixed(2));
-        const num = await nextInvoiceNumber(pool);
-        const due = new Date(); due.setDate(due.getDate() + dueDays);
+        const year = new Date().getFullYear();
+        const count = await pool.query("SELECT COUNT(*) FROM invoices WHERE EXTRACT(YEAR FROM created_at)=$1", [year]);
+        const num = `F-${year}-${String(parseInt(count.rows[0].count) + 1).padStart(3, '0')}`;
+        const due = new Date(); due.setDate(due.getDate() + parseInt(due_days));
         const result = await pool.query(
             `INSERT INTO invoices (client_id,invoice_number,title,description,amount_ht,tps_amount,tvq_amount,amount_ttc,status,due_date,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'unpaid',$9,NOW()) RETURNING *`,
             [client_id, num, title, description || null, amount_ht, tps, tvq, ttc, due]
         );
-        const invoice = result.rows[0];
-
-        // Workflow — notifier le client de la nouvelle facture
-        const fmtCA = (v) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(v);
-        await notifyClient(pool, client_id,
-            `Une nouvelle facture est disponible sur votre portail.\n\nFacture : ${num} — ${title}\nMontant HT : ${fmtCA(amount_ht)}\nTPS (5%) : ${fmtCA(tps)}\nTVQ (9,975%) : ${fmtCA(tvq)}\nTotal TTC : ${fmtCA(ttc)}\nDate d'échéance : ${due.toLocaleDateString('fr-CA')}\n\nVeuillez procéder au paiement depuis votre espace client avant la date d'échéance.\n\nMerci pour votre confiance.\nÉquipe VNK Automatisation Inc.`
-        );
-
-        res.status(201).json({ success: true, invoice, workflow: 'Facture créée — client notifié.' });
-        wsBroadcast({ event: 'new_invoice', clientId: parseInt(client_id), data: invoice });
+        const inv = result.rows[0];
+        res.status(201).json({ success: true, invoice: inv });
+        _notifyFull(pool, inv.client_id, {
+            chatMsg: `🧾 Nouvelle facture *${inv.invoice_number}* — ${parseFloat(inv.amount_ttc).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}. Réglez-la depuis votre portail.`,
+            wsEvent: 'new_invoice',
+            wsData: { invoice: inv },
+            emailFn: (cl) => _email && _email.tplNewInvoice(cl, inv)
+        });
     } catch (err) {
-        console.error('POST invoice error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
 
 router.put('/invoices/:id/mark-paid', authenticateAdmin, async (req, res) => {
     try {
-        const result = await pool.query(
-            `UPDATE invoices SET status='paid', paid_at=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *`,
-            [req.params.id]
-        );
+        const result = await pool.query(`UPDATE invoices SET status='paid', paid_at=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *`, [req.params.id]);
         if (!result.rows.length) return res.status(404).json({ success: false, message: 'Facture non trouvée.' });
-        const invoice = result.rows[0];
-
-        // Enregistrer le paiement
-        await pool.query(
-            `INSERT INTO payments (invoice_id, client_id, amount, currency, status, paid_at, created_at)
-             VALUES ($1,$2,$3,'cad','completed',NOW(),NOW())`,
-            [req.params.id, invoice.client_id, invoice.amount_ttc]
-        );
-
-        // Workflow — notifier le client de la confirmation de paiement
-        const fmtCA = (v) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(v);
-        await notifyClient(pool, invoice.client_id,
-            `Votre paiement a été reçu et confirmé.\n\nFacture : ${invoice.invoice_number} — ${invoice.title}\nMontant réglé : ${fmtCA(invoice.amount_ttc)}\nDate : ${new Date().toLocaleDateString('fr-CA')}\n\nMerci pour votre paiement. Le reçu PDF est disponible dans votre espace client.\n\nÉquipe VNK Automatisation Inc.`
-        );
-
-        res.json({ success: true, invoice, workflow: 'Facture marquée payée — client notifié.' });
-        wsBroadcast({ event: 'invoice_paid', clientId: invoice.client_id, data: invoice });
+        await pool.query(`INSERT INTO payments (invoice_id, amount, status, paid_at) VALUES ($1,$2,'completed',NOW())`, [req.params.id, result.rows[0].amount_ttc]);
+        res.json({ success: true, invoice: result.rows[0] });
     } catch (err) {
-        console.error('mark-paid error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
@@ -540,15 +539,16 @@ router.get('/contracts', authenticateAdmin, async (req, res) => {
 
 router.post('/contracts', authenticateAdmin, async (req, res) => {
     try {
-        const { client_id, mandate_id, quote_id, title, content, file_url } = req.body;
+        const { client_id, mandate_id, quote_id, title, content, file_url, status } = req.body;
         if (!client_id || !title) return res.status(400).json({ success: false, message: 'Champs requis manquants.' });
+        const contractStatus = ['draft', 'pending', 'pending_signature'].includes(status) ? status : 'pending';
         const year = new Date().getFullYear();
         const count = await pool.query("SELECT COUNT(*) FROM contracts WHERE EXTRACT(YEAR FROM created_at)=$1", [year]);
         const num = `CT-${year}-${String(parseInt(count.rows[0].count) + 1).padStart(3, '0')}`;
         const result = await pool.query(
             `INSERT INTO contracts (client_id, mandate_id, quote_id, contract_number, title, content, file_url, status, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,'draft',NOW(),NOW()) RETURNING *`,
-            [client_id, mandate_id || null, quote_id || null, num, title, content || null, file_url || null]
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW()) RETURNING *`,
+            [client_id, mandate_id || null, quote_id || null, num, title, content || null, file_url || null, contractStatus]
         );
         res.status(201).json({ success: true, contract: result.rows[0] });
     } catch (err) {
@@ -558,120 +558,74 @@ router.post('/contracts', authenticateAdmin, async (req, res) => {
 
 router.put('/contracts/:id/sign', authenticateAdmin, async (req, res) => {
     try {
+        const current = await pool.query('SELECT * FROM contracts WHERE id=$1', [req.params.id]);
+        if (!current.rows.length) return res.status(404).json({ success: false, message: 'Contrat non trouvé.' });
+        const c = current.rows[0];
+        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS admin_signed_at TIMESTAMPTZ`).catch(() => { });
+        const bothSigned = !!c.signed_at;
         const result = await pool.query(
-            `UPDATE contracts SET status='signed', signed_at=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *`,
-            [req.params.id]
+            `UPDATE contracts SET admin_signed_at=NOW(), status=$1, updated_at=NOW() WHERE id=$2 RETURNING *`,
+            [bothSigned ? 'signed' : 'pending', req.params.id]
         );
-        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Contrat non trouvé.' });
         res.json({ success: true, contract: result.rows[0] });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
 
-// ============================================
-// PUT /api/admin/contracts/:id/admin-sign
-// Signature admin → si client aussi signé : générer facture automatiquement
-// ============================================
+// PUT /contracts/:id/admin-sign — signature canvas admin
 router.put('/contracts/:id/admin-sign', authenticateAdmin, async (req, res) => {
     try {
         const { signature_data } = req.body;
-        // Migrations douces
         await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS admin_signed_at TIMESTAMPTZ`).catch(() => { });
         await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS admin_signature_data TEXT`).catch(() => { });
-
+        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS signed_at TIMESTAMP`).catch(() => { });
+        // Récupérer l'état actuel
+        const current = await pool.query('SELECT * FROM contracts WHERE id=$1', [req.params.id]);
+        if (!current.rows.length) return res.status(404).json({ success: false, message: 'Contrat non trouvé.' });
+        const c = current.rows[0];
+        // Status = signed seulement si le CLIENT a aussi signé
+        const bothSigned = !!c.signed_at;
         let query, params;
         if (signature_data && signature_data.startsWith('data:image/')) {
-            query = `UPDATE contracts SET admin_signed_at=NOW(), admin_signature_data=$1, status='signed', updated_at=NOW() WHERE id=$2 RETURNING *`;
-            params = [signature_data, req.params.id];
+            query = `UPDATE contracts SET admin_signed_at=NOW(), admin_signature_data=$1, status=$2, updated_at=NOW() WHERE id=$3 RETURNING *`;
+            params = [signature_data, bothSigned ? 'signed' : 'pending', req.params.id];
         } else {
-            query = `UPDATE contracts SET admin_signed_at=NOW(), status='signed', updated_at=NOW() WHERE id=$1 RETURNING *`;
-            params = [req.params.id];
+            query = `UPDATE contracts SET admin_signed_at=NOW(), status=$1, updated_at=NOW() WHERE id=$2 RETURNING *`;
+            params = [bothSigned ? 'signed' : 'pending', req.params.id];
         }
         const result = await pool.query(query, params);
-        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Contrat non trouvé.' });
         const contract = result.rows[0];
-
-        // Workflow — récupérer infos complètes du contrat (client + devis lié)
-        const fullContract = await pool.query(
-            `SELECT ct.*, c.full_name, c.company_name, c.email, c.client_id as cid,
-                    q.quote_number, q.amount_ht, q.tps_amount, q.tvq_amount, q.amount_ttc, q.title as quote_title
-             FROM contracts ct
-             JOIN clients c ON ct.client_id = c.id
-             LEFT JOIN quotes q ON ct.quote_id = q.id
-             WHERE ct.id = $1`,
-            [req.params.id]
-        );
-
-        let autoInvoice = null;
-        let workflowSteps = ['Contrat signé par l\'administrateur'];
-
-        if (fullContract.rows.length) {
-            const fc = fullContract.rows[0];
-
-            // Notifier le client — contrat signé des deux parties
+        // Notifier le client — silencieux si erreur
+        try {
             await notifyClient(pool, contract.client_id,
-                `Votre contrat ${contract.contract_number} — « ${contract.title} » est maintenant signé des deux parties.\n\nLe contrat signé est disponible en téléchargement dans votre espace client.\n\nUne facture sera émise prochainement.\n\nMerci de votre confiance.\nÉquipe VNK Automatisation Inc.`
+                `Votre contrat ${contract.contract_number} — « ${contract.title} » a été signé par l'administrateur.\n\n${!bothSigned ? 'Il ne reste plus que votre signature pour finaliser le contrat.' : 'Le contrat est maintenant signé des deux parties.'}\n\nÉquipe VNK Automatisation Inc.`
             );
-            workflowSteps.push('Client notifié — contrat signé');
-
-            // Auto-générer la facture si un devis est lié et qu'aucune facture n'existe encore
-            if (fc.quote_id && fc.amount_ttc) {
-                const existingInvoice = await pool.query(
-                    `SELECT id FROM invoices WHERE quote_id = $1 LIMIT 1`,
-                    [fc.quote_id]
-                );
-
-                if (!existingInvoice.rows.length) {
-                    const fmtCA = (v) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(v);
-                    const num = await nextInvoiceNumber(pool);
-                    const due = new Date(); due.setDate(due.getDate() + 30);
-
-                    const invoiceResult = await pool.query(
-                        `INSERT INTO invoices
-                         (client_id, quote_id, mandate_id, invoice_number, title, description,
-                          amount_ht, tps_amount, tvq_amount, amount_ttc, status, due_date, created_at, updated_at)
-                         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'unpaid',$11,NOW(),NOW()) RETURNING *`,
-                        [
-                            contract.client_id,
-                            fc.quote_id,
-                            contract.mandate_id || null,
-                            num,
-                            `Facture — ${fc.quote_title || contract.title}`,
-                            `Conformément au contrat ${contract.contract_number} et au devis ${fc.quote_number}`,
-                            fc.amount_ht, fc.tps_amount, fc.tvq_amount, fc.amount_ttc,
-                            due
-                        ]
-                    );
-                    autoInvoice = invoiceResult.rows[0];
-
-                    // Lier la facture au devis si possible
-                    await pool.query(
-                        `UPDATE invoices SET quote_id=$1 WHERE id=$2`,
-                        [fc.quote_id, autoInvoice.id]
-                    ).catch(() => { });
-
-                    // Notifier le client de la nouvelle facture
-                    await notifyClient(pool, contract.client_id,
-                        `Suite à la signature de votre contrat, une facture a été générée automatiquement.\n\nFacture : ${num}\nMontant HT : ${fmtCA(fc.amount_ht)}\nTPS (5%) : ${fmtCA(fc.tps_amount)}\nTVQ (9,975%) : ${fmtCA(fc.tvq_amount)}\nTotal TTC : ${fmtCA(fc.amount_ttc)}\nDate d'échéance : ${due.toLocaleDateString('fr-CA')}\n\nVeuillez procéder au paiement depuis votre espace client.\n\nMerci.\nÉquipe VNK Automatisation Inc.`
-                    );
-                    workflowSteps.push(`Facture ${num} générée automatiquement`);
-                    workflowSteps.push('Client notifié de la nouvelle facture');
-                }
-            }
+        } catch (notifErr) {
+            console.warn('admin-sign notify error:', notifErr.message);
         }
-
-        res.json({
-            success: true,
-            contract,
-            auto_invoice: autoInvoice,
-            workflow: workflowSteps
-        });
-        // WebSocket — notifier le client en temps réel (contrat signé + facture auto si applicable)
-        wsBroadcast({ event: 'contract_signed', clientId: contract.client_id, data: { contract, auto_invoice: autoInvoice } });
+        // Broadcast WS avant res.json pour éviter ERR_HTTP_HEADERS_SENT
+        if (bothSigned) {
+            _autoCreateInvoice(pool, contract);
+            // Notifier contrat signé des deux parties
+            _notifyFull(pool, contract.client_id, {
+                chatMsg: `✅ Contrat *${contract.contract_number}* signé des deux parties ! Les travaux peuvent démarrer. Votre facture a été générée.`,
+                wsEvent: 'contract_signed',
+                wsData: { contract },
+                emailFn: (cl) => _email.tplContractSigned(cl, contract)
+            });
+        } else {
+            // Notifier que l'admin a signé, en attente client
+            _notifyFull(pool, contract.client_id, {
+                chatMsg: `✍️ VNK Automatisation a signé le contrat *${contract.contract_number}*. Votre signature est maintenant requise pour démarrer les travaux.`,
+                wsEvent: 'contract_signed',
+                wsData: { contract }
+            });
+        }
+        return res.json({ success: true, contract, message: bothSigned ? 'Contrat signé des deux parties.' : 'Signature admin enregistrée — en attente du client.' });
     } catch (err) {
-        console.error('admin-sign error:', err);
-        res.status(500).json({ success: false, message: 'Server error.' });
+        console.error('admin-sign error:', err.message);
+        if (!res.headersSent) res.status(500).json({ success: false, message: 'Server error: ' + err.message });
     }
 });
 
@@ -796,10 +750,9 @@ router.get('/documents', authenticateAdmin, async (req, res) => {
 
 router.post('/documents', authenticateAdmin, async (req, res) => {
     try {
-        const { client_id, mandate_id, title, description, file_type, file_name, file_url, file_data, file_size, category } = req.body;
+        const { client_id, mandate_id, title, description, file_type, file_name, file_url, file_data, file_size, category, status } = req.body;
         if (!client_id || !title) return res.status(400).json({ success: false, message: 'client_id et title requis.' });
         let finalUrl = file_url || null;
-        // If base64 data provided (direct upload), store as data URL
         if (file_data && !finalUrl) {
             const mimes = {
                 pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -809,18 +762,32 @@ router.post('/documents', authenticateAdmin, async (req, res) => {
             const ext = (file_type || 'other').toLowerCase();
             finalUrl = 'data:' + (mimes[ext] || 'application/octet-stream') + ';base64,' + file_data;
         }
-        // Catégorie : on prend exactement ce qui est sélectionné
-        const CATEGORIES = ['Documentation technique', 'Livrables', 'Factures', 'Devis', 'Contrats', 'Autres documents'];
-        const selectedCategory = category && category.trim();
-        const finalCategory = selectedCategory;
-        const { status } = req.body;
+        // Catégorie : exactement ce que l'admin a choisi
+        const finalCategory = (category && category.trim()) ? category.trim() : null;
+        // Statut : disponible_lu = déjà lu, sinon non lu (notifie le client)
+        const finalStatus = (status === 'disponible_lu') ? 'disponible' : (status || 'disponible');
+        const isRead = (status === 'disponible_lu');
+        await pool.query(`ALTER TABLE documents ADD COLUMN IF NOT EXISTS category VARCHAR(100)`).catch(() => { });
+        await pool.query(`ALTER TABLE documents ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'disponible'`).catch(() => { });
+        await pool.query(`ALTER TABLE documents ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false`).catch(() => { });
         const result = await pool.query(
-            `INSERT INTO documents (client_id, mandate_id, title, description, file_type, file_name, file_url, file_size, category, status, created_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW()) RETURNING *`,
+            `INSERT INTO documents (client_id, mandate_id, title, description, file_type, file_name, file_url, file_size, category, status, is_read, created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW()) RETURNING *`,
             [client_id, mandate_id || null, title, description || null, file_type || 'other',
-                file_name || title, finalUrl, file_size || null, finalCategory, status || 'disponible']
+                file_name || title, finalUrl, file_size || null, finalCategory, finalStatus, isRead]
         );
-        res.status(201).json({ success: true, document: result.rows[0] });
+        const doc = result.rows[0];
+        res.status(201).json({ success: true, document: doc });
+        // Notification chat + email (seulement si non lu = nouveau pour le client)
+        if (!isRead) {
+            const catLabel = finalCategory || 'document';
+            _notifyFull(pool, client_id, {
+                chatMsg: `📄 Nouveau document disponible : *${title}*${finalCategory ? ' (' + finalCategory + ')' : ''}. Consultez-le dans votre portail, section Documents.`,
+                wsEvent: 'new_document',
+                wsData: { document: doc },
+                emailFn: (cl) => _email.tplNewDocument(cl, doc)
+            });
+        }
     } catch (err) {
         console.error('POST document error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -848,7 +815,7 @@ router.get('/messages', authenticateAdmin, async (req, res) => {
              ORDER BY c.full_name`
         );
         const threads = await Promise.all(allClients.rows.map(async (c) => {
-            const msgs = await pool.query(`SELECT id, client_id, sender, content, attachment_data, is_read, created_at FROM messages WHERE client_id=$1 ORDER BY created_at ASC`, [c.id]);
+            const msgs = await pool.query(`SELECT id, client_id, sender, content, attachment_data, is_read, channel, created_at FROM messages WHERE client_id=$1 ORDER BY created_at ASC`, [c.id]);
             const unread = await pool.query(`SELECT COUNT(*) FROM messages WHERE client_id=$1 AND sender='client' AND is_read=false`, [c.id]);
             return {
                 client_id: c.id,
@@ -866,21 +833,110 @@ router.get('/messages', authenticateAdmin, async (req, res) => {
 
 router.post('/messages/:clientId', authenticateAdmin, async (req, res) => {
     try {
-        const { content } = req.body;
+        const { content, channel = 'chat' } = req.body;
         if (!content) return res.status(400).json({ success: false, message: 'Message vide.' });
-        const result = await pool.query(
-            `INSERT INTO messages (client_id, sender, content, is_read, created_at) VALUES ($1, 'vnk', $2, false, NOW()) RETURNING *`,
-            [req.params.clientId, content.trim()]
-        );
-        // Marquer les messages du client comme lus en même temps
+
+        // Ajouter colonne channel si pas encore présente
+        await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS channel VARCHAR(30) DEFAULT 'chat'`).catch(() => { });
+
+        let msg = null;
+        // Insérer dans le chat seulement si canal = chat ou both
+        if (channel === 'chat' || channel === 'both') {
+            const result = await pool.query(
+                `INSERT INTO messages (client_id, sender, content, is_read, channel, created_at) VALUES ($1, 'vnk', $2, false, $3, NOW()) RETURNING *`,
+                [req.params.clientId, content.trim(), channel]
+            );
+            msg = result.rows[0];
+        }
+        // Marquer les messages du client comme lus
         await pool.query(
             `UPDATE messages SET is_read=true WHERE client_id=$1 AND sender='client' AND is_read=false`,
             [req.params.clientId]
         );
-        res.status(201).json({ success: true, message: result.rows[0] });
-        wsBroadcast({ event: 'new_message_vnk', clientId: parseInt(req.params.clientId), data: result.rows[0] });
+
+        // Récupérer infos client pour email
+        const clR = await pool.query('SELECT * FROM clients WHERE id=$1', [req.params.clientId]).catch(() => ({ rows: [] }));
+        const client = clR.rows[0];
+
+        // Envoyer email si canal = email ou both
+        if ((channel === 'email' || channel === 'both') && _email && client) {
+            const msgObj = msg || { content: content.trim(), channel, created_at: new Date() };
+            await _email.sendEmail(client.email, _email.tplNewMessage(client, msgObj)).catch(e => {
+                console.warn('[email] Message send error:', e.message);
+            });
+            // Si canal email uniquement → insérer quand même en DB avec channel='email' pour garder trace
+            if (channel === 'email' && !msg) {
+                const result = await pool.query(
+                    `INSERT INTO messages (client_id, sender, content, is_read, channel, created_at) VALUES ($1, 'vnk', $2, false, 'email', NOW()) RETURNING *`,
+                    [req.params.clientId, content.trim()]
+                );
+                msg = result.rows[0];
+            }
+        }
+
+        if (!msg) {
+            return res.status(201).json({ success: true, message: { client_id: parseInt(req.params.clientId), content, channel } });
+        }
+
+        res.status(201).json({ success: true, message: msg });
+        // WS push (seulement si chat ou both)
+        if (channel !== 'email') {
+            wsBroadcast({ event: 'new_message', clientId: parseInt(req.params.clientId), data: { message: msg } });
+        }
     } catch (err) {
+        console.error('[messages POST]', err.message);
         res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// POST /api/admin/email-inbound — Recevoir un email entrant (webhook)
+// Compatible SendGrid Inbound Parse, Mailgun, Postmark
+// Mappe l'email à un client via son adresse email
+router.post('/email-inbound', async (req, res) => {
+    try {
+        // Support SendGrid, Mailgun, Postmark formats
+        const from = req.body.from || req.body.sender || req.body.From || '';
+        const subject = req.body.subject || req.body.Subject || '(Sans objet)';
+        const text = req.body.text || req.body['body-plain'] || req.body.TextBody || '';
+        const html = req.body.html || req.body['body-html'] || req.body.HtmlBody || '';
+
+        // Extraire l'adresse email de l'expéditeur
+        const emailMatch = from.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        if (!emailMatch) return res.status(200).json({ success: false, message: 'Email invalide.' });
+        const fromEmail = emailMatch[0].toLowerCase();
+
+        // Trouver le client correspondant
+        const cl = await pool.query('SELECT * FROM clients WHERE LOWER(email)=$1', [fromEmail]);
+        if (!cl.rows.length) {
+            console.log('[email-inbound] Email inconnu:', fromEmail, '—', subject);
+            return res.status(200).json({ success: false, message: 'Client non trouvé.' });
+        }
+        const client = cl.rows[0];
+
+        // Nettoyer le contenu texte
+        const body = text.trim() || html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        const content = subject && subject !== '(Sans objet)'
+            ? `**${subject}**\n\n${body}`.substring(0, 2000)
+            : body.substring(0, 2000);
+
+        // Ajouter colonne channel si pas encore présente
+        await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS channel VARCHAR(30) DEFAULT 'chat'`).catch(() => { });
+
+        // Insérer comme message client avec channel='email_received'
+        const result = await pool.query(
+            `INSERT INTO messages (client_id, sender, content, is_read, channel, created_at) VALUES ($1, 'client', $2, false, 'email_received', NOW()) RETURNING *`,
+            [client.id, content]
+        );
+        const msg = result.rows[0];
+        console.log(`[email-inbound] Email reçu de ${fromEmail} (${client.full_name}) — ${subject}`);
+
+        // WS push vers admin
+        wsBroadcast({ event: 'new_message_client', clientId: client.id, data: { message: msg, from: fromEmail } });
+
+        res.status(200).json({ success: true });
+    } catch (err) {
+        console.error('[email-inbound]', err.message);
+        res.status(200).json({ success: false }); // Toujours 200 pour les webhooks
     }
 });
 
@@ -1051,7 +1107,6 @@ router.post('/messages/:clientId/with-attachment', authenticateAdmin, upload.arr
             [req.params.clientId]
         );
         res.status(201).json({ success: true, message: result.rows[0] });
-        wsBroadcast({ event: 'new_message_vnk', clientId: parseInt(req.params.clientId), data: result.rows[0] });
     } catch (err) {
         console.error('with-attachment error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -1157,32 +1212,23 @@ router.get('/quotes/:id/pdf', authenticateAdmin, async (req, res) => {
 });
 
 // ============================================================
-// QUOTES — Accepter + workflow complet automatique
-// Étapes : Marquer accepté → Générer contrat → Notifier client
+// QUOTES — Accepter + générer contrat automatiquement
 // ============================================================
 router.put('/quotes/:id/accept', authenticateAdmin, async (req, res) => {
     try {
-        // 1. Marquer devis comme accepté
-        await pool.query(
-            'UPDATE quotes SET status=$1, accepted_at=NOW(), updated_at=NOW() WHERE id=$2',
-            ['accepted', req.params.id]
-        );
+        // Marquer devis comme accepté
+        await pool.query('UPDATE quotes SET status=$1 WHERE id=$2', ['accepted', req.params.id]);
 
-        // 2. Générer contrat automatiquement
+        // Générer contrat automatiquement
         const { contract, quote } = await pdfTemplates.autoGenerateContract(pool, req.params.id);
 
-        // 3. Notification interne au client — devis accepté + contrat à signer
-        const fmtCA = (v) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(v);
-        await notifyClient(pool, quote.client_id,
-            `Bonjour ${quote.full_name},\n\nVotre devis ${quote.quote_number} — « ${quote.title} » a été accepté.\n\nMontant : ${fmtCA(quote.amount_ttc)} TTC\n\nUn contrat de service (${contract.contract_number}) a été généré automatiquement. Vous pouvez le consulter et le signer depuis la section Contrats de votre espace client.\n\nUne fois le contrat signé des deux parties, une facture vous sera transmise.\n\nÉquipe VNK Automatisation Inc.`
-        );
-
-        // 4. Tenter envoi Dropbox Sign si configuré
+        // Envoyer pour signature Dropbox Sign si configuré
         let signatureRequestSent = false;
         if (process.env.DROPBOXSIGN_API_KEY && quote.email) {
             try {
                 const hellosignService = require('../services/hellosign');
                 if (hellosignService && hellosignService.sendForSignature) {
+                    // Note: le PDF sera généré à la demande - on envoie juste la demande
                     const result = await hellosignService.sendForSignature({
                         title: contract.title,
                         signer_email: quote.email,
@@ -1202,20 +1248,11 @@ router.put('/quotes/:id/accept', authenticateAdmin, async (req, res) => {
         res.json({
             success: true,
             contract_number: contract.contract_number,
-            contract_id: contract.id,
             signature_sent: signatureRequestSent,
-            workflow: [
-                'Devis accepté',
-                `Contrat ${contract.contract_number} généré`,
-                'Client notifié par messagerie',
-                signatureRequestSent ? 'Demande de signature Dropbox Sign envoyée' : 'Signature manuelle requise dans le portail'
-            ],
             message: signatureRequestSent
-                ? 'Devis accepté, contrat généré et envoyé pour signature au client.'
-                : 'Devis accepté et contrat créé. Le client est notifié et peut signer depuis son portail.'
+                ? 'Devis accepte et contrat envoye pour signature au client.'
+                : 'Devis accepte et contrat cree. Envoyez-le manuellement pour signature.'
         });
-        // WebSocket — notifier le client en temps réel
-        wsBroadcast({ event: 'quote_accepted', clientId: quote.client_id, data: { contract_number: contract.contract_number, contract_id: contract.id } });
     } catch (err) {
         console.error('Accept quote error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -1273,14 +1310,13 @@ router.get('/contracts/:id/pdf', authenticateAdmin, async (req, res) => {
 router.put('/quotes/:id', authenticateAdmin, async (req, res) => {
     try {
         const { title, description, amount_ht, tps_amount, tvq_amount, amount_ttc, expiry_date, status } = req.body;
-        const safeExpiry = (expiry_date && String(expiry_date).trim() !== '') ? expiry_date : null;
         const result = await pool.query(
             `UPDATE quotes SET title=$1, description=$2, amount_ht=$3, tps_amount=$4, tvq_amount=$5,
-             amount_ttc=$6, expiry_date=$7, status=$8, updated_at=NOW() WHERE id=$9 RETURNING *`,
+             amount_ttc=$6, expiry_date=$7, status=$8 WHERE id=$9 RETURNING *`,
             [title, description || null, amount_ht, tps_amount, tvq_amount, amount_ttc,
-                safeExpiry, status || 'pending', req.params.id]
+                expiry_date || null, status || 'pending', req.params.id]
         );
-        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Devis non trouvé.' });
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Devis non trouve.' });
         res.json({ success: true, quote: result.rows[0] });
     } catch (err) {
         console.error('PUT quote:', err);
@@ -1294,43 +1330,16 @@ router.put('/quotes/:id', authenticateAdmin, async (req, res) => {
 router.put('/invoices/:id', authenticateAdmin, async (req, res) => {
     try {
         const { title, description, amount_ht, tps_amount, tvq_amount, amount_ttc, due_date, status } = req.body;
-        const safeDue = (due_date && String(due_date).trim() !== '') ? due_date : null;
-
-        // Récupérer le statut précédent pour détecter un changement
-        const prev = await pool.query('SELECT status, client_id, invoice_number FROM invoices WHERE id=$1', [req.params.id]);
-
         const result = await pool.query(
             `UPDATE invoices SET title=$1, description=$2, amount_ht=$3, tps_amount=$4, tvq_amount=$5,
-             amount_ttc=$6, due_date=$7, status=$8, updated_at=NOW(),
+             amount_ttc=$6, due_date=$7, status=$8,
              paid_at=CASE WHEN $8='paid' AND paid_at IS NULL THEN NOW() ELSE paid_at END
              WHERE id=$9 RETURNING *`,
             [title, description || null, amount_ht, tps_amount, tvq_amount, amount_ttc,
-                safeDue, status || 'unpaid', req.params.id]
+                due_date || null, status || 'unpaid', req.params.id]
         );
-        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Facture non trouvée.' });
-        const invoice = result.rows[0];
-
-        // Workflow — notifier si passage à "payé" ou "en retard"
-        if (prev.rows.length && prev.rows[0].status !== status) {
-            const fmtCA = (v) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(v);
-            if (status === 'paid') {
-                await pool.query(
-                    `INSERT INTO payments (invoice_id, client_id, amount, currency, status, paid_at, created_at)
-                     VALUES ($1,$2,$3,'cad','completed',NOW(),NOW())
-                     ON CONFLICT DO NOTHING`,
-                    [req.params.id, invoice.client_id, invoice.amount_ttc]
-                ).catch(() => { });
-                await notifyClient(pool, invoice.client_id,
-                    `Votre paiement a été confirmé.\n\nFacture : ${invoice.invoice_number} — ${invoice.title}\nMontant : ${fmtCA(invoice.amount_ttc)}\nDate : ${new Date().toLocaleDateString('fr-CA')}\n\nMerci pour votre paiement.\nÉquipe VNK Automatisation Inc.`
-                );
-            } else if (status === 'overdue') {
-                await notifyClient(pool, invoice.client_id,
-                    `RAPPEL : Votre facture ${invoice.invoice_number} est en retard de paiement.\n\nMontant dû : ${fmtCA(invoice.amount_ttc)}\n\nVeuillez régulariser depuis votre espace client dès que possible.\n\nÉquipe VNK Automatisation Inc.`
-                );
-            }
-        }
-
-        res.json({ success: true, invoice });
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Facture non trouvee.' });
+        res.json({ success: true, invoice: result.rows[0] });
     } catch (err) {
         console.error('PUT invoice:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -1343,14 +1352,12 @@ router.put('/invoices/:id', authenticateAdmin, async (req, res) => {
 router.put('/expenses/:id', authenticateAdmin, async (req, res) => {
     try {
         const { title, amount, tps_paid, tvq_paid, vendor, expense_date, notes } = req.body;
-        const safeDate = (expense_date && String(expense_date).trim() !== '') ? expense_date : null;
-        if (!safeDate) return res.status(400).json({ success: false, message: 'La date de dépense est requise.' });
         const result = await pool.query(
             `UPDATE expenses SET title=$1, amount=$2, tps_paid=$3, tvq_paid=$4, vendor=$5, expense_date=$6, notes=$7
              WHERE id=$8 RETURNING *`,
-            [title, amount, tps_paid || 0, tvq_paid || 0, vendor || null, safeDate, notes || null, req.params.id]
+            [title, amount, tps_paid || 0, tvq_paid || 0, vendor || null, expense_date, notes || null, req.params.id]
         );
-        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Dépense non trouvée.' });
+        if (!result.rows.length) return res.status(404).json({ success: false, message: 'Depense non trouvee.' });
         res.json({ success: true, expense: result.rows[0] });
     } catch (err) {
         console.error('PUT expense:', err);
@@ -1384,137 +1391,6 @@ router.delete('/contracts/:id', authenticateAdmin, async (req, res) => {
 router.delete('/clients/:id', authenticateAdmin, async (req, res) => {
     try { await pool.query('DELETE FROM clients WHERE id=$1', [req.params.id]); res.json({ success: true }); }
     catch (err) { res.status(500).json({ success: false, message: 'Server error.' }); }
-});
-
-// ============================================================
-// WORKFLOW — Générer facture depuis un contrat signé (manuel)
-// POST /api/admin/contracts/:id/generate-invoice
-// ============================================================
-router.post('/contracts/:id/generate-invoice', authenticateAdmin, async (req, res) => {
-    try {
-        const { due_days } = req.body;
-        const dueDays = (parseInt(due_days) > 0) ? parseInt(due_days) : 30;
-
-        const q = await pool.query(
-            `SELECT ct.*, c.full_name, c.company_name, c.email,
-                    qo.quote_number, qo.amount_ht, qo.tps_amount, qo.tvq_amount, qo.amount_ttc, qo.title as quote_title
-             FROM contracts ct
-             JOIN clients c ON ct.client_id = c.id
-             LEFT JOIN quotes qo ON ct.quote_id = q.id
-             WHERE ct.id = $1`,
-            [req.params.id]
-        );
-        if (!q.rows.length) return res.status(404).json({ success: false, message: 'Contrat non trouvé.' });
-        const row = q.rows[0];
-
-        if (!row.amount_ttc) return res.status(400).json({ success: false, message: 'Aucun devis lié avec montant.' });
-
-        const num = await nextInvoiceNumber(pool);
-        const due = new Date(); due.setDate(due.getDate() + dueDays);
-        const fmtCA = (v) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(v);
-
-        const result = await pool.query(
-            `INSERT INTO invoices (client_id, quote_id, mandate_id, invoice_number, title, description,
-             amount_ht, tps_amount, tvq_amount, amount_ttc, status, due_date, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'unpaid',$11,NOW(),NOW()) RETURNING *`,
-            [row.client_id, row.quote_id || null, row.mandate_id || null, num,
-            `Facture — ${row.quote_title || row.title}`,
-            `Conformément au contrat ${row.contract_number}`,
-            row.amount_ht, row.tps_amount, row.tvq_amount, row.amount_ttc, due]
-        );
-        const invoice = result.rows[0];
-
-        await notifyClient(pool, row.client_id,
-            `Une facture a été générée suite à votre contrat.\n\nFacture : ${num}\nMontant TTC : ${fmtCA(row.amount_ttc)}\nÉchéance : ${due.toLocaleDateString('fr-CA')}\n\nVeuillez procéder au paiement depuis votre espace client.\n\nÉquipe VNK Automatisation Inc.`
-        );
-
-        res.status(201).json({ success: true, invoice, workflow: 'Facture générée et client notifié.' });
-        wsBroadcast({ event: 'new_invoice', clientId: row.client_id, data: invoice });
-    } catch (err) {
-        console.error('generate-invoice error:', err);
-        res.status(500).json({ success: false, message: 'Server error.' });
-    }
-});
-
-// ============================================================
-// WORKFLOW — Statut global du workflow pour un client
-// GET /api/admin/clients/:id/workflow-status
-// ============================================================
-router.get('/clients/:id/workflow-status', authenticateAdmin, async (req, res) => {
-    try {
-        const cid = req.params.id;
-        const [mandates, quotes, contracts, invoices, payments] = await Promise.all([
-            pool.query(`SELECT id, title, status, progress FROM mandates WHERE client_id=$1 ORDER BY created_at DESC LIMIT 5`, [cid]),
-            pool.query(`SELECT id, quote_number, title, status, amount_ttc FROM quotes WHERE client_id=$1 ORDER BY created_at DESC LIMIT 5`, [cid]),
-            pool.query(`SELECT id, contract_number, title, status, signed_at, admin_signed_at FROM contracts WHERE client_id=$1 ORDER BY created_at DESC LIMIT 5`, [cid]),
-            pool.query(`SELECT id, invoice_number, title, status, amount_ttc, due_date, paid_at FROM invoices WHERE client_id=$1 ORDER BY created_at DESC LIMIT 5`, [cid]),
-            pool.query(`SELECT SUM(amount) as total_paid FROM payments WHERE client_id=$1 AND status='completed'`, [cid])
-        ]);
-
-        // Déterminer l'étape courante du workflow
-        const activeMandate = mandates.rows.find(m => m.status === 'active' || m.status === 'in_progress');
-        const pendingQuote = quotes.rows.find(q => q.status === 'pending');
-        const pendingContract = contracts.rows.find(c => c.status === 'draft' || c.status === 'pending');
-        const unpaidInvoice = invoices.rows.find(i => i.status === 'unpaid' || i.status === 'overdue');
-
-        let currentStep = 'idle';
-        let nextAction = null;
-        if (!mandates.rows.length) { currentStep = 'no_mandate'; nextAction = 'Créer un mandat'; }
-        else if (!quotes.rows.length) { currentStep = 'mandate_active'; nextAction = 'Créer un devis'; }
-        else if (pendingQuote) { currentStep = 'quote_pending'; nextAction = 'Attendre acceptation du devis par le client'; }
-        else if (pendingContract) { currentStep = 'contract_pending'; nextAction = 'Signer le contrat'; }
-        else if (unpaidInvoice) { currentStep = 'invoice_unpaid'; nextAction = 'Attendre le paiement du client'; }
-        else { currentStep = 'complete'; nextAction = 'Workflow complet'; }
-
-        res.json({
-            success: true,
-            current_step: currentStep,
-            next_action: nextAction,
-            summary: {
-                mandates: mandates.rows,
-                quotes: quotes.rows,
-                contracts: contracts.rows,
-                invoices: invoices.rows,
-                total_paid: parseFloat(payments.rows[0]?.total_paid || 0)
-            }
-        });
-    } catch (err) {
-        console.error('workflow-status error:', err);
-        res.status(500).json({ success: false, message: 'Server error.' });
-    }
-});
-
-// ============================================================
-// WORKFLOW — Rappels automatiques factures en retard
-// POST /api/admin/invoices/send-reminders
-// ============================================================
-router.post('/invoices/send-reminders', authenticateAdmin, async (req, res) => {
-    try {
-        const overdue = await pool.query(
-            `SELECT i.*, c.full_name FROM invoices i
-             JOIN clients c ON i.client_id = c.id
-             WHERE i.status = 'unpaid' AND i.due_date < NOW()
-             ORDER BY i.due_date ASC`
-        );
-
-        let notified = 0;
-        const fmtCA = (v) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(v);
-
-        for (const inv of overdue.rows) {
-            const daysPast = Math.floor((Date.now() - new Date(inv.due_date)) / 86400000);
-            await notifyClient(pool, inv.client_id,
-                `RAPPEL DE PAIEMENT — ${daysPast} jour(s) de retard\n\nFacture : ${inv.invoice_number} — ${inv.title}\nMontant dû : ${fmtCA(inv.amount_ttc)}\nDate d'échéance : ${new Date(inv.due_date).toLocaleDateString('fr-CA')}\n\nVeuillez régulariser ce solde depuis votre espace client.\n\nPour toute question, contactez-nous directement.\n\nÉquipe VNK Automatisation Inc.`
-            );
-            // Marquer comme overdue
-            await pool.query(`UPDATE invoices SET status='overdue', updated_at=NOW() WHERE id=$1`, [inv.id]);
-            notified++;
-        }
-
-        res.json({ success: true, notified, message: `${notified} rappel(s) envoyé(s).` });
-    } catch (err) {
-        console.error('send-reminders error:', err);
-        res.status(500).json({ success: false, message: 'Server error.' });
-    }
 });
 
 module.exports = router;

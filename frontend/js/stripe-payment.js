@@ -17,7 +17,10 @@ function initStripe() {
 }
 
 /* ─── Point d'entrée principal ─── */
+// _vnkCurrentInvoiceId partagé via window
+
 async function payInvoice(invoiceId, amountTtc) {
+    window._vnkCurrentInvoiceId = invoiceId;
     initStripe();
     if (!_vnkStripe) {
         _vnkToast('Service de paiement indisponible. Rechargez la page.', 'error');
@@ -265,9 +268,9 @@ function _vnkMountStripeElement(clientSecret) {
 
     const payEl = elements.create('payment', {
         layout: { type: 'tabs', defaultCollapsed: false },
-        paymentMethodOrder: ['card', 'apple_pay', 'google_pay', 'link', 'acss_debit'],
+        paymentMethodOrder: ['card'],
         fields: { billingDetails: { name: 'never', email: 'never', address: 'never' } },
-        wallets: { applePay: 'auto', googlePay: 'auto' }
+        wallets: { applePay: 'never', googlePay: 'never' }
     });
 
     _vnkPayElements = elements;
@@ -321,7 +324,7 @@ async function _vnkPaySubmit() {
         const { error, paymentIntent } = await _vnkStripe.confirmPayment({
             elements: _vnkPayElements,
             confirmParams: {
-                return_url: window.location.origin + '/portail.html?payment=success',
+                return_url: window.location.origin + '/portail.html?payment=success&invoice_id=' + (window._vnkCurrentInvoiceId || ''),
                 payment_method_data: {
                     billing_details: {
                         name: (fname + ' ' + lname).trim(),
@@ -339,6 +342,21 @@ async function _vnkPaySubmit() {
             if (btn) btn.disabled = false;
             if (inner) inner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Réessayer`;
         } else if (paymentIntent?.status === 'succeeded') {
+            // Confirmer côté serveur pour marquer la facture comme payée
+            const token = localStorage.getItem('vnk-token');
+            if (token && paymentIntent.id && window._vnkCurrentInvoiceId) {
+                fetch('/api/payments/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ payment_intent_id: paymentIntent.id, invoice_id: parseInt(window._vnkCurrentInvoiceId) })
+                }).then(r => r.json()).then(d => {
+                    console.log('[VNK] Payment confirm:', d.message);
+                    if (d.success && typeof loadAllData === 'function') setTimeout(loadAllData, 800);
+                    else if (!d.success) console.warn('[VNK] Confirm failed:', d.message);
+                }).catch(e => console.error('[VNK] Confirm error:', e));
+            } else {
+                console.warn('[VNK] Cannot confirm: token=' + !!token + ' piId=' + paymentIntent.id + ' invId=' + window._vnkCurrentInvoiceId);
+            }
             _vnkPaySuccess(email);
         }
     } catch (e) {
@@ -386,9 +404,25 @@ function closePaymentModal() {
 /* ─── Retour redirect Stripe ─── */
 function checkPaymentReturn() {
     const p = new URLSearchParams(window.location.search);
-    if (p.get('payment') === 'success') {
+    const piId = p.get('payment_intent');
+    const invId = p.get('invoice_id') || window._vnkCurrentInvoiceId;
+    if (p.get('payment') === 'success' || p.get('redirect_status') === 'succeeded' || piId) {
         window.history.replaceState({}, '', window.location.pathname);
-        setTimeout(() => { _vnkToast('Paiement confirmé ! Merci.', 'success'); if (typeof loadAllData === 'function') loadAllData(); }, 500);
+        const token = localStorage.getItem('vnk-token');
+        if (piId && invId && token) {
+            fetch('/api/payments/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ payment_intent_id: piId, invoice_id: parseInt(invId) })
+            }).then(r => r.json()).then(d => {
+                if (d.success && typeof loadAllData === 'function') setTimeout(loadAllData, 800);
+                _vnkToast(d.success ? 'Paiement confirmé ! Merci.' : d.message, d.success ? 'success' : 'error');
+            }).catch(() => {
+                if (typeof loadAllData === 'function') setTimeout(loadAllData, 800);
+            });
+        } else {
+            setTimeout(() => { _vnkToast('Paiement confirmé ! Merci.', 'success'); if (typeof loadAllData === 'function') loadAllData(); }, 500);
+        }
     }
 }
 

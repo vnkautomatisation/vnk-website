@@ -34,6 +34,14 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'frontend')));
 
 // ── Routes API ────────────────────────────────────────────────
+// ── Email inbound webhook (public — pas d'auth, pour SendGrid/Mailgun) ──
+const _adminRoutes = require('./backend/routes/admin');
+app.post('/api/email-inbound', (req, res) => {
+    // Forward vers la route admin sans authentification
+    req.url = '/email-inbound';
+    _adminRoutes(req, res, (err) => res.status(500).json({ error: err?.message }));
+});
+
 app.use('/api/auth', require('./backend/routes/auth'));
 app.use('/api/admin', require('./backend/routes/admin'));
 app.use('/api/clients', require('./backend/routes/clients'));
