@@ -1,164 +1,87 @@
-/* ============================================================
-   VNK Automatisation Inc. — WebSocket Server
-   ws-server.js — À placer dans backend/
+require('dotenv').config();
 
-   Usage dans server.js :
-     const { initWebSocket, broadcast } = require('./ws-server');
-     const server = app.listen(PORT, ...);
-     initWebSocket(server);
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
 
-   Depuis n'importe quelle route Express :
-     const { broadcast } = require('./ws-server');
-     broadcast({ type: 'new_invoice', clientId: 5, data: invoice });
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-   Protocole :
-     Client → Serveur : { type: 'auth', token: '...' }
-     Serveur → Client : { type: 'event', event: '...', data: {...} }
-     Serveur → Client : { type: 'pong' }  (réponse aux ping)
-     Client → Serveur : { type: 'ping' }
-============================================================ */
-'use strict';
+// ── Middlewares ───────────────────────────────────────────────
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
 
-const WebSocket = require('ws');
-const jwt = require('jsonwebtoken');
-
-// ── Map des connexions actives ────────────────────────────────
-// adminClients  : Set<ws>          — tous les admins connectés
-// clientSockets : Map<clientId, Set<ws>> — sockets par client
-const adminClients = new Set();
-const clientSockets = new Map();
-
-let _wss = null;
-
-// ── Initialisation ────────────────────────────────────────────
-function initWebSocket(httpServer) {
-    _wss = new WebSocket.Server({ server: httpServer, path: '/ws' });
-
-    _wss.on('connection', (ws, req) => {
-        ws._authenticated = false;
-        ws._role = null;      // 'admin' | 'client'
-        ws._clientId = null;
-        ws._pingTimeout = null;
-
-        // Délai d'authentification : 10s pour s'identifier
-        const authTimeout = setTimeout(() => {
-            if (!ws._authenticated) {
-                ws.close(4001, 'Auth timeout');
-            }
-        }, 10000);
-
-        ws.on('message', (raw) => {
-            let msg;
-            try { msg = JSON.parse(raw); } catch { return; }
-
-            // ── AUTH ──────────────────────────────────────────
-            if (msg.type === 'auth') {
-                clearTimeout(authTimeout);
-                const token = msg.token;
-                if (!token) { ws.close(4002, 'No token'); return; }
-
-                try {
-                    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-                    if (decoded.isAdmin) {
-                        ws._authenticated = true;
-                        ws._role = 'admin';
-                        adminClients.add(ws);
-                        _send(ws, { type: 'authenticated', role: 'admin' });
-                        console.log('[WS] Admin connected');
-                    } else if (decoded.id) {
-                        ws._authenticated = true;
-                        ws._role = 'client';
-                        ws._clientId = decoded.id;
-                        if (!clientSockets.has(decoded.id)) clientSockets.set(decoded.id, new Set());
-                        clientSockets.get(decoded.id).add(ws);
-                        _send(ws, { type: 'authenticated', role: 'client', clientId: decoded.id });
-                        console.log(`[WS] Client ${decoded.id} connected`);
-                    } else {
-                        ws.close(4003, 'Invalid token');
-                    }
-                } catch (e) {
-                    ws.close(4004, 'Token invalid');
-                }
-                return;
-            }
-
-            if (!ws._authenticated) return;
-
-            // ── PING ──────────────────────────────────────────
-            if (msg.type === 'ping') {
-                _send(ws, { type: 'pong' });
-                return;
-            }
-        });
-
-        ws.on('close', () => {
-            clearTimeout(authTimeout);
-            clearTimeout(ws._pingTimeout);
-            adminClients.delete(ws);
-            if (ws._clientId && clientSockets.has(ws._clientId)) {
-                clientSockets.get(ws._clientId).delete(ws);
-                if (clientSockets.get(ws._clientId).size === 0) {
-                    clientSockets.delete(ws._clientId);
-                }
-            }
-            console.log(`[WS] ${ws._role || 'unauthenticated'} disconnected`);
-        });
-
-        ws.on('error', (err) => {
-            console.warn('[WS] Socket error:', err.message);
-        });
-    });
-
-    console.log('[WS] WebSocket server initialized at /ws');
-    return _wss;
-}
-
-// ── Envoi utilitaire ─────────────────────────────────────────
-function _send(ws, data) {
-    if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(data));
+// ── Cache headers middleware ──────────────────────────────────
+// HTML → jamais en cache (toujours frais)
+// CSS/JS → ETag (revalidation)
+// Images → 1 heure
+app.use((req, res, next) => {
+    const ext = path.extname(req.path).toLowerCase();
+    if (ext === '.html' || req.path === '/') {
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+    } else if (ext === '.css' || ext === '.js') {
+        res.set('Cache-Control', 'no-cache');  // force revalidation via ETag
+    } else if (['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.webp'].includes(ext)) {
+        res.set('Cache-Control', 'public, max-age=3600');
     }
+    next();
+});
+
+// ── Fichiers statiques ────────────────────────────────────────
+app.use(express.static(path.join(__dirname, 'frontend')));
+
+// ── Routes API ────────────────────────────────────────────────
+app.use('/api/auth', require('./backend/routes/auth'));
+app.use('/api/admin', require('./backend/routes/admin'));
+app.use('/api/clients', require('./backend/routes/clients'));
+app.use('/api/mandates', require('./backend/routes/mandates'));
+app.use('/api/quotes', require('./backend/routes/quotes'));
+app.use('/api/invoices', require('./backend/routes/invoices'));
+app.use('/api/contracts', require('./backend/routes/contracts'));
+app.use('/api/messages', require('./backend/routes/messages'));
+app.use('/api/documents', require('./backend/routes/documents'));
+app.use('/api/payments', require('./backend/routes/payments'));
+app.use('/api/contact', require('./backend/routes/contact'));
+app.use('/api/calendly', require('./backend/routes/calendly'));
+
+// ── Stripe (optionnel) ────────────────────────────────────────
+try {
+    app.use('/api/stripe', require('./backend/routes/stripe'));
+} catch (e) {
+    console.warn('Stripe non configuré — payments non disponibles');
 }
 
-// ── Broadcast ────────────────────────────────────────────────
-// Envoie un événement à :
-//   - tous les admins si targetRole === 'admin' ou non spécifié
-//   - le client spécifique si clientId est fourni
-//   - les deux si broadcast === true
-//
-// Exemples d'utilisation depuis les routes admin :
-//   broadcast({ event: 'new_message',    clientId: 5,   data: msg });
-//   broadcast({ event: 'quote_accepted', clientId: 5,   data: quote, notifyAdmin: true });
-//   broadcast({ event: 'new_client',                    data: client, adminOnly: true });
-function broadcast({ event, data = {}, clientId = null, adminOnly = false, notifyAdmin = true }) {
-    const payload = JSON.stringify({ type: 'event', event, data });
-
-    // Notifier l'admin
-    if (!clientId || notifyAdmin) {
-        adminClients.forEach(ws => {
-            if (ws.readyState === WebSocket.OPEN) ws.send(payload);
+// ── Catch-all ─────────────────────────────────────────────────
+// Ne sert JAMAIS index.html pour les requêtes .html explicites
+app.use((req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
+    const ext = path.extname(req.path);
+    if (ext && ext !== '.html') return next();
+    if (ext === '.html') {
+        // Servir le fichier HTML demandé directement
+        return res.sendFile(path.join(__dirname, 'frontend', req.path), err => {
+            if (err) res.status(404).send('Page non trouvée');
         });
     }
+    // Pas d'extension → index.html (SPA fallback)
+    res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+});
 
-    // Notifier le client spécifique
-    if (clientId && !adminOnly) {
-        const sockets = clientSockets.get(clientId);
-        if (sockets) {
-            sockets.forEach(ws => {
-                if (ws.readyState === WebSocket.OPEN) ws.send(payload);
-            });
-        }
-    }
+// ── Démarrage ─────────────────────────────────────────────────
+const server = app.listen(PORT, () => {
+    console.log(`VNK Automatisation Inc. — http://localhost:${PORT}`);
+});
+
+// ── WebSocket ─────────────────────────────────────────────────
+try {
+    const { initWebSocket } = require('./backend/ws-server');
+    initWebSocket(server);
+    console.log('WebSocket initialisé sur /ws');
+} catch (e) {
+    console.warn('WebSocket non disponible:', e.message);
 }
 
-// ── Stats ─────────────────────────────────────────────────────
-function getStats() {
-    return {
-        admins: adminClients.size,
-        clients: clientSockets.size,
-        totalConnections: adminClients.size + [...clientSockets.values()].reduce((s, set) => s + set.size, 0)
-    };
-}
-
-module.exports = { initWebSocket, broadcast, getStats };
+module.exports = { app, server };

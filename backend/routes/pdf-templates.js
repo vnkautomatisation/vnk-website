@@ -66,26 +66,48 @@ function dateCA(d) {
 function pageWidth(doc) { return doc.page.width; }
 function contentWidth(doc) { return doc.page.width - C.marginL - C.marginR; }
 
-// Dessine le logo hexagonal VNK à la position (cx, cy) avec rayon r
+// Dessine le logo hexagonal VNK — version améliorée (double hexagone + texte centré)
 function drawHexLogo(doc, cx, cy, r, fillColor, strokeColor) {
+    // ── Hexagone extérieur (halo) ──
+    const outerPts = [];
+    for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i - Math.PI / 6;
+        outerPts.push([cx + (r + 5) * Math.cos(a), cy + (r + 5) * Math.sin(a)]);
+    }
+    doc.save().moveTo(outerPts[0][0], outerPts[0][1]);
+    for (let i = 1; i < 6; i++) doc.lineTo(outerPts[i][0], outerPts[i][1]);
+    doc.closePath().fillOpacity(0.08).fillColor(fillColor).fill().restore();
+
+    // ── Hexagone principal (fond semi-transparent) ──
     const pts = [];
     for (let i = 0; i < 6; i++) {
         const a = (Math.PI / 3) * i - Math.PI / 6;
         pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
     }
-    // Remplissage semi-transparent
-    doc.save()
-        .moveTo(pts[0][0], pts[0][1]);
+    doc.save().moveTo(pts[0][0], pts[0][1]);
     for (let i = 1; i < 6; i++) doc.lineTo(pts[i][0], pts[i][1]);
-    doc.closePath().fillOpacity(0.18).fillColor(fillColor).fill().restore();
-    // Contour
-    doc.save()
-        .moveTo(pts[0][0], pts[0][1]);
+    doc.closePath().fillOpacity(0.22).fillColor(fillColor).fill().restore();
+
+    // ── Contour principal ──
+    doc.save().moveTo(pts[0][0], pts[0][1]);
     for (let i = 1; i < 6; i++) doc.lineTo(pts[i][0], pts[i][1]);
-    doc.closePath().lineWidth(1.5).strokeOpacity(0.9).strokeColor(strokeColor).stroke().restore();
-    // Texte VNK centré
-    doc.fillColor(strokeColor).fontSize(8).font('Helvetica-Bold')
-        .text('VNK', cx - r, cy - 5, { width: r * 2, align: 'center' });
+    doc.closePath().lineWidth(2).strokeOpacity(1).strokeColor(strokeColor).stroke().restore();
+
+    // ── Hexagone intérieur (mini) ──
+    const innerR = r * 0.45;
+    const innerPts = [];
+    for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i - Math.PI / 6;
+        innerPts.push([cx + innerR * Math.cos(a), cy + innerR * Math.sin(a)]);
+    }
+    doc.save().moveTo(innerPts[0][0], innerPts[0][1]);
+    for (let i = 1; i < 6; i++) doc.lineTo(innerPts[i][0], innerPts[i][1]);
+    doc.closePath().lineWidth(0.8).strokeOpacity(0.5).strokeColor(strokeColor).stroke().restore();
+
+    // ── Texte VNK centré ──
+    const fontSize = Math.max(7, r * 0.38);
+    doc.fillColor(strokeColor).fillOpacity(1).fontSize(fontSize).font('Helvetica-Bold')
+        .text('VNK', cx - r, cy - fontSize * 0.55, { width: r * 2, align: 'center', characterSpacing: 1.5 });
 }
 
 // Barre de section avec accent latéral bleu
@@ -252,33 +274,41 @@ async function generateQuotePDF(res, quote, client, lines) {
     const w = pageWidth(doc);
 
     // ── HEADER ──────────────────────────────
-    doc.rect(0, 0, w, 100).fillColor(C.blue).fill();
+    const headerH = 108;
+    doc.rect(0, 0, w, headerH).fillColor(C.blue).fill();
     // Bande déco basse
-    doc.rect(0, 97, w, 3).fillColor(C.blueMid).fillOpacity(0.6).fill().fillOpacity(1);
+    doc.rect(0, headerH - 4, w, 4).fillColor(C.blueMid).fillOpacity(0.7).fill().fillOpacity(1);
+    // Bande déco très basse (accent)
+    doc.rect(0, headerH, w, 2).fillColor(C.blueMid).fillOpacity(0.3).fill().fillOpacity(1);
 
-    // Logo hexagonal
-    drawHexLogo(doc, 58, 50, 28, C.white, C.white);
+    // Logo hexagonal — plus grand, centré verticalement
+    drawHexLogo(doc, 62, 54, 34, C.white, C.white);
 
     // Nom + slogan + contact
-    doc.fillColor(C.white).fontSize(15).font('Helvetica-Bold')
-        .text(C.name, 96, 26);
-    doc.fillColor(C.white).fontSize(7.5).font('Helvetica')
-        .text('VALUE · NETWORK · KNOWLEDGE', 97, 44, { characterSpacing: 1.2 });
-    doc.fillColor('#B8CDD8').fontSize(7).font('Helvetica')
-        .text(`NEQ : ${C.neq}  ·  ${C.email}  ·  ${C.phone}`, 97, 57);
+    doc.fillColor(C.white).fontSize(16).font('Helvetica-Bold')
+        .text(C.name, 108, 24);
+    doc.fillColor('rgba(255,255,255,0.85)').fontSize(7.5).font('Helvetica')
+        .text('VALUE · NETWORK · KNOWLEDGE', 109, 44, { characterSpacing: 1.5 });
+    doc.fillColor('#A8C4D8').fontSize(7).font('Helvetica')
+        .text(`NEQ : ${C.neq}`, 109, 56);
+    doc.fillColor('#A8C4D8').fontSize(7)
+        .text(`${C.email}  ·  ${C.phone}  ·  ${C.site}`, 109, 67);
 
     // Badge document (droite)
-    const bx = w - 148, by = 18, bw = 120, bh = 64;
-    doc.rect(bx, by, bw, bh).fillColor('#2A6BA8').fill();
-    doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor('#5A8FBF').stroke();
-    doc.fillColor(C.white).fontSize(10).font('Helvetica-Bold')
-        .text('DEVIS', bx, by + 10, { width: bw, align: 'center', characterSpacing: 2 });
-    doc.fillColor(C.white).fontSize(9).font('Helvetica')
-        .text(quote.quote_number, bx, by + 27, { width: bw, align: 'center' });
-    doc.fillColor('#B8CDD8').fontSize(7.5)
-        .text(dateCA(quote.created_at), bx, by + 44, { width: bw, align: 'center' });
+    const bx = w - 152, by = 16, bw = 124, bh = 76;
+    doc.rect(bx, by, bw, bh).fillColor('#1E5A9C').fill();
+    doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor('#4A7FBF').stroke();
+    doc.rect(bx, by, 3, bh).fillColor(C.blueMid).fill();
+    doc.fillColor(C.white).fontSize(11).font('Helvetica-Bold')
+        .text('DEVIS', bx + 4, by + 12, { width: bw - 8, align: 'center', characterSpacing: 2.5 });
+    doc.moveTo(bx + 10, by + 30).lineTo(bx + bw - 10, by + 30)
+        .lineWidth(0.3).strokeColor('#4A7FBF').stroke();
+    doc.fillColor(C.white).fontSize(9.5).font('Helvetica')
+        .text(quote.quote_number, bx + 4, by + 36, { width: bw - 8, align: 'center' });
+    doc.fillColor('#A8C4D8').fontSize(7.5)
+        .text(dateCA(quote.created_at), bx + 4, by + 53, { width: bw - 8, align: 'center' });
 
-    doc.y = 116;
+    doc.y = headerH + 18;
 
     // ── BLOCS INFO ───────────────────────────
     const cw = contentWidth(doc);
@@ -393,30 +423,37 @@ async function generateInvoicePDF(res, invoice, client) {
     const accentColor = isPaid ? C.green : C.blueMid;
 
     // ── HEADER marine ────────────────────────
-    doc.rect(0, 0, w, 100).fillColor(C.navy).fill();
-    doc.rect(0, 97, w, 3).fillColor(accentColor).fillOpacity(0.8).fill().fillOpacity(1);
+    const headerH = 108;
+    doc.rect(0, 0, w, headerH).fillColor(C.navy).fill();
+    doc.rect(0, headerH - 4, w, 4).fillColor(accentColor).fillOpacity(0.8).fill().fillOpacity(1);
+    doc.rect(0, headerH, w, 2).fillColor(accentColor).fillOpacity(0.3).fill().fillOpacity(1);
 
-    drawHexLogo(doc, 58, 50, 28, C.white, C.white);
+    drawHexLogo(doc, 62, 54, 34, C.white, C.white);
 
-    doc.fillColor(C.white).fontSize(15).font('Helvetica-Bold')
-        .text(C.name, 96, 26);
-    doc.fillColor(C.white).fontSize(7.5).font('Helvetica')
-        .text('VALUE · NETWORK · KNOWLEDGE', 97, 44, { characterSpacing: 1.2 });
-    doc.fillColor('#B8CDD8').fontSize(7)
-        .text(`NEQ : ${C.neq}  ·  ${C.email}  ·  ${C.phone}`, 97, 57);
+    doc.fillColor(C.white).fontSize(16).font('Helvetica-Bold')
+        .text(C.name, 108, 24);
+    doc.fillColor('rgba(255,255,255,0.8)').fontSize(7.5).font('Helvetica')
+        .text('VALUE · NETWORK · KNOWLEDGE', 109, 44, { characterSpacing: 1.5 });
+    doc.fillColor('#A8C0D8').fontSize(7)
+        .text(`NEQ : ${C.neq}`, 109, 56);
+    doc.fillColor('#A8C0D8').fontSize(7)
+        .text(`${C.email}  ·  ${C.phone}  ·  ${C.site}`, 109, 67);
 
     // Badge FACTURE
-    const bx = w - 148, by = 18, bw = 120, bh = 64;
-    doc.rect(bx, by, bw, bh).fillColor('#1A4570').fill();
-    doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor('#3A6590').stroke();
-    doc.fillColor(C.white).fontSize(10).font('Helvetica-Bold')
-        .text('FACTURE', bx, by + 10, { width: bw, align: 'center', characterSpacing: 2 });
-    doc.fillColor(C.white).fontSize(9).font('Helvetica')
-        .text(invoice.invoice_number, bx, by + 27, { width: bw, align: 'center' });
-    doc.fillColor('#B8CDD8').fontSize(7.5)
-        .text(dateCA(invoice.created_at), bx, by + 44, { width: bw, align: 'center' });
+    const bx = w - 152, by = 16, bw = 124, bh = 76;
+    doc.rect(bx, by, bw, bh).fillColor('#0C2344').fill();
+    doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor('#2A4D6E').stroke();
+    doc.rect(bx, by, 3, bh).fillColor(accentColor).fill();
+    doc.fillColor(C.white).fontSize(11).font('Helvetica-Bold')
+        .text('FACTURE', bx + 4, by + 12, { width: bw - 8, align: 'center', characterSpacing: 2.5 });
+    doc.moveTo(bx + 10, by + 30).lineTo(bx + bw - 10, by + 30)
+        .lineWidth(0.3).strokeColor('#2A4D6E').stroke();
+    doc.fillColor(C.white).fontSize(9.5).font('Helvetica')
+        .text(invoice.invoice_number, bx + 4, by + 36, { width: bw - 8, align: 'center' });
+    doc.fillColor('#A8C0D8').fontSize(7.5)
+        .text(dateCA(invoice.created_at), bx + 4, by + 53, { width: bw - 8, align: 'center' });
 
-    doc.y = 116;
+    doc.y = headerH + 18;
 
     // ── BLOCS INFO ───────────────────────────
     const cw = contentWidth(doc);

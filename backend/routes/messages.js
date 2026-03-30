@@ -1,85 +1,189 @@
 /* ============================================
-   VNK Automatisation Inc. - Messages Routes
-   ============================================ */
-
+   VNK Automatisation Inc. — Messages Routes
+   Chat client ↔ VNK (portail + admin)
+   v3.0 — WebSocket temps réel
+============================================ */
+'use strict';
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 
-// GET /api/messages — get client messages
+// ── WebSocket broadcast ──
+let _wsBroadcast = null;
+try { _wsBroadcast = require('../ws-server').broadcast; } catch (e) { }
+const wsBroadcast = (opts) => { if (_wsBroadcast) { try { _wsBroadcast(opts); } catch (e) { } } };
+
+// ── Middleware admin ──
+function authenticateAdmin(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ success: false, message: 'Non autorisé.' });
+    const token = authHeader.split(' ')[1];
+    try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'vnk_secret_2024');
+        if (!decoded.isAdmin) return res.status(403).json({ success: false, message: 'Accès refusé.' });
+        req.admin = decoded;
+        next();
+    } catch (e) {
+        res.status(401).json({ success: false, message: 'Token invalide.' });
+    }
+}
+
+// ════════════════════════════════════════
+// ROUTES CLIENT (portail)
+// ════════════════════════════════════════
+
+// GET / — liste des messages du client connecté
+// ?markRead=true → marque les messages VNK comme lus (chat ouvert)
+// Sans paramètre → retourne les messages SANS changer is_read (pour le badge)
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT id, sender, content, is_read, created_at
-       FROM messages
-       WHERE client_id = $1
-       ORDER BY created_at ASC`,
+            `SELECT id, sender, content, attachment_data, is_read, created_at
+             FROM messages
+             WHERE client_id = $1
+             ORDER BY created_at ASC`,
             [req.user.id]
         );
 
-        // Mark messages from VNK as read
-        await pool.query(
-            `UPDATE messages 
-       SET is_read = true 
-       WHERE client_id = $1 AND sender = 'vnk' AND is_read = false`,
-            [req.user.id]
-        );
+        // Marquer lu SEULEMENT si le client a explicitement ouvert le chat
+        if (req.query.markRead === 'true') {
+            await pool.query(
+                `UPDATE messages SET is_read = true
+                 WHERE client_id = $1 AND sender = 'vnk' AND is_read = false`,
+                [req.user.id]
+            );
+            // Retourner avec is_read=true mis à jour
+            result.rows.forEach(m => { if (m.sender === 'vnk') m.is_read = true; });
+        }
 
-        res.json({
-            success: true,
-            count: result.rows.length,
-            messages: result.rows
-        });
-
-    } catch (error) {
-        console.error('Get messages error:', error);
-        res.status(500).json({ success: false, message: 'Server error.' });
+        res.json({ success: true, messages: result.rows });
+    } catch (e) {
+        console.error('GET /api/messages error:', e);
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
     }
 });
 
-// POST /api/messages — send message
+// POST / — envoyer un message (client → VNK)
 router.post('/', authenticateToken, async (req, res) => {
     try {
         const { content } = req.body;
-
-        if (!content || content.trim().length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Message content is required.'
-            });
+        if (!content || !String(content).trim()) {
+            return res.status(400).json({ success: false, message: 'Message vide.' });
         }
 
         const result = await pool.query(
-            `INSERT INTO messages (client_id, sender, content, is_read, created_at)
-       VALUES ($1, 'client', $2, false, NOW())
-       RETURNING *`,
-            [req.user.id, content.trim()]
+            `INSERT INTO messages (client_id, sender, content, is_read)
+             VALUES ($1, 'client', $2, false)
+             RETURNING id, sender, content, is_read, created_at`,
+            [req.user.id, String(content).trim()]
         );
 
-        res.status(201).json({
-            success: true,
-            message: result.rows[0]
+        const msg = result.rows[0];
+
+        // Notifier l'admin en temps réel
+        wsBroadcast({
+            event: 'new_message_client',
+            data: { message: msg, clientId: req.user.id },
+            adminOnly: true
         });
 
-    } catch (error) {
-        console.error('Send message error:', error);
-        res.status(500).json({ success: false, message: 'Server error.' });
+        res.json({ success: true, message: msg });
+    } catch (e) {
+        console.error('POST /api/messages error:', e);
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
     }
 });
 
-// POST /api/messages/upload — upload file/audio
-router.post('/upload', authenticateToken, async (req, res) => {
+// ════════════════════════════════════════
+// ROUTES ADMIN
+// ════════════════════════════════════════
+
+// GET /admin/unread-count — nombre de messages non lus (badge sidebar)
+router.get('/admin/unread-count', authenticateAdmin, async (req, res) => {
     try {
-        // Multer non configuré — stocker en base64 dans le content du message
-        // Pour l'instant, retourner une URL blob (le frontend gère localement)
-        res.json({
-            success: false,
-            message: 'Upload serveur non configuré. Utiliser URL locale.'
+        const result = await pool.query(
+            `SELECT COUNT(*) FROM messages WHERE sender = 'client' AND is_read = false`
+        );
+        res.json({ success: true, count: parseInt(result.rows[0].count) });
+    } catch (e) {
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    }
+});
+
+// GET /admin/:clientId — tous les messages d'un client (vue admin)
+router.get('/admin/:clientId', authenticateAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, sender, content, attachment_data, is_read, created_at
+             FROM messages
+             WHERE client_id = $1
+             ORDER BY created_at ASC`,
+            [req.params.clientId]
+        );
+        res.json({ success: true, messages: result.rows });
+    } catch (e) {
+        console.error('GET /api/messages/admin/:id error:', e);
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    }
+});
+
+// POST /admin/:clientId — VNK répond au client
+router.post('/admin/:clientId', authenticateAdmin, async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (!content || !String(content).trim()) {
+            return res.status(400).json({ success: false, message: 'Message vide.' });
+        }
+
+        const result = await pool.query(
+            `INSERT INTO messages (client_id, sender, content, is_read)
+             VALUES ($1, 'vnk', $2, false)
+             RETURNING id, sender, content, is_read, created_at`,
+            [req.params.clientId, String(content).trim()]
+        );
+
+        const msg = result.rows[0];
+
+        // Notifier le client en temps réel
+        wsBroadcast({
+            event: 'new_message_vnk',
+            data: { message: msg },
+            clientId: String(req.params.clientId),
+            notifyAdmin: false
         });
-    } catch (error) {
-        console.error('Upload error:', error);
-        res.status(500).json({ success: false, message: 'Server error.' });
+
+        res.json({ success: true, message: msg });
+    } catch (e) {
+        console.error('POST /api/messages/admin/:id error:', e);
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    }
+});
+
+// PUT /admin/:clientId/mark-read — marquer messages du client comme lus
+router.put('/admin/:clientId/mark-read', authenticateAdmin, async (req, res) => {
+    try {
+        await pool.query(
+            `UPDATE messages SET is_read = true
+             WHERE client_id = $1 AND sender = 'client' AND is_read = false`,
+            [req.params.clientId]
+        );
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    }
+});
+
+// PUT /admin/mark-all-read — tout marquer lu
+router.put('/admin/mark-all-read', authenticateAdmin, async (req, res) => {
+    try {
+        await pool.query(
+            `UPDATE messages SET is_read = true WHERE sender = 'client' AND is_read = false`
+        );
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
     }
 });
 

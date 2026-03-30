@@ -77,8 +77,6 @@ function showDashboard() {
 
     loadAllData();
     startPolling();
-    // Init notifications portail
-    setTimeout(() => { _updatePortalBellDot(); renderPortalNotifPanel(); }, 500);
 
     // Restaurer onglet + état des filtres/recherches
     const savedTab = (window.VNKState ? window.VNKState.get('tab') : null) || localStorage.getItem('vnk-portal-tab');
@@ -167,60 +165,26 @@ async function loadAllData() {
             if (el('stat-mandates')) el('stat-mandates').textContent = dash.activeMandates || 0;
             if (el('stat-quotes')) el('stat-quotes').textContent = dash.pendingQuotes || 0;
             if (el('stat-invoices')) el('stat-invoices').textContent = dash.pendingInvoices || 0;
+            // Toujours mettre à jour les badges — showBadge gère le masquage si count=0
             showBadge('badge-quotes', dash.pendingQuotes || 0);
             showBadge('badge-invoices', dash.pendingInvoices || 0);
             showBadge('badge-mandates', dash.activeMandates || 0);
-            // Dots sidebar
-            showDot('dot-quotes', (dash.pendingQuotes || 0) > 0);
-            showDot('dot-invoices', (dash.pendingInvoices || 0) > 0);
-            showDot('dot-mandates', (dash.activeMandates || 0) > 0);
             renderActivity(dash.recentActivity || []);
         }
         if (quotes) {
-            const prevCount = (window._allQuotes || []).filter(q => q.status === 'pending').length;
             window._allQuotes = quotes.quotes || [];
             const pendingQuotes = window._allQuotes.filter(q => q.status === 'pending');
             renderQuotes(window._allQuotes);
             showBadge('badge-quotes', pendingQuotes.length);
-            showDot('dot-quotes', pendingQuotes.length > 0);
-            // Notification si nouveau devis reçu
-            if (pendingQuotes.length > prevCount) {
-                const newest = pendingQuotes[0];
-                pushPortalNotif('quote',
-                    `Nouveau devis disponible${newest ? ' — ' + newest.title : ''} à accepter ou refuser`,
-                    'quotes'
-                );
-            }
         } else {
             const qlist = el('quotes-list');
             if (qlist) qlist.innerHTML = '<div style="padding:1rem;background:#FEF3C7;border-radius:8px;border-left:3px solid #D97706;font-size:0.85rem;color:#92400E"><strong>Session expirée.</strong> <a href="#" onclick="logout()" style="color:#92400E">Reconnectez-vous</a> pour voir vos devis.</div>';
         }
         if (invoices) {
-            const prevUnpaid = (window._allInvoices || []).filter(i => i.status === 'unpaid' || i.status === 'overdue').length;
             window._allInvoices = invoices.invoices || [];
             renderInvoices(window._allInvoices);
             const unpaid = window._allInvoices.filter(i => i.status === 'unpaid' || i.status === 'overdue').length;
             showBadge('badge-invoices', unpaid);
-            showDot('dot-invoices', unpaid > 0);
-            // Notification si nouvelle facture ou retard
-            if (unpaid > prevUnpaid) {
-                const newest = window._allInvoices.find(i => i.status === 'unpaid' || i.status === 'overdue');
-                const fmtCA = (v) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(parseFloat(v) || 0);
-                pushPortalNotif('invoice',
-                    `Nouvelle facture${newest ? ' ' + newest.invoice_number + ' — ' + fmtCA(newest.amount_ttc) : ''} à régler`,
-                    'invoices'
-                );
-            }
-            // Notification facture en retard
-            const overdue = window._allInvoices.filter(i => i.status === 'overdue');
-            if (overdue.length > 0) {
-                const prevOverdue = (window._prevOverdueIds || []);
-                const newOverdue = overdue.filter(i => !prevOverdue.includes(i.id));
-                if (newOverdue.length > 0) {
-                    pushPortalNotif('invoice', `Facture ${newOverdue[0].invoice_number} en retard de paiement`, 'invoices');
-                }
-                window._prevOverdueIds = overdue.map(i => i.id);
-            }
         }
         if (docs) {
             const docsArr = docs.documents || [];
@@ -228,7 +192,6 @@ async function loadAllData() {
             renderDocuments(window._allDocuments);
             const unread = _getUnreadDocs(docsArr);
             showBadge('badge-documents', unread.length);
-            showDot('dot-documents', unread.length > 0);
         }
         if (mandates) {
             const mArr = mandates.mandates || [];
@@ -236,49 +199,28 @@ async function loadAllData() {
             filterMandates();
             const activeMandates = mArr.filter(m => m.status === 'active' || m.status === 'in_progress').length;
             showBadge('badge-mandates', activeMandates);
-            showDot('dot-mandates', activeMandates > 0);
         }
         if (contracts) {
-            const prevPending = (window._allContracts || []).filter(c => c.status === 'pending_signature' || c.status === 'pending').length;
             window._allContracts = contracts.contracts || [];
             renderPortalContracts(window._allContracts);
             const pending = window._allContracts.filter(c => c.status === 'pending_signature' || c.status === 'pending').length;
             showBadge('badge-contracts', pending);
-            showDot('dot-contracts', pending > 0);
-            // Notification si contrat à signer
-            if (pending > prevPending) {
-                const newest = window._allContracts.find(c => c.status === 'pending_signature' || c.status === 'pending');
-                pushPortalNotif('contract',
-                    `Contrat${newest ? ' ' + newest.contract_number + ' — ' + newest.title : ''} en attente de votre signature`,
-                    'contracts'
-                );
-            }
-            // Notification si contrat nouvellement signé des deux parties
-            const signed = window._allContracts.filter(c => c.status === 'signed' && c.admin_signed_at);
-            const prevSignedIds = window._prevSignedContractIds || [];
-            const newSigned = signed.filter(c => !prevSignedIds.includes(c.id));
-            if (newSigned.length > 0) {
-                pushPortalNotif('contract',
-                    `Contrat ${newSigned[0].contract_number} signé — un exemplaire est disponible dans vos documents`,
-                    'contracts'
-                );
-            }
-            window._prevSignedContractIds = signed.map(c => c.id);
         }
         if (messages) {
             const msgs = messages.messages || [];
-            const unread = msgs.filter(m => !m.is_read && m.sender === 'vnk').length;
+            // Utiliser last-seen-id (comme chat-widget.js) — is_read en DB n'est plus fiable
+            const lastSeenId = parseInt(localStorage.getItem('vnk-chat-last-seen-id') || '0');
+            const unread = msgs.filter(m => m.sender === 'vnk' && m.id > lastSeenId).length;
             const prevUnread = parseInt(el('stat-messages')?.textContent || '0');
             if (el('stat-messages')) el('stat-messages').textContent = unread;
             if (typeof vnkChatNotify === 'function') vnkChatNotify(msgs, unread);
-            // Notification navigateur + son si nouveau message
-            if (unread > prevUnread && typeof vnkNotif !== 'undefined') {
-                const lastVnk = msgs.filter(m => !m.is_read && m.sender === 'vnk').pop();
-                vnkNotif.newMessage('VNK Automatisation', lastVnk?.content?.substring(0, 80));
-                // Aussi dans le panel
-                pushPortalNotif('message',
-                    `Nouveau message de VNK${lastVnk ? ' : ' + lastVnk.content.substring(0, 60) + (lastVnk.content.length > 60 ? '…' : '') : ''}`,
-                    null // pas de tab — ouvre le chat widget
+            // Notification si nouveau message VNK (id plus grand que ce qu'on connaissait)
+            if (unread > prevUnread) {
+                const lastVnk = msgs.filter(m => m.sender === 'vnk' && m.id > lastSeenId).pop();
+                if (typeof vnkNotif !== 'undefined') vnkNotif.newMessage('VNK Automatisation', lastVnk?.content?.substring(0, 80));
+                if (typeof pushPortalNotif === 'function') pushPortalNotif('message',
+                    'Nouveau message de VNK' + (lastVnk ? ' : ' + lastVnk.content.substring(0, 60) + (lastVnk.content.length > 60 ? '…' : '') : ''),
+                    null
                 );
             }
         }
@@ -430,22 +372,25 @@ function _updateActionsRequired() {
     `).join('');
 }
 
+// ═══════════════════════════════════════════════════════════
+// WEBSOCKET + POLLING HYBRIDE
+// WS si dispo, sinon polling 10s actif / 60s arrière-plan
+// ═══════════════════════════════════════════════════════════
 let _pollingInterval = null;
 let _pollingActive = false;
 let _wsPortal = null;
 let _wsReconnectTimer = null;
-let _wsReconnectDelay = 2000;  // délai initial 2s, double à chaque échec (max 30s)
+let _wsReconnectDelay = 2000;
 let _wsPingInterval = null;
 const WS_MAX_RECONNECT = 30000;
 
-// ── WebSocket client — connexion + reconnexion automatique ───
 function startPolling() {
     if (_pollingActive) return;
     _pollingActive = true;
     _connectPortalWS();
-
-    // Recharge immédiatement quand l'onglet redevient visible
     document.addEventListener('visibilitychange', _onPortalTabVisible);
+    // Init notifications au démarrage
+    setTimeout(() => { _updatePortalBellDot(); renderPortalNotifPanel(); }, 300);
 }
 
 function stopPolling() {
@@ -459,78 +404,43 @@ function _connectPortalWS() {
     if (!_pollingActive) return;
     const token = localStorage.getItem('vnk-token');
     if (!token) { _fallbackPoll(); return; }
-
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${proto}//${location.host}/ws`;
-
-    try {
-        _wsPortal = new WebSocket(wsUrl);
-    } catch (e) {
-        console.warn('[WS] Cannot create WebSocket, falling back to polling:', e.message);
-        _fallbackPoll();
-        return;
-    }
+    try { _wsPortal = new WebSocket(proto + '//' + location.host + '/ws'); } catch (e) { _fallbackPoll(); return; }
 
     _wsPortal.onopen = () => {
-        console.log('[WS] Portal connected');
-        _wsReconnectDelay = 2000; // reset backoff
-        // Authentifier
+        _wsReconnectDelay = 2000;
         _wsPortal.send(JSON.stringify({ type: 'auth', token }));
-        // Ping toutes les 25s pour garder la connexion vivante
         clearInterval(_wsPingInterval);
         _wsPingInterval = setInterval(() => {
-            if (_wsPortal && _wsPortal.readyState === WebSocket.OPEN) {
+            if (_wsPortal && _wsPortal.readyState === WebSocket.OPEN)
                 _wsPortal.send(JSON.stringify({ type: 'ping' }));
-            }
         }, 25000);
-        // Recharge initiale des données
         loadAllData();
     };
-
     _wsPortal.onmessage = (e) => {
-        let msg;
-        try { msg = JSON.parse(e.data); } catch { return; }
-        if (msg.type === 'pong') return;
-        if (msg.type === 'authenticated') { console.log('[WS] Authenticated as', msg.role); return; }
+        let msg; try { msg = JSON.parse(e.data); } catch { return; }
+        if (msg.type === 'pong' || msg.type === 'authenticated') return;
         if (msg.type === 'event') _handlePortalWsEvent(msg.event, msg.data || {});
     };
-
-    _wsPortal.onclose = (e) => {
-        console.log('[WS] Portal disconnected:', e.code, e.reason);
-        clearInterval(_wsPingInterval);
-        if (_pollingActive) _schedulePortalReconnect();
-    };
-
-    _wsPortal.onerror = (e) => {
-        console.warn('[WS] Portal error — will reconnect');
-        clearInterval(_wsPingInterval);
-    };
+    _wsPortal.onclose = () => { clearInterval(_wsPingInterval); if (_pollingActive) _schedulePortalReconnect(); };
+    _wsPortal.onerror = () => { clearInterval(_wsPingInterval); };
 }
 
 function _disconnectPortalWS() {
-    clearInterval(_wsPingInterval);
-    clearTimeout(_wsReconnectTimer);
-    if (_wsPortal) {
-        _wsPortal.onclose = null; // éviter la reconnexion auto
-        _wsPortal.close();
-        _wsPortal = null;
-    }
+    clearInterval(_wsPingInterval); clearTimeout(_wsReconnectTimer);
+    if (_wsPortal) { _wsPortal.onclose = null; _wsPortal.close(); _wsPortal = null; }
 }
 
 function _schedulePortalReconnect() {
     if (!_pollingActive) return;
-    console.log(`[WS] Reconnecting in ${_wsReconnectDelay}ms...`);
     _wsReconnectTimer = setTimeout(() => {
         _wsReconnectDelay = Math.min(_wsReconnectDelay * 2, WS_MAX_RECONNECT);
         _connectPortalWS();
     }, _wsReconnectDelay);
 }
 
-// ── Fallback polling si WebSocket non disponible ─────────────
-// (serveur sans ws, navigateur très ancien, etc.)
 function _fallbackPoll() {
     if (!_pollingActive) return;
-    console.log('[WS] Using polling fallback (10s)');
     async function _poll() {
         if (!_pollingActive) return;
         await loadAllData();
@@ -539,116 +449,138 @@ function _fallbackPoll() {
     _pollingInterval = setTimeout(_poll, 10000);
 }
 
-// ── Recharge quand l'onglet redevient visible ─────────────────
 async function _onPortalTabVisible() {
     if (!document.hidden && _pollingActive) {
-        if (_wsPortal && _wsPortal.readyState === WebSocket.OPEN) {
-            // WS connecté → juste recharger les données
-            await loadAllData();
-        } else if (!_wsPortal || _wsPortal.readyState === WebSocket.CLOSED) {
-            // WS déconnecté → reconnecter
-            clearTimeout(_wsReconnectTimer);
-            _connectPortalWS();
-        }
+        if (_wsPortal && _wsPortal.readyState === WebSocket.OPEN) { await loadAllData(); }
+        else if (!_wsPortal || _wsPortal.readyState === WebSocket.CLOSED) { clearTimeout(_wsReconnectTimer); _connectPortalWS(); }
     }
 }
 
-// ── Gestionnaire d'événements WebSocket portail ───────────────
 function _handlePortalWsEvent(event, data) {
+    const fmtCA = (v) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(parseFloat(v) || 0);
     switch (event) {
-
-        // Nouveau message de VNK
         case 'new_message_vnk':
-            loadAllData(); // Recharge messages + badge
-            pushPortalNotif('message',
-                `Nouveau message de VNK${data.content ? ' : ' + data.content.substring(0, 60) + (data.content.length > 60 ? '…' : '') : ''}`,
-                null
-            );
+            loadAllData();
+            pushPortalNotif('message', 'Nouveau message de VNK' + (data.content ? ' : ' + data.content.substring(0, 60) + (data.content.length > 60 ? '…' : '') : ''), null);
             if (typeof vnkNotif !== 'undefined') vnkNotif.sound();
-            if (typeof vnkChatNotify === 'function') setTimeout(() => {
-                const msgs = (window._allMessages || []);
-                const unread = msgs.filter(m => !m.is_read && m.sender === 'vnk').length;
-                vnkChatNotify(msgs, unread);
-            }, 500);
             break;
-
-        // Nouveau devis
         case 'new_quote':
             loadAllData();
-            pushPortalNotif('quote',
-                `Nouveau devis disponible${data.title ? ' — ' + data.title : ''} à accepter ou refuser`,
-                'quotes'
-            );
-            showDot('dot-quotes', true);
-            break;
-
-        // Devis accepté (confirmation)
+            pushPortalNotif('quote', 'Nouveau devis disponible' + (data.title ? ' — ' + data.title : '') + ' à accepter', 'quotes');
+            showDot('dot-quotes', true); break;
         case 'quote_accepted':
             loadAllData();
-            pushPortalNotif('contract',
-                `Votre devis a été accepté — Contrat ${data.contract_number || ''} généré, en attente de signature`,
-                'contracts'
-            );
-            showDot('dot-contracts', true);
-            break;
-
-        // Nouvelle facture
-        case 'new_invoice': {
+            pushPortalNotif('contract', 'Devis accepté — Contrat ' + (data.contract_number || '') + ' généré', 'contracts');
+            showDot('dot-contracts', true); break;
+        case 'new_invoice':
             loadAllData();
-            const fmtCA = (v) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(parseFloat(v) || 0);
-            pushPortalNotif('invoice',
-                `Nouvelle facture${data.invoice_number ? ' ' + data.invoice_number : ''}${data.amount_ttc ? ' — ' + fmtCA(data.amount_ttc) : ''} à régler`,
-                'invoices'
-            );
+            pushPortalNotif('invoice', 'Nouvelle facture' + (data.invoice_number ? ' ' + data.invoice_number : '') + (data.amount_ttc ? ' — ' + fmtCA(data.amount_ttc) : '') + ' à régler', 'invoices');
             showDot('dot-invoices', true);
             if (typeof vnkNotif !== 'undefined') vnkNotif.sound();
             break;
-        }
-
-        // Paiement confirmé
-        case 'invoice_paid': {
+        case 'invoice_paid':
             loadAllData();
-            const fmtCA2 = (v) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(parseFloat(v) || 0);
-            pushPortalNotif('payment',
-                `Paiement confirmé${data.invoice_number ? ' — Facture ' + data.invoice_number : ''}${data.amount_ttc ? ' — ' + fmtCA2(data.amount_ttc) : ''}`,
-                'invoices'
-            );
-            showDot('dot-invoices', false);
-            break;
-        }
-
-        // Contrat signé par admin → disponible à signer côté client
+            pushPortalNotif('payment', 'Paiement confirmé' + (data.invoice_number ? ' — Facture ' + data.invoice_number : ''), 'invoices');
+            showDot('dot-invoices', false); break;
         case 'contract_signed':
             loadAllData();
-            pushPortalNotif('contract',
-                `Contrat${data.contract && data.contract.contract_number ? ' ' + data.contract.contract_number : ''} signé — disponible dans vos documents`,
-                'contracts'
-            );
+            pushPortalNotif('contract', 'Contrat' + (data.contract && data.contract.contract_number ? ' ' + data.contract.contract_number : '') + ' signé — disponible dans vos documents', 'contracts');
             showDot('dot-contracts', true);
-            if (data.auto_invoice) {
-                pushPortalNotif('invoice', `Facture ${data.auto_invoice.invoice_number} générée automatiquement`, 'invoices');
-                showDot('dot-invoices', true);
-                if (typeof vnkNotif !== 'undefined') vnkNotif.sound();
-            }
+            if (data.auto_invoice) { pushPortalNotif('invoice', 'Facture ' + data.auto_invoice.invoice_number + ' générée', 'invoices'); showDot('dot-invoices', true); if (typeof vnkNotif !== 'undefined') vnkNotif.sound(); }
             break;
-
-        // Mandat mis à jour
-        case 'mandate_updated':
-        case 'mandate_created':
+        case 'mandate_updated': case 'mandate_created':
             loadAllData();
-            if (data.status === 'completed') {
-                pushPortalNotif('mandate', `Votre mandat « ${data.title || ''} » est terminé`, 'mandates');
-            } else if (event === 'mandate_created') {
-                pushPortalNotif('mandate', `Nouveau mandat ouvert : « ${data.title || ''} »`, 'mandates');
-                showDot('dot-mandates', true);
-            }
+            if (data.status === 'completed') pushPortalNotif('mandate', 'Mandat « ' + (data.title || '') + ' » terminé', 'mandates');
+            else if (event === 'mandate_created') { pushPortalNotif('mandate', 'Nouveau mandat : « ' + (data.title || '') + ' »', 'mandates'); showDot('dot-mandates', true); }
             break;
-
-        default:
-            // Événement inconnu → recharge générale
-            loadAllData();
+        default: loadAllData();
     }
 }
+
+function showDot(id, active) { const d = document.getElementById(id); if (d) d.style.display = active ? 'block' : 'none'; }
+
+// ═══════════════════════════════════════════════════════════
+// SYSTÈME NOTIFICATIONS PORTAIL
+// ═══════════════════════════════════════════════════════════
+const PORTAL_NOTIF_KEY = 'vnk-portal-notifs';
+function _loadPortalNotifs() { try { return JSON.parse(localStorage.getItem(PORTAL_NOTIF_KEY) || '[]'); } catch { return []; } }
+function _savePortalNotifs(list) { localStorage.setItem(PORTAL_NOTIF_KEY, JSON.stringify(list.slice(0, 40))); }
+
+const PORTAL_NOTIF_CFG = {
+    message: { bg: '#EBF3FA', icon: '#1B4F8A', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+    quote: { bg: '#FEF3C7', icon: '#D97706', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' },
+    contract: { bg: '#EDE9FE', icon: '#7C3AED', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>' },
+    invoice: { bg: '#FEE2E2', icon: '#DC2626', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>' },
+    payment: { bg: '#D1FAE5', icon: '#059669', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>' },
+    mandate: { bg: '#E0F2FE', icon: '#0284C7', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>' },
+    system: { bg: '#F1F5F9', icon: '#64748B', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/></svg>' },
+};
+
+function pushPortalNotif(type, text, tab) {
+    const list = _loadPortalNotifs();
+    if (list.find(n => n.text === text && (Date.now() - new Date(n.ts).getTime()) < 30000)) return;
+    list.unshift({ id: Date.now(), type, text, tab: tab || null, read: false, ts: new Date().toISOString() });
+    _savePortalNotifs(list);
+    renderPortalNotifPanel();
+    _updatePortalBellDot();
+    if (typeof vnkNotif !== 'undefined') vnkNotif.sound();
+}
+
+function _relTime(iso) {
+    const d = Date.now() - new Date(iso).getTime();
+    if (d < 60000) return "À l'instant";
+    if (d < 3600000) return Math.floor(d / 60000) + ' min';
+    if (d < 86400000) return Math.floor(d / 3600000) + ' h';
+    return Math.floor(d / 86400000) + ' j';
+}
+
+function renderPortalNotifPanel() {
+    const container = document.getElementById('portal-notif-list');
+    const empty = document.getElementById('portal-notif-empty');
+    if (!container) return;
+    Array.from(container.children).forEach(c => { if (c.id !== 'portal-notif-empty') c.remove(); });
+    const list = _loadPortalNotifs();
+    if (!list.length) { if (empty) empty.style.display = 'block'; return; }
+    if (empty) empty.style.display = 'none';
+    list.forEach(n => {
+        const cfg = PORTAL_NOTIF_CFG[n.type] || PORTAL_NOTIF_CFG.system;
+        const el = document.createElement('div');
+        el.className = 'portal-notif-item' + (n.read ? '' : ' unread');
+        el.innerHTML = '<div class="portal-notif-icon" style="background:' + cfg.bg + ';color:' + cfg.icon + '">' + cfg.svg + '</div>'
+            + '<div class="portal-notif-body"><div class="portal-notif-text">' + n.text + '</div><div class="portal-notif-time">' + _relTime(n.ts) + '</div></div>'
+            + (!n.read ? '<div class="portal-notif-unread-dot"></div>' : '');
+        el.onclick = () => {
+            const all = _loadPortalNotifs(); const idx = all.findIndex(x => x.id === n.id);
+            if (idx !== -1) { all[idx].read = true; _savePortalNotifs(all); }
+            el.classList.remove('unread'); const dot = el.querySelector('.portal-notif-unread-dot'); if (dot) dot.remove();
+            _updatePortalBellDot();
+            if (n.tab) { closePortalNotifPanel(); showTab(n.tab); }
+        };
+        container.appendChild(el);
+    });
+}
+
+function _updatePortalBellDot() {
+    const unread = _loadPortalNotifs().filter(n => !n.read).length;
+    const dot = document.getElementById('portal-notif-bell-dot');
+    if (dot) dot.style.display = unread > 0 ? 'block' : 'none';
+}
+
+function togglePortalNotifPanel() {
+    const panel = document.getElementById('portal-notif-panel');
+    if (!panel) return;
+    if (panel.classList.contains('open')) closePortalNotifPanel();
+    else { panel.classList.add('open'); renderPortalNotifPanel(); }
+}
+function closePortalNotifPanel() { const p = document.getElementById('portal-notif-panel'); if (p) p.classList.remove('open'); }
+function markAllPortalNotifsRead() { _savePortalNotifs(_loadPortalNotifs().map(n => ({ ...n, read: true }))); renderPortalNotifPanel(); _updatePortalBellDot(); }
+function clearAllPortalNotifs() { _savePortalNotifs([]); renderPortalNotifPanel(); _updatePortalBellDot(); }
+
+document.addEventListener('click', (e) => {
+    const panel = document.getElementById('portal-notif-panel');
+    const btn = document.querySelector('.portal-notif-btn');
+    if (panel && panel.classList.contains('open') && !panel.contains(e.target) && btn && !btn.contains(e.target)) closePortalNotifPanel();
+});
 
 /* ─────────────────────────────────────────────
    refreshPortal — bouton Actualiser fonctionnel
@@ -747,14 +679,13 @@ function showTab(tabName) {
 
 function showBadge(id, count) {
     const badge = document.getElementById(id);
-    if (!badge) return;
-    if (count && count > 0) {
-        badge.style.display = 'inline-block';
-        badge.textContent = count;
-    } else {
-        badge.style.display = 'none';
-        badge.textContent = '0';
+    if (badge) {
+        if (count && count > 0) { badge.style.display = 'inline-block'; badge.textContent = count; }
+        else { badge.style.display = 'none'; badge.textContent = '0'; }
     }
+    // Sync dot
+    const dotId = id.replace('badge-', 'dot-');
+    if (typeof showDot === 'function') showDot(dotId, count > 0);
 }
 
 function renderProfile(user) {
@@ -2384,126 +2315,6 @@ function showPortalToast(msg, type) {
     t.style.opacity = '1';
     clearTimeout(t._to);
     t._to = setTimeout(() => { t.style.opacity = '0'; }, 3500);
-}
-
-// ══════════════════════════════════════════════
-// SYSTÈME DE NOTIFICATIONS PORTAIL CLIENT
-// ══════════════════════════════════════════════
-
-const PORTAL_NOTIF_KEY = 'vnk-portal-notifs';
-
-function _loadPortalNotifs() {
-    try { return JSON.parse(localStorage.getItem(PORTAL_NOTIF_KEY) || '[]'); } catch { return []; }
-}
-function _savePortalNotifs(list) {
-    localStorage.setItem(PORTAL_NOTIF_KEY, JSON.stringify(list.slice(0, 40)));
-}
-
-const PORTAL_NOTIF_CONFIG = {
-    message: { bg: '#EBF3FA', icon: '#1B4F8A', label: 'Message', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
-    quote: { bg: '#FEF3C7', icon: '#D97706', label: 'Devis', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' },
-    contract: { bg: '#EDE9FE', icon: '#7C3AED', label: 'Contrat', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' },
-    invoice: { bg: '#FEE2E2', icon: '#DC2626', label: 'Facture', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>' },
-    payment: { bg: '#D1FAE5', icon: '#059669', label: 'Paiement', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' },
-    mandate: { bg: '#E0F2FE', icon: '#0284C7', label: 'Mandat', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>' },
-    system: { bg: '#F1F5F9', icon: '#64748B', label: 'Système', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' },
-};
-
-function pushPortalNotif(type, text, tab) {
-    const list = _loadPortalNotifs();
-    // Éviter les doublons récents (même texte dans les 30 dernières secondes)
-    const recent = list.find(n => n.text === text && (Date.now() - new Date(n.ts).getTime()) < 30000);
-    if (recent) return;
-    list.unshift({ id: Date.now(), type, text, tab: tab || null, read: false, ts: new Date().toISOString() });
-    _savePortalNotifs(list);
-    renderPortalNotifPanel();
-    _updatePortalBellDot();
-    // Son de notification
-    if (typeof vnkNotif !== 'undefined') vnkNotif.sound();
-}
-
-function _portalRelTime(iso) {
-    const diff = Date.now() - new Date(iso).getTime();
-    if (diff < 60000) return "À l'instant";
-    if (diff < 3600000) return Math.floor(diff / 60000) + ' min';
-    if (diff < 86400000) return Math.floor(diff / 3600000) + ' h';
-    return Math.floor(diff / 86400000) + ' j';
-}
-
-function renderPortalNotifPanel() {
-    const list = _loadPortalNotifs();
-    const container = document.getElementById('portal-notif-list');
-    const empty = document.getElementById('portal-notif-empty');
-    if (!container) return;
-    Array.from(container.children).forEach(c => { if (c.id !== 'portal-notif-empty') c.remove(); });
-    if (!list.length) { if (empty) empty.style.display = 'block'; return; }
-    if (empty) empty.style.display = 'none';
-    list.forEach(n => {
-        const cfg = PORTAL_NOTIF_CONFIG[n.type] || PORTAL_NOTIF_CONFIG.system;
-        const el = document.createElement('div');
-        el.className = 'portal-notif-item' + (n.read ? '' : ' unread');
-        el.innerHTML = `
-            <div class="portal-notif-icon" style="background:${cfg.bg};color:${cfg.icon}">${cfg.svg}</div>
-            <div class="portal-notif-body">
-                <div class="portal-notif-text">${n.text}</div>
-                <div class="portal-notif-time">${_portalRelTime(n.ts)}</div>
-            </div>
-            ${!n.read ? '<div class="portal-notif-unread-dot"></div>' : ''}
-        `;
-        el.onclick = () => {
-            const all = _loadPortalNotifs();
-            const idx = all.findIndex(x => x.id === n.id);
-            if (idx !== -1) { all[idx].read = true; _savePortalNotifs(all); }
-            el.classList.remove('unread');
-            const dot = el.querySelector('.portal-notif-unread-dot');
-            if (dot) dot.remove();
-            _updatePortalBellDot();
-            if (n.tab) { closePortalNotifPanel(); showTab(n.tab); }
-        };
-        container.appendChild(el);
-    });
-}
-
-function _updatePortalBellDot() {
-    const unread = _loadPortalNotifs().filter(n => !n.read).length;
-    const dot = document.getElementById('portal-notif-bell-dot');
-    if (dot) dot.style.display = unread > 0 ? 'block' : 'none';
-}
-
-function togglePortalNotifPanel() {
-    const panel = document.getElementById('portal-notif-panel');
-    if (!panel) return;
-    if (panel.classList.contains('open')) { closePortalNotifPanel(); }
-    else { panel.classList.add('open'); renderPortalNotifPanel(); }
-}
-function closePortalNotifPanel() {
-    const panel = document.getElementById('portal-notif-panel');
-    if (panel) panel.classList.remove('open');
-}
-function markAllPortalNotifsRead() {
-    _savePortalNotifs(_loadPortalNotifs().map(n => ({ ...n, read: true })));
-    renderPortalNotifPanel();
-    _updatePortalBellDot();
-}
-function clearAllPortalNotifs() {
-    _savePortalNotifs([]);
-    renderPortalNotifPanel();
-    _updatePortalBellDot();
-}
-
-// Fermer panel si clic hors
-document.addEventListener('click', (e) => {
-    const panel = document.getElementById('portal-notif-panel');
-    const btn = document.querySelector('.portal-notif-btn');
-    if (panel && panel.classList.contains('open')) {
-        if (!panel.contains(e.target) && btn && !btn.contains(e.target)) closePortalNotifPanel();
-    }
-});
-
-// ── Dot helper — remplace showBadge pour les dots sidebar ──
-function showDot(dotId, active) {
-    const dot = document.getElementById(dotId);
-    if (dot) dot.style.display = active ? 'block' : 'none';
 }
 
 function _closeAndOpenChat() {

@@ -86,30 +86,73 @@
             </div>
         </div>
 
-        <button class="vnk-chat-bubble" onclick="vnkChatToggle()" title="Contacter VNK">
-            <svg id="vnk-chat-icon-closed" width="52" height="52" viewBox="0 0 60 60">
-                <polygon points="30,2 55,15.5 55,44.5 30,58 5,44.5 5,15.5" fill="none" stroke="white" stroke-width="3"/>
-                <text x="30" y="36" text-anchor="middle" style="font-size:13px;font-weight:900;fill:white;font-family:sans-serif;letter-spacing:-0.5px">VNK</text>
-            </svg>
-            <svg id="vnk-chat-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="display:none">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-            <div class="vnk-chat-unread" id="vnk-chat-unread">0</div>
+        <button class="vnk-chat-bubble" onclick="vnkChatToggle()" id="vnk-chat-bubble-btn" title="Contacter VNK Automatisation">
+            <div class="vnk-bubble-inner" id="vnk-bubble-inner">
+                <svg id="vnk-chat-icon-closed" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <svg id="vnk-chat-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" style="display:none">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </div>
+            <div class="vnk-chat-unread" id="vnk-chat-unread" style="display:none">0</div>
         </button>`;
 
     const style = document.createElement('style');
     style.textContent = `
-        @keyframes vnkBlink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-        #vnk-chat-panel.vnk-expanded {
-            position:fixed!important;top:0!important;right:0!important;bottom:0!important;
-            width:420px!important;max-width:100vw!important;max-height:100vh!important;
-            border-radius:0!important;z-index:99999!important;
-            box-shadow:-4px 0 32px rgba(0,0,0,0.18)!important;
-        }
+        @keyframes vnkBlink{0%,100%{opacity:1}50%{opacity:0.2}}
+        @keyframes vnkBubblePop{0%{transform:scale(0.8);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+        @keyframes vnkBadgeBounce{0%,100%{transform:scale(1)}40%{transform:scale(1.4)}70%{transform:scale(0.9)}}
+        @keyframes vnkPulseRing{0%{transform:scale(1);opacity:0.7}100%{transform:scale(1.6);opacity:0}}
+        @keyframes vnkShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-8deg)}40%{transform:rotate(8deg)}60%{transform:rotate(-5deg)}80%{transform:rotate(5deg)}}
+
+        .vnk-chat-widget{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9998;display:flex;flex-direction:column;align-items:flex-end;pointer-events:none}
+        .vnk-chat-widget>*{pointer-events:auto}
+
+        .vnk-chat-bubble{width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#1B4F8A,#0F2D52);box-shadow:0 6px 20px rgba(15,45,82,0.45),0 2px 6px rgba(0,0,0,0.2);transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.2s;outline:none;animation:vnkBubblePop 0.4s cubic-bezier(0.34,1.56,0.64,1)}
+        .vnk-chat-bubble:hover{transform:scale(1.08);box-shadow:0 10px 28px rgba(15,45,82,0.55)}
+        .vnk-chat-bubble:active{transform:scale(0.95)}
+        .vnk-chat-bubble.has-unread::before{content:'';position:absolute;inset:-4px;border-radius:50%;border:2.5px solid rgba(230,57,70,0.6);animation:vnkPulseRing 1.8s ease-out infinite}
+        .vnk-bubble-inner{display:flex;align-items:center;justify-content:center;transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1)}
+        .vnk-chat-bubble.open-state .vnk-bubble-inner{transform:rotate(90deg) scale(0.88)}
+        .vnk-chat-bubble.shake{animation:vnkShake 0.5s ease}
+
+        .vnk-chat-unread{position:absolute;top:-5px;right:-5px;min-width:22px;height:22px;padding:0 5px;background:#E63946;color:white;font-size:0.7rem;font-weight:900;border-radius:11px;border:2.5px solid white;display:none;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 10px rgba(230,57,70,0.6);font-family:system-ui,sans-serif;letter-spacing:-0.3px}
+
+        .vnk-chat-panel{display:none;flex-direction:column;position:fixed;bottom:5rem;right:1.5rem;width:360px;max-height:520px;background:white;border-radius:18px;box-shadow:0 8px 32px rgba(10,18,35,0.18),0 0 0 1px rgba(0,0,0,0.05);overflow:hidden;z-index:9997;transform:scale(0.92) translateY(10px);opacity:0;transition:transform 0.28s cubic-bezier(0.34,1.4,0.64,1),opacity 0.22s ease}
+        .vnk-chat-panel.open{display:flex;transform:scale(1) translateY(0);opacity:1}
+        #vnk-chat-panel.vnk-expanded{position:fixed!important;top:0!important;right:0!important;bottom:0!important;width:420px!important;max-width:100vw!important;max-height:100vh!important;border-radius:0!important;z-index:99999!important;box-shadow:-4px 0 32px rgba(0,0,0,0.18)!important}
+
+        .vnk-chat-messages{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:0.5rem;background:#F8FAFC;scrollbar-width:thin;scrollbar-color:#E2E8F0 transparent}
+        .vnk-chat-msg{display:flex;flex-direction:column;max-width:82%}
+        .vnk-chat-msg.client{align-items:flex-end;align-self:flex-end}
+        .vnk-chat-msg.vnk{align-items:flex-start;align-self:flex-start}
+        .vnk-chat-msg-bubble{padding:0.6rem 0.9rem;border-radius:14px;font-size:0.875rem;line-height:1.5;word-break:break-word}
+        .vnk-chat-msg.client .vnk-chat-msg-bubble{background:linear-gradient(135deg,#1B4F8A,#2563EB);color:white;border-radius:14px 14px 4px 14px}
+        .vnk-chat-msg.vnk .vnk-chat-msg-bubble{background:white;color:#1E293B;border:1px solid #E2E8F0;border-radius:14px 14px 14px 4px}
+        .vnk-chat-msg-time{font-size:0.65rem;color:#94A3B8;margin-top:3px;padding:0 4px}
+
+        .vnk-chat-compose{border-top:1px solid #F1F5F9;padding:0.65rem 0.75rem 0.75rem;background:white}
+        .vnk-chat-actions{display:flex;gap:4px}
+        .vnk-chat-action-btn{width:32px;height:32px;border:none;background:none;cursor:pointer;color:#94A3B8;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s}
+        .vnk-chat-action-btn:hover{background:#F1F5F9;color:#1B4F8A}
+        .vnk-chat-input{flex:1;resize:none;border:1.5px solid #E2E8F0;border-radius:10px;padding:0.55rem 0.8rem;font-size:0.875rem;font-family:inherit;outline:none;min-height:38px;max-height:100px;line-height:1.5;transition:border-color 0.15s}
+        .vnk-chat-input:focus{border-color:#1B4F8A}
+        .vnk-chat-send{width:38px;height:38px;border:none;background:linear-gradient(135deg,#1B4F8A,#2563EB);border-radius:10px;cursor:pointer;color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;box-shadow:0 2px 8px rgba(27,79,138,0.3)}
+        .vnk-chat-send:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(27,79,138,0.4)}
+        .vnk-chat-send:disabled{opacity:0.5;transform:none}
+
+        .vnk-chat-header{display:flex;align-items:center;gap:0.65rem;padding:0.85rem 1rem;flex-shrink:0}
+        .vnk-chat-header-info{flex:1;min-width:0}
+        .vnk-chat-header-info strong{display:block;font-size:0.88rem;font-weight:700;color:white}
+        .vnk-chat-header-info span{font-size:0.72rem;color:rgba(255,255,255,0.65)}
+
         .vnk-msg-read{font-size:0.65rem;color:#94A3B8;margin-top:1px;display:flex;align-items:center;gap:3px;justify-content:flex-end}
         .vnk-msg-read.seen{color:#2E75B6}
         .vnk-file-msg{display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(27,79,138,0.08);border-radius:8px;border:1px solid rgba(27,79,138,0.15);text-decoration:none;color:#1B4F8A;font-size:0.82rem;font-weight:600}
         .vnk-file-msg:hover{background:rgba(27,79,138,0.14)}
+        .vnk-menu-item:hover{background:#F1F5F9}
+        @media(max-width:480px){.vnk-chat-panel{width:calc(100vw - 2rem);right:1rem;bottom:4.5rem}.vnk-chat-bubble{width:52px;height:52px}}
     `;
     document.head.appendChild(style);
     document.body.appendChild(widget);
@@ -125,10 +168,19 @@
         panel.classList.toggle('open', _isOpen);
         if (ic) ic.style.display = _isOpen ? 'none' : 'block';
         if (io) io.style.display = _isOpen ? 'block' : 'none';
+        const _bubble = document.getElementById('vnk-chat-bubble-btn');
+        if (_bubble) _bubble.classList.toggle('open-state', _isOpen);
         if (_isOpen) {
             _unreadCount = 0;
             const b = document.getElementById('vnk-chat-unread');
-            if (b) b.style.display = 'none';
+            if (b) { b.style.display = 'none'; b.textContent = '0'; }
+            if (_bubble) _bubble.classList.remove('has-unread');
+            _unreadCount = 0;
+            // Sauvegarder le dernier ID VNK vu → badge ne reviendra pas sur les anciens msgs
+            if (_messages.length) {
+                const lastVnkMsg = [..._messages].reverse().find(m => m.sender === 'vnk');
+                if (lastVnkMsg) localStorage.setItem('vnk-chat-last-seen-id', String(lastVnkMsg.id));
+            }
             // Afficher l'avatar client dans le header si disponible
             try {
                 const user = JSON.parse(localStorage.getItem('vnk-user') || '{}');
@@ -145,11 +197,13 @@
         }
     };
 
-    window.vnkChatLoad = async function () {
+    window.vnkChatLoad = async function (forceNoMark) {
         const token = localStorage.getItem('vnk-token');
         if (!token) return;
         try {
-            const r = await fetch('/api/messages', { headers: { Authorization: 'Bearer ' + token } });
+            // markRead=true quand le chat est ouvert — marque les messages VNK comme lus
+            const url = '/api/messages' + (_isOpen && !forceNoMark ? '?markRead=true' : '');
+            const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
             if (!r.ok) return;
             const d = await r.json();
             const msgs = d.messages || [];
@@ -158,6 +212,11 @@
             if (msgs.length === _messages.length && lastId === newLastId) return;
             _messages = msgs;
             vnkChatRender(msgs);
+            // Si chat ouvert → mettre à jour last-seen-id avec le dernier msg VNK
+            if (_isOpen && msgs.length) {
+                const lastVnk = [...msgs].reverse().find(m => m.sender === 'vnk');
+                if (lastVnk) localStorage.setItem('vnk-chat-last-seen-id', String(lastVnk.id));
+            }
         } catch { }
     };
 
@@ -214,7 +273,7 @@
         input.value = ''; input.style.height = 'auto';
         try {
             const r = await fetch('/api/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ content }) });
-            if (r.ok) await vnkChatLoad();
+            if (r.ok) await vnkChatLoad(true); // forceNoMark — ne pas marquer les msgs VNK comme lus
         } catch { }
         _sending = false; btn.disabled = false;
     };
@@ -258,7 +317,7 @@
                     ? `[Image] ${file.name} ||URL:${b64}`
                     : `[Fichier] ${file.name} (${sizeFmt}) ||URL:${b64}`;
                 await fetch('/api/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ content: msgContent }) });
-                await vnkChatLoad();
+                await vnkChatLoad(true);
             };
             reader2.readAsDataURL(file);
         } catch { }
@@ -316,19 +375,54 @@
             .then(d => {
                 if (!d) return;
                 const msgs = d.messages || [];
-                const unread = msgs.filter(m => !m.is_read && m.sender === 'vnk').length;
+                // Compter les messages VNK non vus : après le dernier ID vu par le client
+                const lastSeenId = parseInt(localStorage.getItem('vnk-chat-last-seen-id') || '0');
+                const unread = msgs.filter(m => m.sender === 'vnk' && m.id > lastSeenId).length;
+
                 const badge = document.getElementById('vnk-chat-unread');
+                const bbl = document.getElementById('vnk-chat-bubble-btn');
                 if (badge) {
-                    if (unread > 0 && !_isOpen) { badge.textContent = unread; badge.style.display = 'flex'; _unreadCount = unread; }
-                    else badge.style.display = 'none';
+                    if (unread > 0 && !_isOpen) {
+                        const prev = _unreadCount;
+                        badge.textContent = String(unread);
+                        badge.style.display = 'flex';
+                        _unreadCount = unread;
+                        if (bbl) bbl.classList.add('has-unread');
+                        if (unread > prev && bbl) {
+                            bbl.classList.remove('shake'); void bbl.offsetWidth;
+                            bbl.classList.add('shake');
+                            setTimeout(() => bbl.classList.remove('shake'), 600);
+                        }
+                        badge.style.animation = 'none'; void badge.offsetWidth;
+                        badge.style.animation = 'vnkBadgeBounce 0.4s cubic-bezier(0.34,1.56,0.64,1)';
+                    } else if (!_isOpen) {
+                        badge.style.display = 'none'; badge.textContent = '0'; _unreadCount = 0;
+                        if (bbl) bbl.classList.remove('has-unread');
+                    }
                 }
                 if (_isOpen && msgs.length !== _messages.length) { _messages = msgs; vnkChatRender(msgs); }
             }).catch(() => { });
     }
 
-    _polling = setInterval(vnkChatPoll, 5000);
+    // Polling réduit — le WebSocket de portal.js pousse les mises à jour via vnkChatNotify()
+    // On garde un polling léger seulement comme fallback
+    function _startChatPolling() {
+        if (_polling) clearInterval(_polling);
+        _polling = setInterval(vnkChatPoll, 15000); // 15s fallback
+    }
+    _startChatPolling();
+
+    // Si le WS portal est actif, désactiver le polling du chat (vnkChatNotify gère tout)
+    // Vérification toutes les 3s au démarrage, puis stop si WS connecté
+    const _wsCheck = setInterval(() => {
+        if (window._wsPortal && window._wsPortal.readyState === WebSocket.OPEN) {
+            clearInterval(_polling); _polling = null;
+            clearInterval(_wsCheck);
+        }
+    }, 3000);
+
     vnkChatLoad();
-    vnkChatPoll();
+    vnkChatPoll(); // Le poll initial calcule les non-vus via last-seen-id immédiatement
 
     window.vnkChatMenuToggle = function () {
         const menu = document.getElementById('vnk-chat-menu');
@@ -370,9 +464,23 @@
     window.vnkChatNotify = function (msgs, unread) {
         if (msgs && msgs.length !== _messages.length) { _messages = msgs; if (_isOpen) vnkChatRender(msgs); }
         const badge = document.getElementById('vnk-chat-unread');
+        const bbl = document.getElementById('vnk-chat-bubble-btn');
         if (badge) {
-            if (unread > 0 && !_isOpen) { badge.textContent = unread; badge.style.display = 'flex'; }
-            else if (_isOpen) badge.style.display = 'none';
+            if (unread > 0 && !_isOpen) {
+                const prev = _unreadCount;
+                badge.textContent = String(unread); badge.style.display = 'flex'; _unreadCount = unread;
+                if (bbl) bbl.classList.add('has-unread');
+                if (unread > prev && bbl) {
+                    bbl.classList.remove('shake'); void bbl.offsetWidth;
+                    bbl.classList.add('shake');
+                    setTimeout(() => bbl.classList.remove('shake'), 600);
+                }
+                badge.style.animation = 'none'; void badge.offsetWidth;
+                badge.style.animation = 'vnkBadgeBounce 0.4s cubic-bezier(0.34,1.56,0.64,1)';
+            } else {
+                badge.style.display = 'none'; badge.textContent = '0';
+                if (bbl) bbl.classList.remove('has-unread');
+            }
         }
     };
 })();
