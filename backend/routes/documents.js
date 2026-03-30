@@ -65,10 +65,25 @@ router.get('/:id', authenticateToken, async (req, res) => {
         const doc = result.rows[0];
 
         if (doc.file_url) {
+            // Si c'est une URL relative, la servir directement avec auth
+            if (doc.file_url.startsWith('/') || doc.file_url.startsWith('http')) {
+                return res.redirect(doc.file_url);
+            }
             return res.redirect(doc.file_url);
         }
 
-        res.status(404).json({ success: false, message: 'File not available.' });
+        if (doc.file_data) {
+            // Fichier stocké en base64 en DB
+            const buf = Buffer.from(doc.file_data, 'base64');
+            const mime = doc.file_type === 'pdf' ? 'application/pdf'
+                : doc.file_type === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    : 'application/octet-stream';
+            res.set({ 'Content-Type': mime, 'Content-Disposition': 'inline; filename="' + (doc.file_name || doc.title) + '"' });
+            return res.send(buf);
+        }
+
+        // Pas de fichier — retourner info du document en JSON
+        res.status(404).json({ success: false, message: 'Fichier non disponible. Le document a été créé sans fichier joint.', document: { id: doc.id, title: doc.title, description: doc.description } });
 
     } catch (error) {
         console.error('Get document error:', error);

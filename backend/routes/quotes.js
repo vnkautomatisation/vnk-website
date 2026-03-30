@@ -35,6 +35,30 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // GET /api/quotes/:id
+// GET /:id/pdf — générer PDF devis (portail client)
+router.get('/:id/pdf', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT q.*, cl.full_name, cl.company_name, cl.email, cl.phone,
+                    cl.address, cl.city, cl.province, cl.postal_code
+             FROM quotes q
+             JOIN clients cl ON q.client_id = cl.id
+             WHERE q.id = $1 AND q.client_id = $2`,
+            [req.params.id, req.user.id]
+        );
+        if (!result.rows.length)
+            return res.status(404).json({ success: false, message: 'Devis introuvable.' });
+        const row = result.rows[0];
+        const quote = { ...row };
+        const client = { full_name: row.full_name, email: row.email, phone: row.phone, company_name: row.company_name, address: row.address, city: row.city, province: row.province, postal_code: row.postal_code };
+        const { generateQuotePDF } = require('./pdf-templates');
+        await generateQuotePDF(res, quote, client);
+    } catch (e) {
+        console.error('Quote PDF client error:', e);
+        if (!res.headersSent) res.status(500).json({ success: false, message: 'Erreur PDF.' });
+    }
+});
+
 router.get('/:id', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
@@ -84,10 +108,17 @@ router.put('/:id/accept', authenticateToken, async (req, res) => {
         // Migrations douces
         await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS quote_id INTEGER`).catch(() => { });
         await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS amount_ttc NUMERIC(10,2)`).catch(() => { });
+        // Migrations douces pour colonnes signature
+        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS client_signature_data TEXT`).catch(() => { });
+        await pool.query(`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS signed_at TIMESTAMP`).catch(() => { });
+
+        const signatureData = req.body && req.body.signature_data ? req.body.signature_data : null;
+
         const result = await pool.query(
-            `UPDATE quotes SET status='accepted', accepted_at=NOW(), updated_at=NOW()
+            `UPDATE quotes SET status='accepted', accepted_at=NOW(), signed_at=NOW(), updated_at=NOW(),
+             client_signature_data=$3
              WHERE id=$1 AND client_id=$2 AND status='pending' RETURNING *`,
-            [req.params.id, req.user.id]
+            [req.params.id, req.user.id, signatureData]
         );
         if (!result.rows.length) return res.status(404).json({ success: false, message: 'Quote not found or already processed.' });
         const quote = result.rows[0];
@@ -115,7 +146,32 @@ router.put('/:id/accept', authenticateToken, async (req, res) => {
                 }).catch(() => { });
             }
             pool.query(`INSERT INTO messages (client_id, sender, content, is_read, created_at) VALUES ($1, $2, false, NOW())`,
-                [quote.client_id, 'Votre devis ' + quote.quote_number + ' a été accepté ! Contrat ' + newCtLocal.contract_number + ' disponible dans votre portail — signature requise.']).catch(() => { });
+                [quote.client_id, 'Devis ' + quote.quote_number + ' accepté — Contrat ' + newCtLocal.contract_number + ' créé. Votre signature est requise pour démarrer les travaux.']).catch(() => { });
+            // Notifier admin
+            if (_email) {
+                pool.query('SELECT * FROM clients WHERE id=$1', [quote.client_id]).then(r => {
+                    if (r.rows[0]) _email.notifyAdmin(_email.tplAdminQuoteAccepted(r.rows[0], quote)).catch(() => { });
+                }).catch(() => { });
+            }
+            // Insérer le devis accepté dans documents (avec statut Approuvé)
+            try {
+                await pool.query(`ALTER TABLE documents ADD COLUMN IF NOT EXISTS category VARCHAR(100)`).catch(() => { });
+                await pool.query(`ALTER TABLE documents ADD COLUMN IF NOT EXISTS status VARCHAR(50)`).catch(() => { });
+                await pool.query(
+                    `INSERT INTO documents (client_id, title, description, file_type, file_name, category, status, is_read, created_at, updated_at)
+                     VALUES ($1, $2, $3, 'pdf', $4, 'Devis', 'Approuvé', false, NOW(), NOW())`,
+                    [
+                        quote.client_id,
+                        quote.quote_number + (quote.title ? ' — ' + quote.title : ''),
+                        'Devis accepté le ' + new Date().toLocaleDateString('fr-CA') + ' — ' + (quote.amount_ttc ? new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(quote.amount_ttc) : ''),
+                        quote.quote_number + '.pdf'
+                    ]
+                );
+                console.log('[workflow] Devis', quote.quote_number, 'ajouté aux documents');
+            } catch (docErr) {
+                console.warn('[workflow] Erreur ajout document devis:', docErr.message);
+            }
+
             return res.json({ success: true, message: 'Devis accepté. Un contrat a été créé.', quote, contract: newCtLocal });
         } catch (contractErr) {
             console.warn('[workflow] Erreur création contrat auto:', contractErr.message);

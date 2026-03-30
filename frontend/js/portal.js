@@ -92,9 +92,18 @@ function showDashboard() {
     loadAllData();
     startPolling();
 
-    // Restaurer onglet + état des filtres/recherches
+    // Restaurer onglet — priorité à l'ancre URL (liens emails), puis état sauvegardé
+    const urlHash = window.location.hash.replace('#', '');
+    const hashTabMap = { quotes: 'quotes', contracts: 'contracts', invoices: 'invoices', documents: 'documents', messages: 'messages', mandates: 'mandates' };
+    const hashTab = hashTabMap[urlHash];
     const savedTab = (window.VNKState ? window.VNKState.get('tab') : null) || localStorage.getItem('vnk-portal-tab');
-    if (savedTab && savedTab !== 'dashboard') showTab(savedTab);
+    if (hashTab) {
+        setTimeout(() => showTab(hashTab), 300);
+        // Lien admin messagerie : #messages-{clientId} → pas applicable côté client
+        window.history.replaceState(null, '', window.location.pathname); // Nettoyer l'ancre
+    } else if (savedTab && savedTab !== 'dashboard') {
+        showTab(savedTab);
+    }
 }
 
 async function _refreshUserFromAPI() {
@@ -1206,8 +1215,7 @@ function renderQuotes(quotes) {
             '<td style="text-align:center"><span class="vnk-badge" style="background:' + color + '18;color:' + color + '">' + (sl[q.status] || q.status) + '</span></td>' +
             '<td class="amount">' + formatCurrency(q.amount_ttc) + '</td>' +
             '<td class="actions">' +
-            '<button class="vnk-action-btn" onclick="downloadPDF(\'quotes\',' + q.id + ',\'' + q.quote_number + '\')">PDF</button>' +
-            (isPending ? ' <button class="vnk-action-btn primary" onclick="acceptQuote(' + q.id + ')">Accepter</button>' : '') +
+            (isPending ? '<button class="vnk-action-btn primary" onclick="openQuoteSignModal(' + q.id + ')">Accepter</button>' : '<button class="vnk-action-btn" onclick="openQuoteViewModal(' + q.id + ',\'' + q.quote_number + '\')">Voir</button>') +
             '</td></tr>';
     }).join('');
 
@@ -1283,8 +1291,9 @@ function renderInvoices(invoices) {
             '<span class="portal-item-amount" style="color:' + (isPaid ? '#27AE60' : 'var(--color-primary)') + '">' + formatCurrency(inv.amount_ttc) + '</span>' +
             '<span style="background:' + color + '22;color:' + color + ';font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px">' + (sl[inv.status] || inv.status) + '</span>' +
             '<div style="display:flex;gap:0.4rem;margin-top:0.3rem">' +
-            '<button class="btn btn-outline btn-sm" onclick="downloadPDF(\'invoices\',' + inv.id + ',\'' + inv.invoice_number + '\')">PDF</button>' +
-            (inv.status === 'unpaid' || inv.status === 'overdue' ? '<button class="btn btn-primary btn-sm" onclick="payInvoice(' + inv.id + ',' + inv.amount_ttc + ')">Payer</button>' : '') +
+            (inv.status === 'unpaid' || inv.status === 'overdue'
+                ? '<button class="btn btn-primary btn-sm" onclick="previewInvoicePDF(' + inv.id + ',' + inv.amount_ttc + ')">Payer</button>'
+                : '<button class="btn btn-outline btn-sm" onclick="previewInvoicePDF(' + inv.id + ',0)">Voir</button>') +
             '</div></div></div>';
     };
 
@@ -1381,8 +1390,10 @@ function renderInvoicesV2(actives, historique, aPage, aPages, aTotal, hPage, hPa
             <td style="text-align:center"><span class="vnk-badge" style="background:${color}18;color:${color}">${sl[inv.status] || inv.status}</span></td>
             <td class="amount" style="color:${isPaid ? '#27AE60' : 'inherit'}">${formatCurrency(inv.amount_ttc)}</td>
             <td class="actions">
-                <button class="vnk-action-btn" onclick="downloadPDF('invoices',${inv.id},'${inv.invoice_number}')">PDF</button>
-                ${!isPaid ? ' <button class="vnk-action-btn primary" onclick="payInvoice(' + inv.id + ',' + inv.amount_ttc + ')">Payer</button>' : ''}
+                ${!isPaid
+                ? '<button class="vnk-action-btn primary" onclick="previewInvoicePDF(' + inv.id + ',' + inv.amount_ttc + ')">Payer</button>'
+                : '<button class="vnk-action-btn" onclick="previewInvoicePDF(' + inv.id + ',0)">Voir</button>'
+            }
             </td>
         </tr>`;
     }).join('');
@@ -1464,7 +1475,7 @@ function renderPortalContracts(contracts) {
             <td class="actions">
                 ${needsSign
                 ? '<button class="vnk-action-btn primary" onclick="openSignatureModal(' + c.id + ')">Signer</button>'
-                : '<button class="vnk-action-btn" onclick="openSignatureModal(' + c.id + ')">Voir</button> <button class="vnk-action-btn" onclick="_openPdfWithAuth(' + c.id + ',true)">PDF</button>'
+                : '<button class="vnk-action-btn" onclick="openSignatureModal(' + c.id + ')">Voir</button>'
             }
             </td>
         </tr>`;
@@ -1527,56 +1538,68 @@ function openDoc(docId) {
     const doc = (window._allDocuments || []).find(d => String(d.id) === String(docId));
     if (!doc) return;
 
-    let fileUrl = doc.file_url;
-    if (!fileUrl && doc._invoice_id) fileUrl = '/api/invoices/' + doc._invoice_id + '/pdf';
-    if (!fileUrl && doc._quote_id) fileUrl = '/api/quotes/' + doc._quote_id + '/pdf';
-    if (!fileUrl && doc._contract_id) fileUrl = '/api/contracts/' + doc._contract_id + '/pdf';
-    if (doc._action === 'pdf-invoice' && doc._invoice_id) fileUrl = '/api/invoices/' + doc._invoice_id + '/pdf';
-    if (doc._action === 'pdf-quote' && doc._quote_id) fileUrl = '/api/quotes/' + doc._quote_id + '/pdf';
-    if (doc._action === 'pdf-contract' && doc._contract_id) fileUrl = '/api/contracts/' + doc._contract_id + '/pdf';
+    let apiUrl = null;
+    if (doc._action === 'pdf-invoice' && doc._invoice_id) apiUrl = '/api/invoices/' + doc._invoice_id + '/pdf';
+    else if (doc._action === 'pdf-quote' && doc._quote_id) apiUrl = '/api/quotes/' + doc._quote_id + '/pdf';
+    else if (doc._action === 'pdf-contract' && doc._contract_id) apiUrl = '/api/contracts/' + doc._contract_id + '/pdf';
+    else if (doc._invoice_id) apiUrl = '/api/invoices/' + doc._invoice_id + '/pdf';
+    else if (doc._quote_id) apiUrl = '/api/quotes/' + doc._quote_id + '/pdf';
+    else if (doc._contract_id) apiUrl = '/api/contracts/' + doc._contract_id + '/pdf';
+    else if (doc.file_url) apiUrl = doc.file_url;
+    else if (!doc._synth && doc.id) apiUrl = '/api/documents/' + doc.id;  // doc DB sans file_url
 
-    if (!fileUrl) return;
+    if (!apiUrl) {
+        showPortalToast('Ce document n\'a pas de fichier joint.', 'error');
+        return;
+    }
 
-    // Marquer comme lu
     _markDocRead(docId);
 
-    // Supprimer modale existante
-    var ex = document.getElementById('doc-viewer-modal');
-    if (ex) ex.remove();
+    const token = localStorage.getItem('vnk-token');
+    const fname = doc.file_name || doc.title + '.pdf';
+    const date = doc.created_at ? new Date(doc.created_at).toLocaleDateString('fr-CA') : '';
+    const isImg = /\.(png|jpg|jpeg|gif|webp)$/i.test(apiUrl) || (doc.file_type && /^(png|jpg|jpeg|gif|webp)$/i.test(doc.file_type));
 
-    var isPdf = fileUrl.includes('/pdf') || fileUrl.startsWith('data:application/pdf') || fileUrl.toLowerCase().endsWith('.pdf');
-    var isImg = /\.(png|jpg|jpeg|gif|webp)$/i.test(fileUrl) || fileUrl.startsWith('data:image');
-    var dlUrl = fileUrl;
-    var fname = doc.file_name || doc.title + '.pdf';
-    var date = doc.created_at ? new Date(doc.created_at).toLocaleDateString('fr-CA') : '';
+    // Utiliser fetch avec token pour éviter le 403
+    const fetchDoc = token
+        ? fetch(apiUrl, { headers: { 'Authorization': 'Bearer ' + token } })
+        : fetch(apiUrl);
 
-    var previewHtml = isPdf
-        ? '<iframe src="' + dlUrl + '#toolbar=1" style="width:100%;height:100%;border:none" title="' + doc.title + '"></iframe>'
-        : isImg
-            ? '<img src="' + dlUrl + '" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;display:block;margin:auto" alt="' + doc.title + '">'
-            : '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:1rem;color:#64748B"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>Aperçu non disponible.<br><small>Téléchargez pour ouvrir ce fichier.</small></p></div>';
+    fetchDoc
+        .then(r => { if (!r.ok) throw new Error('Accès refusé (' + r.status + ')'); return r.blob(); })
+        .then(blob => {
+            const blobUrl = URL.createObjectURL(blob);
+            const ex = document.getElementById('doc-viewer-modal'); if (ex) ex.remove();
 
-    var modal = document.createElement('div');
-    modal.id = 'doc-viewer-modal';
-    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,0.75);display:flex;align-items:center;justify-content:center;padding:1rem';
-    modal.innerHTML = '<div style="background:white;border-radius:14px;width:min(920px,96vw);height:min(87vh,820px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 70px rgba(0,0,0,0.4)">'
-        + '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1.25rem;border-bottom:1px solid #E2E8F0;flex-shrink:0;gap:1rem">'
-        + '<div style="min-width:0;flex:1">'
-        + '<div style="font-size:0.92rem;font-weight:700;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + doc.title + '</div>'
-        + '<div style="font-size:0.72rem;color:#94A3B8;margin-top:2px">' + date + '</div>'
-        + '</div>'
-        + '<div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0">'
-        + '<a href="' + dlUrl + '" download="' + fname + '" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;background:#1B4F8A;color:white;border-radius:7px;font-size:0.78rem;font-weight:600;text-decoration:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Télécharger</a>'
-        + '<button onclick="document.getElementById(\'doc-viewer-modal\').remove()" style="width:32px;height:32px;border:1.5px solid #E2E8F0;border-radius:7px;background:white;cursor:pointer;font-size:1.1rem;color:#64748B;display:flex;align-items:center;justify-content:center;font-family:inherit">×</button>'
-        + '</div>'
-        + '</div>'
-        + '<div style="flex:1;overflow:auto;background:#F8FAFC;padding:4px">' + previewHtml + '</div>'
-        + '</div>';
+            const modal = document.createElement('div');
+            modal.id = 'doc-viewer-modal';
+            modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,0.82);display:flex;align-items:center;justify-content:center;padding:0.5rem';
 
-    modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
-    document.body.appendChild(modal);
-    // Rafraîchir les cartes pour afficher "Lu"
-    renderDocuments(window._allDocuments || []);
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'background:white;border-radius:12px;width:min(1200px,98vw);height:97vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 70px rgba(0,0,0,0.5)';
+
+            const hdr = document.createElement('div');
+            hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1.25rem;border-bottom:1px solid #E2E8F0;flex-shrink:0;gap:1rem';
+            const dlBtn = '<a href="' + blobUrl + '" download="' + fname + '" style="display:inline-flex;align-items:center;gap:5px;padding:0.4rem 0.9rem;background:#1B4F8A;color:white;border-radius:7px;font-size:0.78rem;font-weight:600;text-decoration:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Télécharger</a>';
+            hdr.innerHTML = '<div style="min-width:0;flex:1"><div style="font-size:0.92rem;font-weight:700;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + doc.title + '</div><div style="font-size:0.72rem;color:#94A3B8;margin-top:2px">' + date + '</div></div>'
+                + '<div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0">' + dlBtn
+                + '<button onclick="document.getElementById(&quot;doc-viewer-modal&quot;).remove()" style="width:32px;height:32px;border:1.5px solid #E2E8F0;border-radius:7px;background:white;cursor:pointer;font-size:1.1rem;color:#64748B;display:flex;align-items:center;justify-content:center">×</button></div>';
+
+            const body = document.createElement('div');
+            body.style.cssText = 'flex:1;overflow:auto;background:#F8FAFC;padding:4px';
+            if (isImg) {
+                body.innerHTML = '<img src="' + blobUrl + '" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;display:block;margin:auto" alt="' + doc.title + '">';
+            } else {
+                body.innerHTML = '<iframe src="' + blobUrl + '#toolbar=1" style="width:100%;height:100%;border:none" title="' + doc.title + '"></iframe>';
+            }
+
+            wrap.appendChild(hdr); wrap.appendChild(body);
+            modal.appendChild(wrap);
+            modal.addEventListener('click', function (e) { if (e.target === modal) { URL.revokeObjectURL(blobUrl); modal.remove(); } });
+            document.body.appendChild(modal);
+            renderDocuments(window._allDocuments || []);
+        })
+        .catch(e => { console.error('openDoc error:', e); showPortalToast('Impossible d\'ouvrir ce document : ' + e.message, 'error'); });
 }
 
 // Marquer un doc comme lu — local + API
@@ -1648,7 +1671,15 @@ window._docSearch = '';
 
 function filterDocuments() {
     const search = (document.getElementById('doc-search')?.value || '').toLowerCase();
-    const catFilter = document.getElementById('doc-cat-filter')?.value || 'all';
+    // Mettre à jour dynamiquement le select des catégories
+    const catSel = document.getElementById('doc-cat-filter');
+    if (catSel && window._allDocuments) {
+        const allCats = [...new Set((window._allDocuments || []).map(d => _docCategory(d)).filter(Boolean))];
+        const current = catSel.value;
+        catSel.innerHTML = '<option value="all">Toutes catégories</option>'
+            + allCats.map(c => `<option value="${c}"${current === c ? ' selected' : ''}>${c}</option>`).join('');
+    }
+    const catFilter = catSel?.value || 'all';
     const readFilter = document.getElementById('doc-read-filter')?.value || 'all';
     if (search || catFilter !== 'all' || readFilter !== 'all') _pageState.documents = 1;
     window._docSearch = search;
@@ -1660,6 +1691,8 @@ function filterDocuments() {
         window.VNKState.save('doc_read', readFilter);
     }
     let list = window._allDocuments || [];
+    // Masquer les documents marqués Indisponible (sauf si filtre explicite)
+    list = list.filter(d => !d.status || d.status.toLowerCase() !== 'indisponible' && d.status.toLowerCase() !== 'unavailable');
     if (search) list = list.filter(d => (d.title || '').toLowerCase().includes(search) || (d.description || '').toLowerCase().includes(search));
     if (catFilter !== 'all') list = list.filter(d => _docCategory(d) === catFilter);
     if (readFilter !== 'all') {
@@ -1807,6 +1840,19 @@ function renderDocuments(documents) {
         'Documentation technique': { icon: '#0284C7', badgeBg: '#E0F2FE' },
         'Autres documents': { icon: '#64748B', badgeBg: '#F1F5F9' }
     };
+    // Palette auto pour catégories custom
+    const _customCatPalette = [
+        { icon: '#0891B2', badgeBg: '#CFFAFE' }, { icon: '#7C3AED', badgeBg: '#EDE9FE' },
+        { icon: '#BE185D', badgeBg: '#FCE7F3' }, { icon: '#047857', badgeBg: '#D1FAE5' },
+        { icon: '#B45309', badgeBg: '#FEF3C7' }, { icon: '#1D4ED8', badgeBg: '#DBEAFE' },
+    ];
+    let _customCatIdx = 0;
+    function _getCatColor(cat) {
+        if (catColors[cat]) return catColors[cat];
+        // Assigner une couleur stable basée sur le nom
+        let hash = 0; for (let c of cat) hash = (hash * 31 + c.charCodeAt(0)) % _customCatPalette.length;
+        return _customCatPalette[Math.abs(hash) % _customCatPalette.length];
+    }
     const defaultColor = { icon: '#64748B', badgeBg: '#F1F5F9' };
     const CAT_PAGE = 15;
 
@@ -1847,7 +1893,7 @@ function renderDocuments(documents) {
         // is_read de la DB si disponible, sinon localStorage
         const isRead = doc.is_read === true || (doc.is_read == null && readIds.map(String).includes(String(doc.id)));
         const cat = _docCategory(doc);
-        const colors = catColors[cat] || defaultColor;
+        const colors = _getCatColor(cat);
 
         let statusText = '';
         if (doc.category === 'Factures' || doc._category === 'Factures') statusText = 'Facture pay\u00e9e';
@@ -1902,7 +1948,7 @@ function renderDocuments(documents) {
 
     // ── Bloc accordéon par catégorie avec INDEX numérique dans onclick ──
     const renderCategoryBlock = (cat, docs, catIdx) => {
-        const colors = catColors[cat] || defaultColor;
+        const colors = _getCatColor(cat);
         const unread = docs.filter(d => !readIds.map(String).includes(String(d.id))).length;
         const isExpanded = window._docCatExpanded[cat] !== false;
         const catPage = window._docCatPage[cat] || 1;
@@ -1999,15 +2045,147 @@ function _updateDocItem(id) {
     }, 100);
 }
 
-async function downloadPDF(type, id, number) {
+
+async function previewQuotePDF(quoteId, quoteNumber, isPending) {
     const token = localStorage.getItem('vnk-token');
     try {
-        const response = await fetch('/api/' + type + '/' + id + '/pdf', { headers: { 'Authorization': 'Bearer ' + token } });
+        const response = await fetch('/api/quotes/' + quoteId + '/pdf', { headers: { 'Authorization': 'Bearer ' + token } });
         if (!response.ok) { showPortalToast('Impossible de charger le PDF.', 'error'); return; }
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        _showPdfPreviewModal(url, 'VNK-' + number + '.pdf');
-    } catch (error) { console.error('PDF error:', error); showPortalToast('Erreur PDF.', 'error'); }
+        const blobUrl = URL.createObjectURL(blob);
+
+        const existing = document.getElementById('vnk-pdf-preview-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'vnk-pdf-preview-modal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(10,18,35,0.75);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem';
+
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'width:100%;max-width:900px;height:90vh;background:white;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.4)';
+
+        // Header
+        const hdr = document.createElement('div');
+        hdr.style.cssText = 'background:#0F2D52;padding:0.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0';
+
+        const hdrLeft = document.createElement('div');
+        hdrLeft.style.cssText = 'display:flex;align-items:center;gap:0.75rem';
+        hdrLeft.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+            + '<span style="color:white;font-size:0.85rem;font-weight:600">Devis ' + quoteNumber + '</span>';
+
+        const hdrRight = document.createElement('div');
+        hdrRight.style.cssText = 'display:flex;align-items:center;gap:0.5rem';
+
+        if (isPending) {
+            const acceptB = document.createElement('button');
+            acceptB.style.cssText = 'display:flex;align-items:center;gap:6px;padding:0.4rem 0.9rem;background:#16A34A;border:none;border-radius:7px;color:white;font-size:0.78rem;font-weight:700;cursor:pointer';
+            acceptB.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Accepter';
+            acceptB.onclick = function () { modal.remove(); acceptQuote(quoteId); };
+            hdrRight.appendChild(acceptB);
+        }
+
+        const dlBtn = document.createElement('button');
+        dlBtn.style.cssText = 'display:flex;align-items:center;gap:5px;padding:0.4rem 0.85rem;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:7px;color:white;font-size:0.78rem;font-weight:600;cursor:pointer';
+        dlBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Télécharger';
+        dlBtn.onclick = function () { const a = document.createElement('a'); a.href = blobUrl; a.download = 'VNK-' + quoteNumber + '.pdf'; a.click(); };
+
+        const closeBtn = document.createElement('button');
+        closeBtn.style.cssText = 'background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = function () { URL.revokeObjectURL(blobUrl); modal.remove(); };
+
+        hdrRight.appendChild(dlBtn);
+        hdrRight.appendChild(closeBtn);
+        hdr.appendChild(hdrLeft);
+        hdr.appendChild(hdrRight);
+
+        const iframe = document.createElement('iframe');
+        iframe.src = blobUrl;
+        iframe.style.cssText = 'flex:1;width:100%;border:none';
+
+        wrap.appendChild(hdr);
+        wrap.appendChild(iframe);
+        modal.appendChild(wrap);
+        document.body.appendChild(modal);
+        modal.addEventListener('click', function (e) { if (e.target === modal) { URL.revokeObjectURL(blobUrl); modal.remove(); } });
+    } catch (error) { console.error('Quote PDF error:', error); showPortalToast('Erreur PDF.', 'error'); }
+}
+
+
+
+// ── Prévisualisation facture avec bouton Payer intégré ─────────────
+async function previewInvoicePDF(invoiceId, amountTtc) {
+    // Fermer tout modal existant
+    ['vnk-sign-modal', 'vnk-pdf-preview-modal'].forEach(id => {
+        const e = document.getElementById(id); if (e) e.remove();
+    });
+
+    const token = localStorage.getItem('vnk-token');
+    const inv = (window._allInvoices || []).find(i => i.id === invoiceId) || {};
+    const isPaying = amountTtc > 0 && inv.status !== 'paid';
+    const fmtAmt = typeof formatCurrency === 'function' ? formatCurrency(amountTtc) : amountTtc + ' $';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'vnk-sign-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;flex-direction:column';
+
+    const statusHtml = inv.status === 'paid'
+        ? '<span style="color:#27AE60;font-weight:600;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Payée</span>'
+        : inv.status === 'overdue'
+            ? '<span style="color:#E74C3C;font-weight:600;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E74C3C" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>En retard</span>'
+            : '<span style="color:#D97706;font-weight:600;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>En attente de paiement</span>';
+
+    const payBtnHtml = isPaying
+        ? '<button onclick="closeSignatureModal();payInvoice(' + invoiceId + ',' + amountTtc + ')" style="padding:0.6rem 1.5rem;background:#27AE60;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">'
+        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>'
+        + 'Payer ' + fmtAmt + '</button>'
+        : '';
+
+    overlay.innerHTML =
+        '<div style="background:#0F2D52;padding:0.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">'
+        + '<div>'
+        + '<div style="font-size:0.95rem;font-weight:700;color:white">' + (inv.invoice_number || 'Facture') + (inv.title ? ' — ' + inv.title : '') + '</div>'
+        + '<div style="font-size:0.72rem;color:rgba(255,255,255,0.6);margin-top:1px">' + (isPaying ? 'Montant à régler : ' + fmtAmt : 'Facture consultée') + '</div>'
+        + '</div>'
+        + '<button onclick="closeSignatureModal()" style="background:rgba(255,255,255,0.1);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.3rem;display:flex;align-items:center;justify-content:center">×</button>'
+        + '</div>'
+        + '<div style="flex:1;overflow:auto;background:#525659">'
+        + '<iframe id="sign-modal-iframe" src="" style="width:100%;height:100%;border:none;display:block;min-height:500px"></iframe>'
+        + '</div>'
+        + '<div style="background:white;border-top:1px solid #E2E8F0;padding:1rem 1.5rem;flex-shrink:0">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">'
+        + '<div>' + statusHtml + '</div>'
+        + '<div style="display:flex;gap:0.75rem">'
+        + '<button onclick="closeSignatureModal()" style="padding:0.6rem 1.25rem;background:white;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer">Fermer</button>'
+        + payBtnHtml
+        + '</div>'
+        + '</div>'
+        + '</div>';
+
+    document.body.appendChild(overlay);
+
+    fetch('/api/invoices/' + invoiceId + '/pdf', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(r => { if (!r.ok) throw new Error('Erreur ' + r.status); return r.blob(); })
+        .then(blob => {
+            const iframe = document.getElementById('sign-modal-iframe');
+            if (iframe) iframe.src = URL.createObjectURL(blob);
+        })
+        .catch(e => { console.error('Invoice PDF:', e); showPortalToast('Impossible de charger la facture.', 'error'); });
+}
+async function downloadPDF(type, id, number) {
+    // Rediriger vers l'onglet Documents pour consultation/téléchargement
+    const tab = document.querySelector('[onclick*="showTab(\'documents"]');
+    showTab('documents');
+    // Ouvrir le doc synthétique correspondant après le rendu
+    setTimeout(() => {
+        const synthId = type === 'invoices' ? 'inv-' + id
+            : type === 'contracts' ? 'ct-' + id
+                : type === 'quotes' ? 'q-' + id : null;
+        if (synthId) {
+            const doc = (window._allDocuments || []).find(d => d._synth_id === synthId || String(d.id) === String(id));
+            if (doc) openDoc(doc._synth_id || doc.id);
+        }
+    }, 350);
 }
 
 function _showPdfPreviewModal(blobUrl, filename) {
@@ -2355,12 +2533,8 @@ async function acceptQuote(quoteId) {
                     ? 'Le contrat ' + d.contract.contract_number + ' a été créé et est disponible dans vos contrats.'
                     : 'Un contrat vous sera envoyé pour signature prochainement.';
                 showInfo('Devis accepté !', msg, 'success');
-                // Rafraîchir immédiatement quotes + contracts
+                // Rafraîchir immédiatement
                 await loadAllData();
-                // Aller directement sur l'onglet contrats si contrat créé
-                if (d.contract) {
-                    setTimeout(() => showTab('contracts'), 800);
-                }
             } else {
                 showInfo('Erreur', d.message || 'Impossible d\'accepter ce devis. Réessayez.', 'error');
             }
@@ -2379,6 +2553,211 @@ function signPortalContract(contractId) {
 }
 
 // ── Modal de signature canvas ──────────────────────────────────────
+
+// ── Modal devis : voir PDF + signer = accepter ─────────────────────
+async function openQuoteSignModal(quoteId) {
+    const existing = document.getElementById('vnk-sign-modal');
+    if (existing) existing.remove();
+
+    const q = (window._allQuotes || []).find(x => x.id === quoteId) || {};
+    const token = localStorage.getItem('vnk-token');
+
+    const overlay = document.createElement('div');
+    overlay.id = 'vnk-sign-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;flex-direction:column';
+    overlay.innerHTML = `
+        <div style="background:#0F2D52;padding:0.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+            <div>
+                <div style="font-size:0.95rem;font-weight:700;color:white">${q.quote_number || 'Devis'} — ${q.title || ''}</div>
+                <div style="font-size:0.72rem;color:rgba(255,255,255,0.6);margin-top:1px">Lisez le devis ci-dessous avant de signer</div>
+            </div>
+            <button onclick="closeSignatureModal()" style="background:rgba(255,255,255,0.1);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.3rem;display:flex;align-items:center;justify-content:center">×</button>
+        </div>
+        <div style="flex:1;overflow:auto;background:#525659">
+            <iframe id="sign-modal-iframe" src="" style="width:100%;height:100%;border:none;display:block;min-height:500px"></iframe>
+        </div>
+        <div style="background:white;border-top:1px solid #E2E8F0;padding:1rem 1.5rem;flex-shrink:0">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+                <span style="font-size:0.82rem;color:#64748B;display:flex;align-items:center;gap:5px">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    En attente de votre acceptation
+                </span>
+                <div style="display:flex;gap:0.75rem">
+                    <button onclick="closeSignatureModal()" style="padding:0.6rem 1.25rem;background:white;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer">Fermer</button>
+                    <button onclick="openQuoteSignatureCanvas(${quoteId})" style="padding:0.6rem 1.5rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        Signer et accepter le devis
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    overlay._quoteId = quoteId;
+
+    // Charger le PDF du devis dans l'iframe
+    fetch('/api/quotes/' + quoteId + '/pdf', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(r => r.blob())
+        .then(blob => {
+            const iframe = document.getElementById('sign-modal-iframe');
+            if (iframe) iframe.src = URL.createObjectURL(blob);
+        })
+        .catch(() => showPortalToast('Impossible de charger le devis.', 'error'));
+}
+
+// ── Canvas signature pour accepter un devis ─────────────────────────
+function openQuoteSignatureCanvas(quoteId) {
+    const existing = document.getElementById('vnk-canvas-panel');
+    if (existing) existing.remove();
+
+    const panel = document.createElement('div');
+    panel.id = 'vnk-canvas-panel';
+    panel.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;padding:1.5rem';
+    panel.innerHTML = `
+        <div style="width:100%;max-width:780px;background:white;border-radius:16px;box-shadow:0 24px 64px rgba(0,0,0,0.3);overflow:hidden">
+            <div style="background:#0F2D52;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between">
+                <div>
+                    <div style="font-size:0.95rem;font-weight:700;color:white">Votre signature</div>
+                    <div style="font-size:0.72rem;color:rgba(255,255,255,0.6);margin-top:2px">En signant, vous acceptez les termes du devis</div>
+                </div>
+                <button onclick="document.getElementById('vnk-canvas-panel').remove()" style="background:rgba(255,255,255,0.12);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center">×</button>
+            </div>
+            <div style="padding:1.25rem 1.5rem 0">
+                <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem">
+                    <button id="sign-tab-draw" onclick="_switchSignTab('draw')" style="flex:1;padding:0.5rem;border-radius:8px;border:2px solid #1B4F8A;background:#EBF5FB;color:#1B4F8A;font-size:0.8rem;font-weight:700;cursor:pointer">&#9998; Dessiner</button>
+                    <button id="sign-tab-upload" onclick="_switchSignTab('upload')" style="flex:1;padding:0.5rem;border-radius:8px;border:2px solid #E2E8F0;background:white;color:#64748B;font-size:0.8rem;font-weight:600;cursor:pointer">&#8679; Importer</button>
+                    <button id="sign-tab-text" onclick="_switchSignTab('text')" style="flex:1;padding:0.5rem;border-radius:8px;border:2px solid #E2E8F0;background:white;color:#64748B;font-size:0.8rem;font-weight:600;cursor:pointer">Aa Initiales</button>
+                </div>
+            </div>
+            <div style="padding:0 1.5rem 1.5rem">
+                <div id="sign-panel-draw">
+                    <div style="border:2px solid #1B4F8A;border-radius:10px;background:white;position:relative;touch-action:none;margin-bottom:1rem">
+                        <canvas id="sign-canvas" width="720" height="180" style="display:block;width:100%;height:180px;border-radius:8px;cursor:crosshair"></canvas>
+                        <button onclick="clearSignatureCanvas()" style="position:absolute;top:8px;right:8px;background:white;border:1px solid #E2E8F0;border-radius:6px;padding:4px 10px;font-size:0.75rem;color:#64748B;cursor:pointer;font-weight:500">Effacer</button>
+                    </div>
+                </div>
+                <div id="sign-panel-upload" style="display:none">
+                    <div id="sign-upload-zone" onclick="document.getElementById('sign-file-input').click()" style="border:2px dashed #1B4F8A;border-radius:10px;padding:2rem;text-align:center;cursor:pointer;background:#F8FAFC;margin-bottom:1rem">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="1.5" style="margin-bottom:0.5rem"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <div style="font-size:0.85rem;font-weight:600;color:#1B4F8A">Cliquez pour importer</div>
+                        <div style="font-size:0.75rem;color:#94A3B8;margin-top:4px">PNG, JPG — fond blanc recommandé</div>
+                    </div>
+                    <input type="file" id="sign-file-input" accept="image/*" style="display:none" onchange="_loadSignatureImage(this)">
+                    <canvas id="sign-canvas-upload" width="720" height="180" style="display:none;width:100%;height:180px;border-radius:8px;border:2px solid #1B4F8A"></canvas>
+                </div>
+                <div id="sign-panel-text" style="display:none">
+                    <input type="text" id="sign-text-input" placeholder="Ex: JT" maxlength="4" style="width:100%;padding:0.75rem;border:2px solid #1B4F8A;border-radius:10px;font-size:1.5rem;text-align:center;font-family:serif;font-weight:700;color:#0F2D52;margin-bottom:0.75rem;box-sizing:border-box" oninput="_previewTextSignature(this.value)">
+                    <canvas id="sign-canvas-text" width="720" height="120" style="display:block;width:100%;height:120px;border-radius:8px;border:1.5px solid #E2E8F0;background:#FAFAFA"></canvas>
+                </div>
+                <div style="font-size:0.73rem;color:#94A3B8;line-height:1.5;margin:0.75rem 0 1rem">
+                    En signant, vous confirmez avoir lu et accepté les termes du devis. Votre adresse IP et la date seront enregistrées.
+                </div>
+                <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+                    <button onclick="document.getElementById('vnk-canvas-panel').remove()" style="padding:0.6rem 1.4rem;background:white;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer">Annuler</button>
+                    <button id="sign-submit-btn" onclick="submitQuoteAcceptance()" style="padding:0.6rem 1.75rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Accepter et signer
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(panel);
+    // Stocker le quoteId sur le modal parent
+    const signModal = document.getElementById('vnk-sign-modal');
+    if (signModal) signModal._quoteId = quoteId;
+    initSignatureCanvas();
+}
+
+// ── Soumettre la signature du devis = accepter ──────────────────────
+async function submitQuoteAcceptance() {
+    if (_clientSignMode === 'draw' && isCanvasEmpty()) {
+        showPortalToast('Veuillez dessiner votre signature avant de soumettre.', 'error');
+        return;
+    }
+    const overlay = document.getElementById('vnk-sign-modal');
+    const quoteId = overlay?._quoteId;
+    if (!quoteId) return;
+
+    const btn = document.getElementById('sign-submit-btn');
+    if (btn?._submitting) return;
+    if (btn) { btn._submitting = true; btn.disabled = true; btn.textContent = 'Envoi en cours...'; }
+
+    let signatureData;
+    if (_clientSignMode === 'upload') {
+        signatureData = _uploadedSignatureData;
+        if (!signatureData) { showPortalToast('Veuillez importer une image de signature.', 'error'); return; }
+    } else if (_clientSignMode === 'text') {
+        const textCanvas = document.getElementById('sign-canvas-text');
+        const textInput = document.getElementById('sign-text-input');
+        if (!textInput?.value?.trim()) { showPortalToast('Veuillez entrer vos initiales.', 'error'); return; }
+        signatureData = textCanvas.toDataURL('image/png');
+    } else {
+        signatureData = _signCanvas.toDataURL('image/png');
+    }
+
+    const token = localStorage.getItem('vnk-token');
+    try {
+        const r = await fetch('/api/quotes/' + quoteId + '/accept', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ signature_data: signatureData })
+        });
+        const d = await r.json();
+        if (d.success) {
+            const canvasPanel = document.getElementById('vnk-canvas-panel');
+            if (canvasPanel) canvasPanel.remove();
+            closeSignatureModal();
+            _clientSignMode = 'draw';
+            _uploadedSignatureData = null;
+            const msg = d.contract
+                ? 'Devis accepté ! Le contrat ' + d.contract.contract_number + ' a été créé et est disponible dans Contrats.'
+                : 'Devis accepté — un contrat vous sera envoyé.';
+            showPortalToast(msg, 'success');
+            await loadAllData();
+        } else {
+            showPortalToast(d.message || 'Erreur lors de l\'acceptation.', 'error');
+            if (btn) { btn._submitting = false; btn.disabled = false; btn.textContent = 'Accepter et signer'; }
+        }
+    } catch (e) {
+        showPortalToast('Erreur de connexion.', 'error');
+        if (btn) { btn._submitting = false; btn.disabled = false; btn.textContent = 'Accepter et signer'; }
+    }
+}
+
+// ── Vue PDF devis archivé (sans signature) ───────────────────────────
+async function openQuoteViewModal(quoteId, quoteNumber) {
+    const token = localStorage.getItem('vnk-token');
+    const existing = document.getElementById('vnk-sign-modal');
+    if (existing) existing.remove();
+
+    const q = (window._allQuotes || []).find(x => x.id === quoteId) || {};
+    const overlay = document.createElement('div');
+    overlay.id = 'vnk-sign-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;flex-direction:column';
+    overlay.innerHTML = `
+        <div style="background:#0F2D52;padding:0.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+            <div>
+                <div style="font-size:0.95rem;font-weight:700;color:white">${q.quote_number || quoteNumber} — ${q.title || ''}</div>
+                <div style="font-size:0.72rem;color:rgba(255,255,255,0.6);margin-top:1px">Devis accepté</div>
+            </div>
+            <button onclick="closeSignatureModal()" style="background:rgba(255,255,255,0.1);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.3rem;display:flex;align-items:center;justify-content:center">×</button>
+        </div>
+        <div style="flex:1;overflow:auto;background:#525659">
+            <iframe id="sign-modal-iframe" src="" style="width:100%;height:100%;border:none;display:block;min-height:500px"></iframe>
+        </div>
+        <div style="background:white;border-top:1px solid #E2E8F0;padding:1rem 1.5rem;flex-shrink:0;display:flex;justify-content:flex-end">
+            <button onclick="closeSignatureModal()" style="padding:0.6rem 1.25rem;background:white;color:#64748B;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer">Fermer</button>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    fetch('/api/quotes/' + quoteId + '/pdf', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(r => r.blob())
+        .then(blob => {
+            const iframe = document.getElementById('sign-modal-iframe');
+            if (iframe) iframe.src = URL.createObjectURL(blob);
+        })
+        .catch(() => showPortalToast('Impossible de charger le devis.', 'error'));
+}
+
 function openSignatureModal(contractId) {
     // Supprimer l'ancien modal si existant
     const existing = document.getElementById('vnk-sign-modal');
@@ -2424,7 +2803,7 @@ function openSignatureModal(contractId) {
         if (needsClientSign) {
             actionDiv.innerHTML = '<button onclick="openClientSignatureCanvas(' + contractId + ')" style="padding:0.6rem 1.5rem;background:#D97706;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px"><svg width=\'14\' height=\'14\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2.5\'><path d=\'M12 20h9\'/><path d=\'M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z\'/></svg>Signer ce contrat</button>';
         } else {
-            actionDiv.innerHTML = '<button onclick="_openPdfWithAuth(' + contractId + ', true)" style="padding:0.6rem 1.5rem;border:1.5px solid #27AE60;color:#27AE60;background:white;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px"><svg width=\'14\' height=\'14\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2.5\'><path d=\'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\'/><polyline points=\'7 10 12 15 17 10\'/><line x1=\'12\' y1=\'15\' x2=\'12\' y2=\'3\'/></svg>Télécharger PDF</button>';
+            actionDiv.innerHTML = '';
         }
     }
 

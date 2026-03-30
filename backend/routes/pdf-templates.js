@@ -68,45 +68,29 @@ function contentWidth(doc) { return doc.page.width - C.marginL - C.marginR; }
 
 // Dessine le logo hexagonal VNK — version améliorée (double hexagone + texte centré)
 function drawHexLogo(doc, cx, cy, r, fillColor, strokeColor) {
-    // ── Hexagone extérieur (halo) ──
-    const outerPts = [];
-    for (let i = 0; i < 6; i++) {
-        const a = (Math.PI / 3) * i - Math.PI / 6;
-        outerPts.push([cx + (r + 5) * Math.cos(a), cy + (r + 5) * Math.sin(a)]);
-    }
-    doc.save().moveTo(outerPts[0][0], outerPts[0][1]);
-    for (let i = 1; i < 6; i++) doc.lineTo(outerPts[i][0], outerPts[i][1]);
-    doc.closePath().fillOpacity(0.08).fillColor(fillColor).fill().restore();
+    // Reproduit exactement le logo SVG du site :
+    // polygon fill="rgba(255,255,255,0.12)" + stroke="rgba(255,255,255,0.7)" + text VNK blanc
+    // Le bleu vient du fond du header PDF — pas de fond rempli dans l'hexagone
 
-    // ── Hexagone principal (fond semi-transparent) ──
     const pts = [];
     for (let i = 0; i < 6; i++) {
         const a = (Math.PI / 3) * i - Math.PI / 6;
         pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
     }
+
+    // Voile blanc très léger (rgba 0.12 comme le SVG du site)
     doc.save().moveTo(pts[0][0], pts[0][1]);
     for (let i = 1; i < 6; i++) doc.lineTo(pts[i][0], pts[i][1]);
-    doc.closePath().fillOpacity(0.22).fillColor(fillColor).fill().restore();
+    doc.closePath().fillOpacity(0.12).fillColor('#FFFFFF').fill().restore();
 
-    // ── Contour principal ──
+    // Contour blanc semi-transparent (0.7 comme le SVG du site), épaisseur 1.5
     doc.save().moveTo(pts[0][0], pts[0][1]);
     for (let i = 1; i < 6; i++) doc.lineTo(pts[i][0], pts[i][1]);
-    doc.closePath().lineWidth(2).strokeOpacity(1).strokeColor(strokeColor).stroke().restore();
+    doc.closePath().lineWidth(1.5).strokeOpacity(0.7).strokeColor('#FFFFFF').stroke().restore();
 
-    // ── Hexagone intérieur (mini) ──
-    const innerR = r * 0.45;
-    const innerPts = [];
-    for (let i = 0; i < 6; i++) {
-        const a = (Math.PI / 3) * i - Math.PI / 6;
-        innerPts.push([cx + innerR * Math.cos(a), cy + innerR * Math.sin(a)]);
-    }
-    doc.save().moveTo(innerPts[0][0], innerPts[0][1]);
-    for (let i = 1; i < 6; i++) doc.lineTo(innerPts[i][0], innerPts[i][1]);
-    doc.closePath().lineWidth(0.8).strokeOpacity(0.5).strokeColor(strokeColor).stroke().restore();
-
-    // ── Texte VNK centré ──
+    // Texte VNK blanc centré
     const fontSize = Math.max(7, r * 0.38);
-    doc.fillColor(strokeColor).fillOpacity(1).fontSize(fontSize).font('Helvetica-Bold')
+    doc.fillColor('#FFFFFF').fillOpacity(1).fontSize(fontSize).font('Helvetica-Bold')
         .text('VNK', cx - r, cy - fontSize * 0.55, { width: r * 2, align: 'center', characterSpacing: 1.5 });
 }
 
@@ -272,81 +256,90 @@ async function generateQuotePDF(res, quote, client, lines) {
     doc.pipe(res);
 
     const w = pageWidth(doc);
-
-    // ── HEADER ──────────────────────────────
-    const headerH = 108;
-    doc.rect(0, 0, w, headerH).fillColor(C.blue).fill();
-    // Bande déco basse
-    doc.rect(0, headerH - 4, w, 4).fillColor(C.blueMid).fillOpacity(0.7).fill().fillOpacity(1);
-    // Bande déco très basse (accent)
-    doc.rect(0, headerH, w, 2).fillColor(C.blueMid).fillOpacity(0.3).fill().fillOpacity(1);
-
-    // Logo hexagonal — plus grand, centré verticalement
-    drawHexLogo(doc, 62, 54, 34, C.white, C.white);
-
-    // Nom + slogan + contact
-    doc.fillColor(C.white).fontSize(16).font('Helvetica-Bold')
-        .text(C.name, 108, 24);
-    doc.fillColor('rgba(255,255,255,0.85)').fontSize(7.5).font('Helvetica')
-        .text('VALUE · NETWORK · KNOWLEDGE', 109, 44, { characterSpacing: 1.5 });
-    doc.fillColor('#A8C4D8').fontSize(7).font('Helvetica')
-        .text(`NEQ : ${C.neq}`, 109, 56);
-    doc.fillColor('#A8C4D8').fontSize(7)
-        .text(`${C.email}  ·  ${C.phone}  ·  ${C.site}`, 109, 67);
-
-    // Badge document (droite)
-    const bx = w - 152, by = 16, bw = 124, bh = 76;
-    doc.rect(bx, by, bw, bh).fillColor('#1E5A9C').fill();
-    doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor('#4A7FBF').stroke();
-    doc.rect(bx, by, 3, bh).fillColor(C.blueMid).fill();
-    doc.fillColor(C.white).fontSize(11).font('Helvetica-Bold')
-        .text('DEVIS', bx + 4, by + 12, { width: bw - 8, align: 'center', characterSpacing: 2.5 });
-    doc.moveTo(bx + 10, by + 30).lineTo(bx + bw - 10, by + 30)
-        .lineWidth(0.3).strokeColor('#4A7FBF').stroke();
-    doc.fillColor(C.white).fontSize(9.5).font('Helvetica')
-        .text(quote.quote_number, bx + 4, by + 36, { width: bw - 8, align: 'center' });
-    doc.fillColor('#A8C4D8').fontSize(7.5)
-        .text(dateCA(quote.created_at), bx + 4, by + 53, { width: bw - 8, align: 'center' });
-
-    doc.y = headerH + 18;
-
-    // ── BLOCS INFO ───────────────────────────
     const cw = contentWidth(doc);
+    const pH = doc.page.height;   // 792 pts
+    const hdrH = 108;              // hauteur header
+    const ftrY = pH - 44;         // Y début footer
+
+    // ── Helper : dessine le header identique sur chaque page ──────────────
+    function drawHeader() {
+        doc.rect(0, 0, w, hdrH).fillColor(C.blue).fill();
+        doc.rect(0, hdrH - 4, w, 4).fillColor(C.blueMid).fillOpacity(0.7).fill().fillOpacity(1);
+        doc.rect(0, hdrH, w, 2).fillColor(C.blueMid).fillOpacity(0.3).fill().fillOpacity(1);
+
+        drawHexLogo(doc, 62, 54, 34, C.white, C.white);
+
+        doc.fillColor(C.white).fontSize(16).font('Helvetica-Bold')
+            .text(C.name, 108, 24);
+        doc.fillColor('rgba(255,255,255,0.85)').fontSize(7.5).font('Helvetica')
+            .text('VALUE · NETWORK · KNOWLEDGE', 109, 44, { characterSpacing: 1.5 });
+        doc.fillColor('#A8C4D8').fontSize(7)
+            .text('NEQ : ' + C.neq, 109, 56);
+        doc.fillColor('#A8C4D8').fontSize(7)
+            .text(C.email + '  ·  ' + C.phone + '  ·  ' + C.site, 109, 67);
+
+        // Badge numéro de devis
+        const bx = w - 152, by = 16, bw = 124, bh = 76;
+        doc.rect(bx, by, bw, bh).fillColor('#1E5A9C').fill();
+        doc.rect(bx, by, bw, bh).lineWidth(0.5).strokeColor('#4A7FBF').stroke();
+        doc.rect(bx, by, 3, bh).fillColor(C.blueMid).fill();
+        doc.fillColor(C.white).fontSize(11).font('Helvetica-Bold')
+            .text('DEVIS', bx + 4, by + 12, { width: bw - 8, align: 'center', characterSpacing: 2.5 });
+        doc.moveTo(bx + 10, by + 30).lineTo(bx + bw - 10, by + 30)
+            .lineWidth(0.3).strokeColor('#4A7FBF').stroke();
+        doc.fillColor(C.white).fontSize(9.5).font('Helvetica')
+            .text(quote.quote_number, bx + 4, by + 36, { width: bw - 8, align: 'center' });
+        doc.fillColor('#A8C4D8').fontSize(7.5)
+            .text(dateCA(quote.created_at), bx + 4, by + 53, { width: bw - 8, align: 'center' });
+    }
+
+    // ── Helper : dessine le footer ────────────────────────────────────────
+    function drawFtr() { drawFooter(doc, quote.quote_number, C.navy); }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // PAGE 1  — Header · Infos · Description · [espace] · Tableau · Total
+    // ══════════════════════════════════════════════════════════════════════
+    drawHeader();
+
+    // Blocs infos côte à côte
     const halfW = (cw - 12) / 2;
     const infoH = 108;
-    const infoY = doc.y;  // capturer Y avant les deux blocs
-
+    const infoY = hdrH + 20;
     infoBox(doc, C.marginL, infoY, halfW, infoH, C.blueMid, 'CLIENT', [
         ['Nom', client.full_name],
         ['Entreprise', client.company_name],
         ['Courriel', client.email],
         ['Téléphone', client.phone],
-        ['Ville', `${client.city || ''} ${client.province || ''}`.trim()],
+        ['Ville', (client.city || '') + ' ' + (client.province || '')],
     ]);
-
-    const rx = C.marginL + halfW + 12;
-    infoBox(doc, rx, infoY, halfW, infoH, C.blue, 'DÉTAILS DU DEVIS', [
+    infoBox(doc, C.marginL + halfW + 12, infoY, halfW, infoH, C.blue, 'DÉTAILS DU DEVIS', [
         ['Numéro', quote.quote_number],
         ['Date', dateCA(quote.created_at)],
         ['Valide jusqu\'au', quote.expiry_date ? dateCA(quote.expiry_date) : '30 jours'],
-        ['Statut', 'En attente d\'approbation'],
+        ['Statut', quote.status === 'accepted' ? 'Approuvé' : 'En attente d\'approbation'],
     ]);
 
-    doc.y = infoY + infoH + 18;
-
-    // ── DESCRIPTION ──────────────────────────
+    // Section description — juste en dessous des infos
+    doc.y = infoY + infoH + 16;
     sectionBar(doc, 'Description des services');
     doc.fillColor(C.text).fontSize(9.5).font('Helvetica-Bold')
         .text(quote.title, C.marginL, doc.y, { width: cw });
-    doc.y += 14;
+    doc.y += 16;
     if (quote.description) {
-        doc.fillColor(C.gray).fontSize(8).font('Helvetica')
-            .text(quote.description, C.marginL, doc.y, { width: cw, lineGap: 3 });
-        doc.y += 10;
+        doc.fillColor(C.gray).fontSize(8.5).font('Helvetica')
+            .text(quote.description, C.marginL, doc.y, { width: cw, lineGap: 4 });
+        doc.y += doc.heightOfString(quote.description, { width: cw }) + 10;
     }
-    doc.y += 8;
 
-    // ── TABLEAU ──────────────────────────────
+    // ── Tableau + Total ancrés ensemble en bas de page ─────────────────────
+    // Estimation : sectionBar(30) + header_table(24) + lignes(~28 chacune) + taxBlock(90)
+    const nbLines = (lines && lines.length) ? lines.length : 1;
+    const tableEst = 30 + 24 + nbLines * 30 + 90 + 20; // marge de sécurité
+    const tableTopY = ftrY - tableEst;                   // Y idéal pour commencer le tableau
+
+    // On descend jusqu'à tableTopY seulement si on est encore au-dessus
+    if (doc.y < tableTopY) doc.y = tableTopY;
+
     sectionBar(doc, 'Lignes de service');
     const tableLines = (lines && lines.length) ? lines : [{
         description: quote.title,
@@ -354,56 +347,131 @@ async function generateQuotePDF(res, quote, client, lines) {
     }];
     serviceTable(doc, tableLines);
 
+    // Total — s'il déborde on le laisse s'ajuster naturellement
     taxBlock(doc, quote.amount_ht, quote.tps_amount, quote.tvq_amount, quote.amount_ttc, 'TOTAL DU DEVIS');
 
-    // ── CONDITIONS ───────────────────────────
+    drawFtr();
+
+    // ══════════════════════════════════════════════════════════════════════
+    // PAGE 2  — Même header · Conditions · Signature large · Footer
+    // ══════════════════════════════════════════════════════════════════════
+    doc.addPage();
+    drawHeader();
+    doc.y = hdrH + 28;
+
+    // ── Conditions de paiement dynamiques selon le plan ──
     sectionBar(doc, 'Conditions de paiement');
-    const conditions = [
-        'Acompte de 50 % à la signature du contrat.',
-        'Solde dû à la livraison des travaux.',
-        `Devis valide 30 jours à compter du ${dateCA(quote.created_at)}.`,
+    const plan = quote.payment_plan || 'split_50_50';
+    const pct1 = quote.payment_pct1 != null ? parseInt(quote.payment_pct1) : 50;
+    const pct2 = quote.payment_pct2 != null ? parseInt(quote.payment_pct2) : 50;
+    const ttcVal = parseFloat(quote.amount_ttc || 0);
+    const fmtCA2 = v => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(v);
+    let conds = [];
+    if (quote.payment_conditions && quote.payment_conditions.trim()) {
+        // Conditions personnalisées par l'admin
+        conds = quote.payment_conditions.split('\n').filter(l => l.trim()).map(l => l.trim());
+    } else if (plan === 'full') {
+        conds = ['Paiement unique de ' + fmtCA2(ttcVal) + ' TTC dû à la signature du contrat.'];
+    } else {
+        conds = [
+            'Acompte de ' + pct1 + ' % (' + fmtCA2(ttcVal * pct1 / 100) + ' TTC) dû à la signature du contrat.',
+            'Solde de ' + pct2 + ' % (' + fmtCA2(ttcVal * pct2 / 100) + ' TTC) dû à la livraison des travaux.',
+        ];
+    }
+    conds = conds.concat([
+        'Devis valide 30 jours à compter du ' + dateCA(quote.created_at) + '.',
         'Ce devis ne constitue pas un contrat — un contrat de service sera émis après acceptation.',
         'Les prix sont en dollars canadiens (CAD) et excluent les taxes applicables.',
-    ];
-    conditions.forEach(c => {
-        doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
-            .text(`•  ${c}`, C.marginL + 6, doc.y, { width: cw - 6, lineGap: 2 });
-        doc.y += 13;
+    ]);
+    conds.forEach(c => {
+        doc.fillColor(C.gray).fontSize(8.5).font('Helvetica')
+            .text('•  ' + c, C.marginL + 10, doc.y, { width: cw - 10, lineGap: 3 });
+        doc.y += 16;
     });
-    doc.y += 6;
+    doc.y += 18;
 
-    // ── ACCEPTATION / SIGNATURE ───────────────
-    sectionBar(doc, 'Acceptation');
-    doc.fillColor(C.gray).fontSize(8).font('Helvetica')
-        .text('En signant ci-dessous, le client accepte les termes et conditions de ce devis et autorise VNK Automatisation Inc. à procéder aux travaux décrits.',
-            C.marginL, doc.y, { width: cw, lineGap: 3 });
-    doc.y += 20;
+    // Acceptation
+    sectionBar(doc, 'Acceptation et signature');
+    doc.fillColor(C.gray).fontSize(8.5).font('Helvetica')
+        .text(
+            'En signant ci-dessous, le client reconnaît avoir lu, compris et accepté '
+            + 'les termes et conditions du présent devis, et autorise VNK Automatisation Inc. '
+            + 'à procéder aux travaux décrits.',
+            C.marginL, doc.y, { width: cw, lineGap: 4 }
+        );
+    doc.y += 32;
 
-    const sigY = doc.y;
-    const sigW = (cw - 20) / 2;
+    // Zones de signature — larges et aérées
+    const sigTopY = doc.y;
+    const sigH = 110;  // hauteur généreuse
+    const sigW = (cw - 24) / 2;
 
-    // Signature client
-    doc.rect(C.marginL, sigY, sigW, 52).fillColor(C.grayLight).fill();
-    doc.rect(C.marginL, sigY, sigW, 52).lineWidth(0.5).strokeColor(C.border).stroke();
-    doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
-        .text('SIGNATURE DU CLIENT', C.marginL + 8, sigY + 8);
-    doc.moveTo(C.marginL + 8, sigY + 38).lineTo(C.marginL + sigW - 8, sigY + 38)
-        .lineWidth(0.5).strokeColor(C.border).strokeOpacity(1).stroke();
+    // Bloc CLIENT
+    const sx1 = C.marginL;
+    doc.rect(sx1, sigTopY, sigW, sigH).fillColor(C.grayLight).fill();
+    doc.rect(sx1, sigTopY, sigW, sigH).lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.rect(sx1, sigTopY, 3, sigH).fillColor(C.blue).fill();
+    doc.fillColor(C.blue).fontSize(8).font('Helvetica-Bold')
+        .text('SIGNATURE DU CLIENT', sx1 + 12, sigTopY + 10, { width: sigW - 20 });
+    doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
+        .text('Nom : ' + (client.full_name || '______________________'), sx1 + 12, sigTopY + 24, { width: sigW - 20 });
+    // Image signature si disponible
+    if (quote.client_signature_data && quote.client_signature_data.startsWith('data:image/')) {
+        try {
+            const b64 = quote.client_signature_data.replace(/^data:image\/\w+;base64,/, '');
+            const imgBuf = Buffer.from(b64, 'base64');
+            doc.image(imgBuf, sx1 + 12, sigTopY + 38, { width: sigW - 24, height: 44, fit: [sigW - 24, 44] });
+        } catch (e) { /* ignore */ }
+    }
+    // Ligne de signature
+    doc.moveTo(sx1 + 12, sigTopY + 86).lineTo(sx1 + sigW - 12, sigTopY + 86)
+        .lineWidth(0.5).strokeColor('#AABBCC').stroke();
+    const sigDateStr = quote.signed_at ? dateCA(quote.signed_at) : (quote.accepted_at ? dateCA(quote.accepted_at) : '______________________');
     doc.fillColor(C.gray).fontSize(7).font('Helvetica')
-        .text(client.full_name || '', C.marginL + 8, sigY + 41);
+        .text('Signé le : ' + sigDateStr, sx1 + 12, sigTopY + 90, { width: sigW - 20 });
 
-    // Ligne date
-    const dx = C.marginL + sigW + 20;
-    doc.rect(dx, sigY, sigW, 52).fillColor(C.grayLight).fill();
-    doc.rect(dx, sigY, sigW, 52).lineWidth(0.5).strokeColor(C.border).stroke();
-    doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
-        .text('DATE', dx + 8, sigY + 8);
-    doc.moveTo(dx + 8, sigY + 38).lineTo(dx + sigW - 8, sigY + 38)
-        .lineWidth(0.5).strokeColor(C.border).strokeOpacity(1).stroke();
+    // Bloc DATE
+    const sx2 = C.marginL + sigW + 24;
+    const isAccepted = quote.status === 'accepted';
+    doc.rect(sx2, sigTopY, sigW, sigH).fillColor(isAccepted ? '#F0FDF4' : C.grayLight).fill();
+    doc.rect(sx2, sigTopY, sigW, sigH).lineWidth(0.5).strokeColor(isAccepted ? '#A7F3D0' : C.border).stroke();
+    doc.rect(sx2, sigTopY, 3, sigH).fillColor(isAccepted ? C.green : C.blue).fill();
+    doc.fillColor(isAccepted ? C.green : C.blue).fontSize(8).font('Helvetica-Bold')
+        .text(isAccepted ? 'DEVIS APPROUVÉ ✓' : 'DATE DE SIGNATURE', sx2 + 12, sigTopY + 10, { width: sigW - 20 });
+    const acceptedDateStr = quote.accepted_at ? dateCA(quote.accepted_at) : (quote.signed_at ? dateCA(quote.signed_at) : null);
+    if (isAccepted && acceptedDateStr) {
+        doc.fillColor(C.green).fontSize(14).font('Helvetica-Bold')
+            .text(acceptedDateStr, sx2 + 12, sigTopY + 34, { width: sigW - 24 });
+        doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
+            .text('Date d\'acceptation', sx2 + 12, sigTopY + 54, { width: sigW - 20 });
+        // Badge vert approuvé
+        doc.rect(sx2 + 12, sigTopY + 68, 90, 18).fillColor(C.green).fill();
+        doc.fillColor(C.white).fontSize(7.5).font('Helvetica-Bold')
+            .text('APPROUVÉ', sx2 + 12, sigTopY + 72, { width: 90, align: 'center' });
+    } else {
+        doc.moveTo(sx2 + 12, sigTopY + 80).lineTo(sx2 + sigW - 12, sigTopY + 80)
+            .lineWidth(0.5).strokeColor('#AABBCC').stroke();
+        doc.fillColor(C.gray).fontSize(7).font('Helvetica')
+            .text('Date (JJ/MM/AAAA)', sx2 + 12, sigTopY + 84, { width: sigW - 20 });
+    }
 
-    doc.y = sigY + 52;
+    doc.y = sigTopY + sigH + 24;
 
-    drawFooter(doc, quote.quote_number, C.navy);
+    // Tampon VNK en bas
+    const stampY = doc.y;
+    const stampH = 50;
+    doc.rect(C.marginL, stampY, cw, stampH).fillColor('#EBF3FA').fill();
+    doc.rect(C.marginL, stampY, cw, stampH).lineWidth(0.5).strokeColor('#BFD8EE').stroke();
+    doc.rect(C.marginL, stampY, 3, stampH).fillColor(C.blue).fill();
+    doc.fillColor(C.blue).fontSize(8).font('Helvetica-Bold')
+        .text('VNK AUTOMATISATION INC.', C.marginL + 12, stampY + 10);
+    doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
+        .text(C.founder + ', ' + C.title, C.marginL + 12, stampY + 24);
+    doc.fillColor(C.gray).fontSize(7)
+        .text('Document généré le ' + dateCA(new Date()) + '  ·  ' + C.email,
+            C.marginL + 12, stampY + 35);
+
+    drawFtr();
     doc.end();
 }
 
@@ -494,22 +562,83 @@ async function generateInvoicePDF(res, invoice, client) {
 
     taxBlock(doc, invoice.amount_ht, invoice.tps_amount, invoice.tvq_amount, invoice.amount_ttc, 'TOTAL FACTURE');
 
-    // ── PAIEMENT ─────────────────────────────
+    // ── PAIEMENT — dynamique selon statut ────────────────────────────────
     sectionBar(doc, 'Informations de paiement', isPaid ? C.green : C.blue);
     const payY = doc.y;
-    doc.rect(C.marginL, payY, cw, 54).fillColor(C.grayLight).fill();
-    doc.rect(C.marginL, payY, 3, 54).fillColor(isPaid ? C.green : C.blueMid).fill();
-    doc.rect(C.marginL, payY, cw, 54).lineWidth(0.5).strokeColor(C.border).stroke();
 
-    doc.fillColor(C.text).fontSize(8.5).font('Helvetica-Bold')
-        .text(`Virement bancaire  ·  Interac : ${C.email}`, C.marginL + 12, payY + 10);
-    doc.fillColor(C.gray).fontSize(8).font('Helvetica')
-        .text(`Référence de paiement obligatoire : ${invoice.invoice_number}`,
-            C.marginL + 12, payY + 24);
-    doc.fillColor('#94A3B8').fontSize(7.5).font('Helvetica')
-        .text(`TPS (5 %) : ${C.tps}   ·   TVQ (9,975 %) : ${C.tvq}`,
-            C.marginL + 12, payY + 38);
-    doc.y = payY + 62;
+    if (isPaid) {
+        // ── FACTURE PAYÉE : afficher le mode de paiement utilisé ──────────
+        const paidByStripe = !!(invoice.stripe_payment_intent_id);
+        const paidByWire = !paidByStripe && invoice.payment_method === 'virement';
+        const paidByCash = !paidByStripe && invoice.payment_method === 'comptant';
+        const paidDate = invoice.paid_at ? dateCA(invoice.paid_at) : dateCA(new Date());
+
+        const payH = 56;
+        doc.rect(C.marginL, payY, cw, payH).fillColor('#F0FDF4').fill();
+        doc.rect(C.marginL, payY, 3, payH).fillColor(C.green).fill();
+        doc.rect(C.marginL, payY, cw, payH).lineWidth(0.5).strokeColor('#A7F3D0').stroke();
+
+        // Icône checkmark
+        doc.fillColor(C.green).fontSize(9).font('Helvetica-Bold')
+            .text('PAIEMENT REÇU', C.marginL + 12, payY + 10);
+        doc.fillColor(C.gray).fontSize(8).font('Helvetica')
+            .text('Date : ' + paidDate, C.marginL + 12, payY + 24);
+
+        let modeLabel = 'Virement bancaire / Interac';
+        if (paidByStripe) modeLabel = 'Carte de crédit (paiement en ligne sécurisé)';
+        else if (paidByCash) modeLabel = 'Paiement comptant';
+
+        doc.fillColor(C.gray).fontSize(8)
+            .text('Mode : ' + modeLabel, C.marginL + 12, payY + 36);
+
+        if (paidByStripe && invoice.stripe_payment_intent_id) {
+            doc.fillColor('#94A3B8').fontSize(7)
+                .text('Réf. Stripe : ' + invoice.stripe_payment_intent_id, C.marginL + 12, payY + 47, { width: cw - 24 });
+        }
+        doc.y = payY + payH + 8;
+
+    } else {
+        // ── FACTURE NON PAYÉE : afficher les deux modes disponibles ────────
+        const payH = 80;
+        doc.rect(C.marginL, payY, cw, payH).fillColor(C.grayLight).fill();
+        doc.rect(C.marginL, payY, 3, payH).fillColor(C.blueMid).fill();
+        doc.rect(C.marginL, payY, cw, payH).lineWidth(0.5).strokeColor(C.border).stroke();
+
+        const colW = (cw - 16) / 2;
+
+        // Colonne gauche — carte en ligne
+        const col1X = C.marginL + 8;
+        doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
+            .text('OPTION 1 — PAIEMENT EN LIGNE', col1X, payY + 10, { width: colW - 8 });
+        doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
+            .text('Payez par carte de crédit via votre', col1X, payY + 23, { width: colW - 8 });
+        doc.fillColor(C.gray).fontSize(7.5)
+            .text('portail client sécurisé :', col1X, payY + 34, { width: colW - 8 });
+        doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
+            .text(C.site, col1X, payY + 45, { width: colW - 8 });
+        doc.fillColor('#94A3B8').fontSize(7).font('Helvetica')
+            .text('Paiement sécurisé via Stripe', col1X, payY + 58, { width: colW - 8 });
+
+        // Séparateur
+        const sepX = C.marginL + 8 + colW;
+        doc.moveTo(sepX, payY + 8).lineTo(sepX, payY + 72)
+            .lineWidth(0.5).strokeColor(C.border).stroke();
+
+        // Colonne droite — virement
+        const col2X = sepX + 8;
+        doc.fillColor(C.blue).fontSize(7.5).font('Helvetica-Bold')
+            .text('OPTION 2 — VIREMENT / INTERAC', col2X, payY + 10, { width: colW - 8 });
+        doc.fillColor(C.text).fontSize(7.5).font('Helvetica-Bold')
+            .text(C.email, col2X, payY + 23, { width: colW - 8 });
+        doc.fillColor(C.gray).fontSize(7.5).font('Helvetica')
+            .text('Référence obligatoire :', col2X, payY + 35, { width: colW - 8 });
+        doc.fillColor(C.text).fontSize(8).font('Helvetica-Bold')
+            .text(invoice.invoice_number, col2X, payY + 46, { width: colW - 8 });
+        doc.fillColor('#94A3B8').fontSize(7)
+            .text('TPS : ' + C.tps + '  ·  TVQ : ' + C.tvq, col2X, payY + 60, { width: colW - 8 });
+
+        doc.y = payY + payH + 8;
+    }
 
     // ── TAMPON PAYÉE ─────────────────────────
     if (isPaid) {

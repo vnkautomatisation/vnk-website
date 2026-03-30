@@ -380,6 +380,12 @@ router.post('/:id/client-sign', authenticateToken, async (req, res) => {
                 }).catch(() => { });
             }
         }
+        // Notifier admin si client vient de signer
+        if (!adminAlreadySigned && _email) {
+            pool.query('SELECT * FROM clients WHERE id=$1', [signedContract.client_id]).then(r => {
+                if (r.rows[0]) _email.notifyAdmin(_email.tplAdminContractSignedByClient(r.rows[0], signedContract)).catch(() => { });
+            }).catch(() => { });
+        }
         res.json({ success: true, message: adminAlreadySigned ? 'Contrat signé des deux parties.' : 'Signature enregistrée — en attente de la signature VNK.', contract: signedContract });
     } catch (e) {
         console.error('Client sign error:', e);

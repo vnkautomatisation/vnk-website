@@ -1,19 +1,15 @@
 /* ============================================
    VNK Automatisation Inc. - Contracts Routes
    Flux: créer → PDF auto → Dropbox Sign → webhook signé
-   v3.0 — WebSocket temps réel
 ============================================ */
 'use strict';
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+let _email = null;
+try { _email = require('../email'); } catch (e) { }
 const { authenticateToken } = require('../middleware/auth');
 const { sendSignatureRequest, getSignatureStatus } = require('../services/hellosign');
-
-// ── WebSocket broadcast ──
-let _wsBroadcast = null;
-try { _wsBroadcast = require('../ws-server').broadcast; } catch (e) { }
-const wsBroadcast = (opts) => { if (_wsBroadcast) { try { _wsBroadcast(opts); } catch (e) { } } };
 
 async function nextContractNumber() {
     const year = new Date().getFullYear();
@@ -27,12 +23,13 @@ async function nextContractNumber() {
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT c.id, c.contract_number, c.title, c.status,
-                    c.file_url, c.signed_at, c.created_at, c.hellosign_request_id,
-                    q.quote_number, q.amount_ttc
+            `SELECT c.id, c.client_id, c.contract_number, c.title, c.status,
+                    c.file_url, c.signed_at, c.admin_signed_at, c.created_at,
+                    c.hellosign_request_id, c.content, c.amount_ttc,
+                    q.quote_number, q.amount_ttc as quote_amount_ttc
              FROM contracts c
              LEFT JOIN quotes q ON c.quote_id = q.id
-             WHERE c.client_id = $1
+             WHERE c.client_id = $1 AND c.status != 'draft'
              ORDER BY c.created_at DESC`,
             [req.user.id]
         );
@@ -40,6 +37,32 @@ router.get('/', authenticateToken, async (req, res) => {
     } catch (e) {
         console.error('Get contracts error:', e);
         res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    }
+});
+
+// GET /:id/pdf — PDF du contrat pour le client
+router.get('/:id/pdf', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT c.*, q.quote_number, q.amount_ttc, q.description as quote_description, q.title as quote_title,
+                    cl.full_name, cl.company_name, cl.email, cl.phone, cl.address, cl.city, cl.province, cl.postal_code
+             FROM contracts c
+             LEFT JOIN quotes q ON c.quote_id = q.id
+             JOIN clients cl ON c.client_id = cl.id
+             WHERE c.id = $1 AND c.client_id = $2`,
+            [req.params.id, req.user.id]
+        );
+        if (!result.rows.length)
+            return res.status(404).json({ success: false, message: 'Contrat introuvable.' });
+        const row = result.rows[0];
+        const contract = { ...row };
+        const client = { full_name: row.full_name, email: row.email, phone: row.phone, company_name: row.company_name, address: row.address, city: row.city, province: row.province, postal_code: row.postal_code };
+        const quote = row.quote_number ? { quote_number: row.quote_number, amount_ttc: row.amount_ttc, description: row.quote_description, title: row.quote_title } : null;
+        const pdfTemplates = require('./pdf-templates');
+        await pdfTemplates.generateContractPDF(res, contract, client, quote);
+    } catch (e) {
+        console.error('Contract PDF error:', e);
+        if (!res.headersSent) res.status(500).json({ success: false, message: 'Erreur PDF.' });
     }
 });
 
@@ -226,20 +249,10 @@ router.post('/webhook', async (req, res) => {
             console.log(`HelloSign event: ${eventType}`);
 
             if (eventType === 'signature_request_signed' && sigId) {
-                const updated = await pool.query(
-                    `UPDATE contracts SET status='signed', signed_at=NOW(), updated_at=NOW() WHERE hellosign_request_id=$1 RETURNING *`,
+                await pool.query(
+                    `UPDATE contracts SET status='signed', signed_at=NOW(), updated_at=NOW() WHERE hellosign_request_id=$1`,
                     [sigId]
                 );
-                // WebSocket — notifier admin et client en temps réel
-                if (updated.rows.length) {
-                    const c = updated.rows[0];
-                    wsBroadcast({
-                        event: 'contract_client_signed',
-                        clientId: c.client_id,
-                        data: { contract_number: c.contract_number, client_id: c.client_id },
-                        notifyAdmin: true
-                    });
-                }
             }
             if (eventType === 'signature_request_viewed' && sigId) {
                 await pool.query(
@@ -254,6 +267,107 @@ router.post('/webhook', async (req, res) => {
         res.status(200).send('Hello API Event Received');
     }
 });
+
+
+// ── Créer facture(s) automatiquement après double signature — selon plan de paiement ──
+async function _autoCreateInvoice(pool, contract) {
+    try {
+        // Vérifier si des factures existent déjà pour ce contrat
+        const existing = await pool.query(
+            `SELECT id FROM invoices WHERE contract_id = $1`, [contract.id]
+        ).catch(() => ({ rows: [] }));
+        if (existing.rows.length) return; // Déjà créées
+
+        // Migrations douces
+        await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS contract_id INTEGER REFERENCES contracts(id)`).catch(() => { });
+        await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS invoice_phase VARCHAR(20)`).catch(() => { });
+        await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS phase_number INT DEFAULT 1`).catch(() => { });
+
+        // Récupérer montants + plan de paiement depuis le devis associé
+        let amount_ht = contract.amount_ht || 0;
+        let amount_ttc = contract.amount_ttc || 0;
+        let tps = contract.tps_amount || 0;
+        let tvq = contract.tvq_amount || 0;
+        let payment_plan = 'split_50_50';
+        let pct1 = 50, pct2 = 50;
+
+        if (contract.quote_id) {
+            const q = await pool.query('SELECT * FROM quotes WHERE id=$1', [contract.quote_id]).catch(() => ({ rows: [] }));
+            if (q.rows[0]) {
+                amount_ht = q.rows[0].amount_ht || amount_ht;
+                tps = q.rows[0].tps_amount || tps;
+                tvq = q.rows[0].tvq_amount || tvq;
+                amount_ttc = q.rows[0].amount_ttc || amount_ttc;
+                payment_plan = q.rows[0].payment_plan || 'split_50_50';
+                pct1 = q.rows[0].payment_pct1 != null ? parseInt(q.rows[0].payment_pct1) : 50;
+                pct2 = q.rows[0].payment_pct2 != null ? parseInt(q.rows[0].payment_pct2) : 50;
+            }
+        }
+        if (!amount_ttc) return;
+
+        const year = new Date().getFullYear();
+        const due30 = new Date(); due30.setDate(due30.getDate() + 30);
+        const dueStr = due30.toISOString().split('T')[0];
+        const baseTitle = contract.title || contract.contract_number;
+        const fmtCA = v => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(v);
+
+        async function nextInvoiceNum() {
+            const c = await pool.query("SELECT COUNT(*) FROM invoices WHERE EXTRACT(YEAR FROM created_at)=$1", [year]);
+            return `F-${year}-${String(parseInt(c.rows[0].count) + 1).padStart(3, '0')}`;
+        }
+
+        if (payment_plan === 'full') {
+            // ── Paiement unique ──────────────────────────────────────────────
+            const num = await nextInvoiceNum();
+            await pool.query(
+                `INSERT INTO invoices (client_id,contract_id,invoice_number,title,description,amount_ht,tps_amount,tvq_amount,amount_ttc,status,invoice_phase,phase_number,due_date,created_at,updated_at)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'unpaid','full',1,$10,NOW(),NOW())`,
+                [contract.client_id, contract.id, num,
+                `Contrat de service — ${baseTitle}`,
+                `Paiement unique · Contrat ${contract.contract_number}`,
+                    amount_ht, tps, tvq, amount_ttc, dueStr]
+            );
+            console.log(`[workflow] Facture unique ${num} créée pour ${contract.contract_number}`);
+        } else {
+            // ── 2 versements ─────────────────────────────────────────────────
+            const round2 = v => Math.round(v * 100) / 100;
+            const ttc1 = round2(amount_ttc * pct1 / 100);
+            const ht1 = round2(amount_ht * pct1 / 100);
+            const tps1 = round2(tps * pct1 / 100);
+            const tvq1 = round2(tvq * pct1 / 100);
+            const ttc2 = round2(amount_ttc - ttc1);
+            const ht2 = round2(amount_ht - ht1);
+            const tps2 = round2(tps - tps1);
+            const tvq2 = round2(tvq - tvq1);
+
+            // Facture 1 — acompte, payable maintenant
+            const num1 = await nextInvoiceNum();
+            await pool.query(
+                `INSERT INTO invoices (client_id,contract_id,invoice_number,title,description,amount_ht,tps_amount,tvq_amount,amount_ttc,status,invoice_phase,phase_number,due_date,created_at,updated_at)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'unpaid','acompte',1,$10,NOW(),NOW())`,
+                [contract.client_id, contract.id, num1,
+                `Acompte ${pct1}% — ${baseTitle}`,
+                `Acompte à la signature · ${pct1}% du contrat ${contract.contract_number} · Total : ${fmtCA(amount_ttc)}`,
+                    ht1, tps1, tvq1, ttc1, dueStr]
+            );
+            console.log(`[workflow] Facture acompte ${num1} (${pct1}%) créée pour ${contract.contract_number}`);
+
+            // Facture 2 — solde, en draft (invisible client jusqu'à libération)
+            const num2 = await nextInvoiceNum();
+            await pool.query(
+                `INSERT INTO invoices (client_id,contract_id,invoice_number,title,description,amount_ht,tps_amount,tvq_amount,amount_ttc,status,invoice_phase,phase_number,due_date,created_at,updated_at)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'draft','solde',2,$10,NOW(),NOW())`,
+                [contract.client_id, contract.id, num2,
+                `Solde ${pct2}% — ${baseTitle}`,
+                `Solde à la livraison · ${pct2}% du contrat ${contract.contract_number} · Total : ${fmtCA(amount_ttc)}`,
+                    ht2, tps2, tvq2, ttc2, dueStr]
+            );
+            console.log(`[workflow] Facture solde ${num2} (${pct2}%, draft) créée pour ${contract.contract_number}`);
+        }
+    } catch (e) {
+        console.warn('[workflow] Erreur création facture auto:', e.message);
+    }
+}
 
 // POST /:id/client-sign — signature dessin du client (canvas base64)
 router.post('/:id/client-sign', authenticateToken, async (req, res) => {
@@ -279,27 +393,48 @@ router.post('/:id/client-sign', authenticateToken, async (req, res) => {
 
         const ip = ip_address || req.headers['x-forwarded-for'] || req.connection.remoteAddress || '';
 
+        // Récupérer l'état actuel pour savoir si l'admin a déjà signé
+        const current = await pool.query('SELECT admin_signed_at FROM contracts WHERE id=$1', [req.params.id]);
+        const adminAlreadySigned = current.rows.length && !!current.rows[0].admin_signed_at;
+        // Status = signed seulement si les DEUX ont signé
+        const newStatus = adminAlreadySigned ? 'signed' : 'pending';
+
         const result = await pool.query(
             `UPDATE contracts
              SET client_signature_data = $1,
                  client_signature_ip   = $2,
                  signed_at             = NOW(),
-                 status                = 'signed',
+                 status                = $3,
                  updated_at            = NOW()
-             WHERE id = $3
+             WHERE id = $4
              RETURNING *`,
-            [signature_data, ip.split(',')[0].trim(), req.params.id]
+            [signature_data, ip.split(',')[0].trim(), newStatus, req.params.id]
         );
 
-        res.json({ success: true, message: 'Contrat signé avec succès.', contract: result.rows[0] });
-        // WebSocket — notifier l'admin en temps réel que le client a signé
-        wsBroadcast({
-            event: 'contract_client_signed',
-            clientId: req.user.id,
-            data: { contract_number: result.rows[0].contract_number, client_id: req.user.id },
-            notifyAdmin: true,
-            adminOnly: false
-        });
+        const signedContract = result.rows[0];
+        if (adminAlreadySigned && signedContract.status === 'signed') {
+            _autoCreateInvoice(pool, signedContract);
+            // Email confirmation contrat signé
+            if (_email) {
+                pool.query('SELECT * FROM clients WHERE id=$1', [signedContract.client_id]).then(r => {
+                    if (r.rows[0]) _email.sendEmail(r.rows[0].email, _email.tplContractSigned(r.rows[0], signedContract)).catch(() => { });
+                }).catch(() => { });
+            }
+        } else if (!adminAlreadySigned) {
+            // Client a signé, en attente admin — email d'info
+            if (_email) {
+                pool.query('SELECT * FROM clients WHERE id=$1', [signedContract.client_id]).then(r => {
+                    if (r.rows[0]) _email.sendEmail(r.rows[0].email, _email.tplNewContract(r.rows[0], signedContract)).catch(() => { });
+                }).catch(() => { });
+            }
+        }
+        // Notifier admin si client vient de signer
+        if (!adminAlreadySigned && _email) {
+            pool.query('SELECT * FROM clients WHERE id=$1', [signedContract.client_id]).then(r => {
+                if (r.rows[0]) _email.notifyAdmin(_email.tplAdminContractSignedByClient(r.rows[0], signedContract)).catch(() => { });
+            }).catch(() => { });
+        }
+        res.json({ success: true, message: adminAlreadySigned ? 'Contrat signé des deux parties.' : 'Signature enregistrée — en attente de la signature VNK.', contract: signedContract });
     } catch (e) {
         console.error('Client sign error:', e);
         res.status(500).json({ success: false, message: 'Erreur serveur : ' + e.message });
