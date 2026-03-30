@@ -1,10 +1,13 @@
+const pool = require('../db');
+let _email = null;
+try { _email = require('../email'); } catch (e) { }
 /* ============================================
    VNK Automatisation Inc. - Quotes Routes
    ============================================ */
 
 const express = require('express');
 const router = express.Router();
-const pool = require('../db');
+
 const { authenticateToken } = require('../middleware/auth');
 
 // GET /api/quotes
@@ -78,13 +81,46 @@ router.post('/', async (req, res) => {
 // PUT /api/quotes/:id/accept
 router.put('/:id/accept', authenticateToken, async (req, res) => {
     try {
+        // Migrations douces
+        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS quote_id INTEGER`).catch(() => { });
+        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS amount_ttc NUMERIC(10,2)`).catch(() => { });
         const result = await pool.query(
             `UPDATE quotes SET status='accepted', accepted_at=NOW(), updated_at=NOW()
              WHERE id=$1 AND client_id=$2 AND status='pending' RETURNING *`,
             [req.params.id, req.user.id]
         );
         if (!result.rows.length) return res.status(404).json({ success: false, message: 'Quote not found or already processed.' });
-        res.json({ success: true, message: 'Quote accepted.', quote: result.rows[0] });
+        const quote = result.rows[0];
+
+        // Créer automatiquement un contrat lié au devis
+        try {
+            await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS quote_id INTEGER`).catch(() => { });
+            const year = new Date().getFullYear();
+            const count = await pool.query("SELECT COUNT(*) FROM contracts WHERE EXTRACT(YEAR FROM created_at)=$1", [year]);
+            const num = parseInt(count.rows[0].count) + 1;
+            const contractNumber = `CT-${year}-${String(num).padStart(3, '0')}`;
+            const contractResult = await pool.query(
+                `INSERT INTO contracts (client_id, quote_id, contract_number, title, status, amount_ttc, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, 'pending', $5, NOW(), NOW()) RETURNING *`,
+                [quote.client_id, quote.id, contractNumber,
+                quote.title || ('Contrat de service — ' + quote.quote_number),
+                quote.amount_ttc]
+            );
+            console.log('[workflow] Contrat', contractNumber, 'créé automatiquement pour devis', quote.quote_number);
+            const newCtLocal = contractResult.rows[0];
+            // Email + chat : nouveau contrat à signer
+            if (_email) {
+                pool.query('SELECT * FROM clients WHERE id=$1', [quote.client_id]).then(r => {
+                    if (r.rows[0]) _email.sendEmail(r.rows[0].email, _email.tplNewContract(r.rows[0], newCtLocal)).catch(() => { });
+                }).catch(() => { });
+            }
+            pool.query(`INSERT INTO messages (client_id, sender, content, is_read, created_at) VALUES ($1, $2, false, NOW())`,
+                [quote.client_id, 'Votre devis ' + quote.quote_number + ' a été accepté ! Contrat ' + newCtLocal.contract_number + ' disponible dans votre portail — signature requise.']).catch(() => { });
+            return res.json({ success: true, message: 'Devis accepté. Un contrat a été créé.', quote, contract: newCtLocal });
+        } catch (contractErr) {
+            console.warn('[workflow] Erreur création contrat auto:', contractErr.message);
+            return res.json({ success: true, message: 'Quote accepted.', quote });
+        }
     } catch (error) {
         console.error('Accept quote error:', error);
         res.status(500).json({ success: false, message: 'Server error.' });

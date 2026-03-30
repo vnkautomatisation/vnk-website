@@ -6,6 +6,27 @@
     <meta name="description" content="Portail client VNK Automatisation Inc. — Accédez à vos mandats, devis, contrats et factures en ligne.">
     <meta name="robots" content="noindex, nofollow">
     <title>Portail client | VNK Automatisation Inc.</title>
+    <!-- Anti-flash : cacher login immédiatement si token présent -->
+    <script>try { if (localStorage.getItem('vnk-token')) { document.write('<style>#login-section{display:none!important}#dashboard-section{display:grid!important}.portal-sidebar{display:flex!important}</style>'); } } catch (e) { }</script>
+    <style>
+        body {
+            background: #F8FAFC;
+        }
+
+        html {
+            animation: pageFadeIn 0.18s ease-out;
+        }
+
+        @keyframes pageFadeIn {
+            from {
+                opacity: 0
+            }
+
+            to {
+                opacity: 1
+            }
+        }
+    </style>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/responsive.css">
@@ -205,6 +226,43 @@
     <script>/* Anti-flash auth check */(function () { var t = localStorage.getItem("vnk-token"); if (t) { document.addEventListener("DOMContentLoaded", function () { var l = document.getElementById("login-section"); var d = document.getElementById("dashboard-section"); if (l) l.style.display = "none"; if (d) d.style.display = "grid"; }); } else { document.addEventListener("DOMContentLoaded", function () { var l = document.getElementById("login-section"); if (l) l.style.display = ""; }); } })();</script>
 </head>
 <body class="portal-body">
+    <!-- Loader de chargement -->
+    <div id="vnk-page-loader" style="position:fixed;inset:0;z-index:99999;background:#F8FAFC;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;transition:opacity 0.25s ease">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="48" height="48" rx="12" fill="#1B4F8A" />
+            <path d="M14 16L24 32L34 16" stroke="#1B4F8A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M19 16L24 24.5L29 16" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <div style="width:160px;height:3px;background:rgba(0,0,0,0.08);border-radius:99px;overflow:hidden">
+            <div style="height:100%;background:linear-gradient(90deg,#3B82F6,#60A5FA);border-radius:99px;animation:vnkLoad 0.9s ease-in-out forwards"></div>
+        </div>
+    </div>
+    <style>
+        @keyframes vnkLoad {
+            from {
+                width: 0%
+            }
+
+            to {
+                width: 100%
+            }
+        }
+    </style>
+    <script>
+        var _vnkLoaderStart = Date.now();
+        window.addEventListener('load', function () {
+            var loader = document.getElementById('vnk-page-loader');
+            if (!loader) return;
+            // Afficher au minimum 600ms pour que l'animation soit visible
+            var elapsed = Date.now() - _vnkLoaderStart;
+            var remaining = Math.max(0, 1200 - elapsed);
+            setTimeout(function () {
+                loader.style.opacity = '0';
+                setTimeout(function () { loader.style.display = 'none'; }, 260);
+            }, remaining);
+        });
+    </script>
+
 
     <!-- ═══════════════════════════════════════
          NAVBAR
@@ -553,10 +611,8 @@
                         </div>
                         <select id="contract-filter" class="portal-filter-select" onchange="filterContracts()">
                             <option value="all">Tous</option>
-                            <option value="pending_signature">En attente de signature</option>
-                            <option value="pending">En attente</option>
-                            <option value="signed">Signé</option>
-                            <option value="draft">Brouillon</option>
+                            <option value="pending_signature">À signer</option>
+                            <option value="signed">Signés</option>
                         </select>
                         <button class="portal-sort-btn" id="contract-sort-btn" onclick="toggleSort('contracts')" title="Trier">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="9" y1="18" x2="15" y2="18" /></svg>

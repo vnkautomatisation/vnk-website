@@ -4,6 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin | VNK Automatisation Inc.</title>
+    <style>
+        body {
+            background: #F1F5F9;
+        }
+
+        html {
+            animation: pageFadeIn 0.18s ease-out;
+        }
+
+        @keyframes pageFadeIn {
+            from {
+                opacity: 0
+            }
+
+            to {
+                opacity: 1
+            }
+        }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -267,7 +286,7 @@
             background: var(--primary-dark);
             color: white;
             padding: 0 1.5rem;
-            height: 58px;
+            height: 70px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -1802,6 +1821,43 @@
     </style>
 </head>
 <body>
+    <!-- Loader de chargement -->
+    <div id="vnk-page-loader" style="position:fixed;inset:0;z-index:99999;background:#F1F5F9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;transition:opacity 0.25s ease">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="48" height="48" rx="12" fill="#1B4F8A" />
+            <path d="M14 16L24 32L34 16" stroke="#1B4F8A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M19 16L24 24.5L29 16" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <div style="width:160px;height:3px;background:rgba(0,0,0,0.08);border-radius:99px;overflow:hidden">
+            <div style="height:100%;background:linear-gradient(90deg,#3B82F6,#60A5FA);border-radius:99px;animation:vnkLoad 0.9s ease-in-out forwards"></div>
+        </div>
+    </div>
+    <style>
+        @keyframes vnkLoad {
+            from {
+                width: 0%
+            }
+
+            to {
+                width: 100%
+            }
+        }
+    </style>
+    <script>
+        var _vnkLoaderStart = Date.now();
+        window.addEventListener('load', function () {
+            var loader = document.getElementById('vnk-page-loader');
+            if (!loader) return;
+            // Afficher au minimum 600ms pour que l'animation soit visible
+            var elapsed = Date.now() - _vnkLoaderStart;
+            var remaining = Math.max(0, 1200 - elapsed);
+            setTimeout(function () {
+                loader.style.opacity = '0';
+                setTimeout(function () { loader.style.display = 'none'; }, 260);
+            }, remaining);
+        });
+    </script>
+
 
     <div class="toast" id="toast"></div>
     <div class="confirm-overlay" id="confirm-overlay">
@@ -1918,8 +1974,15 @@
     <div class="admin-app" id="admin-app" style="display:none;flex-direction:column">
         <header class="admin-topbar">
             <div class="topbar-left">
-                <svg width="32" height="32" viewBox="0 0 32 32"><polygon points="16,1 29,8 29,24 16,31 3,24 3,8" fill="rgba(255,255,255,0.1)" /><polygon points="16,1 29,8 29,24 16,31 3,24 3,8" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" /><text x="16" y="20" text-anchor="middle" style="font-size:8px;font-weight:800;fill:white;font-family:sans-serif">VNK</text></svg>
-                <div class="topbar-logo"><div><div class="topbar-logo-text">Automatisation Inc.</div><div class="topbar-logo-sub">VALUE · NETWORK · KNOWLEDGE</div></div></div>
+                <a href="index.html" style="display:flex;align-items:center;text-decoration:none;flex-shrink:0">
+                    <svg width="220" height="42" viewBox="0 0 220 42">
+                        <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="rgba(255,255,255,0.12)" />
+                        <polygon points="21,2 38,11 38,31 21,40 4,31 4,11" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" />
+                        <text x="21" y="26" text-anchor="middle" style="font-size:11px;font-weight:800;fill:white;font-family:sans-serif">VNK</text>
+                        <text x="48" y="18" style="font-size:13px;font-weight:700;fill:white;font-family:sans-serif">Automatisation Inc.</text>
+                        <text x="48" y="33" style="font-size:7.5px;fill:rgba(255,255,255,0.6);font-family:sans-serif;letter-spacing:1.2px">VALUE · NETWORK · KNOWLEDGE</text>
+                    </svg>
+                </a>
                 <div style="height:24px;width:1px;background:rgba(255,255,255,0.2);margin:0 0.25rem"></div>
                 <div style="font-size:0.75rem;color:#99BBDD;font-weight:600">Admin</div>
             </div>
@@ -2469,6 +2532,25 @@
                                         <button onclick="adminStopRecord(false)" style="border:none;background:#94A3B8;color:white;border-radius:5px;padding:2px 8px;cursor:pointer;font-size:0.72rem;font-family:inherit">Annuler</button>
                                     </div>
                                 </div>
+                                <!-- Toggle canal d'envoi -->
+                                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+                                    <span style="font-size:0.72rem;font-weight:600;color:#64748B">Envoyer via</span>
+                                    <div style="display:flex;background:#F1F5F9;border-radius:8px;padding:2px;gap:2px">
+                                        <button id="send-mode-chat" onclick="setSendMode('chat')"
+                                                style="padding:3px 10px;border-radius:6px;border:none;font-size:0.72rem;font-weight:700;cursor:pointer;background:#1B4F8A;color:white;transition:all 0.15s">
+                                            Chat
+                                        </button>
+                                        <button id="send-mode-email" onclick="setSendMode('email')"
+                                                style="padding:3px 10px;border-radius:6px;border:none;font-size:0.72rem;font-weight:700;cursor:pointer;background:transparent;color:#64748B;transition:all 0.15s">
+                                            Email
+                                        </button>
+                                        <button id="send-mode-both" onclick="setSendMode('both')"
+                                                style="padding:3px 10px;border-radius:6px;border:none;font-size:0.72rem;font-weight:700;cursor:pointer;background:transparent;color:#64748B;transition:all 0.15s">
+                                            Les deux
+                                        </button>
+                                    </div>
+                                    <span id="send-mode-hint" style="font-size:0.68rem;color:#94A3B8">→ Portail client</span>
+                                </div>
                                 <div style="display:flex;gap:0.5rem;align-items:flex-end">
                                     <textarea id="admin-chat-input" rows="1" placeholder="Répondre en tant que VNK..."
                                               style="flex:1;padding:0.6rem 0.75rem;border:1.5px solid #E2E8F0;border-radius:10px;font-size:0.875rem;font-family:inherit;resize:none;outline:none;min-height:40px;transition:border-color 0.15s"
@@ -2476,7 +2558,7 @@
                                               onblur="this.style.borderColor='#E2E8F0'"
                                               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();adminChatSend()}"
                                               oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
-                                    <button onclick="adminChatSend()" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1B4F8A,#2E75B6);color:white;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(27,79,138,0.3)">
+                                    <button onclick="adminChatSend()" id="admin-send-btn" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1B4F8A,#2E75B6);color:white;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(27,79,138,0.3)" title="Envoyer">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
                                     </button>
                                 </div>
@@ -2939,7 +3021,8 @@
                 <div class="form-group">
                     <label class="form-label">Statut</label>
                     <select class="form-select" id="nd-status">
-                        <option value="disponible">Disponible</option>
+                        <option value="disponible" selected>Disponible — Non lu (notifie le client)</option>
+                        <option value="disponible_lu">Disponible — Déjà lu</option>
                         <option value="en_attente">En attente de signature</option>
                         <option value="brouillon">Brouillon</option>
                         <option value="archive">Archivé</option>
@@ -2987,6 +3070,7 @@
                 <div class="form-group"><label class="form-label">Devis associé</label><select class="form-select" id="nct-quote"><option value="">Aucun</option></select></div>
                 <div class="form-group"><label class="form-label">Titre du contrat *</label><input type="text" class="form-input" id="nct-title" placeholder="Contrat de service — Support PLC"></div>
                 <div class="form-group"><label class="form-label">Contenu / clauses principales</label><textarea class="form-textarea" id="nct-content" rows="5"></textarea></div>
+                <div class="form-group"><label class="form-label">Statut</label><select class="form-select" id="nct-status"><option value="pending">En attente de signature</option><option value="draft">Brouillon (interne — non visible par le client)</option></select></div>
                 <div class="form-group"><label class="form-label">URL du fichier contrat</label><input type="url" class="form-input" id="nct-url" placeholder="https://drive.google.com/..."><div class="form-hint">Lien vers le document signable.</div></div>
             </div>
             <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-new-contract')">Annuler</button><button class="btn btn-primary" onclick="createContract()">Créer le contrat</button></div>
@@ -3248,13 +3332,13 @@
                 const el = document.createElement('div');
                 el.className = 'notif-item' + (n.read ? '' : ' unread');
                 el.innerHTML = `
-                            <div class="notif-icon" style="background:${c.bg};color:${c.icon}">${ico}</div>
-                            <div class="notif-body">
-                                <div class="notif-text">${n.text}</div>
-                                <div class="notif-time">${_relTime(n.ts)}</div>
-                            </div>
-                            ${!n.read ? '<div class="notif-unread-dot"></div>' : ''}
-                        `;
+                                <div class="notif-icon" style="background:${c.bg};color:${c.icon}">${ico}</div>
+                                <div class="notif-body">
+                                    <div class="notif-text">${n.text}</div>
+                                    <div class="notif-time">${_relTime(n.ts)}</div>
+                                </div>
+                                ${!n.read ? '<div class="notif-unread-dot"></div>' : ''}
+                            `;
                 el.onclick = () => {
                     // Marquer comme lu
                     const all = _loadNotifs();
@@ -3516,6 +3600,8 @@
 
         function _adminConnectWS() {
             if (!_adminWsActive || !adminToken) { _adminFallbackPoll(); return; }
+            // Démarrer le fallback poll immédiatement — le WS le remplacera si connecté
+            if (!adminPollingInterval) _adminFallbackPoll();
             const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
             const url = `${proto}//${location.host}/ws`;
             try { _adminWs = new WebSocket(url); } catch (e) { console.warn('[WS-Admin] Fallback to polling'); _adminFallbackPoll(); return; }
@@ -3539,10 +3625,16 @@
 
             _adminWs.onclose = () => {
                 clearInterval(_adminWsPingTimer);
-                if (_adminWsActive) _adminScheduleReconn();
+                if (_adminWsActive) {
+                    if (_adminWsReconnDelay >= ADMIN_WS_MAX_DELAY) {
+                        _adminFallbackPoll();
+                    } else {
+                        _adminScheduleReconn();
+                    }
+                }
             };
 
-            _adminWs.onerror = () => { clearInterval(_adminWsPingTimer); };
+            _adminWs.onerror = () => { clearInterval(_adminWsPingTimer); _adminFallbackPoll(); };
         }
 
         function _adminScheduleReconn() {
@@ -3556,13 +3648,12 @@
         // Fallback polling si WebSocket indisponible
         function _adminFallbackPoll() {
             if (!_adminWsActive) return;
-            console.log('[WS-Admin] Polling fallback (15s)');
             async function _cycle() {
                 if (!_adminWsActive) return;
                 await _adminPollCycle();
-                if (_adminWsActive) adminPollingInterval = setTimeout(_cycle, document.hidden ? 60000 : 15000);
+                if (_adminWsActive) adminPollingInterval = setTimeout(_cycle, document.hidden ? 30000 : 5000);
             }
-            adminPollingInterval = setTimeout(_cycle, 15000);
+            adminPollingInterval = setTimeout(_cycle, 5000);
         }
 
         async function _adminPollCycle() {
@@ -3576,14 +3667,16 @@
                 await loadMessages();
                 if (typeof _adminCurrentClient !== 'undefined' && _adminCurrentClient) adminOpenThread(_adminCurrentClient);
                 const activeSection = localStorage.getItem('vnk-admin-section') || 'dashboard';
-                const [invD, quoD, ctD] = await Promise.all([
+                const [invD, quoD, ctD, mandD] = await Promise.all([
                     api('/invoices').catch(() => ({ success: false })),
                     api('/quotes').catch(() => ({ success: false })),
-                    api('/contracts').catch(() => ({ success: false }))
+                    api('/contracts').catch(() => ({ success: false })),
+                    api('/mandates').catch(() => ({ success: false }))
                 ]);
-                if (invD.success) { allInvoices = invD.invoices || []; if (!['invoices', 'payments'].includes(activeSection)) { renderTable('invoices'); renderTable('payments'); } }
-                if (quoD.success) { allQuotes = quoD.quotes || []; if (activeSection !== 'quotes') renderTable('quotes'); }
-                if (ctD.success) { const pp = tState.contracts ? tState.contracts.p : 1; allContracts = ctD.contracts || []; if (!tState.contracts) tState.contracts = { p: 1 }; tState.contracts.p = pp; if (activeSection !== 'contracts') renderContracts(); }
+                if (invD.success) { allInvoices = invD.invoices || []; renderTable('invoices'); renderTable('payments'); }
+                if (quoD.success) { allQuotes = quoD.quotes || []; renderTable('quotes'); }
+                if (ctD.success) { const pp = tState.contracts ? tState.contracts.p : 1; allContracts = ctD.contracts || []; if (!tState.contracts) tState.contracts = { p: 1 }; tState.contracts.p = pp; renderContracts(); }
+                if (mandD.success) { allMandates = mandD.mandates || []; renderTable('mandates'); }
                 await loadDocuments();
                 const newState = {
                     unreadMsgs: allMessages.reduce((s, t) => s + (t.unread_count || 0), 0),
@@ -3771,33 +3864,33 @@
                 const progress = mandate ? (mandate.progress || 0) : 0;
                 const initials = (client.full_name || '').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
                 return `<div style="background:${s.bg};border:1.5px solid ${s.border};border-radius:12px;padding:1.1rem;cursor:pointer;transition:box-shadow .15s"
-                            onmouseenter="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'" onmouseleave="this.style.boxShadow='none'"
-                            onclick="showSection('clients');setTimeout(()=>openCdp(${client.id}),300)">
-                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem">
-                                <div style="display:flex;align-items:center;gap:0.6rem">
-                                    <div style="width:34px;height:34px;border-radius:50%;background:${s.border};display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;color:${s.color};flex-shrink:0">${initials}</div>
-                                    <div>
-                                        <div style="font-size:0.83rem;font-weight:700;color:var(--text)">${client.full_name}</div>
-                                        <div style="font-size:0.72rem;color:var(--text-light)">${client.company_name || ''}</div>
+                                onmouseenter="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'" onmouseleave="this.style.boxShadow='none'"
+                                onclick="showSection('clients');setTimeout(()=>openCdp(${client.id}),300)">
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem">
+                                    <div style="display:flex;align-items:center;gap:0.6rem">
+                                        <div style="width:34px;height:34px;border-radius:50%;background:${s.border};display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;color:${s.color};flex-shrink:0">${initials}</div>
+                                        <div>
+                                            <div style="font-size:0.83rem;font-weight:700;color:var(--text)">${client.full_name}</div>
+                                            <div style="font-size:0.72rem;color:var(--text-light)">${client.company_name || ''}</div>
+                                        </div>
                                     </div>
+                                    <span style="font-size:0.69rem;font-weight:700;padding:3px 9px;border-radius:20px;background:white;color:${s.color};border:1px solid ${s.border};white-space:nowrap">${s.label}</span>
                                 </div>
-                                <span style="font-size:0.69rem;font-weight:700;padding:3px 9px;border-radius:20px;background:white;color:${s.color};border:1px solid ${s.border};white-space:nowrap">${s.label}</span>
-                            </div>
-                            ${mandate ? `<div style="margin-bottom:0.6rem">
-                                <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-light);margin-bottom:3px">
-                                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">${mandate.title}</span>
-                                    <span>${progress}%</span>
+                                ${mandate ? `<div style="margin-bottom:0.6rem">
+                                    <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-light);margin-bottom:3px">
+                                        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">${mandate.title}</span>
+                                        <span>${progress}%</span>
+                                    </div>
+                                    <div style="height:4px;background:rgba(0,0,0,0.08);border-radius:2px">
+                                        <div style="height:4px;background:${s.color};border-radius:2px;width:${progress}%"></div>
+                                    </div>
+                                </div>` : ''}
+                                ${invoice ? `<div style="font-size:0.72rem;color:#DC2626;font-weight:600;margin-bottom:0.35rem">Facture ${invoice.invoice_number} — ${fmt(invoice.amount_ttc)}</div>` : ''}
+                                <div style="font-size:0.72rem;color:var(--text-light);display:flex;align-items:center;gap:4px">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                    ${nextAction}
                                 </div>
-                                <div style="height:4px;background:rgba(0,0,0,0.08);border-radius:2px">
-                                    <div style="height:4px;background:${s.color};border-radius:2px;width:${progress}%"></div>
-                                </div>
-                            </div>` : ''}
-                            ${invoice ? `<div style="font-size:0.72rem;color:#DC2626;font-weight:600;margin-bottom:0.35rem">Facture ${invoice.invoice_number} — ${fmt(invoice.amount_ttc)}</div>` : ''}
-                            <div style="font-size:0.72rem;color:var(--text-light);display:flex;align-items:center;gap:4px">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                                ${nextAction}
-                            </div>
-                        </div>`;
+                            </div>`;
             });
             grid.innerHTML = cards.join('');
             const dot = document.getElementById('badge-workflow');
@@ -3828,16 +3921,16 @@
                 const labels = { invoice: 'Facture', quote: 'Devis', mandate: 'Mandat', document: 'Document' };
                 const color = colors[a.type] || 'var(--text-light)';
                 return `<div style="display:flex;align-items:center;gap:0.85rem;padding:0.75rem 0;border-bottom:1px solid var(--border)">
-                                            <div style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:${color}"></div>
-                                            <div style="flex:1;min-width:0">
-                                                <div style="font-size:0.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.description}</div>
-                                                <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.15rem">
-                                                    <span style="font-size:0.7rem;font-weight:700;color:white;background:${color};padding:0.1rem 0.5rem;border-radius:10px">${labels[a.type] || ''}</span>
-                                                    <span style="font-size:0.73rem;color:var(--text-light)">${a.client_name} · ${fmtDate(a.date)}</span>
+                                                <div style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:${color}"></div>
+                                                <div style="flex:1;min-width:0">
+                                                    <div style="font-size:0.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.description}</div>
+                                                    <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.15rem">
+                                                        <span style="font-size:0.7rem;font-weight:700;color:white;background:${color};padding:0.1rem 0.5rem;border-radius:10px">${labels[a.type] || ''}</span>
+                                                        <span style="font-size:0.73rem;color:var(--text-light)">${a.client_name} · ${fmtDate(a.date)}</span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            ${a.amount ? `<div style="font-size:0.88rem;font-weight:800;color:var(--primary);white-space:nowrap">${fmt(a.amount)}</div>` : ''}
-                                        </div>`;
+                                                ${a.amount ? `<div style="font-size:0.88rem;font-weight:800;color:var(--primary);white-space:nowrap">${fmt(a.amount)}</div>` : ''}
+                                            </div>`;
             }).join('');
         }
 
@@ -3876,6 +3969,8 @@
 
         function isActive(c) { return c.is_active === true || c.is_active === 1 || c.is_active === 't' || c.is_active === 'true'; }
         function renderClients() {
+            const openMenu = document.querySelector('[id^="cmenu-"][style*="display: block"],[id^="cmenu-"][style*="display:block"]');
+            if (openMenu) return;
             let list = [...allClients];
             if (cF === 'active') list = list.filter(c => isActive(c));
             if (cF === 'inactive') list = list.filter(c => !isActive(c));
@@ -3896,50 +3991,50 @@
             grid.innerHTML = paged.map(c => {
                 const techs = c.technologies ? c.technologies.split(',').filter(Boolean) : [];
                 return `<div class="client-card" onclick="openCdp(${c.id})">
-                                            <div class="client-avatar">${initials(c.full_name)}</div>
-                                            <div style="flex:1;min-width:0">
-                                                <div class="client-name">${c.full_name} <span class="badge ${isActive(c) ? 'badge-active' : 'badge-expired'}" style="font-size:0.68rem;margin-left:0.3rem">${isActive(c) ? 'Actif' : 'Inactif'}</span></div>
-                                                <div class="client-company">${c.company_name || '—'}${c.sector ? ' · ' + c.sector : ''}</div>
-                                                <div class="client-meta"><span>${c.email}</span>${c.phone ? '<span>' + c.phone + '</span>' : ''}${c.city ? '<span>' + c.city + (c.province ? ', ' + c.province : '') + '</span>' : ''}<span>Depuis ${fmtDate(c.created_at)}</span></div>
-                                                ${techs.length ? `<div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.3rem">${techs.map(t => `<span class="client-pill">${t.trim()}</span>`).join('')}</div>` : ''}
-                                            </div>
-                                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;flex-shrink:0">
-                                                ${mCounts[c.id] ? `<span style="font-size:0.75rem;color:var(--text-light)">${mCounts[c.id]} mandat${mCounts[c.id] > 1 ? 's' : ''}</span>` : ''}
-                                                ${iCounts[c.id] ? `<span style="font-size:0.75rem;font-weight:700;color:var(--error)">${iCounts[c.id]} impayée${iCounts[c.id] > 1 ? 's' : ''}</span>` : ''}
-                                                <div style="position:relative">
-                                                    <button class="btn btn-ghost btn-sm" style="padding:0.3rem 0.5rem;font-size:1rem;line-height:1" onclick="event.stopPropagation();toggleClientMenu(${c.id},this)" title="Actions rapides">⋯</button>
-                                                    <div id="client-menu-${c.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.2);border:1px solid var(--border);min-width:190px;z-index:9999;padding:0.35rem 0">
-                                                        <div style="padding:0.3rem 0.75rem;font-size:0.68rem;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px">Actions rapides</div>
-                                                        <button onclick="event.stopPropagation();closeAllClientMenus();prefill('nq-client',${c.id});openModal('modal-new-quote')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                                            Nouveau devis
-                                                        </button>
-                                                        <button onclick="event.stopPropagation();closeAllClientMenus();prefill('ni-client',${c.id});openModal('modal-new-invoice')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                                                            Nouvelle facture
-                                                        </button>
-                                                        <button onclick="event.stopPropagation();closeAllClientMenus();prefill('nm-client',${c.id});openModal('modal-new-mandate')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                                                            Nouveau mandat
-                                                        </button>
-                                                        <div style="height:1px;background:var(--border);margin:0.3rem 0"></div>
-                                                        <button onclick="event.stopPropagation();closeAllClientMenus();openRefundModal(${c.id},'${c.full_name.replace(/'/g, "\\'")}');" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--success)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.82"/></svg>
-                                                            Rembourser via Stripe
-                                                        </button>
-                                                        <button onclick="event.stopPropagation();closeAllClientMenus();archiveClient(${c.id},'${c.full_name.replace(/'/g, "\\'")}',isActive(c))" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:${isActive(c) ? 'var(--warning)' : 'var(--success)'}" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/></svg>
-                                                            ${isActive(c) ? 'Archiver client' : 'Réactiver client'}
-                                                        </button>
-                                                        <div style="height:1px;background:var(--border);margin:0.3rem 0.75rem"></div>
-                                                        <button onclick="event.stopPropagation();closeAllClientMenus();deleteClient(${c.id},'${c.full_name.replace(/'/g, "\\'")}')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'">
-                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-                                                            Supprimer définitivement
-                                                        </button>
+                                                <div class="client-avatar">${initials(c.full_name)}</div>
+                                                <div style="flex:1;min-width:0">
+                                                    <div class="client-name">${c.full_name} <span class="badge ${isActive(c) ? 'badge-active' : 'badge-expired'}" style="font-size:0.68rem;margin-left:0.3rem">${isActive(c) ? 'Actif' : 'Inactif'}</span></div>
+                                                    <div class="client-company">${c.company_name || '—'}${c.sector ? ' · ' + c.sector : ''}</div>
+                                                    <div class="client-meta"><span>${c.email}</span>${c.phone ? '<span>' + c.phone + '</span>' : ''}${c.city ? '<span>' + c.city + (c.province ? ', ' + c.province : '') + '</span>' : ''}<span>Depuis ${fmtDate(c.created_at)}</span></div>
+                                                    ${techs.length ? `<div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.3rem">${techs.map(t => `<span class="client-pill">${t.trim()}</span>`).join('')}</div>` : ''}
+                                                </div>
+                                                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;flex-shrink:0">
+                                                    ${mCounts[c.id] ? `<span style="font-size:0.75rem;color:var(--text-light)">${mCounts[c.id]} mandat${mCounts[c.id] > 1 ? 's' : ''}</span>` : ''}
+                                                    ${iCounts[c.id] ? `<span style="font-size:0.75rem;font-weight:700;color:var(--error)">${iCounts[c.id]} impayée${iCounts[c.id] > 1 ? 's' : ''}</span>` : ''}
+                                                    <div style="position:relative">
+                                                        <button class="btn btn-ghost btn-sm" style="padding:0.3rem 0.5rem;font-size:1rem;line-height:1" onclick="event.stopPropagation();toggleClientMenu(${c.id},this)" title="Actions rapides">⋯</button>
+                                                        <div id="client-menu-${c.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.2);border:1px solid var(--border);min-width:190px;z-index:9999;padding:0.35rem 0">
+                                                            <div style="padding:0.3rem 0.75rem;font-size:0.68rem;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px">Actions rapides</div>
+                                                            <button onclick="event.stopPropagation();closeAllClientMenus();prefill('nq-client',${c.id});openModal('modal-new-quote')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                                                Nouveau devis
+                                                            </button>
+                                                            <button onclick="event.stopPropagation();closeAllClientMenus();prefill('ni-client',${c.id});openModal('modal-new-invoice')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                                                                Nouvelle facture
+                                                            </button>
+                                                            <button onclick="event.stopPropagation();closeAllClientMenus();prefill('nm-client',${c.id});openModal('modal-new-mandate')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                                                                Nouveau mandat
+                                                            </button>
+                                                            <div style="height:1px;background:var(--border);margin:0.3rem 0"></div>
+                                                            <button onclick="event.stopPropagation();closeAllClientMenus();openRefundModal(${c.id},'${c.full_name.replace(/'/g, "\\'")}');" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--success)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.82"/></svg>
+                                                                Rembourser via Stripe
+                                                            </button>
+                                                            <button onclick="event.stopPropagation();closeAllClientMenus();archiveClient(${c.id},'${c.full_name.replace(/'/g, "\\'")}',isActive(c))" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:${isActive(c) ? 'var(--warning)' : 'var(--success)'}" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/></svg>
+                                                                ${isActive(c) ? 'Archiver client' : 'Réactiver client'}
+                                                            </button>
+                                                            <div style="height:1px;background:var(--border);margin:0.3rem 0.75rem"></div>
+                                                            <button onclick="event.stopPropagation();closeAllClientMenus();deleteClient(${c.id},'${c.full_name.replace(/'/g, "\\'")}')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'">
+                                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                                                                Supprimer définitivement
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>`;
+                                            </div>`;
             }).join('');
             renderPag('clients', total, cPage, pages, p => { cPage = p; renderClients(); });
         }
@@ -3953,54 +4048,54 @@
             set('cdp-sub', (c.company_name || c.email) + (c.city ? ` · ${c.city}` : ''));
             const techs = c.technologies ? c.technologies.split(',').filter(Boolean) : [];
             document.getElementById('cdp-info').innerHTML = `
-                                        <div class="info-grid">
-                                            <div class="info-item"><label>Courriel</label><span>${c.email}</span></div>
-                                            <div class="info-item"><label>Téléphone</label><span>${c.phone || '—'}</span></div>
-                                            <div class="info-item"><label>Entreprise</label><span>${c.company_name || '—'}</span></div>
-                                            <div class="info-item"><label>Secteur</label><span>${c.sector || '—'}</span></div>
-                                            <div class="info-item"><label>Adresse</label><span>${c.address || '—'}${c.city ? ', ' + c.city : ''}</span></div>
-                                            <div class="info-item"><label>Province / Code postal</label><span>${c.province || '—'} ${c.postal_code || ''}</span></div>
-                                            <div class="info-item"><label>Statut</label><span class="badge ${isActive(c) ? 'badge-active' : 'badge-expired'}">${isActive(c) ? 'Actif' : 'Inactif'}</span></div>
-                                            <div class="info-item"><label>Dernière connexion</label><span>${c.last_login ? fmtDate(c.last_login) : 'Jamais'}</span></div>
-                                        </div>
-                                        ${techs.length ? `<div style="margin-bottom:1rem"><div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-light);margin-bottom:0.4rem">Technologies</div><div style="display:flex;flex-wrap:wrap;gap:0.4rem">${techs.map(t => `<span class="client-pill">${t.trim()}</span>`).join('')}</div></div>` : ''}
-                                        ${c.internal_notes ? `<div style="background:rgba(224,120,32,0.06);border-radius:8px;padding:0.75rem;border-left:3px solid var(--warning)"><div style="font-size:0.72rem;font-weight:700;color:var(--warning);margin-bottom:0.3rem">NOTES INTERNES</div><div style="font-size:0.85rem">${c.internal_notes}</div></div>` : ''}
-                                        <div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap">
-                                            <button class="btn btn-primary btn-sm" onclick="prefill('nm-client',${c.id});openModal('modal-new-mandate');closeCdp()">+ Mandat</button>
-                                            <button class="btn btn-outline btn-sm" onclick="prefill('nq-client',${c.id});openModal('modal-new-quote');closeCdp()">+ Devis</button>
-                                            <button class="btn btn-outline btn-sm" onclick="prefill('ni-client',${c.id});openModal('modal-new-invoice');closeCdp()">+ Facture</button>
-                                            <button class="btn btn-ghost btn-sm" onclick="prefill('nd-client',${c.id});openModal('modal-new-document');closeCdp()">+ Document</button>
-                                            <button class="btn btn-ghost btn-sm" onclick="prefill('conv-client',${c.id});openModal('modal-new-conversation');closeCdp()">+ Message</button>
-                                        </div>`;
+                                            <div class="info-grid">
+                                                <div class="info-item"><label>Courriel</label><span>${c.email}</span></div>
+                                                <div class="info-item"><label>Téléphone</label><span>${c.phone || '—'}</span></div>
+                                                <div class="info-item"><label>Entreprise</label><span>${c.company_name || '—'}</span></div>
+                                                <div class="info-item"><label>Secteur</label><span>${c.sector || '—'}</span></div>
+                                                <div class="info-item"><label>Adresse</label><span>${c.address || '—'}${c.city ? ', ' + c.city : ''}</span></div>
+                                                <div class="info-item"><label>Province / Code postal</label><span>${c.province || '—'} ${c.postal_code || ''}</span></div>
+                                                <div class="info-item"><label>Statut</label><span class="badge ${isActive(c) ? 'badge-active' : 'badge-expired'}">${isActive(c) ? 'Actif' : 'Inactif'}</span></div>
+                                                <div class="info-item"><label>Dernière connexion</label><span>${c.last_login ? fmtDate(c.last_login) : 'Jamais'}</span></div>
+                                            </div>
+                                            ${techs.length ? `<div style="margin-bottom:1rem"><div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-light);margin-bottom:0.4rem">Technologies</div><div style="display:flex;flex-wrap:wrap;gap:0.4rem">${techs.map(t => `<span class="client-pill">${t.trim()}</span>`).join('')}</div></div>` : ''}
+                                            ${c.internal_notes ? `<div style="background:rgba(224,120,32,0.06);border-radius:8px;padding:0.75rem;border-left:3px solid var(--warning)"><div style="font-size:0.72rem;font-weight:700;color:var(--warning);margin-bottom:0.3rem">NOTES INTERNES</div><div style="font-size:0.85rem">${c.internal_notes}</div></div>` : ''}
+                                            <div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap">
+                                                <button class="btn btn-primary btn-sm" onclick="prefill('nm-client',${c.id});openModal('modal-new-mandate');closeCdp()">+ Mandat</button>
+                                                <button class="btn btn-outline btn-sm" onclick="prefill('nq-client',${c.id});openModal('modal-new-quote');closeCdp()">+ Devis</button>
+                                                <button class="btn btn-outline btn-sm" onclick="prefill('ni-client',${c.id});openModal('modal-new-invoice');closeCdp()">+ Facture</button>
+                                                <button class="btn btn-ghost btn-sm" onclick="prefill('nd-client',${c.id});openModal('modal-new-document');closeCdp()">+ Document</button>
+                                                <button class="btn btn-ghost btn-sm" onclick="prefill('conv-client',${c.id});openModal('modal-new-conversation');closeCdp()">+ Message</button>
+                                            </div>`;
             const cms = allMandates.filter(m => m.client_id === clientId);
             document.getElementById('cdp-mandats').innerHTML = cms.length ? cms.map(m => `
-                                        <div class="cdp-item">
-                                            <div class="cdp-item-head"><div class="cdp-item-title">${m.title}</div><span class="badge badge-${m.status}">${statusLabel(m.status)}</span></div>
-                                            <div class="cdp-item-meta">${m.service_type || ''} · Début: ${m.start_date ? fmtDate(m.start_date) : '—'}</div>
-                                            <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem">
-                                                <div class="progress-bg" style="flex:1"><div class="progress-fill" style="width:${m.progress || 0}%"></div></div>
-                                                <span style="font-size:0.75rem;color:var(--text-light)">${m.progress || 0}%</span>
-                                            </div>
-                                            <div style="margin-top:0.5rem"><button class="btn btn-sm btn-outline" onclick="openEditMandate(${m.id},'${m.status}',${m.progress || 0},'${(m.notes || '').replace(/'/g, "\\'")}')">Modifier</button></div>
-                                        </div>`).join('') : '<div class="empty-state"><p>Aucun mandat.</p></div>';
+                                            <div class="cdp-item">
+                                                <div class="cdp-item-head"><div class="cdp-item-title">${m.title}</div><span class="badge badge-${m.status}">${statusLabel(m.status)}</span></div>
+                                                <div class="cdp-item-meta">${m.service_type || ''} · Début: ${m.start_date ? fmtDate(m.start_date) : '—'}</div>
+                                                <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem">
+                                                    <div class="progress-bg" style="flex:1"><div class="progress-fill" style="width:${m.progress || 0}%"></div></div>
+                                                    <span style="font-size:0.75rem;color:var(--text-light)">${m.progress || 0}%</span>
+                                                </div>
+                                                <div style="margin-top:0.5rem"><button class="btn btn-sm btn-outline" onclick="openEditMandate(${m.id},'${m.status}',${m.progress || 0},'${(m.notes || '').replace(/'/g, "\\'")}')">Modifier</button></div>
+                                            </div>`).join('') : '<div class="empty-state"><p>Aucun mandat.</p></div>';
             const cqs = allQuotes.filter(q => q.client_id === clientId);
             document.getElementById('cdp-devis').innerHTML = cqs.length ? cqs.map(q => `
-                                        <div class="cdp-item">
-                                            <div class="cdp-item-head"><div class="cdp-item-title">${q.quote_number} — ${q.title}</div><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></div>
-                                            <div class="cdp-item-meta">${fmt(q.amount_ttc)} TTC · Exp: ${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</div>
-                                            <div style="margin-top:0.5rem"><button onclick="downloadPdf('/api/admin/quotes/${q.id}/pdf', '${q.quote_number}.pdf')" class="btn btn-sm btn-outline">PDF</button></div>
-                                        </div>`).join('') : '<div class="empty-state"><p>Aucun devis.</p></div>';
+                                            <div class="cdp-item">
+                                                <div class="cdp-item-head"><div class="cdp-item-title">${q.quote_number} — ${q.title}</div><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></div>
+                                                <div class="cdp-item-meta">${fmt(q.amount_ttc)} TTC · Exp: ${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</div>
+                                                <div style="margin-top:0.5rem"><button onclick="downloadPdf('/api/admin/quotes/${q.id}/pdf', '${q.quote_number}.pdf')" class="btn btn-sm btn-outline">PDF</button></div>
+                                            </div>`).join('') : '<div class="empty-state"><p>Aucun devis.</p></div>';
             const cis = allInvoices.filter(i => i.client_id === clientId);
             document.getElementById('cdp-factures').innerHTML = cis.length ? cis.map(i => {
                 const ov = i.status === 'unpaid' && new Date(i.due_date) < new Date();
                 return `<div class="cdp-item">
-                                            <div class="cdp-item-head"><div class="cdp-item-title">${i.invoice_number} — ${i.title}</div><span class="badge badge-${ov ? 'overdue' : i.status}">${ov ? 'En retard' : statusLabel(i.status)}</span></div>
-                                            <div class="cdp-item-meta">${fmt(i.amount_ttc)} TTC · Échéance: ${i.due_date ? fmtDate(i.due_date) : '—'}</div>
-                                            <div style="display:flex;gap:0.4rem;margin-top:0.5rem">
-                                                <button onclick="downloadPdf('/api/admin/invoices/${i.id}/pdf', '${i.invoice_number}.pdf')" class="btn btn-sm btn-outline">PDF</button>
-                                                ${i.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${i.id})">Marquer payée</button>` : ''}
-                                            </div>
-                                        </div>`;
+                                                <div class="cdp-item-head"><div class="cdp-item-title">${i.invoice_number} — ${i.title}</div><span class="badge badge-${ov ? 'overdue' : i.status}">${ov ? 'En retard' : statusLabel(i.status)}</span></div>
+                                                <div class="cdp-item-meta">${fmt(i.amount_ttc)} TTC · Échéance: ${i.due_date ? fmtDate(i.due_date) : '—'}</div>
+                                                <div style="display:flex;gap:0.4rem;margin-top:0.5rem">
+                                                    <button onclick="downloadPdf('/api/admin/invoices/${i.id}/pdf', '${i.invoice_number}.pdf')" class="btn btn-sm btn-outline">PDF</button>
+                                                    ${i.status === 'unpaid' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${i.id})">Marquer payée</button>` : ''}
+                                                </div>
+                                            </div>`;
             }).join('') : '<div class="empty-state"><p>Aucune facture.</p></div>';
             await loadCdpMessages(clientId);
             showCdpTab('info');
@@ -4014,11 +4109,11 @@
             const msgs = thread?.messages || [];
             const list = document.getElementById('cdp-msg-list');
             list.innerHTML = msgs.length ? msgs.map(m => `
-                                        <div class="msg-row ${m.sender === 'client' ? 'msg-row-client' : 'msg-row-vnk'}">
-                                            <div style="font-size:0.7rem;color:var(--text-light);margin-bottom:0.12rem;font-weight:600">${m.sender === 'client' ? 'Client' : 'VNK Automatisation'}</div>
-                                            <div class="msg-bubble ${m.sender === 'client' ? 'msg-bubble-client' : 'msg-bubble-vnk'}">${m.content}${m.attachment_data ? (function () { var a = []; try { a = typeof m.attachment_data === 'string' ? JSON.parse(m.attachment_data) : m.attachment_data; } catch (e) { } return a.map(function (f) { return '<a href="data:' + f.type + ';base64,' + f.data + '" download="' + f.name + '" style="display:flex;align-items:center;gap:0.3rem;margin-top:0.35rem;font-size:0.73rem;font-weight:600;color:inherit;opacity:0.9"><svg width=\'11\' height=\'11\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\'><path d=\'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\'/><polyline points=\'7 10 12 15 17 10\'/><line x1=\'12\' y1=\'15\' x2=\'12\' y2=\'3\'/></svg>' + f.name + '</a>'; }).join(''); })() : ''}</div>
-                                            <div style="font-size:0.68rem;color:var(--text-light);margin-top:0.2rem">${new Date(m.created_at).toLocaleString('fr-CA')}</div>
-                                        </div>`) : '<p style="color:var(--text-light);font-size:0.85rem;text-align:center;padding:1rem">Aucun message échangé.</p>';
+                                            <div class="msg-row ${m.sender === 'client' ? 'msg-row-client' : 'msg-row-vnk'}">
+                                                <div style="font-size:0.7rem;color:var(--text-light);margin-bottom:0.12rem;font-weight:600">${m.sender === 'client' ? 'Client' : 'VNK Automatisation'}</div>
+                                                <div class="msg-bubble ${m.sender === 'client' ? 'msg-bubble-client' : 'msg-bubble-vnk'}">${m.content}${m.attachment_data ? (function () { var a = []; try { a = typeof m.attachment_data === 'string' ? JSON.parse(m.attachment_data) : m.attachment_data; } catch (e) { } return a.map(function (f) { return '<a href="data:' + f.type + ';base64,' + f.data + '" download="' + f.name + '" style="display:flex;align-items:center;gap:0.3rem;margin-top:0.35rem;font-size:0.73rem;font-weight:600;color:inherit;opacity:0.9"><svg width=\'11\' height=\'11\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\'><path d=\'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\'/><polyline points=\'7 10 12 15 17 10\'/><line x1=\'12\' y1=\'15\' x2=\'12\' y2=\'3\'/></svg>' + f.name + '</a>'; }).join(''); })() : ''}</div>
+                                                <div style="font-size:0.68rem;color:var(--text-light);margin-top:0.2rem">${new Date(m.created_at).toLocaleString('fr-CA')}</div>
+                                            </div>`) : '<p style="color:var(--text-light);font-size:0.85rem;text-align:center;padding:1rem">Aucun message échangé.</p>';
             setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
         }
 
@@ -4106,6 +4201,9 @@
 
         // RENDER TABLES
         function renderTable(name) {
+            // Ne pas re-render si un menu ⋯ est ouvert
+            const openMenu = document.querySelector('[id^="cmenu-"][style*="display: block"],[id^="cmenu-"][style*="display:block"]');
+            if (openMenu) return;
             const s = tState[name];
             let list;
             if (name === 'payments') list = [...allInvoices];
@@ -4134,41 +4232,41 @@
             const tl = { pdf: 'PDF', docx: 'Word', zip: 'ZIP', other: 'Fichier' };
             if (!paged.length) { tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-light);padding:2.5rem">Aucun résultat.</td></tr>`; }
             else if (name === 'mandates') tbody.innerHTML = paged.map(m => `<tr>
-                                        <td><strong>${m.client_name}</strong>${m.company_name ? `<br><span style="font-size:0.73rem;color:var(--text-light)">${m.company_name}</span>` : ''}</td>
-                                        <td>${m.title}${m.notes ? `<br><span style="font-size:0.73rem;color:var(--text-light);font-style:italic">${m.notes}</span>` : ''}</td>
-                                        <td>${svc[m.service_type] || m.service_type || '—'}</td>
-                                        <td><span class="badge badge-${m.status}">${statusLabel(m.status)}</span></td>
-                                        <td><div style="display:flex;align-items:center;gap:0.5rem"><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${m.progress || 0}%;background:linear-gradient(90deg,var(--primary),var(--secondary));border-radius:3px"></div></div><span style="font-size:0.73rem;color:var(--text-light)">${m.progress || 0}%</span></div></td>
-                                        <td>${m.start_date ? fmtDate(m.start_date) : '—'}</td>
-                                        <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-m-${m.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-m-${m.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${m.title.substring(0, 20)}</div><button onclick="closeAllRowMenus();var _m=allMandates.find(function(x){return x.id===${m.id}});if(_m)openEditMandate(_m.id,_m.status,_m.progress||0,_m.notes||'')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button><div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();deleteMandate(${m.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
-                                    </tr>`).join('');
+                                            <td><strong>${m.client_name}</strong>${m.company_name ? `<br><span style="font-size:0.73rem;color:var(--text-light)">${m.company_name}</span>` : ''}</td>
+                                            <td>${m.title}${m.notes ? `<br><span style="font-size:0.73rem;color:var(--text-light);font-style:italic">${m.notes}</span>` : ''}</td>
+                                            <td>${svc[m.service_type] || m.service_type || '—'}</td>
+                                            <td><span class="badge badge-${m.status}">${statusLabel(m.status)}</span></td>
+                                            <td><div style="display:flex;align-items:center;gap:0.5rem"><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${m.progress || 0}%;background:linear-gradient(90deg,var(--primary),var(--secondary));border-radius:3px"></div></div><span style="font-size:0.73rem;color:var(--text-light)">${m.progress || 0}%</span></div></td>
+                                            <td>${m.start_date ? fmtDate(m.start_date) : '—'}</td>
+                                            <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-m-${m.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-m-${m.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${m.title.substring(0, 20)}</div><button onclick="closeAllRowMenus();var _m=allMandates.find(function(x){return x.id===${m.id}});if(_m)openEditMandate(_m.id,_m.status,_m.progress||0,_m.notes||'')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button><div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();deleteMandate(${m.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
+                                        </tr>`).join('');
             else if (name === 'quotes') tbody.innerHTML = paged.map(q => `<tr>
-                                        <td><strong>${q.quote_number}</strong></td><td>${q.client_name}</td><td>${q.title}</td>
-                                        <td>${fmt(q.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(q.amount_ttc)}</td>
-                                        <td><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></td>
-                                        <td>${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</td>
-                                        <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-q-${q.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-q-${q.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${q.quote_number}</div><button onclick="closeAllRowMenus();downloadPdf('/api/admin/quotes/${q.id}/pdf','${q.quote_number}.pdf')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>PDF</button><button onclick="closeAllRowMenus();openEditQuote(${q.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button>${q.status === 'pending' ? `<div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();acceptQuote(${q.id},'${q.quote_number}')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--success)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Accepter</button><button onclick="closeAllRowMenus();expireQuote(${q.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--warning)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expirer</button>` : ''}<div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();deleteQuote(${q.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
-                                    </tr>`).join('');
+                                            <td><strong>${q.quote_number}</strong></td><td>${q.client_name}</td><td>${q.title}</td>
+                                            <td>${fmt(q.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(q.amount_ttc)}</td>
+                                            <td><span class="badge badge-${q.status}">${statusLabel(q.status)}</span></td>
+                                            <td>${q.expiry_date ? fmtDate(q.expiry_date) : '—'}</td>
+                                            <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-q-${q.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-q-${q.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${q.quote_number}</div><button onclick="closeAllRowMenus();downloadPdf('/api/admin/quotes/${q.id}/pdf','${q.quote_number}.pdf')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>PDF</button><button onclick="closeAllRowMenus();openEditQuote(${q.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button>${q.status === 'pending' ? `<div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();acceptQuote(${q.id},'${q.quote_number}')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--success)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Accepter</button><button onclick="closeAllRowMenus();expireQuote(${q.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--warning)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expirer</button>` : ''}<div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();deleteQuote(${q.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
+                                        </tr>`).join('');
             else if (name === 'invoices' || name === 'payments') tbody.innerHTML = paged.map(inv => {
                 const ov = inv.status === 'unpaid' && new Date(inv.due_date) < new Date();
                 return `<tr>
-                                            <td><strong>${inv.invoice_number}</strong></td><td>${inv.client_name}</td><td>${inv.title || ''}</td>
-                                            <td>${fmt(inv.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(inv.amount_ttc)}</td>
-                                            <td><span class="badge badge-${ov ? 'overdue' : inv.status}">${ov ? 'En retard' : statusLabel(inv.status)}</span></td>
-                                            <td>${inv.due_date ? fmtDate(inv.due_date) : '—'}</td>
-                                            <td>${inv.paid_at ? fmtDate(inv.paid_at) : '—'}</td>
-                                            <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-i-${inv.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-i-${inv.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${inv.invoice_number}</div><button onclick="closeAllRowMenus();downloadPdf('/api/admin/invoices/${inv.id}/pdf','${inv.invoice_number}.pdf')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>PDF</button><button onclick="closeAllRowMenus();openEditInvoice(${inv.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button>${inv.status === 'unpaid' ? `<div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();markPaid(${inv.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--success)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Marquer payée</button>` : ''}<div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();deleteInvoice(${inv.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
-                                        </tr>`;
+                                                <td><strong>${inv.invoice_number}</strong></td><td>${inv.client_name}</td><td>${inv.title || ''}</td>
+                                                <td>${fmt(inv.amount_ht)}</td><td style="font-weight:700;color:var(--primary)">${fmt(inv.amount_ttc)}</td>
+                                                <td><span class="badge badge-${ov ? 'overdue' : inv.status}">${ov ? 'En retard' : statusLabel(inv.status)}</span></td>
+                                                <td>${inv.due_date ? fmtDate(inv.due_date) : '—'}</td>
+                                                <td>${inv.paid_at ? fmtDate(inv.paid_at) : '—'}</td>
+                                                <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-i-${inv.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-i-${inv.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${inv.invoice_number}</div><button onclick="closeAllRowMenus();downloadPdf('/api/admin/invoices/${inv.id}/pdf','${inv.invoice_number}.pdf')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>PDF</button><button onclick="closeAllRowMenus();openEditInvoice(${inv.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button>${inv.status === 'unpaid' ? `<div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();markPaid(${inv.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--success)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Marquer payée</button>` : ''}<div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();deleteInvoice(${inv.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
+                                            </tr>`;
             }).join('');
             else if (name === 'documents') tbody.innerHTML = paged.map(d => `<tr>
-                                        <td>${d.client_name}</td><td><strong title="${d.title}">${d.title.length > 40 ? d.title.substring(0, 40) + '…' : d.title}</strong>${d.description ? `<br><span style="font-size:0.73rem;color:var(--text-light)">${d.description.substring(0, 60)}${d.description.length > 60 ? '…' : ''}</span>` : ''}</td>
-                                        <td>
-                                            <span class="badge badge-active">${tl[d.file_type] || d.file_type || 'PDF'}</span>
-                                            <span class="badge" style="background:var(--light-blue);color:var(--primary);margin-left:4px">${d.category || 'Autres documents'}</span>
-                                        </td>
-                                        <td>${d.mandate_title || '—'}</td><td>${fmtDate(d.created_at)}</td>
-                                        <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-doc-${d.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-doc-${d.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${d.title.substring(0, 22)}</div>${d.file_url ? `<button onclick="closeAllRowMenus();window.open('${d.file_url}','_blank')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Télécharger</button>` : ''}<button onclick="closeAllRowMenus();editDocument('${d.id}')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button><div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();deleteDocument(${d.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
-                                    </tr>`).join('');
+                                            <td>${d.client_name}</td><td><strong title="${d.title}">${d.title.length > 40 ? d.title.substring(0, 40) + '…' : d.title}</strong>${d.description ? `<br><span style="font-size:0.73rem;color:var(--text-light)">${d.description.substring(0, 60)}${d.description.length > 60 ? '…' : ''}</span>` : ''}</td>
+                                            <td>
+                                                <span class="badge badge-active">${tl[d.file_type] || d.file_type || 'PDF'}</span>
+                                                <span class="badge" style="background:var(--light-blue);color:var(--primary);margin-left:4px">${d.category || 'Autres documents'}</span>
+                                            </td>
+                                            <td>${d.mandate_title || '—'}</td><td>${fmtDate(d.created_at)}</td>
+                                            <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-doc-${d.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-doc-${d.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${d.title.substring(0, 22)}</div>${d.file_url ? `<button onclick="closeAllRowMenus();window.open('${d.file_url}','_blank')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Télécharger</button>` : ''}<button onclick="closeAllRowMenus();editDocument('${d.id}')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button><div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();deleteDocument(${d.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
+                                        </tr>`).join('');
             renderPag(name, total, s.p, pages, p => { s.p = p; if (window.VNKState) window.VNKState.save(name + '_page', p); renderTable(name); });
         }
 
@@ -4300,15 +4398,15 @@
                 const time = lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }) : '';
                 const hasUnread = (t.unread_count || 0) > 0;
                 return `<div onclick="showSection('messages');adminOpenThread(${t.client_id})" style="padding:0.6rem 0.75rem;cursor:pointer;border-bottom:1px solid var(--border);background:${hasUnread ? 'rgba(231,76,60,0.04)' : 'white'};transition:background 0.15s" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='${hasUnread ? 'rgba(231,76,60,0.04)' : 'white'}'">
-                                            <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:2px">
-                                                <span style="font-size:0.75rem;font-weight:${hasUnread ? '700' : '600'};color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px">${t.client_name}</span>
-                                                <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
-                                                    ${hasUnread ? `<span style="background:var(--error);color:white;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px">${t.unread_count}</span>` : ''}
-                                                    <span style="font-size:0.65rem;color:var(--text-light)">${time}</span>
+                                                <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:2px">
+                                                    <span style="font-size:0.75rem;font-weight:${hasUnread ? '700' : '600'};color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px">${t.client_name}</span>
+                                                    <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+                                                        ${hasUnread ? `<span style="background:var(--error);color:white;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px">${t.unread_count}</span>` : ''}
+                                                        <span style="font-size:0.65rem;color:var(--text-light)">${time}</span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div style="font-size:0.72rem;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${preview || 'Aucun message'}</div>
-                                        </div>`;
+                                                <div style="font-size:0.72rem;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${preview || 'Aucun message'}</div>
+                                            </div>`;
             }).join('');
         }
 
@@ -4375,24 +4473,24 @@
                 const lastTime = lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }) : '';
                 const isActive = _adminCurrentClient === t.client_id;
                 return `<div onclick="adminOpenThread(${t.client_id})"
-                                            style="padding:0.85rem 0.75rem;border-radius:10px;cursor:pointer;margin-bottom:2px;background:${isActive ? 'rgba(27,79,138,0.1)' : 'transparent'};border-left:${isActive ? '3px solid #1B4F8A' : '3px solid transparent'};transition:all 0.15s"
-                                            onmouseenter="if(${!isActive}) this.style.background='rgba(0,0,0,0.04)'"
-                                            onmouseleave="if(${!isActive}) this.style.background='transparent'">
-                                            <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.25rem">
-                                                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1B4F8A,#2E75B6);color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0">
-                                                    ${t.client_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                                                style="padding:0.85rem 0.75rem;border-radius:10px;cursor:pointer;margin-bottom:2px;background:${isActive ? 'rgba(27,79,138,0.1)' : 'transparent'};border-left:${isActive ? '3px solid #1B4F8A' : '3px solid transparent'};transition:all 0.15s"
+                                                onmouseenter="if(${!isActive}) this.style.background='rgba(0,0,0,0.04)'"
+                                                onmouseleave="if(${!isActive}) this.style.background='transparent'">
+                                                <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.25rem">
+                                                    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1B4F8A,#2E75B6);color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0">
+                                                        ${t.client_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                    <div style="flex:1;min-width:0">
+                                                        <div style="font-size:0.85rem;font-weight:${t.unread_count ? '700' : '600'};color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.client_name}</div>
+                                                        <div style="font-size:0.72rem;color:#64748B">${t.company_name || ''}</div>
+                                                    </div>
+                                                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
+                                                        <span style="font-size:0.68rem;color:#94A3B8">${lastTime}</span>
+                                                        ${t.unread_count ? `<span style="background:#E74C3C;color:white;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center">${t.unread_count}</span>` : ''}
+                                                    </div>
                                                 </div>
-                                                <div style="flex:1;min-width:0">
-                                                    <div style="font-size:0.85rem;font-weight:${t.unread_count ? '700' : '600'};color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.client_name}</div>
-                                                    <div style="font-size:0.72rem;color:#64748B">${t.company_name || ''}</div>
-                                                </div>
-                                                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
-                                                    <span style="font-size:0.68rem;color:#94A3B8">${lastTime}</span>
-                                                    ${t.unread_count ? `<span style="background:#E74C3C;color:white;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center">${t.unread_count}</span>` : ''}
-                                                </div>
-                                            </div>
-                                            <div style="font-size:0.78rem;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:38px">${lastText}</div>
-                                        </div>`;
+                                                <div style="font-size:0.78rem;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:38px">${lastText}</div>
+                                            </div>`;
             }).join('');
         }
 
@@ -4458,10 +4556,10 @@
                 if (fileMatch) {
                     const [, name, size, url] = fileMatch;
                     bubble = `<a href="${url}" download="${name}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.15);border-radius:8px;border:1px solid rgba(255,255,255,0.2);text-decoration:none;color:inherit;font-size:0.82rem;font-weight:600">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                                ${name} <span style="opacity:0.7;font-weight:400">${size}</span>
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                            </a>`;
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                                    ${name} <span style="opacity:0.7;font-weight:400">${size}</span>
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                </a>`;
                 } else if (imgMatch) {
                     const [, name, url] = imgMatch;
                     bubble = `<a href="${url}" target="_blank"><img src="${url}" alt="${name}" style="max-width:220px;max-height:180px;border-radius:8px;display:block;cursor:pointer"></a>`;
@@ -4474,9 +4572,9 @@
                     bubble += atts.map(a => {
                         const dataUrl = 'data:' + (a.type || 'application/octet-stream') + ';base64,' + a.data;
                         return `<a href="${dataUrl}" download="${a.name}" style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,0.15);text-decoration:none;color:inherit;font-size:0.75rem;font-weight:600">
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                                    ${a.name}
-                                                </a>`;
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                        ${a.name}
+                                                    </a>`;
                     }).join('');
                 }
 
@@ -4485,25 +4583,70 @@
                 const align = isClient ? 'flex-start' : 'flex-end';
                 const radius = isClient ? '4px 14px 14px 14px' : '14px 4px 14px 14px';
 
+                // Tag canal (email, chat, both, ou email_received)
+                const channelTag = m.channel === 'email'
+                    ? '<span style="font-size:0.6rem;background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px">✉ Email</span>'
+                    : m.channel === 'both'
+                        ? '<span style="font-size:0.6rem;background:#EDE9FE;color:#4C1D95;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px">✉ + Chat</span>'
+                        : m.channel === 'email_received'
+                            ? '<span style="font-size:0.6rem;background:#DBEAFE;color:#1E3A8A;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px">✉ Email reçu</span>'
+                            : '<span style="font-size:0.6rem;background:#F0FDF4;color:#14532D;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px">💬 Chat</span>';
+
                 return `<div style="display:flex;flex-direction:column;align-items:${align};gap:2px">
-                                            <div style="font-size:0.68rem;color:#94A3B8;font-weight:600;padding:0 4px">${isClient ? thread.client_name : 'VNK Automatisation'}</div>
-                                            <div style="max-width:75%;padding:0.65rem 1rem;border-radius:${radius};font-size:0.85rem;line-height:1.55;background:${bg};color:${color}">${bubble}</div>
-                                            <div style="font-size:0.65rem;color:#94A3B8;padding:0 4px">${time}</div>
-                                        </div>`;
+                                                <div style="font-size:0.68rem;color:#94A3B8;font-weight:600;padding:0 4px;display:flex;align-items:center;gap:2px">
+                                                    ${isClient ? thread.client_name : 'VNK Automatisation'}
+                                                    ${channelTag}
+                                                </div>
+                                                <div style="max-width:75%;padding:0.65rem 1rem;border-radius:${radius};font-size:0.85rem;line-height:1.55;background:${bg};color:${color}">${bubble}</div>
+                                                <div style="font-size:0.65rem;color:#94A3B8;padding:0 4px">${time}</div>
+                                            </div>`;
             }).join('');
+        }
+
+        let _sendMode = 'chat'; // 'chat' | 'email' | 'both'
+
+        function setSendMode(mode) {
+            _sendMode = mode;
+            const modes = ['chat', 'email', 'both'];
+            modes.forEach(m => {
+                const btn = document.getElementById('send-mode-' + m);
+                if (btn) {
+                    btn.style.background = m === mode ? '#1B4F8A' : 'transparent';
+                    btn.style.color = m === mode ? 'white' : '#64748B';
+                }
+            });
+            const hint = document.getElementById('send-mode-hint');
+            if (hint) {
+                hint.textContent = mode === 'chat' ? '→ Portail client uniquement'
+                    : mode === 'email' ? '→ Email uniquement (pas dans le chat)'
+                        : '→ Email + Portail client';
+            }
+            const input = document.getElementById('admin-chat-input');
+            if (input) {
+                input.placeholder = mode === 'email'
+                    ? 'Rédiger un email...'
+                    : mode === 'both'
+                        ? 'Message envoyé par email ET dans le chat...'
+                        : 'Répondre en tant que VNK...';
+            }
         }
 
         async function adminChatSend() {
             const input = document.getElementById('admin-chat-input');
             const content = input?.value.trim();
             if (!content || !_adminCurrentClient) return;
-            const d = await api('/messages/' + _adminCurrentClient, 'POST', { content });
+
+            const payload = { content, channel: _sendMode };
+            const d = await api('/messages/' + _adminCurrentClient, 'POST', payload);
             if (d.success) {
                 input.value = '';
                 input.style.height = 'auto';
                 await loadMessages();
                 adminOpenThread(_adminCurrentClient);
-                showToast('Message envoyé', 'success');
+                const modeLabel = _sendMode === 'email' ? 'Email envoyé'
+                    : _sendMode === 'both' ? 'Email + message envoyés'
+                        : 'Message envoyé';
+                showToast(modeLabel, 'success');
             } else showToast('Erreur: ' + (d.message || ''), 'error');
         }
 
@@ -4754,6 +4897,9 @@
         function filterContracts() { if (tState.contracts) tState.contracts.p = 1; renderContracts(); }
         function setContractFilter(f, btn) { contractFilter = f; btn.closest('.filter-tabs').querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderContracts(); }
         function renderContracts() {
+            // Ne pas re-render si un menu ⋯ est ouvert — évite de fermer le dropdown pendant le polling
+            const openMenu = document.querySelector('[id^="cmenu-"][style*="display: block"], [id^="cmenu-"][style*="display:block"]');
+            if (openMenu) return;
             const search = (document.getElementById('contracts-search')?.value || '').toLowerCase();
             let list = [...allContracts];
             if (contractFilter !== 'all') list = list.filter(c => c.status === contractFilter);
@@ -4771,52 +4917,52 @@
             const sigPillSigned = `<span style="display:inline-flex;align-items:center;gap:4px;background:#EAF3DE;color:#27500A;font-size:0.7rem;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Signé</span>`;
             const sigPillPending = `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--bg);color:var(--text-light);font-size:0.7rem;padding:3px 9px;border-radius:20px;border:1px solid var(--border);white-space:nowrap">En attente</span>`;
             tbody.innerHTML = paged.map(c => {
-                // Sig. client : basé sur c.signed_at (signature Dropbox/client) ou status='signed'
-                const clientSigned = c.signed_at || c.status === 'signed';
-                // Sig. admin : basé sur c.admin_signed_at (nouveau champ) ou status='signed' sans signed_at distinct
-                const adminSigned = c.admin_signed_at || (c.status === 'signed' && c.signed_at);
+                // Sig. client : SEULEMENT si signed_at est rempli (signature canvas portail)
+                const clientSigned = !!c.signed_at;
+                // Sig. admin : SEULEMENT si admin_signed_at est rempli (signature canvas admin)
+                const adminSigned = !!c.admin_signed_at;
                 const clientPill = clientSigned ? sigPillSigned : sigPillPending;
                 const adminPill = adminSigned
                     ? sigPillSigned
                     : `<span onclick="closeContractMenus();previewContract(${c.id})" style="display:inline-flex;align-items:center;gap:4px;background:var(--bg);color:var(--primary);font-size:0.7rem;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid var(--primary);white-space:nowrap;cursor:pointer" title="Prévisualiser et signer"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Signer →</span>`;
                 return `<tr>
-                                <td><strong style="font-size:0.82rem;white-space:nowrap">${c.contract_number}</strong></td>
-                                <td style="font-size:0.83rem;white-space:nowrap">${c.client_name}<br><span style="font-size:0.7rem;color:var(--text-light)">${c.company_name || ''}</span></td>
-                                <td style="font-size:0.83rem">${c.title}</td>
-                                <td style="text-align:center">${clientPill}</td>
-                                <td style="text-align:center">${adminPill}</td>
-                                <td style="font-size:0.78rem;white-space:nowrap;color:var(--text-light)">${fmtDate(c.created_at)}</td>
-                                <td style="text-align:right"><div class="td-actions" style="position:relative;justify-content:flex-end">
-                                    <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleContractMenu(${c.id},this)" style="padding:0.35rem 0.5rem;font-size:1rem" title="Plus d'options">⋯</button>
-                                    <div id="cmenu-${c.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:200px;z-index:9999;padding:0.35rem 0">
-                                        <div style="padding:0.35rem 0.85rem;font-size:0.68rem;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.04em">Contrat ${c.contract_number}</div>
-                                        <button onclick="closeContractMenus();previewContract(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                            Prévisualiser le contrat
-                                        </button>
-                                        ${!adminSigned ? `<button onclick="closeContractMenus();signContractAdmin(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--success)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                            Signer (ma signature)
-                                        </button>` : `<div style="padding:0.55rem 0.85rem;font-size:0.83rem;display:flex;align-items:center;gap:0.6rem;color:var(--success);opacity:0.7">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                            Signé par vous
-                                        </div>`}
-                                        <button onclick="closeContractMenus();sendContractForSignature(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--primary)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                                            Envoyer au client
-                                        </button>
-                                        <button onclick="closeContractMenus();openEditContract(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                            Modifier
-                                        </button>
-                                        <div style="height:1px;background:var(--border);margin:0.3rem 0.75rem"></div>
-                                        <button onclick="closeContractMenus();deleteContract(${c.id},'${c.contract_number}')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-                                            Supprimer
-                                        </button>
-                                    </div>
-                                </div></td>
-                            </tr>`;
+                                    <td><strong style="font-size:0.82rem;white-space:nowrap">${c.contract_number}</strong></td>
+                                    <td style="font-size:0.83rem;white-space:nowrap">${c.client_name}<br><span style="font-size:0.7rem;color:var(--text-light)">${c.company_name || ''}</span></td>
+                                    <td style="font-size:0.83rem">${c.title}</td>
+                                    <td style="text-align:center">${clientPill}</td>
+                                    <td style="text-align:center">${adminPill}</td>
+                                    <td style="font-size:0.78rem;white-space:nowrap;color:var(--text-light)">${fmtDate(c.created_at)}</td>
+                                    <td style="text-align:right"><div class="td-actions" style="position:relative;justify-content:flex-end">
+                                        <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleContractMenu(${c.id},this)" style="padding:0.35rem 0.5rem;font-size:1rem" title="Plus d'options">⋯</button>
+                                        <div id="cmenu-${c.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:200px;z-index:9999;padding:0.35rem 0">
+                                            <div style="padding:0.35rem 0.85rem;font-size:0.68rem;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.04em">Contrat ${c.contract_number}</div>
+                                            <button onclick="closeContractMenus();previewContract(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                Prévisualiser le contrat
+                                            </button>
+                                            ${!adminSigned ? `<button onclick="closeContractMenus();signContractAdmin(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--success)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                                Signer (ma signature)
+                                            </button>` : `<div style="padding:0.55rem 0.85rem;font-size:0.83rem;display:flex;align-items:center;gap:0.6rem;color:var(--success);opacity:0.7">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                                Signé par vous
+                                            </div>`}
+                                            <button onclick="closeContractMenus();sendContractForSignature(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--primary)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                                Envoyer au client
+                                            </button>
+                                            <button onclick="closeContractMenus();openEditContract(${c.id})" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--text)" onmouseenter="this.style.background='var(--light-blue)'" onmouseleave="this.style.background='none'">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                Modifier
+                                            </button>
+                                            <div style="height:1px;background:var(--border);margin:0.3rem 0.75rem"></div>
+                                            <button onclick="closeContractMenus();deleteContract(${c.id},'${c.contract_number}')" style="width:100%;text-align:left;padding:0.55rem 0.85rem;font-size:0.83rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.6rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                                                Supprimer
+                                            </button>
+                                        </div>
+                                    </div></td>
+                                </tr>`;
             }).join('');
             renderPag('contracts', total, tState.contracts.p, pages, p => { tState.contracts.p = p; renderContracts(); });
         }
@@ -4829,6 +4975,7 @@
                 mandate_id: v('nct-mandate') ? parseInt(v('nct-mandate')) : null,
                 quote_id: v('nct-quote') ? parseInt(v('nct-quote')) : null,
                 title: title,
+                status: v('nct-status') || 'pending',
                 content: v('nct-content') || null,
                 file_url: v('nct-url') || null
             });
@@ -4852,10 +4999,7 @@
         async function sendContractForSignature(id) {
             const c = allContracts.find(x => x.id === id);
             if (!c) return;
-            if (!c.file_url) {
-                showToast('Ajoutez un lien vers le fichier contrat (URL) avant de continuer.', 'error');
-                return;
-            }
+            // Plus besoin de file_url — le PDF est généré automatiquement via /api/admin/contracts/:id/pdf
             var existing = document.getElementById('hellosign-modal');
             if (existing) existing.remove();
 
@@ -4902,7 +5046,7 @@
 
             var info = document.createElement('div');
             info.style.cssText = 'background:var(--light-blue);border-radius:8px;padding:0.85rem;font-size:0.82rem;color:var(--primary);margin-top:0.5rem;line-height:1.6';
-            info.innerHTML = '📄 <strong>' + c.title + '</strong><br><a href="' + c.file_url + '" target="_blank" style="color:var(--primary)">Voir le fichier ↗</a><br><span style="font-size:0.75rem;color:var(--text-light)">Le client recevra un courriel avec un lien de signature sécurisé via HelloSign/Dropbox Sign.</span>';
+            info.innerHTML = '📄 <strong>' + c.title + '</strong><br><a href="/api/admin/contracts/' + c.id + '/pdf" target="_blank" style="color:var(--primary)">Voir le PDF ↗</a><br><span style="font-size:0.75rem;color:var(--text-light)">Le client recevra un courriel avec un lien de signature sécurisé via HelloSign/Dropbox Sign.</span>';
 
             body.appendChild(g1); body.appendChild(g2); body.appendChild(g3); body.appendChild(info);
 
@@ -4962,15 +5106,15 @@
             const sLabels = { open: 'Ouvert', in_progress: 'En cours', resolved: 'Résolu', closed: 'Fermé' };
             if (!paged.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun litige.</td></tr>'; }
             else tbody.innerHTML = paged.map(d => `<tr>
-                                        <td><strong>${d.client_name}</strong><br><span style="font-size:0.73rem;color:var(--text-light)">${d.company_name || ''}</span></td>
-                                        <td><div style="font-weight:600">${d.title}</div>${d.resolution ? `<div style="font-size:0.73rem;color:var(--text-light);font-style:italic;margin-top:2px">${d.resolution}</div>` : ''}</td>
-                                        <td><span style="font-size:0.72rem;font-weight:700;color:${pColors[d.priority] || 'var(--text-light)'}">${pLabels[d.priority] || d.priority}</span></td>
-                                        <td><span class="badge ${sColors[d.status] || 'badge-expired'}">${sLabels[d.status] || d.status}</span></td>
-                                        <td>${d.invoice_number || '—'}</td>
-                                        <td>${fmtDate(d.opened_at)}</td>
-                                        <td style="color:var(--success)">${d.resolved_at ? fmtDate(d.resolved_at) : '—'}</td>
-                                        <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-disp-${d.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-disp-${d.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${d.title.substring(0, 22)}</div>${d.status !== 'resolved' && d.status !== 'closed' ? `<button onclick="closeAllRowMenus();openResolveDispute(${d.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--primary)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Traiter / Résoudre</button><div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div>` : ''}<button onclick="closeAllRowMenus();deleteDispute(${d.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
-                                    </tr>`).join('');
+                                            <td><strong>${d.client_name}</strong><br><span style="font-size:0.73rem;color:var(--text-light)">${d.company_name || ''}</span></td>
+                                            <td><div style="font-weight:600">${d.title}</div>${d.resolution ? `<div style="font-size:0.73rem;color:var(--text-light);font-style:italic;margin-top:2px">${d.resolution}</div>` : ''}</td>
+                                            <td><span style="font-size:0.72rem;font-weight:700;color:${pColors[d.priority] || 'var(--text-light)'}">${pLabels[d.priority] || d.priority}</span></td>
+                                            <td><span class="badge ${sColors[d.status] || 'badge-expired'}">${sLabels[d.status] || d.status}</span></td>
+                                            <td>${d.invoice_number || '—'}</td>
+                                            <td>${fmtDate(d.opened_at)}</td>
+                                            <td style="color:var(--success)">${d.resolved_at ? fmtDate(d.resolved_at) : '—'}</td>
+                                            <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-disp-${d.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-disp-${d.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${d.title.substring(0, 22)}</div>${d.status !== 'resolved' && d.status !== 'closed' ? `<button onclick="closeAllRowMenus();openResolveDispute(${d.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--primary)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Traiter / Résoudre</button><div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div>` : ''}<button onclick="closeAllRowMenus();deleteDispute(${d.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
+                                        </tr>`).join('');
             renderPag('disputes', total, tState.disputes.p, pages, p => { tState.disputes.p = p; renderDisputes(); });
         }
         async function createDispute() { const d = await api('/disputes', 'POST', { client_id: v('nd2-client'), invoice_id: v('nd2-invoice') || null, mandate_id: v('nd2-mandate') || null, title: v('nd2-title'), description: v('nd2-desc'), priority: v('nd2-priority') }); if (d.success) { closeModal('modal-new-dispute'); loadDisputes(); showToast('Litige ouvert !', 'error'); } else showToast(d.message, 'error'); }
@@ -4990,13 +5134,13 @@
             const bc = { pending: 'badge-pending', processed: 'badge-paid', cancelled: 'badge-overdue' };
             if (!paged.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucun remboursement.</td></tr>'; }
             else tbody.innerHTML = paged.map(r => `<tr>
-                                        <td><strong>${r.refund_number}</strong></td><td>${r.client_name}</td>
-                                        <td style="font-size:0.82rem;max-width:200px">${r.reason}</td>
-                                        <td>${fmt(r.amount)}</td><td style="font-weight:700;color:var(--error)">${fmt(r.total_amount)}</td>
-                                        <td><span class="badge ${bc[r.status] || 'badge-expired'}">${sl[r.status] || r.status}</span></td>
-                                        <td>${fmtDate(r.created_at)}</td>
-                                        <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-r-${r.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-r-${r.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${r.refund_number}</div>${r.status === 'pending' ? `<button onclick="closeAllRowMenus();processRefund(${r.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--success)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Confirmer traitement</button><div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div>` : ''}<button onclick="closeAllRowMenus();deleteRefund(${r.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
-                                    </tr>`).join('');
+                                            <td><strong>${r.refund_number}</strong></td><td>${r.client_name}</td>
+                                            <td style="font-size:0.82rem;max-width:200px">${r.reason}</td>
+                                            <td>${fmt(r.amount)}</td><td style="font-weight:700;color:var(--error)">${fmt(r.total_amount)}</td>
+                                            <td><span class="badge ${bc[r.status] || 'badge-expired'}">${sl[r.status] || r.status}</span></td>
+                                            <td>${fmtDate(r.created_at)}</td>
+                                            <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-r-${r.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-r-${r.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${r.refund_number}</div>${r.status === 'pending' ? `<button onclick="closeAllRowMenus();processRefund(${r.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--success)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Confirmer traitement</button><div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div>` : ''}<button onclick="closeAllRowMenus();deleteRefund(${r.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
+                                        </tr>`).join('');
             renderPag('refunds', total_list, tState.refunds.p, pages, p => { tState.refunds.p = p; renderRefunds(); });
         }
         function calcRefundTaxes() { const ht = parseFloat(document.getElementById('nr-amount').value) || 0; const tps = ht * 0.05, tvq = ht * 0.09975; document.getElementById('nr-tax-preview').style.display = ht ? 'block' : 'none'; set('nr-ht', fmt(ht)); set('nr-tps', fmt(tps)); set('nr-tvq', fmt(tvq)); set('nr-ttc', fmt(ht + tps + tvq)); }
@@ -5021,13 +5165,13 @@
             const paged = list.slice((tState.expenses.p - 1) * _pp, tState.expenses.p * _pp);
             if (!paged.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2rem">Aucune dépense.</td></tr>'; renderPag('expenses', 0, 1, 1, () => { }); return; }
             tbody.innerHTML = paged.map(e => `<tr>
-                                        <td>${fmtDate(e.expense_date)}</td><td><strong>${e.title}</strong></td>
-                                        <td><span class="badge badge-active" style="background:rgba(46,117,182,0.1);color:var(--secondary)">${catLabels[e.category] || e.category || '—'}</span></td>
-                                        <td>${e.vendor || '—'}</td><td style="font-weight:700">${fmt(e.amount)}</td>
-                                        <td style="color:var(--success);font-weight:600">${fmt(e.tps_paid)}</td>
-                                        <td style="color:var(--success);font-weight:600">${fmt(e.tvq_paid)}</td>
-                                        <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-e-${e.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-e-${e.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${e.title.substring(0, 22)}</div>${e.receipt_url ? `<button onclick="closeAllRowMenus();window.open('${e.receipt_url}','_blank')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Voir reçu</button>` : ''}<button onclick="closeAllRowMenus();openEditExpense(${e.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button><div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();deleteExpense(${e.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
-                                    </tr>`).join('');
+                                            <td>${fmtDate(e.expense_date)}</td><td><strong>${e.title}</strong></td>
+                                            <td><span class="badge badge-active" style="background:rgba(46,117,182,0.1);color:var(--secondary)">${catLabels[e.category] || e.category || '—'}</span></td>
+                                            <td>${e.vendor || '—'}</td><td style="font-weight:700">${fmt(e.amount)}</td>
+                                            <td style="color:var(--success);font-weight:600">${fmt(e.tps_paid)}</td>
+                                            <td style="color:var(--success);font-weight:600">${fmt(e.tvq_paid)}</td>
+                                            <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-e-${e.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-e-${e.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${e.title.substring(0, 22)}</div>${e.receipt_url ? `<button onclick="closeAllRowMenus();window.open('${e.receipt_url}','_blank')" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Voir reçu</button>` : ''}<button onclick="closeAllRowMenus();openEditExpense(${e.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--text)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button><div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div><button onclick="closeAllRowMenus();deleteExpense(${e.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
+                                        </tr>`).join('');
             renderPag('expenses', total, tState.expenses.p, pages, p => { tState.expenses.p = p; renderExpenses(); });
         }
         async function createExpense() { const d = await api('/expenses', 'POST', { title: v('nex-title'), category: v('nex-category'), amount: parseFloat(v('nex-amount')), tps_paid: parseFloat(v('nex-tps')) || 0, tvq_paid: parseFloat(v('nex-tvq')) || 0, vendor: v('nex-vendor'), receipt_url: v('nex-receipt'), expense_date: v('nex-date'), notes: v('nex-notes') }); if (d.success) { closeModal('modal-new-expense'); loadExpenses(); showToast('Dépense enregistrée !', 'success'); } else showToast(d.message, 'error'); }
@@ -5052,13 +5196,13 @@
             yearInvoices.forEach(inv => { const q = Math.ceil((new Date(inv.paid_at).getMonth() + 1) / 3) - 1; qData[q].ht += parseFloat(inv.amount_ht || 0); qData[q].tps += parseFloat(inv.tps_amount || 0); qData[q].tvq += parseFloat(inv.tvq_amount || 0); });
             const tbody = document.getElementById('taxdecl-quarters-tbody');
             if (tbody) tbody.innerHTML = qData.map((q, i) => `<tr>
-                                        <td><strong>${year} — ${qNames[i]}</strong></td>
-                                        <td>${fmt(q.ht)}</td><td style="color:var(--primary);font-weight:700">${fmt(q.tps)}</td>
-                                        <td style="color:var(--primary);font-weight:700">${fmt(q.tvq)}</td>
-                                        <td style="color:var(--primary);font-weight:800">${fmt(q.tps + q.tvq)}</td>
-                                        <td>${q.ht > 0 ? '<span class="badge badge-active">Données disponibles</span>' : '<span class="badge badge-expired">Aucune donnée</span>'}</td>
-                                        <td>${q.ht > 0 ? `<button class="btn btn-sm btn-outline" onclick="quickCreateDecl(${year},${q.q},'${qNames[i]}')">Enregistrer</button>` : '—'}</td>
-                                    </tr>`).join('');
+                                            <td><strong>${year} — ${qNames[i]}</strong></td>
+                                            <td>${fmt(q.ht)}</td><td style="color:var(--primary);font-weight:700">${fmt(q.tps)}</td>
+                                            <td style="color:var(--primary);font-weight:700">${fmt(q.tvq)}</td>
+                                            <td style="color:var(--primary);font-weight:800">${fmt(q.tps + q.tvq)}</td>
+                                            <td>${q.ht > 0 ? '<span class="badge badge-active">Données disponibles</span>' : '<span class="badge badge-expired">Aucune donnée</span>'}</td>
+                                            <td>${q.ht > 0 ? `<button class="btn btn-sm btn-outline" onclick="quickCreateDecl(${year},${q.q},'${qNames[i]}')">Enregistrer</button>` : '—'}</td>
+                                        </tr>`).join('');
         }
         async function quickCreateDecl(year, quarter, label) {
             const starts = ['01-01', '04-01', '07-01', '10-01'];
@@ -5077,16 +5221,16 @@
             const paged = allTaxDecls.slice((tState.taxdecl.p - 1) * _pp, tState.taxdecl.p * _pp);
             if (!paged.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-light);padding:2rem">Aucune déclaration enregistrée.</td></tr>'; renderPag('taxdecl', 0, 1, 1, () => { }); return; }
             tbody.innerHTML = paged.map(d => `<tr>
-                                        <td><strong>${d.period_label}</strong></td>
-                                        <td>${d.period_type === 'quarterly' ? 'Trimestrielle' : 'Annuelle'}</td>
-                                        <td style="font-weight:700">${fmt(d.total_revenue_ht)}</td>
-                                        <td style="color:var(--primary);font-weight:700">${fmt(d.total_tps)}</td>
-                                        <td style="color:var(--primary);font-weight:700">${fmt(d.total_tvq)}</td>
-                                        <td style="color:var(--primary);font-weight:800">${fmt(d.total_taxes)}</td>
-                                        <td><span class="badge ${bc[d.status] || 'badge-expired'}">${sl[d.status] || d.status}</span></td>
-                                        <td>${d.submitted_at ? fmtDate(d.submitted_at) : '—'}</td>
-                                        <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-tdecl-${d.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-tdecl-${d.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${d.period_label}</div>${d.status === 'draft' ? `<button onclick="closeAllRowMenus();submitDecl(${d.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--success)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Soumettre</button><div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div>` : ''}<button onclick="closeAllRowMenus();deleteTaxDecl(${d.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
-                                    </tr>`).join('');
+                                            <td><strong>${d.period_label}</strong></td>
+                                            <td>${d.period_type === 'quarterly' ? 'Trimestrielle' : 'Annuelle'}</td>
+                                            <td style="font-weight:700">${fmt(d.total_revenue_ht)}</td>
+                                            <td style="color:var(--primary);font-weight:700">${fmt(d.total_tps)}</td>
+                                            <td style="color:var(--primary);font-weight:700">${fmt(d.total_tvq)}</td>
+                                            <td style="color:var(--primary);font-weight:800">${fmt(d.total_taxes)}</td>
+                                            <td><span class="badge ${bc[d.status] || 'badge-expired'}">${sl[d.status] || d.status}</span></td>
+                                            <td>${d.submitted_at ? fmtDate(d.submitted_at) : '—'}</td>
+                                            <td><div class="td-actions" style="position:relative"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();toggleRowMenu('rm-tdecl-${d.id}',this)" style="padding:0.3rem 0.5rem;font-size:1.1rem;line-height:1" title="Actions">⋯</button><div id="rm-tdecl-${d.id}" style="display:none;position:fixed;background:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:175px;z-index:9999;padding:0.3rem 0"><div style="padding:0.25rem 0.75rem;font-size:0.66rem;font-weight:700;color:var(--text-light);text-transform:uppercase">${d.period_label}</div>${d.status === 'draft' ? `<button onclick="closeAllRowMenus();submitDecl(${d.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--success)" onmouseenter="this.style.background='rgba(0,0,0,0.04)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Soumettre</button><div style="height:1px;background:var(--border);margin:0.3rem 0.5rem"></div>` : ''}<button onclick="closeAllRowMenus();deleteTaxDecl(${d.id})" style="width:100%;text-align:left;padding:0.5rem 0.75rem;font-size:0.8rem;border:none;background:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem;color:var(--error)" onmouseenter="this.style.background='rgba(231,76,60,0.06)'" onmouseleave="this.style.background='none'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Supprimer</button></div></div></td>
+                                        </tr>`).join('');
             renderPag('taxdecl', total, tState.taxdecl.p, pages, p => { tState.taxdecl.p = p; renderTaxDecls(); });
         }
         async function createTaxDecl() { const d = await api('/tax-declarations', 'POST', { period_type: v('ntd-type'), period_label: v('ntd-label'), period_start: v('ntd-start'), period_end: v('ntd-end'), notes: v('ntd-notes') }); if (d.success) { closeModal('modal-new-taxdecl'); loadTaxDecls(); showToast('Déclaration créée !', 'success'); } else showToast(d.message, 'error'); }
@@ -5116,6 +5260,8 @@
         function closeContractPreviewModal() {
             closeModal('modal-contract-preview');
             document.getElementById('modal-preview-iframe').src = '';
+            // Recharger les contrats pour refléter les changements de signature
+            loadContracts();
             // Réinitialiser le plein écran si actif
             const inner = document.getElementById('modal-contract-preview-inner');
             const overlay = document.getElementById('modal-contract-preview');
@@ -5161,8 +5307,8 @@
             document.getElementById('modal-preview-title').textContent = contract.contract_number + ' — ' + contract.title;
             document.getElementById('modal-preview-subtitle').textContent = contract.client_name + (contract.company_name ? ' · ' + contract.company_name : '');
 
-            const adminSigned = contract.admin_signed_at || (contract.status === 'signed' && contract.signed_at);
-            const clientSigned = contract.signed_at || contract.status === 'signed';
+            const adminSigned = !!contract.admin_signed_at;
+            const clientSigned = !!contract.signed_at;
             const statusEl = document.getElementById('modal-preview-status');
             statusEl.innerHTML = [
                 clientSigned ? '<span style="color:var(--success);font-weight:600">✓ Client signé</span>' : '<span style="color:var(--text-light)">Client : en attente</span>',
@@ -5233,60 +5379,60 @@
             overlay.id = 'admin-sign-overlay';
             overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;align-items:center;justify-content:center;padding:1rem';
             overlay.innerHTML = `
-                        <div style="background:white;border-radius:16px;width:100%;max-width:500px;box-shadow:0 24px 70px rgba(0,0,0,0.35);overflow:hidden;font-family:inherit">
-                            <div style="background:var(--primary-dark);padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between">
-                                <div>
-                                    <div style="font-size:0.95rem;font-weight:700;color:white">Apposer votre signature</div>
-                                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.7);margin-top:2px" id="admin-sign-subtitle"></div>
-                                </div>
-                                <button onclick="closeAdminSignModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center">×</button>
-                            </div>
-                            <div style="display:flex;border-bottom:1px solid var(--border);background:#f8fafc">
-                                <button id="sign-tab-draw" onclick="switchSignTab('draw')" style="flex:1;padding:0.65rem 0.5rem;border:none;background:white;border-bottom:2px solid var(--primary);font-size:0.82rem;font-weight:600;color:var(--primary);cursor:pointer;font-family:inherit">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px;vertical-align:-2px"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Dessiner
-                                </button>
-                                <button id="sign-tab-initials" onclick="switchSignTab('initials')" style="flex:1;padding:0.65rem 0.5rem;border:none;background:#f8fafc;border-bottom:2px solid transparent;font-size:0.82rem;font-weight:500;color:var(--text-light);cursor:pointer;font-family:inherit">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px;vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></svg>Initiales
-                                </button>
-                                <button id="sign-tab-name" onclick="switchSignTab('name')" style="flex:1;padding:0.65rem 0.5rem;border:none;background:#f8fafc;border-bottom:2px solid transparent;font-size:0.82rem;font-weight:500;color:var(--text-light);cursor:pointer;font-family:inherit">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px;vertical-align:-2px"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>Nom complet
-                                </button>
-                            </div>
-                            <div style="padding:1.25rem">
-                                <div id="sign-panel-draw">
-                                    <div style="font-size:0.8rem;color:var(--text-light);margin-bottom:0.6rem">Dessinez votre signature ci-dessous</div>
-                                    <div style="border:2px solid var(--primary);border-radius:10px;background:#fafcff;position:relative;touch-action:none;overflow:hidden">
-                                        <canvas id="admin-sign-canvas" width="450" height="150" style="display:block;width:100%;height:150px;cursor:crosshair"></canvas>
-                                        <button onclick="clearAdminCanvas()" style="position:absolute;top:6px;right:6px;background:white;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:0.72rem;color:var(--text-light);cursor:pointer;font-family:inherit">Effacer</button>
-                                        <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:70%;height:1px;background:#c8d8ea;pointer-events:none"></div>
+                            <div style="background:white;border-radius:16px;width:100%;max-width:500px;box-shadow:0 24px 70px rgba(0,0,0,0.35);overflow:hidden;font-family:inherit">
+                                <div style="background:var(--primary-dark);padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between">
+                                    <div>
+                                        <div style="font-size:0.95rem;font-weight:700;color:white">Apposer votre signature</div>
+                                        <div style="font-size:0.75rem;color:rgba(255,255,255,0.7);margin-top:2px" id="admin-sign-subtitle"></div>
                                     </div>
+                                    <button onclick="closeAdminSignModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center">×</button>
                                 </div>
-                                <div id="sign-panel-initials" style="display:none">
-                                    <div style="font-size:0.8rem;color:var(--text-light);margin-bottom:0.6rem">Entrez vos initiales (ex: YVK)</div>
-                                    <input id="sign-initials-input" type="text" maxlength="5" placeholder="YVK"
-                                        style="width:100%;font-size:2.5rem;font-family:'Georgia',serif;font-style:italic;text-align:center;padding:1rem;border:2px solid var(--primary);border-radius:10px;outline:none;color:var(--primary-dark);letter-spacing:0.2em;background:#fafcff"
-                                        oninput="this.value=this.value.toUpperCase()">
-                                </div>
-                                <div id="sign-panel-name" style="display:none">
-                                    <div style="font-size:0.8rem;color:var(--text-light);margin-bottom:0.6rem">Entrez votre nom complet</div>
-                                    <input id="sign-name-input" type="text" placeholder="Yan Verone Kengne"
-                                        style="width:100%;font-size:1.6rem;font-family:'Georgia',serif;font-style:italic;text-align:center;padding:1rem;border:2px solid var(--primary);border-radius:10px;outline:none;color:var(--primary-dark);background:#fafcff">
-                                </div>
-                            </div>
-                            <div style="padding:0.85rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:0.75rem">
-                                <div style="font-size:0.75rem;color:var(--text-light)">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-1px;margin-right:3px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                                    Signature légalement valide
-                                </div>
-                                <div style="display:flex;gap:0.6rem">
-                                    <button onclick="closeAdminSignModal()" class="btn btn-ghost">Annuler</button>
-                                    <button id="admin-sign-submit" onclick="submitAdminSignature()" class="btn btn-primary">
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                        Confirmer la signature
+                                <div style="display:flex;border-bottom:1px solid var(--border);background:#f8fafc">
+                                    <button id="sign-tab-draw" onclick="switchSignTab('draw')" style="flex:1;padding:0.65rem 0.5rem;border:none;background:white;border-bottom:2px solid var(--primary);font-size:0.82rem;font-weight:600;color:var(--primary);cursor:pointer;font-family:inherit">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px;vertical-align:-2px"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Dessiner
+                                    </button>
+                                    <button id="sign-tab-initials" onclick="switchSignTab('initials')" style="flex:1;padding:0.65rem 0.5rem;border:none;background:#f8fafc;border-bottom:2px solid transparent;font-size:0.82rem;font-weight:500;color:var(--text-light);cursor:pointer;font-family:inherit">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px;vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></svg>Initiales
+                                    </button>
+                                    <button id="sign-tab-name" onclick="switchSignTab('name')" style="flex:1;padding:0.65rem 0.5rem;border:none;background:#f8fafc;border-bottom:2px solid transparent;font-size:0.82rem;font-weight:500;color:var(--text-light);cursor:pointer;font-family:inherit">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:4px;vertical-align:-2px"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>Nom complet
                                     </button>
                                 </div>
-                            </div>
-                        </div>`;
+                                <div style="padding:1.25rem">
+                                    <div id="sign-panel-draw">
+                                        <div style="font-size:0.8rem;color:var(--text-light);margin-bottom:0.6rem">Dessinez votre signature ci-dessous</div>
+                                        <div style="border:2px solid var(--primary);border-radius:10px;background:#fafcff;position:relative;touch-action:none;overflow:hidden">
+                                            <canvas id="admin-sign-canvas" width="450" height="150" style="display:block;width:100%;height:150px;cursor:crosshair"></canvas>
+                                            <button onclick="clearAdminCanvas()" style="position:absolute;top:6px;right:6px;background:white;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:0.72rem;color:var(--text-light);cursor:pointer;font-family:inherit">Effacer</button>
+                                            <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:70%;height:1px;background:#c8d8ea;pointer-events:none"></div>
+                                        </div>
+                                    </div>
+                                    <div id="sign-panel-initials" style="display:none">
+                                        <div style="font-size:0.8rem;color:var(--text-light);margin-bottom:0.6rem">Entrez vos initiales (ex: YVK)</div>
+                                        <input id="sign-initials-input" type="text" maxlength="5" placeholder="YVK"
+                                            style="width:100%;font-size:2.5rem;font-family:'Georgia',serif;font-style:italic;text-align:center;padding:1rem;border:2px solid var(--primary);border-radius:10px;outline:none;color:var(--primary-dark);letter-spacing:0.2em;background:#fafcff"
+                                            oninput="this.value=this.value.toUpperCase()">
+                                    </div>
+                                    <div id="sign-panel-name" style="display:none">
+                                        <div style="font-size:0.8rem;color:var(--text-light);margin-bottom:0.6rem">Entrez votre nom complet</div>
+                                        <input id="sign-name-input" type="text" placeholder="Yan Verone Kengne"
+                                            style="width:100%;font-size:1.6rem;font-family:'Georgia',serif;font-style:italic;text-align:center;padding:1rem;border:2px solid var(--primary);border-radius:10px;outline:none;color:var(--primary-dark);background:#fafcff">
+                                    </div>
+                                </div>
+                                <div style="padding:0.85rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:0.75rem">
+                                    <div style="font-size:0.75rem;color:var(--text-light)">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-1px;margin-right:3px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                        Signature légalement valide
+                                    </div>
+                                    <div style="display:flex;gap:0.6rem">
+                                        <button onclick="closeAdminSignModal()" class="btn btn-ghost">Annuler</button>
+                                        <button id="admin-sign-submit" onclick="submitAdminSignature()" class="btn btn-primary">
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                            Confirmer la signature
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>`;
             document.body.appendChild(overlay);
             overlay._contractId = contractId;
             const contract = allContracts.find(c => c.id === contractId);
@@ -5312,9 +5458,39 @@
             if (mode === 'draw') requestAnimationFrame(() => { initAdminSignCanvas(); clearAdminCanvas(); });
         }
 
+        function initAdminSignCanvas() {
+            _adminSignCanvas = document.getElementById('admin-sign-canvas');
+            if (!_adminSignCanvas) return;
+            _adminSignCtx = _adminSignCanvas.getContext('2d');
+            _adminSignCtx.strokeStyle = '#0F2D52';
+            _adminSignCtx.lineWidth = 2.5;
+            _adminSignCtx.lineCap = 'round';
+            _adminSignCtx.lineJoin = 'round';
+            // Mouse events
+            _adminSignCanvas.onmousedown = (e) => { _adminSignDrawing = true; const r = _adminSignCanvas.getBoundingClientRect(); _adminSignLastX = (e.clientX - r.left) * (_adminSignCanvas.width / r.width); _adminSignLastY = (e.clientY - r.top) * (_adminSignCanvas.height / r.height); };
+            _adminSignCanvas.onmousemove = (e) => { if (!_adminSignDrawing) return; const r = _adminSignCanvas.getBoundingClientRect(); const x = (e.clientX - r.left) * (_adminSignCanvas.width / r.width); const y = (e.clientY - r.top) * (_adminSignCanvas.height / r.height); _adminSignCtx.beginPath(); _adminSignCtx.moveTo(_adminSignLastX, _adminSignLastY); _adminSignCtx.lineTo(x, y); _adminSignCtx.stroke(); _adminSignLastX = x; _adminSignLastY = y; };
+            _adminSignCanvas.onmouseup = () => { _adminSignDrawing = false; };
+            _adminSignCanvas.onmouseleave = () => { _adminSignDrawing = false; };
+            // Touch events
+            _adminSignCanvas.ontouchstart = (e) => { e.preventDefault(); const t = e.touches[0]; const r = _adminSignCanvas.getBoundingClientRect(); _adminSignDrawing = true; _adminSignLastX = (t.clientX - r.left) * (_adminSignCanvas.width / r.width); _adminSignLastY = (t.clientY - r.top) * (_adminSignCanvas.height / r.height); };
+            _adminSignCanvas.ontouchmove = (e) => { e.preventDefault(); if (!_adminSignDrawing) return; const t = e.touches[0]; const r = _adminSignCanvas.getBoundingClientRect(); const x = (t.clientX - r.left) * (_adminSignCanvas.width / r.width); const y = (t.clientY - r.top) * (_adminSignCanvas.height / r.height); _adminSignCtx.beginPath(); _adminSignCtx.moveTo(_adminSignLastX, _adminSignLastY); _adminSignCtx.lineTo(x, y); _adminSignCtx.stroke(); _adminSignLastX = x; _adminSignLastY = y; };
+            _adminSignCanvas.ontouchend = () => { _adminSignDrawing = false; };
+        }
+
+        function clearAdminCanvas() {
+            _adminSignCanvas = document.getElementById('admin-sign-canvas');
+            if (!_adminSignCanvas) return;
+            if (!_adminSignCtx) _adminSignCtx = _adminSignCanvas.getContext('2d');
+            _adminSignCtx.clearRect(0, 0, _adminSignCanvas.width, _adminSignCanvas.height);
+        }
+
         function closeAdminSignModal() {
+            // Fermer sans soumettre — jamais de signature automatique à la fermeture
             const o = document.getElementById('admin-sign-overlay');
-            if (o) o.style.display = 'none';
+            if (o) { o.style.display = 'none'; o.remove(); }
+            // Réinitialiser le mode
+            _adminSignMode = 'draw';
+            _adminSignDrawing = false;
         }
 
         async function submitAdminSignature() {
@@ -5344,13 +5520,15 @@
             if (!signatureData) return;
 
             const btn = document.getElementById('admin-sign-submit');
+            if (btn._submitting) return; // Anti double-soumission
+            btn._submitting = true;
             btn.disabled = true; btn.textContent = 'Envoi en cours...';
 
             const d = await api('/contracts/' + contractId + '/admin-sign', 'PUT', { signature_data: signatureData });
 
             if (d.success) {
                 closeAdminSignModal();
-                showToast('Contrat signé avec succès !', 'success');
+                showToast(d.message || 'Signature admin enregistrée !', 'success');
                 await loadContracts();
 
                 // Mettre à jour le panel prévisualisation si ouvert
@@ -5360,14 +5538,20 @@
                     const dlBtn = document.getElementById('modal-preview-download-btn');
                     if (signBtn) signBtn.style.display = 'none';
                     if (dlBtn) dlBtn.style.display = 'inline-flex';
+                    // Utiliser les données réelles du contrat retourné
+                    const updatedContract = d.contract;
+                    const clientSigned = updatedContract && !!updatedContract.signed_at;
+                    const adminSigned = updatedContract && !!updatedContract.admin_signed_at;
                     const statusEl = document.getElementById('modal-preview-status');
-                    if (statusEl) statusEl.innerHTML = '<span style="color:var(--success);font-weight:600">✓ Client signé</span><span style="margin:0 0.5rem;color:var(--border)">|</span><span style="color:var(--success);font-weight:600">✓ Admin signé</span>';
-                    showToast('Rechargement du PDF signé...', 'info');
+                    if (statusEl) statusEl.innerHTML =
+                        (clientSigned ? '<span style="color:var(--success);font-weight:600">✓ Client signé</span>' : '<span style="color:var(--text-light)">Client : en attente</span>') +
+                        '<span style="margin:0 0.5rem;color:var(--border)">|</span>' +
+                        (adminSigned ? '<span style="color:var(--success);font-weight:600">✓ Admin signé</span>' : '<span style="color:var(--warning);font-weight:600">Admin : non signé</span>');
                     await _loadContractPdfInIframe(contractId);
                 }
 
                 // Notifications workflow
-                pushNotif('contract', 'Contrat signé — client notifié', 'contracts');
+                pushNotif('contract', d.message || 'Signature admin enregistrée', 'contracts');
                 if (d.auto_invoice) {
                     pushNotif('invoice', 'Facture ' + d.auto_invoice.invoice_number + ' générée automatiquement — client notifié', 'invoices');
                     await loadInvoices();
@@ -5787,10 +5971,10 @@
             modal.id = 'confirm-modal';
             modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:1rem;';
             modal.innerHTML = `<div style="background:white;border-radius:14px;padding:2rem;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
-                                        <div style="font-weight:700;font-size:1rem;color:var(--primary);margin-bottom:1rem">Historique du contrat</div>
-                                        <div style="font-size:0.85rem;line-height:1.6">${lines}</div>
-                                        <div style="margin-top:1.5rem;text-align:right"><button style="padding:0.55rem 1.25rem;border-radius:8px;border:none;background:var(--primary);color:white;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit" onclick="document.getElementById('confirm-modal').remove()">Fermer</button></div>
-                                    </div>`;
+                                            <div style="font-weight:700;font-size:1rem;color:var(--primary);margin-bottom:1rem">Historique du contrat</div>
+                                            <div style="font-size:0.85rem;line-height:1.6">${lines}</div>
+                                            <div style="margin-top:1.5rem;text-align:right"><button style="padding:0.55rem 1.25rem;border-radius:8px;border:none;background:var(--primary);color:white;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit" onclick="document.getElementById('confirm-modal').remove()">Fermer</button></div>
+                                        </div>`;
             document.body.appendChild(modal);
             modal.onclick = e => { if (e.target === modal) modal.remove(); };
         }
@@ -6108,31 +6292,47 @@
         // ============================================
         async function downloadPdf(path, filename) {
             try {
-                const res = await fetch(path, {
-                    headers: { 'Authorization': 'Bearer ' + adminToken }
-                });
+                const res = await fetch(path, { headers: { 'Authorization': 'Bearer ' + adminToken } });
                 if (!res.ok) {
                     const d = await res.json().catch(() => ({}));
                     showToast('Erreur PDF: ' + (d.message || res.status), 'error');
                     return;
                 }
                 const blob = await res.blob();
-                if (!blob || blob.size < 100) {
-                    showToast('PDF vide — verifier la configuration backend', 'error');
-                    return;
-                }
+                if (!blob || blob.size < 100) { showToast('PDF vide — vérifier la configuration backend', 'error'); return; }
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename || 'document.pdf';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                // Delay revoke so browser can read the blob before it's released
-                setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
-            } catch (e) {
-                showToast('Erreur telechargement PDF', 'error');
-            }
+                _adminShowPdfModal(url, filename);
+            } catch (e) { showToast('Erreur PDF: ' + e.message, 'error'); }
+        }
+
+        function _adminShowPdfModal(blobUrl, filename) {
+            const ex = document.getElementById('admin-pdf-preview-modal');
+            if (ex) ex.remove();
+            const modal = document.createElement('div');
+            modal.id = 'admin-pdf-preview-modal';
+            modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(10,18,35,0.75);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem';
+            modal.innerHTML = `<div style="width:100%;max-width:1000px;height:90vh;background:white;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.4)">
+                    <div style="background:var(--dark,#0F2D52);padding:0.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+                        <div style="display:flex;align-items:center;gap:0.75rem">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span style="color:white;font-size:0.85rem;font-weight:600">${filename}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:0.5rem">
+                            <button onclick="_adminDownloadPdf('${blobUrl}','${filename}')" style="display:flex;align-items:center;gap:5px;padding:0.4rem 0.85rem;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:7px;color:white;font-size:0.78rem;font-weight:600;cursor:pointer">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Télécharger
+                            </button>
+                            <button onclick="document.getElementById('admin-pdf-preview-modal').remove()" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center">×</button>
+                        </div>
+                    </div>
+                    <iframe src="${blobUrl}" style="flex:1;width:100%;border:none"></iframe>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        }
+
+        function _adminDownloadPdf(url, filename) {
+            const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
         }
 
 

@@ -5,6 +5,8 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+let _email = null;
+try { _email = require('../email'); } catch (e) { }
 const { authenticateToken } = require('../middleware/auth');
 
 // Initialize Stripe
@@ -86,6 +88,9 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             return res.status(400).json({ error: 'Invalid signature' });
         }
 
+        // Ajouter colonnes si manquantes
+        await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ`).catch(() => { });
+
         // Handle payment success
         if (event.type === 'payment_intent.succeeded') {
             const paymentIntent = event.data.object;
@@ -94,17 +99,17 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             await pool.query(
                 `UPDATE invoices 
          SET status = 'paid', paid_at = NOW(), 
-             stripe_payment_id = $1, updated_at = NOW()
+             stripe_payment_intent_id = $1, updated_at = NOW()
          WHERE id = $2`,
                 [paymentIntent.id, invoiceId]
             );
 
             // Record payment
             await pool.query(
-                `INSERT INTO payments (invoice_id, amount, stripe_payment_id, status, paid_at)
-         VALUES ($1, $2, $3, 'completed', NOW())`,
-                [invoiceId, paymentIntent.amount / 100, paymentIntent.id]
-            );
+                `INSERT INTO payments (invoice_id, amount, status, paid_at)
+         VALUES ($1, $2, 'completed', NOW())`,
+                [invoiceId, paymentIntent.amount / 100]
+            ).catch(() => { });
 
             console.log(`Payment confirmed for invoice ID: ${invoiceId}`);
         }
@@ -114,6 +119,59 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     } catch (error) {
         console.error('Webhook error:', error);
         res.status(500).json({ error: 'Webhook processing failed.' });
+    }
+});
+
+
+// POST /api/payments/confirm — confirmation côté client après paiement Stripe réussi
+// Utilisé quand le webhook n'est pas configuré (local dev ou pas de webhook secret)
+router.post('/confirm', authenticateToken, async (req, res) => {
+    try {
+        if (!stripe) return res.status(503).json({ success: false, message: 'Stripe non configuré.' });
+        const { payment_intent_id, invoice_id } = req.body;
+        // Ajouter colonnes si manquantes
+        await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ`).catch(() => { });
+        await pool.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS client_id INTEGER`).catch(() => { });
+        if (!payment_intent_id || !invoice_id) {
+            return res.status(400).json({ success: false, message: 'payment_intent_id et invoice_id requis.' });
+        }
+        // Vérifier le statut du paiement directement via l'API Stripe
+        const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
+        if (paymentIntent.status !== 'succeeded') {
+            return res.status(400).json({ success: false, message: 'Paiement non confirmé par Stripe.' });
+        }
+        // Vérifier que la facture appartient au client
+        const inv = await pool.query(
+            "SELECT * FROM invoices WHERE id=$1 AND client_id=$2",
+            [invoice_id, req.user.id]
+        );
+        if (!inv.rows.length) return res.status(404).json({ success: false, message: 'Facture introuvable.' });
+        if (inv.rows[0].status === 'paid') return res.json({ success: true, message: 'Déjà payée.' });
+        // Marquer payée
+        await pool.query(
+            `UPDATE invoices SET status='paid', paid_at=NOW(), stripe_payment_intent_id=$1, updated_at=NOW() WHERE id=$2`,
+            [payment_intent_id, invoice_id]
+        );
+        // Enregistrer le paiement (colonnes de base seulement)
+        await pool.query(
+            `INSERT INTO payments (invoice_id, amount, status, paid_at, created_at)
+             VALUES ($1,$2,'completed',NOW(),NOW())`,
+            [invoice_id, paymentIntent.amount / 100]
+        ).catch(() => { });
+        console.log('Payment confirmed via client: invoice', invoice_id, payment_intent_id);
+        res.json({ success: true, message: 'Paiement confirmé.' });
+        // Email confirmation paiement
+        if (_email) {
+            const invFull = await pool.query('SELECT * FROM invoices WHERE id=$1', [invoice_id]).catch(() => ({ rows: [] }));
+            const clFull = invFull.rows[0] ? await pool.query('SELECT * FROM clients WHERE id=$1', [invFull.rows[0].client_id]).catch(() => ({ rows: [] })) : { rows: [] };
+            if (invFull.rows[0] && clFull.rows[0]) {
+                const paidInv = { ...invFull.rows[0], stripe_payment_intent_id: payment_intent_id };
+                _email.sendEmail(clFull.rows[0].email, _email.tplInvoicePaid(clFull.rows[0], paidInv)).catch(() => { });
+            }
+        }
+    } catch (err) {
+        console.error('Confirm payment error:', err.message);
+        res.status(500).json({ success: false, message: 'Erreur: ' + err.message });
     }
 });
 

@@ -14,7 +14,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
         const clientId = req.user.id;
 
         // Get counts for dashboard
-        const [mandates, quotes, invoices, messages] = await Promise.all([
+        const [mandates, quotes, invoices, messages, contracts, unreadDocs] = await Promise.all([
             pool.query(
                 "SELECT COUNT(*) FROM mandates WHERE client_id = $1 AND status IN ('active', 'in_progress')",
                 [clientId]
@@ -30,7 +30,15 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
             pool.query(
                 "SELECT COUNT(*) FROM messages WHERE client_id = $1 AND is_read = false AND sender = 'vnk'",
                 [clientId]
-            )
+            ),
+            pool.query(
+                "SELECT COUNT(*) FROM contracts WHERE client_id = $1 AND status IN ('draft','pending','pending_signature')",
+                [clientId]
+            ),
+            pool.query(
+                "SELECT COUNT(*) FROM documents WHERE client_id = $1 AND (is_read = false OR is_read IS NULL)",
+                [clientId]
+            ).catch(() => ({ rows: [{ count: 0 }] }))
         ]);
 
         // Get recent activity
@@ -68,6 +76,8 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
             pendingQuotes: parseInt(quotes.rows[0].count),
             pendingInvoices: parseInt(invoices.rows[0].count),
             unreadMessages: parseInt(messages.rows[0].count),
+            pendingContracts: parseInt(contracts.rows[0].count),
+            unreadDocuments: parseInt(unreadDocs.rows[0].count),
             recentActivity: activity.rows
         });
 

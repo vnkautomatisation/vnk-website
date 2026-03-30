@@ -14,7 +14,7 @@ router.get('/', authenticateToken, async (req, res) => {
             `SELECT d.id, d.title, d.description, d.file_type,
                     d.file_name, d.file_url, d.file_size,
                     d.uploaded_by, d.created_at,
-                    d.category, d.status,
+                    d.category, d.status, d.is_read,
                     m.title as mandate_title
              FROM documents d
              LEFT JOIN mandates m ON d.mandate_id = m.id
@@ -38,17 +38,14 @@ router.get('/', authenticateToken, async (req, res) => {
 // POST /api/documents/:id/read — marquer un document comme lu
 router.post('/:id/read', authenticateToken, async (req, res) => {
     try {
-        // Vérifier que le document appartient bien au client
-        const check = await pool.query(
-            'SELECT id FROM documents WHERE id = $1 AND client_id = $2',
+        await pool.query(`ALTER TABLE documents ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false`).catch(() => { });
+        await pool.query(
+            'UPDATE documents SET is_read = true WHERE id = $1 AND client_id = $2',
             [req.params.id, req.user.id]
         );
-        if (!check.rows.length) return res.status(404).json({ success: false });
-        // Upsert dans une table de lectures (ou on ignore si pas de table)
-        // Pour l'instant, répondre success (lecture stockée côté localStorage)
         res.json({ success: true });
     } catch (error) {
-        res.json({ success: true }); // Silencieux — lecture locale suffit
+        res.json({ success: true });
     }
 });
 

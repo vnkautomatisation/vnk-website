@@ -1,6 +1,25 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    <style>
+        body {
+            background: #0A1628;
+        }
+
+        html {
+            animation: pageFadeIn 0.2s ease-out;
+        }
+
+        @keyframes pageFadeIn {
+            from {
+                opacity: 0
+            }
+
+            to {
+                opacity: 1
+            }
+        }
+    </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Contactez VNK Automatisation Inc. - Réservez une consultation gratuite en automatisation industrielle - Québec">
@@ -12,6 +31,43 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Loader de chargement -->
+    <div id="vnk-page-loader" style="position:fixed;inset:0;z-index:99999;background:#0A1628;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;transition:opacity 0.25s ease">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="48" height="48" rx="12" fill="#1B4F8A" />
+            <path d="M14 16L24 32L34 16" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M19 16L24 24.5L29 16" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <div style="width:160px;height:3px;background:rgba(255,255,255,0.1);border-radius:99px;overflow:hidden">
+            <div style="height:100%;background:linear-gradient(90deg,#3B82F6,#60A5FA);border-radius:99px;animation:vnkLoad 0.9s ease-in-out forwards"></div>
+        </div>
+    </div>
+    <style>
+        @keyframes vnkLoad {
+            from {
+                width: 0%
+            }
+
+            to {
+                width: 100%
+            }
+        }
+    </style>
+    <script>
+        var _vnkLoaderStart = Date.now();
+        window.addEventListener('load', function () {
+            var loader = document.getElementById('vnk-page-loader');
+            if (!loader) return;
+            // Afficher au minimum 600ms pour que l'animation soit visible
+            var elapsed = Date.now() - _vnkLoaderStart;
+            var remaining = Math.max(0, 1200 - elapsed);
+            setTimeout(function () {
+                loader.style.opacity = '0';
+                setTimeout(function () { loader.style.display = 'none'; }, 260);
+            }, remaining);
+        });
+    </script>
+
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="nav-logo">
