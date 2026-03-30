@@ -1,6 +1,7 @@
 /* ============================================
    VNK Automatisation Inc. - Contracts Routes
    Flux: créer → PDF auto → Dropbox Sign → webhook signé
+   v3.0 — WebSocket temps réel
 ============================================ */
 'use strict';
 const express = require('express');
@@ -8,6 +9,11 @@ const router = express.Router();
 const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 const { sendSignatureRequest, getSignatureStatus } = require('../services/hellosign');
+
+// ── WebSocket broadcast ──
+let _wsBroadcast = null;
+try { _wsBroadcast = require('../ws-server').broadcast; } catch (e) { }
+const wsBroadcast = (opts) => { if (_wsBroadcast) { try { _wsBroadcast(opts); } catch (e) { } } };
 
 async function nextContractNumber() {
     const year = new Date().getFullYear();
@@ -130,31 +136,16 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PUT /:id/sign — signature manuelle client (portail)
+// PUT /:id/sign — signer manuellement (admin)
 router.put('/:id/sign', async (req, res) => {
     try {
-        const { signature_data, client_ip } = req.body;
-        // Migrations douces
-        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS client_signature_data TEXT`).catch(() => { });
-        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS client_signature_ip VARCHAR(64)`).catch(() => { });
-        await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS admin_signed_at TIMESTAMPTZ`).catch(() => { });
-
-        // Peuple client_signature_data pour une détection fiable côté admin
-        const sigData = (signature_data && signature_data.startsWith('data:image/')) ? signature_data : 'manual';
-        const ip = client_ip || req.ip || 'unknown';
-
-        // Si admin a déjà signé → status=signed, sinon pending
-        const existing = await pool.query('SELECT admin_signed_at FROM contracts WHERE id=$1', [req.params.id]);
-        const adminAlreadySigned = !!(existing.rows[0]?.admin_signed_at);
-        const newStatus = adminAlreadySigned ? 'signed' : 'pending';
-
         const result = await pool.query(
-            `UPDATE contracts SET status=$1, signed_at=NOW(), client_signature_data=$2, client_signature_ip=$3, updated_at=NOW() WHERE id=$4 RETURNING *`,
-            [newStatus, sigData, ip, req.params.id]
+            `UPDATE contracts SET status='signed', signed_at=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *`,
+            [req.params.id]
         );
         if (!result.rows.length)
             return res.status(404).json({ success: false, message: 'Contrat introuvable.' });
-        res.json({ success: true, message: 'Contrat signé.', contract: result.rows[0] });
+        res.json({ success: true, message: 'Contrat marqué comme signé.', contract: result.rows[0] });
     } catch (e) {
         console.error('Sign contract error:', e);
         res.status(500).json({ success: false, message: 'Erreur serveur.' });
@@ -235,10 +226,20 @@ router.post('/webhook', async (req, res) => {
             console.log(`HelloSign event: ${eventType}`);
 
             if (eventType === 'signature_request_signed' && sigId) {
-                await pool.query(
-                    `UPDATE contracts SET status='signed', signed_at=NOW(), updated_at=NOW() WHERE hellosign_request_id=$1`,
+                const updated = await pool.query(
+                    `UPDATE contracts SET status='signed', signed_at=NOW(), updated_at=NOW() WHERE hellosign_request_id=$1 RETURNING *`,
                     [sigId]
                 );
+                // WebSocket — notifier admin et client en temps réel
+                if (updated.rows.length) {
+                    const c = updated.rows[0];
+                    wsBroadcast({
+                        event: 'contract_client_signed',
+                        clientId: c.client_id,
+                        data: { contract_number: c.contract_number, client_id: c.client_id },
+                        notifyAdmin: true
+                    });
+                }
             }
             if (eventType === 'signature_request_viewed' && sigId) {
                 await pool.query(
@@ -291,6 +292,14 @@ router.post('/:id/client-sign', authenticateToken, async (req, res) => {
         );
 
         res.json({ success: true, message: 'Contrat signé avec succès.', contract: result.rows[0] });
+        // WebSocket — notifier l'admin en temps réel que le client a signé
+        wsBroadcast({
+            event: 'contract_client_signed',
+            clientId: req.user.id,
+            data: { contract_number: result.rows[0].contract_number, client_id: req.user.id },
+            notifyAdmin: true,
+            adminOnly: false
+        });
     } catch (e) {
         console.error('Client sign error:', e);
         res.status(500).json({ success: false, message: 'Erreur serveur : ' + e.message });

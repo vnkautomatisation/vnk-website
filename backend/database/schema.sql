@@ -246,7 +246,7 @@ CREATE TABLE documents (
     file_url TEXT,
     file_size INTEGER,
     uploaded_by VARCHAR(100),
-    category VARCHAR(100) DEFAULT 'Autres documents',
+    category VARCHAR(100),
     status VARCHAR(50) DEFAULT 'disponible',
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()

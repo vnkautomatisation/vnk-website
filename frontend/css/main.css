@@ -3731,20 +3731,20 @@ img {
 }
 
 .vnk-chat-bubble {
-    width: 64px;
-    height: 64px;
+    width: 58px;
+    height: 58px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #0F2D52, #1B4F8A);
+    background: linear-gradient(145deg, #1B4F8A, #0F2D52);
     color: white;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 6px 24px rgba(15,45,82,0.5);
-    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 6px 20px rgba(15,45,82,0.45), 0 2px 6px rgba(0,0,0,0.2);
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
     .vnk-chat-bubble:hover {
@@ -3754,18 +3754,24 @@ img {
 
 .vnk-chat-unread {
     position: absolute;
-    top: -3px;
-    right: -3px;
-    width: 20px;
-    height: 20px;
-    background: #E74C3C;
-    border-radius: 50%;
+    top: -6px;
+    right: -6px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 5px;
+    background: #E63946;
+    border-radius: 11px;
     font-size: 0.7rem;
-    font-weight: 700;
+    font-weight: 900;
+    color: white;
     display: none;
     align-items: center;
     justify-content: center;
-    border: 2px solid white;
+    border: 2.5px solid white;
+    box-shadow: 0 2px 10px rgba(230,57,70,0.6);
+    font-family: system-ui, sans-serif;
+    letter-spacing: -0.3px;
+    z-index: 10;
 }
 
 .vnk-chat-panel {

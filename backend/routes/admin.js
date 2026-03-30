@@ -1,11 +1,6 @@
 /* ============================================
    VNK Automatisation Inc. - Admin Routes
-   Version Phase 2 — Toutes fonctionnalités
-   + Toggle archive client
-   + Mark messages as read (thread + all)
-   + Export CSV (via frontend)
-   + Contrats, Litiges, Remboursements,
-     Dépenses, Déclarations fiscales
+   Version Phase 3 — WebSocket temps réel
    ============================================ */
 
 const express = require('express');
@@ -17,15 +12,15 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const pdfTemplates = require('./pdf-templates');
 
+// ── WebSocket broadcast (optionnel — gracieux si ws-server absent) ──
+let _wsBroadcast = null;
+try { _wsBroadcast = require('../ws-server').broadcast; } catch (e) { }
+const wsBroadcast = (opts) => { if (_wsBroadcast) { try { _wsBroadcast(opts); } catch (e) { console.warn('[WS] broadcast error:', e.message); } } };
+
 // ============================================================
 // WORKFLOW HELPER — Notification client interne
 // Envoie un message automatique dans la messagerie du client
 // ============================================================
-let _broadcast = null;
-try { _broadcast = require('../ws-server').broadcast; } catch (e) { }
-const wsBroadcast = (opts) => { if (_broadcast) _broadcast(opts); };
-
-
 async function notifyClient(pool, clientId, content) {
     try {
         await pool.query(
@@ -178,6 +173,7 @@ router.post('/clients', authenticateAdmin, async (req, res) => {
             [full_name, email.toLowerCase().trim(), hash, company_name || null, phone || null, address || null, city || null, province || 'QC', postal_code || null, sector || null, technologies || null, internal_notes || null]
         );
         res.status(201).json({ success: true, client: result.rows[0] });
+        wsBroadcast({ event: 'new_client', data: result.rows[0], adminOnly: true });
     } catch (err) {
         console.error('Admin create client error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -235,6 +231,7 @@ router.post('/mandates', authenticateAdmin, async (req, res) => {
         );
 
         res.status(201).json({ success: true, mandate, workflow: 'Mandat créé — client notifié.' });
+        wsBroadcast({ event: 'mandate_created', clientId: parseInt(client_id), data: mandate });
     } catch (err) {
         console.error('POST mandate error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -274,6 +271,7 @@ router.put('/mandates/:id', authenticateAdmin, async (req, res) => {
         }
 
         res.json({ success: true, mandate });
+        wsBroadcast({ event: 'mandate_updated', clientId: mandate.client_id, data: mandate });
     } catch (err) {
         console.error('PUT mandate error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -323,6 +321,7 @@ router.post('/quotes', authenticateAdmin, async (req, res) => {
         );
 
         res.status(201).json({ success: true, quote, workflow: 'Devis créé — client notifié.' });
+        wsBroadcast({ event: 'new_quote', clientId: parseInt(client_id), data: quote });
     } catch (err) {
         console.error('POST /quotes error:', err.message);
         res.status(500).json({ success: false, message: 'Server error: ' + err.message });
@@ -374,6 +373,7 @@ router.post('/invoices', authenticateAdmin, async (req, res) => {
         );
 
         res.status(201).json({ success: true, invoice, workflow: 'Facture créée — client notifié.' });
+        wsBroadcast({ event: 'new_invoice', clientId: parseInt(client_id), data: invoice });
     } catch (err) {
         console.error('POST invoice error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -403,6 +403,7 @@ router.put('/invoices/:id/mark-paid', authenticateAdmin, async (req, res) => {
         );
 
         res.json({ success: true, invoice, workflow: 'Facture marquée payée — client notifié.' });
+        wsBroadcast({ event: 'invoice_paid', clientId: invoice.client_id, data: invoice });
     } catch (err) {
         console.error('mark-paid error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -666,6 +667,8 @@ router.put('/contracts/:id/admin-sign', authenticateAdmin, async (req, res) => {
             auto_invoice: autoInvoice,
             workflow: workflowSteps
         });
+        // WebSocket — notifier le client en temps réel (contrat signé + facture auto si applicable)
+        wsBroadcast({ event: 'contract_signed', clientId: contract.client_id, data: { contract, auto_invoice: autoInvoice } });
     } catch (err) {
         console.error('admin-sign error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -793,7 +796,7 @@ router.get('/documents', authenticateAdmin, async (req, res) => {
 
 router.post('/documents', authenticateAdmin, async (req, res) => {
     try {
-        const { client_id, mandate_id, title, description, file_type, file_name, file_url, file_data, file_size } = req.body;
+        const { client_id, mandate_id, title, description, file_type, file_name, file_url, file_data, file_size, category } = req.body;
         if (!client_id || !title) return res.status(400).json({ success: false, message: 'client_id et title requis.' });
         let finalUrl = file_url || null;
         // If base64 data provided (direct upload), store as data URL
@@ -806,11 +809,16 @@ router.post('/documents', authenticateAdmin, async (req, res) => {
             const ext = (file_type || 'other').toLowerCase();
             finalUrl = 'data:' + (mimes[ext] || 'application/octet-stream') + ';base64,' + file_data;
         }
+        // Catégorie : on prend exactement ce qui est sélectionné
+        const CATEGORIES = ['Documentation technique', 'Livrables', 'Factures', 'Devis', 'Contrats', 'Autres documents'];
+        const selectedCategory = category && category.trim();
+        const finalCategory = selectedCategory;
+        const { status } = req.body;
         const result = await pool.query(
-            `INSERT INTO documents (client_id, mandate_id, title, description, file_type, file_name, file_url, file_size, created_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING *`,
+            `INSERT INTO documents (client_id, mandate_id, title, description, file_type, file_name, file_url, file_size, category, status, created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW()) RETURNING *`,
             [client_id, mandate_id || null, title, description || null, file_type || 'other',
-                file_name || title, finalUrl, file_size || null]
+                file_name || title, finalUrl, file_size || null, finalCategory, status || 'disponible']
         );
         res.status(201).json({ success: true, document: result.rows[0] });
     } catch (err) {
@@ -870,6 +878,7 @@ router.post('/messages/:clientId', authenticateAdmin, async (req, res) => {
             [req.params.clientId]
         );
         res.status(201).json({ success: true, message: result.rows[0] });
+        wsBroadcast({ event: 'new_message_vnk', clientId: parseInt(req.params.clientId), data: result.rows[0] });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error.' });
     }
@@ -1042,6 +1051,7 @@ router.post('/messages/:clientId/with-attachment', authenticateAdmin, upload.arr
             [req.params.clientId]
         );
         res.status(201).json({ success: true, message: result.rows[0] });
+        wsBroadcast({ event: 'new_message_vnk', clientId: parseInt(req.params.clientId), data: result.rows[0] });
     } catch (err) {
         console.error('with-attachment error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -1204,6 +1214,8 @@ router.put('/quotes/:id/accept', authenticateAdmin, async (req, res) => {
                 ? 'Devis accepté, contrat généré et envoyé pour signature au client.'
                 : 'Devis accepté et contrat créé. Le client est notifié et peut signer depuis son portail.'
         });
+        // WebSocket — notifier le client en temps réel
+        wsBroadcast({ event: 'quote_accepted', clientId: quote.client_id, data: { contract_number: contract.contract_number, contract_id: contract.id } });
     } catch (err) {
         console.error('Accept quote error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
@@ -1417,6 +1429,7 @@ router.post('/contracts/:id/generate-invoice', authenticateAdmin, async (req, re
         );
 
         res.status(201).json({ success: true, invoice, workflow: 'Facture générée et client notifié.' });
+        wsBroadcast({ event: 'new_invoice', clientId: row.client_id, data: invoice });
     } catch (err) {
         console.error('generate-invoice error:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
