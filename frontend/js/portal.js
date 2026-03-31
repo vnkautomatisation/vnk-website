@@ -272,6 +272,9 @@ async function loadAllData() {
 
         // Mettre à jour l'avatar sidebar seulement (pas toute la page profil)
         await _refreshUserFromAPI();
+        // Rafraîchir mes RDV si l'onglet booking est actif
+        const _activeTab = localStorage.getItem('vnk-portal-tab');
+        if (_activeTab === 'booking') loadMyAppointments().catch(() => { });
     } catch (error) { console.log('Data loading error:', error); }
 }
 
@@ -284,11 +287,18 @@ const PAGE_SIZE = 10;
 const _PAGE_SIZE = PAGE_SIZE;
 const _pageState = { quotes: 1, invoices: 1, mandates: 1, contracts: 1, documents: 1 };
 
+// Taille de page dynamique — cartes timeline = 6, liste compacte = 15, reste = 10
+function _getPageSize(tab) {
+    if (tab === 'mandates') return _mandateView === 'list' ? 15 : 6;
+    return PAGE_SIZE;
+}
+
 function _paginate(arr, tab) {
     const page = _pageState[tab] || 1;
     const total = arr.length;
-    const pages = Math.ceil(total / PAGE_SIZE);
-    const slice = arr.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    const ps = _getPageSize(tab);
+    const pages = Math.max(1, Math.ceil(total / ps));
+    const slice = arr.slice((page - 1) * ps, page * ps);
     return { slice, page, pages, total };
 }
 
@@ -347,7 +357,8 @@ function _goPage(tab, page) {
     if (tab === 'invoices_history') { _pageState.invoices_history = page; filterInvoices(); return; }
     if (tab === 'quotes') filterQuotes();
     else if (tab === 'invoices') filterInvoices();
-    else if (tab === 'mandates') filterMandates();
+    else if (tab === 'mandates') { const old = document.getElementById('_vnk-mandate-panel'); if (old) old.remove(); filterMandates(); }
+    else if (tab === 'booking') { setTimeout(initBookingTab, 50); }
     else if (tab === 'contracts') filterContracts();
     else if (tab === 'documents') filterDocuments();
 }
@@ -1039,7 +1050,8 @@ function filterMandates() {
     const search = (document.getElementById('mandate-search')?.value || '').toLowerCase();
     const status = document.getElementById('mandate-filter')?.value || 'all';
     let list = window._allMandates || [];
-    if (status !== 'all') list = list.filter(m => m.status === status);
+    _renderMandatesKpis(list);
+    if (status !== 'all') list = list.filter(m => m.status === status || (status === 'active' && m.status === 'in_progress'));
     if (search) { list = list.filter(m => ((m.title || '') + ' ' + (m.description || '')).toLowerCase().includes(search)); _pageState.mandates = 1; }
     window._filteredMandates = list;
     const { slice, page, pages, total } = _paginate(list, 'mandates');
@@ -1112,83 +1124,437 @@ function _vnkTableStyles() {
     return '';
 }
 
+// ── Vue mandats : 'cards' (timeline) ou 'list' (compacte) ──
+let _mandateView = 'cards';
+
+function setMandateView(v) {
+    if (_mandateView === v) return;
+    _mandateView = v;
+    _pageState.mandates = 1; // reset page au changement de vue
+
+    // Sync boutons toggle
+    const btnCards = document.getElementById('mandate-view-cards');
+    const btnList = document.getElementById('mandate-view-list');
+    if (btnCards) {
+        btnCards.style.background = v === 'cards' ? '#1B4F8A' : 'transparent';
+        btnCards.style.color = v === 'cards' ? 'white' : '#94A3B8';
+    }
+    if (btnList) {
+        btnList.style.background = v === 'list' ? '#1B4F8A' : 'transparent';
+        btnList.style.color = v === 'list' ? 'white' : '#94A3B8';
+    }
+    filterMandates();
+}
+
 function renderMandates(mandates) {
     const list = document.getElementById('mandates-list');
     if (!list) return;
+
     if (!mandates || !mandates.length) {
-        list.innerHTML = _vnkTableStyles() + '<div class="vnk-empty">Aucun mandat actif pour l\'instant.</div>';
+        list.innerHTML = '<div style="text-align:center;padding:3rem 1rem">'
+            + '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto 0.75rem"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
+            + '<div style="font-size:0.9rem;font-weight:600;color:#475569">Aucun mandat trouvé</div>'
+            + '<div style="font-size:0.78rem;color:#94A3B8;margin-top:0.3rem">Essayez de changer le filtre</div></div>';
         return;
     }
+
     const stl = { active: 'En cours', in_progress: 'En cours', pending: 'En attente', completed: 'Complété', paused: 'En pause' };
-    const stc = { active: '#27AE60', in_progress: '#27AE60', pending: '#D97706', completed: '#1B4F8A', paused: '#94A3B8' };
-    const svl = { 'plc-support': 'Support PLC', audit: 'Audit technique', documentation: 'Documentation', refactoring: 'Refactorisation' };
-    const rows = mandates.map(m => {
-        const color = stc[m.status] || '#94A3B8';
-        const label = stl[m.status] || m.status;
-        const prog = m.progress || 0;
-        return `<tr>
-            <td class="num">${m.mandate_number || ('MND-' + m.id)}</td>
-            <td class="title">
-                <div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.title}</div>
-                ${m.service_type ? '<div style="font-size:0.72rem;color:#94A3B8;margin-top:1px">' + (svl[m.service_type] || m.service_type) + '</div>' : ''}
-            </td>
-            <td class="date">${new Date(m.start_date || m.created_at).toLocaleDateString('fr-CA')}</td>
-            <td>
-                <div style="display:flex;align-items:center;gap:8px;min-width:120px">
-                    <div class="vnk-progress-bar" style="flex:1"><div class="vnk-progress-fill" style="width:${prog}%"></div></div>
-                    <span style="font-size:0.72rem;font-weight:700;color:#1B4F8A;min-width:30px">${prog}%</span>
-                </div>
-            </td>
-            <td style="text-align:center"><span class="vnk-badge" style="background:${color}18;color:${color}">${label}</span></td>
-            <td class="actions">${m.notes ? (function (note) { return '<button class="vnk-action-btn" onclick="_vnkShowNote(this)" data-note="' + note.replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '" title="Note VNK">Note</button>' })(m.notes) : ''}</td>
-        </tr>`;
-    }).join('');
-    const mHead = '<thead><tr><th>Numéro</th><th>Mandat</th><th>Début</th><th>Progression</th><th style="text-align:center">Statut</th><th></th></tr></thead>';
-    list.innerHTML = _vnkTableStyles() + '<div class="vnk-table-wrap"><table class="vnk-table">' + mHead + '<tbody>' + rows + '</tbody></table></div>';
-}
+    const stBg = { active: '#EBF5FB', in_progress: '#EBF5FB', pending: '#FFFBEB', completed: '#ECFDF5', paused: '#F1F5F9' };
+    const stFg = { active: '#1B4F8A', in_progress: '#1B4F8A', pending: '#92400E', completed: '#065F46', paused: '#475569' };
+    const svl = { 'plc-support': 'Support PLC', audit: 'Audit technique', documentation: 'Documentation', refactoring: 'Refactorisation PLC' };
+    const STEPS = ['Démarrage', 'Diagnostic', 'Intervention', 'Tests', 'Livraison'];
+    const STEP_PCTS = [0, 25, 50, 75, 100];
 
+    // ════════════════════════════════════════
+    // VUE CARTES — timeline complète, 6/page
+    // ════════════════════════════════════════
+    if (_mandateView === 'cards') {
+        const cards = mandates.map(function (m) {
+            const prog = m.progress || 0;
+            const st = prog >= 100 ? 'completed' : (m.status || 'pending');
+            const label = stl[st] || st;
+            const bg = stBg[st] || '#F1F5F9';
+            const fg = stFg[st] || '#475569';
+            const isLate = m.end_date && new Date(m.end_date) < new Date() && prog < 100;
+            const progColor = prog >= 100 ? '#059669' : '#1B4F8A';
 
+            let currentStep = 0;
+            STEP_PCTS.forEach(function (p, i) { if (prog >= p) currentStep = i; });
 
+            const stepsHtml = STEPS.map(function (stepLabel, i) {
+                const done = prog >= STEP_PCTS[i];
+                const current = i === currentStep && prog < 100;
+                const dotBg = done ? progColor : 'white';
+                const dotBorder = done ? progColor : (current ? '#1B4F8A' : '#E2E8F0');
+                const inner = done
+                    ? '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>'
+                    : (current ? '<div style="width:6px;height:6px;border-radius:50%;background:#1B4F8A"></div>' : '');
+                const lc = done ? '#0F172A' : (current ? '#1B4F8A' : '#94A3B8');
+                const lw = (done || current) ? '600' : '400';
+                return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;position:relative;z-index:1">'
+                    + '<div style="width:20px;height:20px;border-radius:50%;background:' + dotBg + ';border:2px solid ' + dotBorder + ';display:flex;align-items:center;justify-content:center">' + inner + '</div>'
+                    + '<span style="font-size:0.6rem;color:' + lc + ';font-weight:' + lw + ';text-align:center;line-height:1.3;white-space:nowrap">' + stepLabel + '</span>'
+                    + '</div>';
+            }).join('');
 
-/* ─────────────────────────────────────────────
-   PAGINATION — affiche N items par page
-───────────────────────────────────────────── */
+            const lineW = Math.min(100, Math.round(prog));
+            const fmtDate = function (d) { return new Date(d).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short', year: 'numeric' }); };
 
-function _renderPagination(containerId, totalItems, currentPage, onPageChange) {
-    const totalPages = Math.ceil(totalItems / _PAGE_SIZE);
-    if (totalPages <= 1) return '';
-    const pages = [];
-    for (let p = 1; p <= totalPages; p++) {
-        if (p === 1 || p === totalPages || (p >= currentPage - 1 && p <= currentPage + 1)) {
-            pages.push(p);
-        } else if (pages[pages.length - 1] !== '...') {
-            pages.push('...');
-        }
+            return '<div class="vnk-mandate-card" data-id="' + m.id + '" onclick="_openPortalMandateDetail(' + m.id + ')" '
+                + 'style="background:white;border:1px solid ' + (isLate ? '#FECACA' : '#E8EEF6') + ';border-radius:12px;padding:1rem 1.1rem 0.9rem;cursor:pointer;transition:border-color .15s,box-shadow .15s;margin-bottom:0.6rem" '
+                + 'onmouseenter="this.style.borderColor=\'' + (isLate ? '#F87171' : '#1B4F8A') + '\';this.style.boxShadow=\'0 2px 10px rgba(27,79,138,0.08)\'" '
+                + 'onmouseleave="this.style.borderColor=\'' + (isLate ? '#FECACA' : '#E8EEF6') + '\';this.style.boxShadow=\'\'">'
+
+                // Titre + badges
+                + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;margin-bottom:0.6rem">'
+                + '<div style="min-width:0;flex:1">'
+                + '<div style="font-weight:700;font-size:0.9rem;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + m.title + '</div>'
+                + '<div style="font-size:0.7rem;color:#94A3B8;margin-top:2px">' + (svl[m.service_type] || m.service_type || '') + (m.mandate_number ? ' · ' + m.mandate_number : '') + '</div>'
+                + '</div>'
+                + '<div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0">'
+                + (isLate ? '<span style="font-size:0.66rem;font-weight:700;padding:2px 8px;border-radius:20px;background:#FEF2F2;color:#DC2626">En retard</span>' : '')
+                + '<span style="font-size:0.66rem;font-weight:600;padding:2px 9px;border-radius:20px;background:' + bg + ';color:' + fg + '">' + label + '</span>'
+                + '</div></div>'
+
+                // Barre progression
+                + '<div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.75rem">'
+                + '<div style="flex:1;height:4px;background:#F1F5F9;border-radius:2px;overflow:hidden"><div style="height:100%;width:' + prog + '%;background:' + progColor + ';border-radius:2px;transition:width .4s"></div></div>'
+                + '<span style="font-size:0.75rem;font-weight:700;color:' + progColor + ';min-width:30px;text-align:right">' + prog + '%</span>'
+                + '</div>'
+
+                // Timeline étapes
+                + '<div style="position:relative;padding:0 10px;margin-bottom:0.75rem">'
+                + '<div style="position:absolute;top:10px;left:10px;right:10px;height:1.5px;background:#E2E8F0"></div>'
+                + '<div style="position:absolute;top:10px;left:10px;height:1.5px;background:' + progColor + ';width:' + lineW + '%;max-width:calc(100% - 20px);transition:width .4s"></div>'
+                + '<div style="display:flex;justify-content:space-between">' + stepsHtml + '</div>'
+                + '</div>'
+
+                // Dates + lien
+                + '<div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #F8FAFC;padding-top:0.6rem">'
+                + '<div style="display:flex;gap:1.25rem">'
+                + (m.start_date ? '<div><div style="font-size:0.58rem;color:#94A3B8;text-transform:uppercase;font-weight:700;letter-spacing:0.04em">Début</div><div style="font-size:0.75rem;font-weight:600;color:#334155">' + fmtDate(m.start_date) + '</div></div>' : '')
+                + (m.end_date ? '<div><div style="font-size:0.58rem;color:' + (isLate ? '#DC2626' : '#94A3B8') + ';text-transform:uppercase;font-weight:700;letter-spacing:0.04em">Fin est.</div><div style="font-size:0.75rem;font-weight:600;color:' + (isLate ? '#DC2626' : '#334155') + '">' + fmtDate(m.end_date) + '</div></div>' : '')
+                + '</div>'
+                + '<div style="font-size:0.72rem;color:#1B4F8A;font-weight:600;display:flex;align-items:center;gap:3px">Détails<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>'
+                + '</div>'
+                + '</div>';
+        }).join('');
+        list.innerHTML = '<div>' + cards + '</div>';
+        return;
     }
-    return `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:1rem;padding-top:0.75rem;border-top:1px solid #E2E8F0">
-        <span style="font-size:0.78rem;color:#94A3B8">${totalItems} élément${totalItems > 1 ? 's' : ''}</span>
-        <div style="display:flex;gap:0.25rem;align-items:center">
-            <button onclick="${onPageChange}(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''} 
-                style="padding:4px 10px;border:1.5px solid ${currentPage <= 1 ? '#E2E8F0' : '#1B4F8A'};border-radius:6px;background:white;color:${currentPage <= 1 ? '#CBD5E0' : '#1B4F8A'};cursor:${currentPage <= 1 ? 'default' : 'pointer'};font-size:0.8rem;font-weight:600;font-family:inherit">
-                Préc.
-            </button>
-            ${pages.map(p => p === '...'
-        ? '<span style="padding:4px 6px;color:#94A3B8">…</span>'
-        : '<button onclick="' + onPageChange + '(' + p + ')" style="padding:4px 10px;border:1.5px solid ' + (p === currentPage ? '#1B4F8A' : '#E2E8F0') + ';border-radius:6px;background:' + (p === currentPage ? '#1B4F8A' : 'white') + ';color:' + (p === currentPage ? 'white' : '#64748B') + ';cursor:pointer;font-size:0.8rem;font-weight:600;font-family:inherit">' + p + '</button>'
-    ).join('')}
-            <button onclick="${onPageChange}(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}
-                style="padding:4px 10px;border:1.5px solid ${currentPage >= totalPages ? '#E2E8F0' : '#1B4F8A'};border-radius:6px;background:white;color:${currentPage >= totalPages ? '#CBD5E0' : '#1B4F8A'};cursor:${currentPage >= totalPages ? 'default' : 'pointer'};font-size:0.8rem;font-weight:600;font-family:inherit">
-                Suiv.
-            </button>
-        </div>
-    </div>`;
+
+    // ════════════════════════════════════════
+    // VUE LISTE — compacte, scalable, 15/page
+    // ════════════════════════════════════════
+    const rows = mandates.map(function (m) {
+        const prog = m.progress || 0;
+        const st = prog >= 100 ? 'completed' : (m.status || 'pending');
+        const label = stl[st] || st;
+        const bg = stBg[st] || '#F1F5F9';
+        const fg = stFg[st] || '#475569';
+        const isLate = m.end_date && new Date(m.end_date) < new Date() && prog < 100;
+        const progColor = prog >= 100 ? '#059669' : '#1B4F8A';
+
+        // Étape courante
+        let stepLabel = 'Démarrage';
+        STEP_PCTS.forEach(function (p, i) { if (prog >= p) stepLabel = STEPS[i]; });
+        const nextStep = prog < 100 ? (STEPS[STEP_PCTS.findIndex(function (p) { return p > prog; })] || 'Livraison') : null;
+
+        return '<div class="vnk-mandate-card" data-id="' + m.id + '" onclick="_openPortalMandateDetail(' + m.id + ')" '
+            + 'style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:0.75rem;padding:0.7rem 1rem;border-bottom:1px solid #F1F5F9;cursor:pointer;transition:background .1s" '
+            + 'onmouseenter="this.style.background=\'#F8FAFC\'" onmouseleave="this.style.background=\'white\'">'
+
+            // Colonne gauche : titre + meta
+            + '<div style="min-width:0">'
+            + '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:3px">'
+            + '<div style="font-weight:600;font-size:0.85rem;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + m.title + '</div>'
+            + (isLate ? '<span style="font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:20px;background:#FEF2F2;color:#DC2626;flex-shrink:0">Retard</span>' : '')
+            + '</div>'
+            // Barre + étape
+            + '<div style="display:flex;align-items:center;gap:0.6rem">'
+            + '<div style="width:120px;height:3px;background:#F1F5F9;border-radius:2px;overflow:hidden;flex-shrink:0"><div style="height:100%;width:' + prog + '%;background:' + progColor + ';border-radius:2px"></div></div>'
+            + '<span style="font-size:0.7rem;font-weight:700;color:' + progColor + '">' + prog + '%</span>'
+            + '<span style="font-size:0.7rem;color:#94A3B8">·</span>'
+            + '<span style="font-size:0.7rem;color:#64748B">' + (nextStep ? 'Prochaine: ' + nextStep : 'Terminé') + '</span>'
+            + '</div></div>'
+
+            // Colonne droite : badge + date
+            + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'
+            + '<span style="font-size:0.66rem;font-weight:600;padding:2px 8px;border-radius:20px;background:' + bg + ';color:' + fg + '">' + label + '</span>'
+            + (m.end_date ? '<span style="font-size:0.68rem;color:' + (isLate ? '#DC2626' : '#94A3B8') + '">'
+                + new Date(m.end_date).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short' }) + '</span>' : '')
+            + '</div>'
+
+            + '</div>';
+    }).join('');
+
+    list.innerHTML = '<div style="background:white;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden">' + rows + '</div>';
 }
 
-// Pages courantes par onglet
-let _pageQuotes = 1, _pageInvoices = 1, _pageMandates = 1, _pageContracts = 1, _pageDocuments = 1;
-function _goPageQuotes(p) { _pageQuotes = p; renderQuotes(window._allQuotes || []); }
-function _goPageInvoices(p) { _pageInvoices = p; renderInvoices(window._allInvoices || []); }
-function _goPageMandates(p) { _pageMandates = p; renderMandates(window._allMandates || []); }
+// Libellés statut et service
+
+function _renderMandatesKpis(all) {
+    const bar = document.getElementById('portal-mandates-kpis');
+    if (!bar) return;
+    const active = all.filter(m => (m.status === 'active' || m.status === 'in_progress') && m.progress < 100).length;
+    const completed = all.filter(m => m.progress === 100 || m.status === 'completed').length;
+    const late = all.filter(m => m.end_date && new Date(m.end_date) < new Date() && (m.progress || 0) < 100).length;
+    const kpis = [
+        { label: 'En cours', value: active, accent: '#1B4F8A', bg: '#EBF5FB' },
+        { label: 'Complétés', value: completed, accent: '#059669', bg: '#ECFDF5' },
+        { label: 'En retard', value: late, accent: late > 0 ? '#DC2626' : '#059669', bg: late > 0 ? '#FEF2F2' : '#ECFDF5' },
+    ];
+    bar.innerHTML = kpis.map(k =>
+        '<div style="background:' + k.bg + ';border:1px solid rgba(0,0,0,0.05);border-radius:10px;padding:0.65rem 0.9rem;display:flex;align-items:center;gap:0.6rem">'
+        + '<div><div style="font-size:1.15rem;font-weight:700;color:' + k.accent + ';line-height:1">' + k.value + '</div>'
+        + '<div style="font-size:0.65rem;font-weight:600;color:' + k.accent + ';opacity:0.75;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px">' + k.label + '</div></div>'
+        + '</div>'
+    ).join('');
+}
+
+function _openPortalMandateDetail(id) {
+    const m = (window._allMandates || []).find(x => x.id === id);
+    if (!m) return;
+
+    // Highlight carte sélectionnée
+    document.querySelectorAll('.vnk-mandate-card').forEach(r => {
+        r.style.borderColor = '#E8EEF6';
+        r.style.boxShadow = '';
+    });
+    const sel = document.querySelector('.vnk-mandate-card[data-id="' + id + '"]');
+    if (sel) { sel.style.borderColor = '#1B4F8A'; sel.style.boxShadow = '0 0 0 2px rgba(27,79,138,0.1)'; }
+
+    const svl = { 'plc-support': 'Support PLC', audit: 'Audit technique', documentation: 'Documentation', refactoring: 'Refactorisation PLC' };
+    const stl = { active: 'En cours', in_progress: 'En cours', pending: 'En attente', completed: 'Complété', paused: 'En pause' };
+    const stBg = { active: '#EBF5FB', in_progress: '#EBF5FB', pending: '#FFFBEB', completed: '#ECFDF5', paused: '#F1F5F9' };
+    const stFg = { active: '#1B4F8A', in_progress: '#1B4F8A', pending: '#92400E', completed: '#065F46', paused: '#475569' };
+    const prog = m.progress || 0;
+    const st = prog >= 100 ? 'completed' : (m.status || 'pending');
+    const isLate = m.end_date && new Date(m.end_date) < new Date() && prog < 100;
+    const progColor = prog >= 100 ? '#059669' : '#1B4F8A';
+
+    const STEPS = ['Démarrage', 'Diagnostic', 'Intervention', 'Tests', 'Livraison'];
+    const STEP_PCTS = [0, 25, 50, 75, 100];
+
+    let currentStep = 0;
+    STEP_PCTS.forEach(function (p, i) { if (prog >= p) currentStep = i; });
+
+    // HTML jalons détaillés pour le panel
+    const milestonesHtml = STEPS.map(function (label, i) {
+        const done = prog >= STEP_PCTS[i];
+        const current = i === currentStep && prog < 100;
+        return '<div style="display:flex;align-items:center;gap:0.6rem;padding:0.35rem 0;border-bottom:1px solid #F8FAFC">'
+            + '<div style="width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;'
+            + 'background:' + (done ? progColor : (current ? 'white' : 'white')) + ';'
+            + 'border:2px solid ' + (done ? progColor : (current ? '#1B4F8A' : '#E2E8F0')) + '">'
+            + (done ? '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>'
+                : (current ? '<div style="width:6px;height:6px;border-radius:50%;background:#1B4F8A"></div>' : ''))
+            + '</div>'
+            + '<span style="font-size:0.8rem;font-weight:' + ((done || current) ? '600' : '400') + ';color:' + (done ? '#0F172A' : (current ? '#1B4F8A' : '#94A3B8')) + '">' + label + '</span>'
+            + '<span style="margin-left:auto;font-size:0.67rem;color:#94A3B8">' + STEP_PCTS[i] + '%</span>'
+            + '</div>';
+    }).join('');
+
+    const closeBtn = 'document.getElementById(\'portal-mandate-side-panel\').style.display=\'none\';'
+        + 'document.querySelectorAll(\'.vnk-mandate-card\').forEach(function(r){r.style.borderColor=\'#E8EEF6\';r.style.boxShadow=\'\'})';
+
+    // ── Desktop : panel latéral sticky ──
+    const sidePanel = document.getElementById('portal-mandate-side-panel');
+    if (sidePanel && window.innerWidth >= 900) {
+        sidePanel.style.display = 'block';
+        sidePanel.innerHTML =
+            // Header
+            '<div style="background:#0F2D52;padding:1rem 1.1rem;display:flex;align-items:flex-start;justify-content:space-between">'
+            + '<div style="flex:1;min-width:0">'
+            + '<div style="font-weight:700;font-size:0.88rem;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.35">' + m.title + '</div>'
+            + '<div style="font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:3px">' + (svl[m.service_type] || '') + (m.mandate_number ? ' · ' + m.mandate_number : '') + '</div>'
+            + '</div>'
+            + '<button onclick="' + closeBtn + '" style="background:none;border:none;color:rgba(255,255,255,0.45);cursor:pointer;font-size:1.2rem;flex-shrink:0;padding:0;margin-left:0.5rem;line-height:1;transition:color .15s" onmouseenter="this.style.color=\'white\'" onmouseleave="this.style.color=\'rgba(255,255,255,0.45)\'">×</button>'
+            + '</div>'
+
+            + '<div style="padding:1rem 1.1rem;overflow-y:auto">'
+
+            // Statut
+            + '<div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:1rem;flex-wrap:wrap">'
+            + '<span style="font-size:0.68rem;font-weight:600;padding:2px 9px;border-radius:20px;background:' + stBg[st] + ';color:' + stFg[st] + '">' + (stl[st] || st) + '</span>'
+            + (isLate ? '<span style="font-size:0.68rem;font-weight:700;padding:2px 9px;border-radius:20px;background:#FEF2F2;color:#DC2626">En retard</span>' : '')
+            + '</div>'
+
+            // Progression
+            + '<div style="margin-bottom:1rem">'
+            + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#94A3B8;margin-bottom:0.5rem">Progression</div>'
+            + '<div style="display:flex;align-items:center;gap:0.6rem">'
+            + '<div style="flex:1;height:6px;background:#F1F5F9;border-radius:3px;overflow:hidden">'
+            + '<div style="height:100%;width:' + prog + '%;background:' + progColor + ';border-radius:3px;transition:width .4s ease"></div>'
+            + '</div>'
+            + '<span style="font-size:0.9rem;font-weight:700;color:' + progColor + ';min-width:36px;text-align:right">' + prog + '%</span>'
+            + '</div></div>'
+
+            // Étapes
+            + '<div style="margin-bottom:1rem">'
+            + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#94A3B8;margin-bottom:0.5rem">Étapes du projet</div>'
+            + milestonesHtml
+            + '</div>'
+
+            // Dates
+            + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem">'
+            + '<div style="background:#F8FAFC;border-radius:8px;padding:0.55rem 0.7rem">'
+            + '<div style="font-size:0.6rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px">Début</div>'
+            + '<div style="font-size:0.82rem;font-weight:600;color:#1E293B">' + (m.start_date ? new Date(m.start_date).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short', year: 'numeric' }) : '—') + '</div>'
+            + '</div>'
+            + '<div style="background:' + (isLate ? '#FEF2F2' : '#F8FAFC') + ';border-radius:8px;padding:0.55rem 0.7rem">'
+            + '<div style="font-size:0.6rem;font-weight:700;color:' + (isLate ? '#DC2626' : '#94A3B8') + ';text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px">Fin est.</div>'
+            + '<div style="font-size:0.82rem;font-weight:600;color:' + (isLate ? '#DC2626' : '#1E293B') + '">' + (m.end_date ? new Date(m.end_date).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short', year: 'numeric' }) : '—') + '</div>'
+            + '</div></div>'
+
+            // Description
+            + (m.description ? '<div style="margin-bottom:1rem"><div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#94A3B8;margin-bottom:0.4rem">Description</div><div style="font-size:0.82rem;color:#334155;line-height:1.55">' + m.description + '</div></div>' : '')
+
+            // Note VNK
+            + (m.notes ? '<div style="background:#FFFBEB;border-radius:8px;padding:0.65rem 0.75rem;border-left:3px solid #D97706;margin-bottom:1rem">'
+                + '<div style="font-size:0.65rem;font-weight:700;color:#92400E;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px">Mise à jour VNK</div>'
+                + '<div style="font-size:0.82rem;color:#334155;line-height:1.5">' + m.notes + '</div>'
+                + '</div>' : '')
+
+            // CTA
+            + '<div style="padding-top:0.875rem;border-top:1px solid #F1F5F9">'
+            + '<button onclick="_vnkOpenChatForMandate(\'' + m.title.replace(/'/g, "\\'") + '\')" '
+            + 'style="width:100%;padding:0.65rem;background:#1B4F8A;color:white;border:none;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:0.5rem;transition:background .15s" '
+            + 'onmouseenter="this.style.background=\'#0F2D52\'" onmouseleave="this.style.background=\'#1B4F8A\'">'
+            + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
+            + 'Envoyer un message à VNK'
+            + '</button>'
+            + '</div>'
+            + '</div>';
+        return;
+    }
+
+    // ── Mobile : bottom sheet ──
+    _vnkOpenMandateDetail({ stopPropagation: function () { } }, id);
+}
+
+// renderMandates remplacée ci-dessus — stub de compatibilité
+function _goPageMandates(p) { _pageMandates = p; filterMandates(); }
+
+function _vnkOpenChatForMandate(mandateTitle) {
+    // Ouvrir le chat widget s'il n'est pas déjà ouvert
+    const panel = document.getElementById('vnk-chat-panel');
+    const isAlreadyOpen = panel && panel.classList.contains('open');
+    if (!isAlreadyOpen && typeof vnkChatToggle === 'function') {
+        vnkChatToggle();
+    }
+    // Fermer le panel latéral pour dégager la vue
+    const sidePanel = document.getElementById('portal-mandate-side-panel');
+    if (sidePanel) sidePanel.style.display = 'none';
+    // Pré-remplir l'input avec le contexte du mandat
+    setTimeout(function () {
+        const input = document.getElementById('vnk-chat-input');
+        if (input) {
+            const prefix = mandateTitle ? 'Concernant le mandat « ' + mandateTitle + ' » : ' : '';
+            input.value = prefix;
+            input.focus();
+            // Positionner le curseur à la fin
+            input.selectionStart = input.selectionEnd = input.value.length;
+            // Auto-resize textarea
+            input.style.height = 'auto';
+            input.style.height = input.scrollHeight + 'px';
+        }
+        // Scroll vers le chat
+        const bubble = document.getElementById('vnk-chat-bubble-btn');
+        if (bubble) bubble.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 350);
+}
+
+function _vnkOpenMandateDetail(e, id) {
+    e.stopPropagation();
+    const m = (window._allMandates || []).find(x => x.id === id);
+    if (!m) return;
+
+    // Supprimer panel existant
+    const old = document.getElementById('_vnk-mandate-panel');
+    if (old) old.remove();
+
+    const svc = { 'plc-support': 'Support PLC', 'audit': 'Audit technique', 'documentation': 'Documentation industrielle', 'refactoring': 'Refactorisation PLC' };
+    const stl = { active: 'En cours', in_progress: 'En cours', pending: 'En attente', completed: 'Complété', paused: 'En pause' };
+    const stc = { active: '#1B4F8A', in_progress: '#1B4F8A', pending: '#D97706', completed: '#27AE60', paused: '#94A3B8' };
+    const prog = m.progress || 0;
+    const realLabel = prog === 100 ? 'Complété' : (stl[m.status] || m.status);
+    const realColor = prog === 100 ? '#27AE60' : (stc[m.status] || '#94A3B8');
+
+    const milestones = [
+        { label: 'Démarrage', pct: 0, done: prog >= 0 },
+        { label: 'Diagnostic', pct: 25, done: prog >= 25 },
+        { label: 'Intervention', pct: 50, done: prog >= 50 },
+        { label: 'Tests', pct: 75, done: prog >= 75 },
+        { label: 'Livraison', pct: 100, done: prog >= 100 },
+    ];
+
+    const panel = document.createElement('div');
+    panel.id = '_vnk-mandate-panel';
+    panel.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.4)';
+    panel.innerHTML = `
+        <div style="background:white;border-radius:16px 16px 0 0;width:100%;max-width:640px;max-height:85vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom)">
+            <div style="padding:1.25rem 1.5rem 1rem;border-bottom:1px solid #E2E8F0;display:flex;align-items:flex-start;gap:1rem">
+                <div style="flex:1">
+                    <div style="font-weight:700;font-size:1rem;color:#1a1a18">${m.title}</div>
+                    <div style="font-size:0.78rem;color:#94A3B8;margin-top:2px">${svc[m.service_type] || m.service_type || ''} · MND-${m.id}</div>
+                </div>
+                <button onclick="document.getElementById('_vnk-mandate-panel').remove()" style="background:none;border:none;font-size:1.4rem;color:#94A3B8;cursor:pointer;padding:0;line-height:1">×</button>
+            </div>
+            <div style="padding:1.25rem 1.5rem">
+                <!-- Statut + progression -->
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem">
+                    <span style="font-size:0.75rem;font-weight:700;padding:4px 12px;border-radius:20px;background:${realColor}18;color:${realColor}">${realLabel}</span>
+                    <span style="font-size:0.88rem;font-weight:800;color:${prog === 100 ? '#27AE60' : '#1B4F8A'};margin-left:auto">${prog}%</span>
+                </div>
+                <div style="height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;margin-bottom:1.5rem">
+                    <div style="height:100%;width:${prog}%;background:${prog === 100 ? '#27AE60' : 'linear-gradient(90deg,#1B4F8A,#2E75B6)'};border-radius:4px;transition:width .4s"></div>
+                </div>
+
+                <!-- Jalons -->
+                <div style="margin-bottom:1.5rem">
+                    <div style="font-size:0.72rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem">Étapes du projet</div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;position:relative">
+                        <div style="position:absolute;top:10px;left:10px;right:10px;height:2px;background:#E2E8F0;z-index:0"></div>
+                        <div style="position:absolute;top:10px;left:10px;height:2px;background:#1B4F8A;z-index:0;width:${Math.min(100, Math.max(0, (prog / 100) * (100 - 0)))}%;transition:width .4s"></div>
+                        ${milestones.map(j => `
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;z-index:1;min-width:52px">
+                            <div style="width:20px;height:20px;border-radius:50%;background:${j.done ? '#1B4F8A' : 'white'};border:2px solid ${j.done ? '#1B4F8A' : '#E2E8F0'};display:flex;align-items:center;justify-content:center">
+                                ${j.done ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                            </div>
+                            <span style="font-size:0.65rem;color:${j.done ? '#1B4F8A' : '#94A3B8'};font-weight:${j.done ? '700' : '400'};text-align:center">${j.label}</span>
+                        </div>`).join('')}
+                    </div>
+                </div>
+
+                <!-- Dates -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem">
+                    <div style="background:#F8FAFC;border-radius:8px;padding:0.75rem">
+                        <div style="font-size:0.65rem;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:3px">Date de début</div>
+                        <div style="font-size:0.88rem;font-weight:600;color:#1a1a18">${m.start_date ? new Date(m.start_date).toLocaleDateString('fr-CA') : '—'}</div>
+                    </div>
+                    <div style="background:#F8FAFC;border-radius:8px;padding:0.75rem">
+                        <div style="font-size:0.65rem;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:3px">Fin estimée</div>
+                        <div style="font-size:0.88rem;font-weight:600;color:#1a1a18">${m.end_date ? new Date(m.end_date).toLocaleDateString('fr-CA') : '—'}</div>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                ${m.description ? `<div style="margin-bottom:1.25rem">
+                    <div style="font-size:0.72rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem">Description du projet</div>
+                    <div style="font-size:0.85rem;color:#334155;line-height:1.6">${m.description}</div>
+                </div>` : ''}
+
+                <!-- Note VNK -->
+                ${m.notes ? `<div style="background:rgba(224,120,32,0.08);border-radius:10px;padding:0.85rem;border-left:3px solid #E07820;margin-bottom:1rem">
+                    <div style="font-size:0.7rem;font-weight:700;color:#E07820;text-transform:uppercase;margin-bottom:3px">Mise à jour de VNK</div>
+                    <div style="font-size:0.85rem;color:#334155">${m.notes}</div>
+                </div>` : ''}
+            </div>
+        </div>`;
+    panel.addEventListener('click', function (ev) { if (ev.target === panel) panel.remove(); });
+    document.body.appendChild(panel);
+}
 function _goPageContracts(p) { _pageContracts = p; renderPortalContracts(window._allContracts || []); }
 function _goPageDocuments(p) { _pageDocuments = p; renderDocuments(window._allDocuments || []); }
 
@@ -3148,3 +3514,921 @@ function _applySort(arr, val, numField) {
         return 0;
     });
 }
+// ════════════════════════════════════════════════════════════════
+// NOUVEAU PROJET — Modal multi-étapes
+// ════════════════════════════════════════════════════════════════
+
+let _npStep = 1;
+const _npStepLabels = ['', 'Étape 1 sur 4 — Type de service', 'Étape 2 sur 4 — Détails techniques', 'Étape 3 sur 4 — Choisir un créneau', 'Étape 4 sur 4 — Révision et envoi'];
+const _svcLabels = { 'plc-support': 'Support PLC', 'audit': 'Audit technique', 'documentation': 'Documentation industrielle', 'refactoring': 'Refactorisation PLC' };
+const _urgLabels = { 'normal': 'Normal — prochaines semaines', 'urgent': 'Urgent — cette semaine', 'critical': '🚨 Critique — production arrêtée' };
+const _budgetLabels = { '': 'Non défini', 'lt2k': 'Moins de 2 000 $', '2k5k': '2 000 – 5 000 $', '5k15k': '5 000 – 15 000 $', '15k50k': '15 000 – 50 000 $', 'gt50k': 'Plus de 50 000 $' };
+const _deadlineLabels = { '': 'Non défini', 'asap': 'Dès que possible', '1month': 'Dans 1 mois', '3months': 'Dans 3 mois', '6months': 'Dans 6 mois', 'flexible': 'Flexible' };
+
+function openNewProjectModal() {
+    const overlay = document.getElementById('new-project-overlay');
+    if (!overlay) return;
+
+    // Pré-remplir les infos client
+    const name = document.getElementById('sidebar-name')?.textContent?.trim() || '';
+    const company = document.getElementById('sidebar-company')?.textContent?.trim() || '';
+    const el = (id) => document.getElementById(id);
+
+    if (el('np-client-name')) el('np-client-name').textContent = name || 'Client VNK';
+    if (el('np-client-company')) el('np-client-company').textContent = company;
+    if (el('np-client-avatar')) el('np-client-avatar').textContent = (name || 'CL').substring(0, 2).toUpperCase();
+
+    // Reset complet
+    _npStep = 1;
+    _npSelectedSlot = null;
+    _npBookingSlots = [];
+    _npBookingMonthOffset = 0;
+    // Réactiver le bouton submit (désactivé après soumission)
+    const btnNext = document.getElementById('np-btn-next');
+    if (btnNext) { btnNext.disabled = false; btnNext.textContent = 'Suivant'; }
+    ['np-service', 'np-plc', 'np-description', 'np-extra', 'np-budget', 'np-deadline'].forEach(id => { const f = el(id); if (f) f.value = ''; });
+    document.querySelectorAll('.np-service-card').forEach(c => c.classList.remove('selected'));
+    el('np-urgency') && (el('np-urgency').value = 'normal');
+    const fb = el('np-feedback'); if (fb) fb.style.display = 'none';
+
+    _npRenderStep();
+    overlay.style.display = 'block';
+}
+
+function closeNewProjectModal() {
+    const overlay = document.getElementById('new-project-overlay');
+    if (overlay) overlay.style.display = 'none';
+    document.querySelectorAll('.portal-mandate-row').forEach(r => r.style.background = '');
+    const sidePanel = document.getElementById('portal-mandate-side-panel');
+    if (sidePanel) sidePanel.style.display = 'none';
+}
+
+function npSelectService(card, value) {
+    document.querySelectorAll('.np-service-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    const input = document.getElementById('np-service');
+    if (input) input.value = value;
+}
+
+function _npRenderStep() {
+    const el = (id) => document.getElementById(id);
+
+    // Afficher l'étape courante
+    for (let i = 1; i <= 5; i++) {
+        const step = el('np-step-' + i);
+        if (step) step.style.display = i === _npStep ? 'block' : 'none';
+    }
+
+    // Label
+    if (el('np-step-label')) el('np-step-label').textContent = _npStepLabels[_npStep] || '';
+
+    // Dots dans le header
+    for (let i = 1; i <= 4; i++) {
+        const dot = el('np-step-' + i + '-dot');
+        if (!dot) continue;
+        const circle = dot.querySelector('div');
+        const label = dot.querySelector('span');
+        if (i < _npStep) {
+            // Complété
+            circle.style.background = 'white';
+            circle.style.color = '#059669';
+            circle.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>';
+            if (label) label.style.color = 'white';
+        } else if (i === _npStep) {
+            // Actif
+            circle.style.background = 'white';
+            circle.style.color = '#1B4F8A';
+            circle.innerHTML = String(i);
+            if (label) label.style.color = 'white';
+            if (label) label.style.fontWeight = '700';
+        } else {
+            // Futur
+            circle.style.background = 'rgba(255,255,255,0.25)';
+            circle.style.color = 'white';
+            circle.innerHTML = String(i);
+            if (label) label.style.color = 'rgba(255,255,255,0.6)';
+            if (label) label.style.fontWeight = '600';
+        }
+    }
+
+    // Lignes entre étapes
+    for (let i = 1; i <= 3; i++) {
+        const line = el('np-line-' + i);
+        if (line) line.style.background = i < _npStep ? 'white' : 'rgba(255,255,255,0.3)';
+    }
+
+    // Boutons footer
+    const btnBack = el('np-btn-back');
+    const btnNext = el('np-btn-next');
+    const footer = el('np-footer');
+
+    if (_npStep === 1) {
+        if (btnBack) btnBack.style.display = 'none';
+        if (btnNext) { btnNext.style.display = 'flex'; btnNext.innerHTML = 'Suivant <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>'; }
+    } else if (_npStep === 2) {
+        if (btnBack) { btnBack.style.display = 'inline-block'; btnBack.textContent = '← Retour'; }
+        if (btnNext) { btnNext.style.display = 'flex'; btnNext.style.background = 'var(--primary,#1B4F8A)'; btnNext.innerHTML = 'Choisir un créneau <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>'; }
+    } else if (_npStep === 3) {
+        // Charger les créneaux
+        if (btnBack) { btnBack.style.display = 'inline-block'; btnBack.textContent = '← Retour'; }
+        if (btnNext) {
+            btnNext.style.display = 'flex';
+            btnNext.style.background = 'var(--primary,#1B4F8A)';
+            const hasSlot = !!_npSelectedSlot;
+            btnNext.innerHTML = hasSlot
+                ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg> Réviser ma demande'
+                : 'Passer cette étape →';
+        }
+        setTimeout(function () { _npInitBookingSlots(); }, 200);
+    } else if (_npStep === 4) {
+        // Remplir le résumé avec le créneau sélectionné
+        _npBuildSummary();
+        if (btnBack) { btnBack.style.display = 'inline-block'; btnBack.textContent = '← Retour'; }
+        if (btnNext) { btnNext.style.display = 'flex'; btnNext.style.background = '#059669'; btnNext.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Envoyer la demande'; }
+    } else if (_npStep === 5) {
+        if (footer) footer.style.display = 'none';
+    }
+
+    if (_npStep < 4 && footer) footer.style.display = 'flex';
+    if (_npStep >= 5 && footer) footer.style.display = 'none';
+    const fb = el('np-feedback'); if (fb) fb.style.display = 'none';
+}
+
+function _npBuildSummary() {
+    const el = (id) => document.getElementById(id);
+    const service = el('np-service')?.value;
+    const desc = el('np-description')?.value?.trim();
+    const plc = el('np-plc')?.value;
+    const urgency = el('np-urgency')?.value;
+    const budget = el('np-budget')?.value;
+    const deadline = el('np-deadline')?.value;
+    const extra = el('np-extra')?.value?.trim();
+    const name = el('np-client-name')?.textContent;
+    const company = el('np-client-company')?.textContent;
+
+    const row = (label, value) => value
+        ? '<div style="display:flex;gap:0.5rem;padding:0.45rem 0;border-bottom:1px solid #F1F5F9"><span style="font-size:0.75rem;font-weight:700;color:#94A3B8;min-width:130px;flex-shrink:0">' + label + '</span><span style="font-size:0.82rem;color:#0F172A;font-weight:500">' + value + '</span></div>'
+        : '';
+
+    const sumEl = el('np-summary');
+    if (sumEl) {
+        sumEl.innerHTML =
+            row('Client', name + (company ? ' — ' + company : ''))
+            + row('Service', _svcLabels[service] || service)
+            + row('Automate', plc || '—')
+            + row('Urgence', _urgLabels[urgency] || urgency)
+            + row('Budget estimé', _budgetLabels[budget] || budget)
+            + row('Délai souhaité', _deadlineLabels[deadline] || deadline)
+            + '<div style="padding:0.45rem 0;border-bottom:1px solid #F1F5F9"><span style="font-size:0.75rem;font-weight:700;color:#94A3B8;display:block;margin-bottom:4px">Description</span><span style="font-size:0.82rem;color:#0F172A;line-height:1.5;display:block">' + desc + '</span></div>'
+            + (extra ? row('Détails techniques', extra) : '');
+    }
+
+    // Recap service étape 2
+    const serviceRecap = el('np-service-recap');
+    if (serviceRecap) serviceRecap.textContent = _svcLabels[service] || service;
+
+    // Afficher/masquer le résumé du créneau en étape 4
+    const slotBadge = el('np-summary-slot');
+    const noSlotBadge = el('np-summary-no-slot');
+    const slotTxt = el('np-summary-slot-text');
+    if (_npSelectedSlot) {
+        const ds = _npSelectedSlot.ds;
+        const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+        if (slotTxt) slotTxt.textContent = dateStr + ' à ' + _npSelectedSlot.time + ' · 30 min';
+        if (slotBadge) { slotBadge.style.display = 'flex'; }
+        if (noSlotBadge) { noSlotBadge.style.display = 'none'; }
+    } else {
+        if (slotBadge) { slotBadge.style.display = 'none'; }
+        if (noSlotBadge) { noSlotBadge.style.display = 'block'; }
+    }
+}
+
+async function npGoStep(direction) {
+    const el = (id) => document.getElementById(id);
+    const fb = el('np-feedback');
+    if (fb) fb.style.display = 'none';
+
+    if (direction === 1) {
+        // Validation avant de passer à l'étape suivante
+        if (_npStep === 1) {
+            const service = el('np-service')?.value;
+            const desc = el('np-description')?.value?.trim();
+            if (!service) {
+                _npShowError('Veuillez sélectionner un type de service.');
+                return;
+            }
+            if (!desc || desc.length < 15) {
+                _npShowError('Veuillez décrire votre besoin (minimum 15 caractères).');
+                return;
+            }
+            // Mettre à jour le recap de service dans l'étape 2
+            const recap = el('np-service-recap');
+            if (recap) recap.textContent = _svcLabels[service] || service;
+        }
+
+        if (_npStep === 4) {
+            // Soumettre
+            await _npSubmit();
+            return;
+        }
+    }
+
+    _npStep = Math.max(1, Math.min(4, _npStep + direction));
+    _npRenderStep();
+
+    // Scroll vers le haut du corps
+    const body = document.querySelector('#new-project-modal > div:nth-child(2)');
+    if (body) body.scrollTop = 0;
+}
+
+function _npShowError(msg) {
+    const fb = document.getElementById('np-feedback');
+    if (fb) {
+        fb.style.display = 'block';
+        fb.style.background = '#FEE2E2';
+        fb.style.color = '#DC2626';
+        fb.style.border = '1px solid #FECACA';
+        fb.style.borderRadius = '8px';
+        fb.style.padding = '0.65rem 1rem';
+        fb.textContent = msg;
+    }
+}
+
+async function _npSubmit() {
+    const el = (id) => document.getElementById(id);
+    const btnNext = el('np-btn-next');
+    const service = el('np-service')?.value;
+    const desc = el('np-description')?.value?.trim();
+    const plc = el('np-plc')?.value;
+    const urgency = el('np-urgency')?.value;
+    const budget = el('np-budget')?.value;
+    const deadline = el('np-deadline')?.value;
+    const extra = el('np-extra')?.value?.trim();
+    const name = el('np-client-name')?.textContent;
+    const company = el('np-client-company')?.textContent;
+
+    if (btnNext) { btnNext.disabled = true; btnNext.textContent = 'Envoi en cours...'; }
+
+    const lines = [
+        '🚀 NOUVELLE DEMANDE DE PROJET',
+        '──────────────────────────────',
+        'Client      : ' + name + (company ? ' — ' + company : ''),
+        'Service     : ' + (_svcLabels[service] || service),
+        'Automate    : ' + (plc || 'Non précisé'),
+        'Urgence     : ' + (_urgLabels[urgency] || urgency),
+        'Budget est. : ' + (_budgetLabels[budget] || 'Non défini'),
+        'Délai       : ' + (_deadlineLabels[deadline] || 'Non défini'),
+        '──────────────────────────────',
+        'DESCRIPTION :',
+        desc,
+        extra ? '\nDÉTAILS TECHNIQUES :\n' + extra : null,
+    ].filter(Boolean);
+
+    const msgContent = lines.join('\n');
+
+    try {
+        const token = localStorage.getItem('vnk-token');
+        const resp = await fetch('/api/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ content: msgContent })
+        });
+        const data = await resp.json();
+
+        if (data.success || resp.ok) {
+            _npStep = 5;
+            _npRenderStep();
+
+            // Afficher le créneau réservé dans la confirmation
+            const sentSlot = document.getElementById('np-sent-slot');
+            const sentNoSlot = document.getElementById('np-sent-no-slot');
+            const sentTxt = document.getElementById('np-sent-slot-text');
+            if (_npSelectedSlot) {
+                const ds = _npSelectedSlot.ds;
+                const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+                if (sentTxt) sentTxt.textContent = dateStr + ' à ' + _npSelectedSlot.time;
+                if (sentSlot) sentSlot.style.display = 'block';
+                if (sentNoSlot) sentNoSlot.style.display = 'none';
+                // Réserver le créneau via l'API
+                try {
+                    const token2 = localStorage.getItem('vnk-token');
+                    await fetch('/api/calendar/book', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token2 },
+                        body: JSON.stringify({ slot_id: _npSelectedSlot.id, subject: 'Appel de qualification — demande de projet', meeting_type: 'video' })
+                    });
+                } catch (e) { /* booking non bloquant */ }
+            } else {
+                if (sentSlot) sentSlot.style.display = 'none';
+                if (sentNoSlot) sentNoSlot.style.display = 'block';
+            }
+
+            if (typeof pushPortalNotif === 'function') {
+                pushPortalNotif('mandate', 'Demande de projet envoyée à VNK', 'mandates');
+            }
+        } else {
+            throw new Error(data.message || 'Erreur serveur');
+        }
+    } catch (err) {
+        _npShowError('Erreur lors de l\'envoi : ' + err.message);
+        if (btnNext) { btnNext.disabled = false; btnNext.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Envoyer la demande'; btnNext.style.background = '#059669'; }
+    }
+}
+
+// Ancienne fonction npSelectService (alias)
+function submitNewProject() { npGoStep(1); }
+
+
+// ── BOOKING INTÉGRÉ DANS LE MODAL NOUVEAU PROJET ────────────────
+let _npBookingSlots = [], _npBookingMonthOffset = 0, _npSelectedSlot = null;
+
+async function _npInitBookingSlots() {
+    const loadEl = document.getElementById('np-booking-loading');
+    const emptyEl = document.getElementById('np-booking-empty');
+    const slotsEl = document.getElementById('np-booking-slots');
+    if (loadEl) loadEl.style.display = 'block';
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (slotsEl) slotsEl.style.display = 'none';
+
+    try {
+        const token = localStorage.getItem('vnk-token');
+        const resp = await fetch('/api/calendar/available', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await resp.json();
+        _npBookingSlots = data.slots || [];
+    } catch (e) {
+        _npBookingSlots = [];
+    }
+
+    if (loadEl) loadEl.style.display = 'none';
+
+    if (!_npBookingSlots.length) {
+        if (emptyEl) emptyEl.style.display = 'block';
+        return;
+    }
+
+    // Naviguer au premier mois avec des créneaux
+    const firstDate = _npBookingSlots[0]?.slot_date?.split('T')[0];
+    if (firstDate) {
+        const now = new Date();
+        const first = new Date(firstDate + 'T12:00:00');
+        _npBookingMonthOffset = (first.getFullYear() - now.getFullYear()) * 12 + (first.getMonth() - now.getMonth());
+    } else {
+        _npBookingMonthOffset = 0;
+    }
+
+    if (slotsEl) slotsEl.style.display = 'block';
+    _npRenderBookingCal();
+}
+
+function npBookingNavMonth(dir) {
+    _npBookingMonthOffset += dir;
+    _npRenderBookingCal();
+    // Cacher les créneaux du jour
+    const dayEl = document.getElementById('np-booking-day-slots');
+    const formEl = document.getElementById('np-booking-form');
+    if (dayEl) dayEl.style.display = 'none';
+    if (formEl) formEl.style.display = 'none';
+}
+
+function _npRenderBookingCal() {
+    const now = new Date();
+    const target = new Date(now.getFullYear(), now.getMonth() + _npBookingMonthOffset, 1);
+    const year = target.getFullYear();
+    const month = target.getMonth();
+    const today = now.toISOString().split('T')[0];
+
+    const lbl = document.getElementById('np-booking-month-label');
+    if (lbl) lbl.textContent = target.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
+
+    const datesWithSlots = new Set(_npBookingSlots.map(s => (s.slot_date || '').split('T')[0]));
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    let startDow = firstDay.getDay() - 1;
+    if (startDow < 0) startDow = 6;
+
+    const grid = document.getElementById('np-booking-cal-grid');
+    if (!grid) return;
+
+    let html = '';
+    for (let i = 0; i < startDow; i++) html += '<div></div>';
+
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+        const ds = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        const hasSlot = datesWithSlots.has(ds);
+        const isPast = ds < today;
+        const isToday = ds === today;
+
+        let style = 'text-align:center;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;transition:all .12s;';
+
+        if (!isPast && hasSlot) {
+            style += 'background:#1B4F8A;color:white;font-weight:700;cursor:pointer;';
+            html += '<div onclick="npSelectBookingDate(\'' + ds + '\')" style="' + style + '" '
+                + 'onmouseenter="this.style.background=\'#2563EB\'" '
+                + 'onmouseleave="this.style.background=\'#1B4F8A\'">'
+                + d + '</div>';
+        } else if (isToday && !hasSlot) {
+            style += 'border:2px solid #1B4F8A;color:#1B4F8A;font-weight:600;';
+            html += '<div style="' + style + '">' + d + '</div>';
+        } else {
+            style += 'color:' + (isPast ? '#D1D5DB' : '#9CA3AF') + ';';
+            html += '<div style="' + style + '">' + d + '</div>';
+        }
+    }
+    grid.innerHTML = html;
+}
+
+function npSelectBookingDate(ds) {
+    const daySlots = _npBookingSlots.filter(s => (s.slot_date || '').split('T')[0] === ds);
+    const dayEl = document.getElementById('np-booking-day-slots');
+    const lbl = document.getElementById('np-booking-day-label');
+    const timesEl = document.getElementById('np-booking-times');
+    const formEl = document.getElementById('np-booking-form');
+    const successEl = document.getElementById('np-booking-success');
+
+    if (formEl) formEl.style.display = 'none';
+    if (successEl) successEl.style.display = 'none';
+    _npSelectedSlot = null;
+
+    if (!dayEl || !lbl || !timesEl) return;
+    dayEl.style.display = 'block';
+
+    const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', {
+        weekday: 'long', day: 'numeric', month: 'long'
+    });
+    lbl.textContent = dateStr;
+
+    if (!daySlots.length) {
+        timesEl.innerHTML = '<div style="font-size:0.78rem;color:#94A3B8">Aucun créneau ce jour.</div>';
+        return;
+    }
+
+    timesEl.innerHTML = daySlots.map(function (s) {
+        const time = (s.start_time || '').substring(0, 5);
+        const dur = s.duration_min || 30;
+        return '<button onclick="npSelectBookingSlot(' + s.id + ', \'' + ds + '\', \'' + time + '\', ' + dur + ')" '
+            + 'data-slot-id="' + s.id + '" '
+            + 'style="padding:0.45rem 0.85rem;border:2px solid #E2E8F0;border-radius:8px;background:white;'
+            + 'color:#334155;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s" '
+            + 'onmouseenter="if(!this.classList.contains(\'np-sel\')){this.style.borderColor=\'#1B4F8A\';this.style.color=\'#1B4F8A\'}" '
+            + 'onmouseleave="if(!this.classList.contains(\'np-sel\')){this.style.borderColor=\'#E2E8F0\';this.style.color=\'#334155\'}">'
+            + time + ' <span style="font-size:0.65rem;opacity:0.6">(' + dur + ' min)</span>'
+            + '</button>';
+    }).join('');
+}
+
+function npSelectBookingSlot(slotId, ds, time, dur) {
+    _npSelectedSlot = { id: slotId, ds, time, dur };
+
+    // Mettre à jour visuellement les boutons
+    document.querySelectorAll('#np-booking-times button').forEach(function (btn) {
+        const sel = parseInt(btn.dataset.slotId) === slotId;
+        btn.classList.toggle('np-sel', sel);
+        btn.style.background = sel ? '#1B4F8A' : 'white';
+        btn.style.color = sel ? 'white' : '#334155';
+        btn.style.borderColor = sel ? '#1B4F8A' : '#E2E8F0';
+    });
+
+    // Afficher formulaire
+    const formEl = document.getElementById('np-booking-form');
+    const txtEl = document.getElementById('np-booking-slot-text');
+    const errEl = document.getElementById('np-booking-err');
+    const btnEl = document.getElementById('np-booking-confirm-btn');
+    if (errEl) { errEl.style.display = 'none'; }
+    if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmer le rendez-vous'; }
+
+    const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+    if (txtEl) txtEl.textContent = dateStr + ' à ' + time + ' (' + dur + ' min)';
+    if (formEl) formEl.style.display = 'block';
+}
+
+async function npConfirmBooking() {
+    if (!_npSelectedSlot) return;
+    const subject = document.getElementById('np-booking-subject')?.value?.trim();
+    const meetType = document.getElementById('np-booking-meet-type')?.value || 'video';
+    const btnEl = document.getElementById('np-booking-confirm-btn');
+    const errEl = document.getElementById('np-booking-err');
+    const successEl = document.getElementById('np-booking-success');
+    const txtEl = document.getElementById('np-booking-success-text');
+    const formEl = document.getElementById('np-booking-form');
+
+    if (errEl) errEl.style.display = 'none';
+    if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Réservation...'; }
+
+    try {
+        const token = localStorage.getItem('vnk-token');
+        const resp = await fetch('/api/calendar/book', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ slot_id: _npSelectedSlot.id, subject, meeting_type: meetType })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            const dateStr = new Date(_npSelectedSlot.ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+            if (txtEl) txtEl.textContent = dateStr + ' à ' + _npSelectedSlot.time;
+            if (formEl) formEl.style.display = 'none';
+            if (successEl) successEl.style.display = 'block';
+            // Supprimer le créneau localement
+            _npBookingSlots = _npBookingSlots.filter(s => s.id !== _npSelectedSlot.id);
+            if (_availableSlots) _availableSlots = _availableSlots.filter(s => s.id !== _npSelectedSlot.id);
+            if (typeof pushPortalNotif === 'function') {
+                pushPortalNotif('mandate', 'RDV confirmé — ' + dateStr + ' à ' + _npSelectedSlot.time, null);
+            }
+        } else {
+            throw new Error(data.message || 'Créneau non disponible');
+        }
+    } catch (e) {
+        if (errEl) { errEl.textContent = 'Erreur : ' + e.message; errEl.style.display = 'block'; }
+        if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmer le rendez-vous'; }
+    }
+}
+// ── FIN BOOKING MODAL ────────────────────────────────────────────
+
+
+// ════════════════════════════════════════════════════════════════
+// BOOKING CALENDRIER — Portail client
+// ════════════════════════════════════════════════════════════════
+
+let _availableSlots = [];
+let _bookingMonthOffset = 0;
+let _selectedSlotId = null;
+let _selectedSlotData = null;
+
+async function loadMyAppointments() {
+    const section = document.getElementById('booking-my-appts-section');
+    const list = document.getElementById('booking-my-appts-list');
+    if (!section || !list) return;
+
+    try {
+        const token = localStorage.getItem('vnk-token');
+        const resp = await fetch('/api/calendar/my-appointments', {
+            headers: { Authorization: 'Bearer ' + token }
+        });
+        const data = await resp.json();
+        window._allMyAppts = data.appointments || [];
+        window._bkApptFilter = window._bkApptFilter || 'all';
+        window._bkApptPage = 1;
+        _renderMyAppts();
+    } catch (e) {
+        console.warn('loadMyAppointments:', e);
+    }
+}
+
+function bkFilterAppts(filter, btn) {
+    window._bkApptFilter = filter;
+    window._bkApptPage = 1;
+    document.querySelectorAll('.bk-filter-btn').forEach(b => {
+        b.style.background = 'white';
+        b.style.borderColor = '#E2E8F0';
+        b.style.color = '#64748B';
+        b.style.fontWeight = '600';
+    });
+    if (btn) {
+        btn.style.background = '#EBF5FB';
+        btn.style.borderColor = '#1B4F8A';
+        btn.style.color = '#1B4F8A';
+        btn.style.fontWeight = '700';
+    }
+    _renderMyAppts();
+}
+
+function _renderMyAppts() {
+    const section = document.getElementById('booking-my-appts-section');
+    const list = document.getElementById('booking-my-appts-list');
+    const pager = document.getElementById('booking-appts-pager');
+    if (!list) return;
+
+    const all = window._allMyAppts || [];
+    if (!all.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+
+    const filter = window._bkApptFilter || 'all';
+    const filtered = filter === 'all' ? all : all.filter(a => a.status === filter);
+
+    const PER_PAGE = 8;
+    const page = window._bkApptPage || 1;
+    const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+    const slice = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+    const STATUS = {
+        confirmed: { label: 'Confirmé', bg: '#ECFDF5', color: '#065F46', border: '#A7F3D0', icon: '✓' },
+        pending: { label: 'En attente', bg: '#FEF9EC', color: '#92400E', border: '#FDE68A', icon: '⏳' },
+        cancelled: { label: 'Annulé', bg: '#FEF2F2', color: '#DC2626', border: '#FECACA', icon: '✕' },
+    };
+
+    if (!slice.length) {
+        list.innerHTML = '<div style="text-align:center;padding:1.5rem;color:#94A3B8;font-size:0.85rem">Aucun rendez-vous dans cette catégorie</div>';
+        if (pager) pager.innerHTML = '';
+        return;
+    }
+
+    list.innerHTML = slice.map(function (a) {
+        const st = STATUS[a.status] || STATUS.pending;
+        const ds = (a.appointment_date || '').split('T')[0];
+        const dateStr = ds ? new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+        }) : '—';
+        const timeStr = (a.start_time || '').substring(0, 5) + ' → ' + (a.end_time || '').substring(0, 5);
+        const hasLink = !!a.meeting_link;
+        const isPast = ds < new Date().toLocaleDateString('fr-CA').split('/').reverse().join('-');
+
+        return '<div style="border:1.5px solid ' + st.border + ';border-radius:12px;background:' + st.bg + ';padding:0.85rem 1rem;display:flex;align-items:center;gap:0.85rem;transition:box-shadow .15s" onmouseenter="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.08)\'" onmouseleave="this.style.boxShadow=\'\'">'
+            // Icône
+            + '<div style="width:40px;height:40px;border-radius:10px;background:' + st.color + ';opacity:0.15;position:relative;flex-shrink:0"></div>'
+            + '<div style="position:relative;margin-left:-40px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;font-weight:700;color:' + st.color + '">' + st.icon + '</div>'
+            // Contenu
+            + '<div style="flex:1;min-width:0">'
+            + '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:2px">'
+            + '<span style="font-size:0.88rem;font-weight:700;color:#0F172A">' + dateStr + '</span>'
+            + '<span style="font-size:0.7rem;font-weight:700;background:white;color:' + st.color + ';padding:1px 8px;border-radius:20px;border:1px solid ' + st.border + '">' + st.label + '</span>'
+            + '</div>'
+            + '<div style="font-size:0.78rem;color:#475569;font-weight:600;margin-bottom:2px">' + timeStr + ' · ' + (a.duration_min || 30) + ' min</div>'
+            + (a.subject ? '<div style="font-size:0.75rem;color:#64748B">' + a.subject + '</div>' : '')
+            + '<div style="font-size:0.7rem;color:#94A3B8;margin-top:2px">' + (a.meeting_type === 'phone' ? '📞 Téléphone' : '📹 Vidéo') + '</div>'
+            + '</div>'
+            // Actions
+            + '<div style="display:flex;flex-direction:column;gap:0.35rem;flex-shrink:0;min-width:100px;align-items:flex-end">'
+            + (hasLink
+                ? '<a href="' + a.meeting_link + '" target="_blank" style="display:block;padding:0.4rem 0.85rem;border:none;border-radius:8px;background:#1B4F8A;color:white;font-size:0.75rem;font-weight:700;text-decoration:none;text-align:center">Rejoindre</a>'
+                : (a.status === 'confirmed' ? '<span style="font-size:0.7rem;background:white;color:#D97706;padding:3px 8px;border-radius:6px;border:1px solid #FDE68A;white-space:nowrap">🔗 Lien à venir</span>' : ''))
+            + (!isPast && a.status === 'confirmed'
+                ? '<button onclick="cancelMyAppointment(' + a.id + ')" style="background:white;border:1.5px solid #FECACA;border-radius:6px;padding:2px 8px;font-size:0.7rem;color:#DC2626;cursor:pointer;font-family:inherit;white-space:nowrap">Annuler</button>'
+                : '')
+            + '</div>'
+            + '</div>';
+    }).join('');
+
+    // Pagination
+    if (pager) {
+        if (pages <= 1) { pager.innerHTML = ''; return; }
+        const from = (page - 1) * PER_PAGE + 1;
+        const to = Math.min(page * PER_PAGE, filtered.length);
+        pager.innerHTML = '<span>' + from + '–' + to + ' sur ' + filtered.length + ' RDV</span>'
+            + '<div style="display:flex;gap:0.3rem">'
+            + (page > 1 ? '<button onclick="_bkApptPg(' + (page - 1) + ')" style="padding:3px 9px;border:1.5px solid #E2E8F0;border-radius:6px;background:white;font-size:0.75rem;cursor:pointer;font-family:inherit">←</button>' : '')
+            + '<span style="padding:3px 9px;border:1.5px solid #1B4F8A;border-radius:6px;background:#EBF5FB;color:#1B4F8A;font-size:0.75rem;font-weight:700">' + page + '/' + pages + '</span>'
+            + (page < pages ? '<button onclick="_bkApptPg(' + (page + 1) + ')" style="padding:3px 9px;border:1.5px solid #E2E8F0;border-radius:6px;background:white;font-size:0.75rem;cursor:pointer;font-family:inherit">→</button>' : '')
+            + '</div>';
+    }
+}
+
+function _bkApptPg(p) { window._bkApptPage = p; _renderMyAppts(); }
+
+
+async function cancelMyAppointment(apptId) {
+    if (!confirm('Annuler ce rendez-vous ?')) return;
+    try {
+        const token = localStorage.getItem('vnk-token');
+        const r = await fetch('/api/calendar/appointments/' + apptId + '/cancel', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({ reason: 'Annulé par le client' })
+        });
+        const data = await r.json();
+        if (data.success) {
+            if (typeof pushPortalNotif === 'function') pushPortalNotif('mandate', 'RDV annulé', null);
+            loadMyAppointments();
+            initBookingTab();
+        }
+    } catch (e) { }
+}
+
+async function initBookingTab() {
+    const grid = document.getElementById('booking-month-grid');
+    const slotsDay = document.getElementById('booking-slots-day');
+    const sep = document.getElementById('booking-day-separator');
+    if (grid) grid.innerHTML = '';
+    if (slotsDay) slotsDay.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem 1rem;color:#CBD5E0;font-size:0.85rem"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto 0.5rem"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Chargement des disponibilités...</div>';
+    if (sep) sep.style.display = 'none';
+    resetBookingSelection();
+
+    // Charger mes RDV en parallèle
+    loadMyAppointments();
+
+    // Toujours recharger depuis le serveur (temps réel)
+    try {
+        const token = localStorage.getItem('vnk-token');
+        const resp = await fetch('/api/calendar/available?ts=' + Date.now(), {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await resp.json();
+        _availableSlots = data.slots || [];
+    } catch (e) {
+        _availableSlots = [];
+    }
+
+    // Naviguer automatiquement au premier mois avec des créneaux
+    if (_availableSlots.length > 0) {
+        const firstDate = _availableSlots[0].slot_date?.split('T')[0];
+        if (firstDate) {
+            const now = new Date();
+            const first = new Date(firstDate + 'T12:00:00');
+            _bookingMonthOffset = (first.getFullYear() - now.getFullYear()) * 12 + (first.getMonth() - now.getMonth());
+        }
+    } else {
+        _bookingMonthOffset = 0;
+    }
+
+    resetBookingSelection();
+    renderBookingMonth();
+}
+
+function bookingNavMonth(dir) {
+    _bookingMonthOffset += dir;
+    renderBookingMonth();
+    // Cacher les créneaux quand on change de mois
+    const sep = document.getElementById('booking-day-separator');
+    const slots = document.getElementById('booking-slots-day');
+    if (sep) sep.style.display = 'none';
+    if (slots) slots.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:1.5rem;color:#CBD5E0;font-size:0.85rem">Sélectionnez une date disponible</div>';
+    resetBookingSelection();
+    // Vider les créneaux du jour
+    const dl = document.getElementById('booking-slots-day');
+    const lbl = document.getElementById('booking-slots-date-label');
+    if (dl) dl.innerHTML = '<div style="font-size:0.85rem;color:#94A3B8">Sélectionnez un jour pour voir les créneaux.</div>';
+    if (lbl) lbl.textContent = '';
+}
+
+function renderBookingMonth() {
+    const now = new Date();
+    const target = new Date(now.getFullYear(), now.getMonth() + _bookingMonthOffset, 1);
+    const year = target.getFullYear();
+    const month = target.getMonth();
+    const lbl = document.getElementById('booking-month-label');
+    if (lbl) lbl.textContent = target.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
+
+    const datesWithSlots = new Set(_availableSlots.map(s => (s.slot_date || '').split('T')[0]));
+    const todayDs = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    let startDow = firstDay.getDay() - 1;
+    if (startDow < 0) startDow = 6;
+
+    const grid = document.getElementById('booking-month-grid');
+    if (!grid) return;
+    let html = '';
+
+    for (let i = 0; i < startDow; i++) html += '<div></div>';
+
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+        const ds = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        const hasSlot = datesWithSlots.has(ds);
+        const isPast = ds < todayDs;
+        const isToday = ds === todayDs;
+        const slotCount = hasSlot ? _availableSlots.filter(s => (s.slot_date || '').split('T')[0] === ds).length : 0;
+
+        if (!isPast && hasSlot) {
+            html += '<div class="bk-cal-day available" onclick="selectBookingDate(\'' + ds + '\')" title="' + slotCount + ' créneau' + (slotCount > 1 ? 'x' : '') + '">' + d + '</div>';
+        } else if (isToday) {
+            html += '<div class="bk-cal-day today">' + d + '</div>';
+        } else if (isPast) {
+            html += '<div class="bk-cal-day past">' + d + '</div>';
+        } else {
+            html += '<div class="bk-cal-day other">' + d + '</div>';
+        }
+    }
+    grid.innerHTML = html;
+}
+
+function bkSetMeetType(type, btn) {
+    document.querySelectorAll('.bk-meet-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const hidden = document.getElementById('booking-meet-type');
+    if (hidden) hidden.value = type;
+}
+
+function selectBookingDate(ds) {
+    const daySlots = _availableSlots.filter(s => (s.slot_date || '').split('T')[0] === ds);
+    const sep = document.getElementById('booking-day-separator');
+    const lbl = document.getElementById('booking-slots-date-label');
+    const container = document.getElementById('booking-slots-day');
+    if (!sep || !lbl || !container) return;
+
+    sep.style.display = 'block';
+    const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', {
+        weekday: 'long', day: 'numeric', month: 'long'
+    });
+    lbl.textContent = dateStr;
+
+    if (!daySlots.length) {
+        container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:1rem;color:#94A3B8;font-size:.82rem">Aucun créneau ce jour.</div>';
+        return;
+    }
+
+    container.style.gridTemplateColumns = 'repeat(3,1fr)';
+    container.innerHTML = daySlots.map(function (s) {
+        const time = (s.start_time || '').substring(0, 5);
+        const dur = s.duration_min || 30;
+        return '<button onclick="selectBookingSlot(' + s.id + ')" data-slot-id="' + s.id + '" class="bk-slot-btn">'
+            + time
+            + '<span style="display:block;font-size:.62rem;font-weight:400;color:inherit;opacity:.7;margin-top:1px">' + dur + ' min</span>'
+            + '</button>';
+    }).join('');
+}
+
+function selectBookingSlot(slotId) {
+    _selectedSlotId = slotId;
+    _selectedSlotData = _availableSlots.find(s => s.id === slotId);
+
+    document.querySelectorAll('#booking-slots-day .bk-slot-btn').forEach(function (btn) {
+        const sel = parseInt(btn.dataset.slotId) === slotId;
+        btn.classList.toggle('selected', sel);
+    });
+
+    const emptyEl = document.getElementById('booking-form-empty');
+    const contentEl = document.getElementById('booking-form-content');
+    const infoEl = document.getElementById('booking-selected-info');
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (contentEl) contentEl.style.display = 'flex';
+    if (infoEl) infoEl.style.display = 'block';
+
+    if (_selectedSlotData) {
+        const ds = (_selectedSlotData.slot_date || '').split('T')[0];
+        const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
+        const slotLbl = document.getElementById('booking-selected-slot-label');
+        const durLbl = document.getElementById('booking-selected-duration');
+        if (slotLbl) slotLbl.textContent = dateStr + ' à ' + (_selectedSlotData.start_time || '').substring(0, 5);
+        if (durLbl) durLbl.textContent = (_selectedSlotData.duration_min || 30) + ' min · Vidéo ou téléphone';
+    }
+
+    const name = document.getElementById('sidebar-name')?.textContent?.trim() || '';
+    const company = document.getElementById('sidebar-company')?.textContent?.trim() || '';
+    const avEl = document.getElementById('booking-client-avatar');
+    const nameEl = document.getElementById('booking-client-name-label');
+    if (avEl) avEl.textContent = (name || 'CL').substring(0, 2).toUpperCase();
+    if (nameEl) nameEl.textContent = name + (company ? ' — ' + company : '');
+
+    const res = document.getElementById('booking-result');
+    const err = document.getElementById('booking-error');
+    const btn = document.getElementById('booking-confirm-btn');
+    if (res) res.style.display = 'none';
+    if (err) err.style.display = 'none';
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmer le rendez-vous'; }
+}
+
+function resetBookingSelection() {
+    _selectedSlotId = null;
+    _selectedSlotData = null;
+    const emptyEl = document.getElementById('booking-form-empty');
+    const contentEl = document.getElementById('booking-form-content');
+    const infoEl = document.getElementById('booking-selected-info');
+    if (emptyEl) emptyEl.style.display = 'flex';
+    if (contentEl) contentEl.style.display = 'none';
+    if (infoEl) infoEl.style.display = 'none';
+    document.querySelectorAll('#booking-slots-day .bk-slot-btn').forEach(b => b.classList.remove('selected'));
+}
+
+async function confirmBooking() {
+    if (!_selectedSlotId) return;
+    const subject = document.getElementById('booking-subject')?.value?.trim();
+    const meetType = document.getElementById('booking-meet-type')?.value || 'video';
+    const btn = document.getElementById('booking-confirm-btn');
+    const err = document.getElementById('booking-error');
+    const res = document.getElementById('booking-result');
+    if (err) err.style.display = 'none';
+    if (btn) { btn.disabled = true; btn.innerHTML = 'Réservation en cours...'; }
+
+    try {
+        const token = localStorage.getItem('vnk-token');
+        const resp = await fetch('/api/calendar/book', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({
+                slot_id: _selectedSlotId, subject, meeting_type: meetType,
+                notes_client: document.getElementById('booking-notes')?.value?.trim() || null
+            })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            const ds = (_selectedSlotData?.slot_date || '').split('T')[0];
+            const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+            const time = (_selectedSlotData?.start_time || '').substring(0, 5);
+            const resText = document.getElementById('booking-result-text');
+            if (resText) resText.textContent = dateStr + ' à ' + time;
+            if (res) res.style.display = 'block';
+            if (btn) btn.style.display = 'none';
+            // Retirer le créneau localement
+            _availableSlots = _availableSlots.filter(s => s.id !== _selectedSlotId);
+            renderBookingMonth();
+            if (typeof pushPortalNotif === 'function') {
+                pushPortalNotif('mandate', 'RDV confirmé — ' + dateStr + ' à ' + time, null);
+            }
+        } else {
+            throw new Error(data.message || 'Créneau non disponible');
+        }
+    } catch (e) {
+        if (err) { err.textContent = 'Erreur : ' + e.message; err.style.display = 'block'; }
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmer le rendez-vous';
+        }
+    }
+}
+
+// Alias compatibilité
+function loadAvailableSlots() { initBookingTab(); }

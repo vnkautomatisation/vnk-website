@@ -70,6 +70,8 @@ function initWebSocket(httpServer) {
                         ws._authenticated = true;
                         ws._role = 'client';
                         ws._clientId = decoded.id;
+                        ws._connectedAt = new Date().toISOString();
+                        ws._currentPage = null;
                         if (!clientSockets.has(decoded.id)) clientSockets.set(decoded.id, new Set());
                         clientSockets.get(decoded.id).add(ws);
                         _send(ws, { type: 'authenticated', role: 'client', clientId: decoded.id });
@@ -86,6 +88,7 @@ function initWebSocket(httpServer) {
             if (!ws._authenticated) return;
 
             // ── PING ──────────────────────────────────────────
+            if (msg.type === 'nav') { ws._currentPage = msg.page || null; return; }
             if (msg.type === 'ping') {
                 _send(ws, { type: 'pong' });
                 return;
@@ -161,4 +164,16 @@ function getStats() {
     };
 }
 
-module.exports = { initWebSocket, broadcast, getStats };
+// ── Présence en temps réel ────────────────────────────────────
+function getOnlineClients() {
+    const online = [];
+    clientSockets.forEach((sockets, clientId) => {
+        if (sockets.size > 0) {
+            const w = [...sockets][0];
+            online.push({ clientId, connectedAt: w._connectedAt || null, currentPage: w._currentPage || null });
+        }
+    });
+    return online;
+}
+
+module.exports = { initWebSocket, broadcast, getOnlineClients };

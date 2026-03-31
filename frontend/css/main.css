@@ -50,6 +50,21 @@ body {
     line-height: var(--line-height);
     background-color: var(--color-white);
     -webkit-font-smoothing: antialiased;
+    margin: 0;
+    padding: 0;
+}
+
+/* Portail + Admin : jamais de scroll externe */
+html {
+    overflow: hidden;
+    height: 100%;
+    max-height: 100vh;
+}
+
+body {
+    overflow: hidden;
+    height: 100%;
+    max-height: 100vh;
 }
 
 a {
@@ -2881,10 +2896,12 @@ img {
 /* ── DASHBOARD — GRILLE 3 COLONNES ── */
 .portal-dashboard {
     display: grid;
-    grid-template-columns: 240px 1fr 320px; /* ← panel droit 320px */
+    grid-template-columns: 240px 1fr 320px;
     height: calc(100vh - var(--nav-height));
+    max-height: calc(100vh - var(--nav-height));
     margin-top: var(--nav-height);
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 /* ── ZONE 1 — SIDEBAR ── */
@@ -3040,6 +3057,7 @@ img {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    height: 100%;
 }
 
 /* Zone gelée en haut du contenu : stats + titre carte */
@@ -3069,8 +3087,12 @@ img {
 }
 
     .portal-tab.active {
-        display: block;
-        padding: 1.25rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        box-sizing: border-box;
     }
 
 /* Dashboard: pas de padding direct — géré par frozen/scroll */
@@ -3081,6 +3103,70 @@ img {
     flex: 1;
     min-height: 0;
     overflow: hidden;
+}
+
+/* Tous les onglets non-dashboard : occupent tout l'espace flex restant */
+#tab-mandates.active,
+#tab-quotes.active,
+#tab-invoices.active,
+#tab-contracts.active,
+#tab-documents.active,
+#tab-profile.active {
+    flex: 1;
+    min-height: 0;
+}
+
+/* Mandats : flex column + pas de padding (gere par sous-zones) */
+#tab-mandates.active {
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+/* Quotes / Factures / Contrats / Profil : enfant direct scrollable */
+#tab-quotes.active > *,
+#tab-invoices.active > *,
+#tab-contracts.active > *,
+#tab-profile.active > * {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1.25rem 1.5rem 5rem;
+}
+
+/* Documents : scroll interne sur portal-list, pas sur le tab entier */
+#tab-documents.active {
+    padding: 1.25rem 1.5rem 0;
+    overflow: hidden;
+}
+
+#tab-documents .portal-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 5rem;
+    max-height: none !important;
+}
+
+/* ── Mandats portail : zones sticky ── */
+#tab-mandates .portal-mandates-header {
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    background: var(--color-bg);
+    padding: 1rem 1.5rem 0.5rem;
+    margin-bottom: 0;
+}
+
+/* Zone scrollable mandats portail — prend tout l'espace restant */
+.portal-mandates-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    padding: 0 1.5rem 5rem;
 }
 
 

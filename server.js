@@ -53,7 +53,9 @@ app.use('/api/messages', require('./backend/routes/messages'));
 app.use('/api/documents', require('./backend/routes/documents'));
 app.use('/api/payments', require('./backend/routes/payments'));
 app.use('/api/contact', require('./backend/routes/contact'));
+app.use('/api/analytics', require('./backend/routes/analytics'));
 app.use('/api/calendly', require('./backend/routes/calendly'));
+app.use('/api/calendar', require('./backend/routes/calendar'));
 
 // ── Stripe (optionnel) ────────────────────────────────────────
 try {
