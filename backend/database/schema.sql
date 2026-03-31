@@ -1,17 +1,14 @@
 -- ============================================================
 -- VNK Automatisation Inc. — Schéma complet base de données
--- Version 4.0 — Workflow complet + Emails transactionnels
--- Mis à jour : 2026-03-30
--- Changements v4.0 :
---   + contracts.amount_ttc, quote_id lié proprement
---   + invoices.contract_id (lien facture ↔ contrat)
---   + quotes.accepted_at déjà présent, workflow complet
---   + documents.is_read (notification badge portail)
---   + Nouveaux event_types : new_document, new_invoice, new_quote
---     new_mandate, mandate_update, contract_signed, payment_confirmed
---   + Section migration v3.0 → v4.0 en bas
+-- Version 5.0 — Demandes de projet avec suivi de statut
+-- Mis à jour : 2026-03-31
+-- Changements v5.0 :
+--   + messages.request_status (suivi statut demandes portail)
+--   + index idx_messages_request_status
+--   + page_views (analytics trafic site)
+--   + Toutes les colonnes ALTER TABLE intégrées directement
 -- ATTENTION: Supprime TOUTES les tables et repart de zéro
--- Pour migration sans perte de données → voir bas du fichier
+-- Pour migration sans perte de données → voir section MIGRATION en bas
 -- ============================================================
 
 -- ============================================================
@@ -20,6 +17,7 @@
 DROP TABLE IF EXISTS message_attachments CASCADE;
 DROP TABLE IF EXISTS ws_connections CASCADE;
 DROP TABLE IF EXISTS workflow_events CASCADE;
+DROP TABLE IF EXISTS page_views CASCADE;
 DROP TABLE IF EXISTS messages CASCADE;
 DROP TABLE IF EXISTS documents CASCADE;
 DROP TABLE IF EXISTS mandate_logs CASCADE;
@@ -78,7 +76,7 @@ CREATE TABLE mandates (
     title           VARCHAR(255) NOT NULL,
     description     TEXT,
     service_type    VARCHAR(100) DEFAULT 'plc-support',
-    status          VARCHAR(50)  DEFAULT 'pending',   -- pending | active | in_progress | completed | cancelled
+    status          VARCHAR(50)  DEFAULT 'pending',   -- pending | active | in_progress | completed | cancelled | paused
     progress        INTEGER      DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
     start_date      DATE,
     end_date        DATE,
@@ -89,29 +87,31 @@ CREATE TABLE mandates (
 
 -- DEVIS
 CREATE TABLE quotes (
-    id              SERIAL PRIMARY KEY,
-    client_id       INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    quote_number    VARCHAR(50) UNIQUE NOT NULL,
-    title           VARCHAR(255) NOT NULL,
-    description     TEXT,
-    service_type    VARCHAR(100),
-    amount_ht       DECIMAL(10,2) NOT NULL DEFAULT 0,
-    tps_amount      DECIMAL(10,2) DEFAULT 0,
-    tvq_amount      DECIMAL(10,2) DEFAULT 0,
-    amount_ttc      DECIMAL(10,2) DEFAULT 0,
-    status          VARCHAR(50)  DEFAULT 'pending',   -- pending | accepted | declined | expired
-    expiry_date     DATE,
-    accepted_at     TIMESTAMP,
-    created_at      TIMESTAMP    DEFAULT NOW(),
-    updated_at      TIMESTAMP    DEFAULT NOW()
+    id                      SERIAL PRIMARY KEY,
+    client_id               INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    quote_number            VARCHAR(50) UNIQUE NOT NULL,
+    title                   VARCHAR(255) NOT NULL,
+    description             TEXT,
+    service_type            VARCHAR(100),
+    amount_ht               DECIMAL(10,2) NOT NULL DEFAULT 0,
+    tps_amount              DECIMAL(10,2) DEFAULT 0,
+    tvq_amount              DECIMAL(10,2) DEFAULT 0,
+    amount_ttc              DECIMAL(10,2) DEFAULT 0,
+    status                  VARCHAR(50)  DEFAULT 'pending',   -- pending | accepted | declined | expired
+    expiry_date             DATE,
+    accepted_at             TIMESTAMP,
+    signed_at               TIMESTAMP,
+    payment_plan            VARCHAR(30)  DEFAULT 'split_50_50',
+    payment_pct1            INT          DEFAULT 50,
+    payment_pct2            INT          DEFAULT 50,
+    payment_conditions      TEXT,
+    client_signature_data   TEXT,
+    created_at              TIMESTAMP    DEFAULT NOW(),
+    updated_at              TIMESTAMP    DEFAULT NOW()
 );
 
 -- CONTRATS
 -- status: draft | pending | signed | cancelled
--- Workflow: admin crée → pending (envoi au client) → signed (les deux signatures)
--- admin_signed_at + admin_signature_data : signature canvas admin
--- client_signature_data + client_signature_ip : signature canvas portail
--- amount_ttc : repris du devis pour la facture auto
 CREATE TABLE contracts (
     id                      SERIAL PRIMARY KEY,
     client_id               INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
@@ -122,26 +122,25 @@ CREATE TABLE contracts (
     content                 TEXT,
     file_url                TEXT,
     status                  VARCHAR(50)  DEFAULT 'pending',   -- draft | pending | signed | cancelled
-    amount_ttc              DECIMAL(10,2) DEFAULT 0,           -- montant du contrat (repris du devis)
+    amount_ttc              DECIMAL(10,2) DEFAULT 0,
     hellosign_request_id    VARCHAR(255),
-    signed_at               TIMESTAMP,                         -- date signature client
-    client_signature_data   TEXT,                              -- base64 PNG signature canvas client
-    client_signature_ip     VARCHAR(64),                       -- IP du client lors de la signature
-    admin_signature_data    TEXT,                              -- base64 PNG signature canvas admin
-    admin_signed_at         TIMESTAMPTZ,                       -- date signature admin
+    signed_at               TIMESTAMP,
+    client_signature_data   TEXT,
+    client_signature_ip     VARCHAR(64),
+    admin_signature_data    TEXT,
+    admin_signed_at         TIMESTAMPTZ,
     created_at              TIMESTAMP    DEFAULT NOW(),
     updated_at              TIMESTAMP    DEFAULT NOW()
 );
 
 -- FACTURES
 -- status: unpaid | paid | overdue | cancelled
--- contract_id : lien vers le contrat (facture auto après double signature)
 CREATE TABLE invoices (
     id                          SERIAL PRIMARY KEY,
     client_id                   INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
     mandate_id                  INTEGER REFERENCES mandates(id),
     quote_id                    INTEGER REFERENCES quotes(id),
-    contract_id                 INTEGER REFERENCES contracts(id),  -- facture auto liée au contrat
+    contract_id                 INTEGER REFERENCES contracts(id),
     invoice_number              VARCHAR(50) UNIQUE NOT NULL,
     title                       VARCHAR(255) NOT NULL,
     description                 TEXT,
@@ -149,9 +148,12 @@ CREATE TABLE invoices (
     tps_amount                  DECIMAL(10,2) DEFAULT 0,
     tvq_amount                  DECIMAL(10,2) DEFAULT 0,
     amount_ttc                  DECIMAL(10,2) DEFAULT 0,
-    status                      VARCHAR(50)  DEFAULT 'unpaid',    -- unpaid | paid | overdue | cancelled
+    status                      VARCHAR(50)  DEFAULT 'unpaid',
     due_date                    DATE,
     paid_at                     TIMESTAMP,
+    payment_method              VARCHAR(50),
+    invoice_phase               VARCHAR(20),
+    phase_number                INT          DEFAULT 1,
     stripe_payment_intent_id    VARCHAR(255),
     stripe_session_id           VARCHAR(255),
     created_at                  TIMESTAMP    DEFAULT NOW(),
@@ -167,7 +169,7 @@ CREATE TABLE payments (
     stripe_charge_id            VARCHAR(255),
     amount                      DECIMAL(10,2) NOT NULL,
     currency                    VARCHAR(10)  DEFAULT 'cad',
-    status                      VARCHAR(50)  DEFAULT 'pending',   -- pending | completed | failed | refunded
+    status                      VARCHAR(50)  DEFAULT 'pending',
     payment_method              VARCHAR(100),
     paid_at                     TIMESTAMP,
     created_at                  TIMESTAMP    DEFAULT NOW()
@@ -175,170 +177,154 @@ CREATE TABLE payments (
 
 -- REMBOURSEMENTS
 CREATE TABLE refunds (
-    id              SERIAL PRIMARY KEY,
-    client_id       INTEGER NOT NULL REFERENCES clients(id),
-    invoice_id      INTEGER REFERENCES invoices(id),
+    id               SERIAL PRIMARY KEY,
+    client_id        INTEGER NOT NULL REFERENCES clients(id),
+    invoice_id       INTEGER REFERENCES invoices(id),
     stripe_refund_id VARCHAR(255),
-    refund_number   VARCHAR(50) UNIQUE NOT NULL,
-    reason          TEXT NOT NULL,
-    amount          DECIMAL(10,2) NOT NULL,
-    tps_amount      DECIMAL(10,2) DEFAULT 0,
-    tvq_amount      DECIMAL(10,2) DEFAULT 0,
-    total_amount    DECIMAL(10,2) NOT NULL,
-    status          VARCHAR(50)  DEFAULT 'pending',   -- pending | completed | failed
-    notes           TEXT,
-    processed_at    TIMESTAMP,
-    created_at      TIMESTAMP    DEFAULT NOW()
+    refund_number    VARCHAR(50) UNIQUE NOT NULL,
+    reason           TEXT NOT NULL,
+    amount           DECIMAL(10,2) NOT NULL,
+    tps_amount       DECIMAL(10,2) DEFAULT 0,
+    tvq_amount       DECIMAL(10,2) DEFAULT 0,
+    total_amount     DECIMAL(10,2) NOT NULL,
+    status           VARCHAR(50)  DEFAULT 'pending',
+    notes            TEXT,
+    processed_at     TIMESTAMP,
+    created_at       TIMESTAMP    DEFAULT NOW()
 );
 
 -- LITIGES
 CREATE TABLE disputes (
-    id              SERIAL PRIMARY KEY,
-    client_id       INTEGER NOT NULL REFERENCES clients(id),
-    invoice_id      INTEGER REFERENCES invoices(id),
-    mandate_id      INTEGER REFERENCES mandates(id),
+    id                SERIAL PRIMARY KEY,
+    client_id         INTEGER NOT NULL REFERENCES clients(id),
+    invoice_id        INTEGER REFERENCES invoices(id),
+    mandate_id        INTEGER REFERENCES mandates(id),
     stripe_dispute_id VARCHAR(255),
-    title           VARCHAR(255) NOT NULL,
-    description     TEXT,
-    status          VARCHAR(50)  DEFAULT 'open',      -- open | under_review | resolved | closed
-    priority        VARCHAR(20)  DEFAULT 'medium',    -- low | medium | high
-    resolution      TEXT,
-    opened_at       TIMESTAMP    DEFAULT NOW(),
-    resolved_at     TIMESTAMP,
-    created_at      TIMESTAMP    DEFAULT NOW()
+    title             VARCHAR(255) NOT NULL,
+    description       TEXT,
+    status            VARCHAR(50)  DEFAULT 'open',
+    priority          VARCHAR(20)  DEFAULT 'medium',
+    resolution        TEXT,
+    opened_at         TIMESTAMP    DEFAULT NOW(),
+    resolved_at       TIMESTAMP,
+    created_at        TIMESTAMP    DEFAULT NOW()
 );
 
 -- DÉPENSES
 CREATE TABLE expenses (
-    id              SERIAL PRIMARY KEY,
-    title           VARCHAR(255) NOT NULL,
-    category        VARCHAR(100) DEFAULT 'autre',
-    amount          DECIMAL(10,2) NOT NULL,
-    tps_paid        DECIMAL(10,2) DEFAULT 0,
-    tvq_paid        DECIMAL(10,2) DEFAULT 0,
-    vendor          VARCHAR(255),
-    receipt_url     TEXT,
-    expense_date    DATE NOT NULL,
-    notes           TEXT,
-    created_at      TIMESTAMP    DEFAULT NOW()
+    id           SERIAL PRIMARY KEY,
+    title        VARCHAR(255) NOT NULL,
+    category     VARCHAR(100) DEFAULT 'autre',
+    amount       DECIMAL(10,2) NOT NULL,
+    tps_paid     DECIMAL(10,2) DEFAULT 0,
+    tvq_paid     DECIMAL(10,2) DEFAULT 0,
+    vendor       VARCHAR(255),
+    receipt_url  TEXT,
+    expense_date DATE NOT NULL,
+    notes        TEXT,
+    created_at   TIMESTAMP    DEFAULT NOW()
 );
 
 -- DÉCLARATIONS FISCALES
 CREATE TABLE tax_declarations (
-    id                  SERIAL PRIMARY KEY,
-    period_type         VARCHAR(50)  NOT NULL,    -- monthly | quarterly | annual
-    period_label        VARCHAR(100) NOT NULL,
-    period_start        DATE         NOT NULL,
-    period_end          DATE         NOT NULL,
-    total_revenue_ht    DECIMAL(10,2) DEFAULT 0,
-    total_tps           DECIMAL(10,2) DEFAULT 0,
-    total_tvq           DECIMAL(10,2) DEFAULT 0,
-    total_taxes         DECIMAL(10,2) DEFAULT 0,
-    status              VARCHAR(50)  DEFAULT 'draft',   -- draft | submitted | filed
-    notes               TEXT,
-    submitted_at        TIMESTAMP,
-    created_at          TIMESTAMP    DEFAULT NOW()
+    id               SERIAL PRIMARY KEY,
+    period_type      VARCHAR(50)  NOT NULL,
+    period_label     VARCHAR(100) NOT NULL,
+    period_start     DATE         NOT NULL,
+    period_end       DATE         NOT NULL,
+    total_revenue_ht DECIMAL(10,2) DEFAULT 0,
+    total_tps        DECIMAL(10,2) DEFAULT 0,
+    total_tvq        DECIMAL(10,2) DEFAULT 0,
+    total_taxes      DECIMAL(10,2) DEFAULT 0,
+    status           VARCHAR(50)  DEFAULT 'draft',
+    notes            TEXT,
+    submitted_at     TIMESTAMP,
+    created_at       TIMESTAMP    DEFAULT NOW()
 );
 
 -- DOCUMENTS
--- is_read: false par défaut → badge notification portail
--- status: disponible | disponible_lu | archivé
 CREATE TABLE documents (
-    id              SERIAL PRIMARY KEY,
-    client_id       INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    mandate_id      INTEGER REFERENCES mandates(id),
-    title           VARCHAR(255) NOT NULL,
-    description     TEXT,
-    file_type       VARCHAR(50)  DEFAULT 'pdf',
-    file_name       VARCHAR(255),
-    file_url        TEXT,
-    file_size       INTEGER,
-    uploaded_by     VARCHAR(100),
-    category        VARCHAR(100),
-    status          VARCHAR(50)  DEFAULT 'disponible',
-    is_read         BOOLEAN      DEFAULT false,   -- false = non lu → badge badge-documents
-    created_at      TIMESTAMP    DEFAULT NOW(),
-    updated_at      TIMESTAMP    DEFAULT NOW()
+    id          SERIAL PRIMARY KEY,
+    client_id   INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    mandate_id  INTEGER REFERENCES mandates(id),
+    title       VARCHAR(255) NOT NULL,
+    description TEXT,
+    file_type   VARCHAR(50)  DEFAULT 'pdf',
+    file_name   VARCHAR(255),
+    file_url    TEXT,
+    file_size   INTEGER,
+    uploaded_by VARCHAR(100),
+    category    VARCHAR(100),
+    status      VARCHAR(50)  DEFAULT 'disponible',
+    is_read     BOOLEAN      DEFAULT false,
+    created_at  TIMESTAMP    DEFAULT NOW(),
+    updated_at  TIMESTAMP    DEFAULT NOW()
 );
 
--- MESSAGES (chat portail + emails)
--- sender: 'client' | 'vnk'
--- channel: 'chat' | 'email' | 'both' | 'email_received'
---   chat           → message dans le portail client seulement
---   email          → email envoyé seulement (gardé en trace)
---   both           → email + message dans le portail
---   email_received → email reçu du client (via webhook inbound)
--- is_read: côté receveur (vnk lit les messages client, client lit les messages vnk)
+-- MESSAGES (chat portail + emails + demandes de projet)
+-- sender        : 'client' | 'vnk'
+-- channel       : 'chat' | 'email' | 'both' | 'email_received'
+-- request_status: statut de la demande de projet (si le message est une demande)
+--   new         → demande reçue, pas encore traitée
+--   in_progress → admin travaille sur la demande
+--   converted   → un mandat ou devis a été créé depuis cette demande
+--   closed      → demande rejetée ou annulée
+--   NULL        → message ordinaire (pas une demande de projet)
 CREATE TABLE messages (
-    id                  SERIAL PRIMARY KEY,
-    client_id           INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    sender              VARCHAR(20) NOT NULL CHECK (sender IN ('client', 'vnk')),
-    content             TEXT,
-    attachment_data     JSONB        DEFAULT NULL,
-    is_read             BOOLEAN      DEFAULT false,
-    channel             VARCHAR(30)  DEFAULT 'chat',  -- chat | email | both | email_received
-    created_at          TIMESTAMP    DEFAULT NOW()
+    id              SERIAL PRIMARY KEY,
+    client_id       INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    sender          VARCHAR(20) NOT NULL CHECK (sender IN ('client', 'vnk')),
+    content         TEXT,
+    attachment_data JSONB        DEFAULT NULL,
+    is_read         BOOLEAN      DEFAULT false,
+    channel         VARCHAR(30)  DEFAULT 'chat',
+    request_status  VARCHAR(20)  DEFAULT NULL,   -- NULL | new | in_progress | converted | closed
+    created_at      TIMESTAMP    DEFAULT NOW()
 );
 
 -- MESSAGES CONTACT (formulaire public du site)
 CREATE TABLE contact_messages (
-    id          SERIAL PRIMARY KEY,
-    name        VARCHAR(255) NOT NULL,
-    email       VARCHAR(255) NOT NULL,
-    company     VARCHAR(255),
-    service     VARCHAR(100),
-    message     TEXT NOT NULL,
-    is_read     BOOLEAN DEFAULT false,
-    created_at  TIMESTAMP DEFAULT NOW()
+    id         SERIAL PRIMARY KEY,
+    name       VARCHAR(255) NOT NULL,
+    email      VARCHAR(255) NOT NULL,
+    company    VARCHAR(255),
+    service    VARCHAR(100),
+    message    TEXT NOT NULL,
+    is_read    BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- LOGS MANDATS
 CREATE TABLE mandate_logs (
-    id          SERIAL PRIMARY KEY,
-    mandate_id  INTEGER REFERENCES mandates(id) ON DELETE CASCADE,
-    action      VARCHAR(100),
+    id         SERIAL PRIMARY KEY,
+    mandate_id INTEGER REFERENCES mandates(id) ON DELETE CASCADE,
+    action     VARCHAR(100),
     description TEXT,
-    created_by  VARCHAR(50) DEFAULT 'admin',
-    created_at  TIMESTAMP DEFAULT NOW()
+    created_by VARCHAR(50) DEFAULT 'admin',
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- ÉVÉNEMENTS WORKFLOW
--- Trace automatique de chaque étape du workflow
--- event_type → événement WebSocket correspondant :
---   mandate_created       → WS: 'new_mandate'
---   mandate_updated       → WS: 'mandate_update'
---   quote_sent            → WS: 'new_quote'
---   quote_accepted        → WS: 'quote_accepted'
---   contract_generated    → WS: (inclus dans quote_accepted)
---   contract_signed_admin → WS: 'contract_signed'
---   contract_signed_both  → WS: 'contract_signed'
---   invoice_generated     → WS: 'new_invoice'
---   invoice_paid          → WS: 'invoice_paid'
---   payment_confirmed     → WS: 'payment_confirmed'
---   new_message_vnk       → WS: 'new_message'
---   new_message_client    → WS: 'new_message'
---   new_document          → WS: 'new_document'
---   new_client            → WS: 'new_client'
 CREATE TABLE workflow_events (
-    id              SERIAL PRIMARY KEY,
-    client_id       INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    mandate_id      INTEGER REFERENCES mandates(id),
-    quote_id        INTEGER REFERENCES quotes(id),
-    contract_id     INTEGER REFERENCES contracts(id),
-    invoice_id      INTEGER REFERENCES invoices(id),
-    event_type      VARCHAR(100) NOT NULL,
-    event_label     VARCHAR(255),
-    triggered_by    VARCHAR(50)  DEFAULT 'admin',  -- admin | client | system | websocket
-    ws_broadcast    BOOLEAN      DEFAULT false,     -- true si poussé via WebSocket
-    metadata        JSONB        DEFAULT NULL,
-    created_at      TIMESTAMP    DEFAULT NOW()
+    id           SERIAL PRIMARY KEY,
+    client_id    INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    mandate_id   INTEGER REFERENCES mandates(id),
+    quote_id     INTEGER REFERENCES quotes(id),
+    contract_id  INTEGER REFERENCES contracts(id),
+    invoice_id   INTEGER REFERENCES invoices(id),
+    event_type   VARCHAR(100) NOT NULL,
+    event_label  VARCHAR(255),
+    triggered_by VARCHAR(50)  DEFAULT 'admin',
+    ws_broadcast BOOLEAN      DEFAULT false,
+    metadata     JSONB        DEFAULT NULL,
+    created_at   TIMESTAMP    DEFAULT NOW()
 );
 
 -- CONNEXIONS WEBSOCKET (monitoring)
 CREATE TABLE ws_connections (
     id              SERIAL PRIMARY KEY,
     client_id       INTEGER REFERENCES clients(id) ON DELETE CASCADE,
-    role            VARCHAR(20) NOT NULL,           -- admin | client
+    role            VARCHAR(20) NOT NULL,
     connected_at    TIMESTAMP    DEFAULT NOW(),
     disconnected_at TIMESTAMP,
     is_active       BOOLEAN      DEFAULT true,
@@ -346,35 +332,53 @@ CREATE TABLE ws_connections (
     user_agent      TEXT
 );
 
+-- ANALYTICS — Trafic site et présence portail
+CREATE TABLE page_views (
+    id          SERIAL PRIMARY KEY,
+    session_id  VARCHAR(64),
+    client_id   INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+    page        VARCHAR(255)    NOT NULL,
+    referrer    VARCHAR(512),
+    user_agent  VARCHAR(512),
+    ip_hash     VARCHAR(64),
+    duration_ms INTEGER,
+    created_at  TIMESTAMP       DEFAULT NOW()
+);
+
 -- ============================================================
 -- ÉTAPE 3: Index pour les performances
 -- ============================================================
-CREATE INDEX idx_clients_email        ON clients(email);
-CREATE INDEX idx_mandates_client      ON mandates(client_id);
-CREATE INDEX idx_mandates_status      ON mandates(status);
-CREATE INDEX idx_quotes_client        ON quotes(client_id);
-CREATE INDEX idx_quotes_status        ON quotes(status);
-CREATE INDEX idx_invoices_client      ON invoices(client_id);
-CREATE INDEX idx_invoices_status      ON invoices(status);
-CREATE INDEX idx_invoices_due_date    ON invoices(due_date);
-CREATE INDEX idx_invoices_quote       ON invoices(quote_id);
-CREATE INDEX idx_invoices_contract    ON invoices(contract_id);
-CREATE INDEX idx_contracts_client     ON contracts(client_id);
-CREATE INDEX idx_contracts_status     ON contracts(status);
-CREATE INDEX idx_contracts_quote      ON contracts(quote_id);
-CREATE INDEX idx_messages_client      ON messages(client_id);
-CREATE INDEX idx_messages_unread      ON messages(client_id, is_read);
-CREATE INDEX idx_documents_client     ON documents(client_id);
-CREATE INDEX idx_documents_unread     ON documents(client_id, is_read) WHERE is_read = false;
-CREATE INDEX idx_payments_invoice     ON payments(invoice_id);
-CREATE INDEX idx_payments_client      ON payments(client_id);
-CREATE INDEX idx_expenses_date        ON expenses(expense_date);
-CREATE INDEX idx_workflow_client      ON workflow_events(client_id);
-CREATE INDEX idx_workflow_type        ON workflow_events(event_type);
-CREATE INDEX idx_workflow_ws          ON workflow_events(ws_broadcast) WHERE ws_broadcast = true;
-CREATE INDEX idx_ws_active            ON ws_connections(is_active) WHERE is_active = true;
-CREATE INDEX idx_ws_client            ON ws_connections(client_id);
-CREATE INDEX idx_ws_connected         ON ws_connections(connected_at DESC);
+CREATE INDEX idx_clients_email            ON clients(email);
+CREATE INDEX idx_mandates_client          ON mandates(client_id);
+CREATE INDEX idx_mandates_status          ON mandates(status);
+CREATE INDEX idx_quotes_client            ON quotes(client_id);
+CREATE INDEX idx_quotes_status            ON quotes(status);
+CREATE INDEX idx_invoices_client          ON invoices(client_id);
+CREATE INDEX idx_invoices_status          ON invoices(status);
+CREATE INDEX idx_invoices_due_date        ON invoices(due_date);
+CREATE INDEX idx_invoices_quote           ON invoices(quote_id);
+CREATE INDEX idx_invoices_contract        ON invoices(contract_id);
+CREATE INDEX idx_contracts_client         ON contracts(client_id);
+CREATE INDEX idx_contracts_status         ON contracts(status);
+CREATE INDEX idx_contracts_quote          ON contracts(quote_id);
+CREATE INDEX idx_messages_client          ON messages(client_id);
+CREATE INDEX idx_messages_unread          ON messages(client_id, is_read);
+CREATE INDEX idx_messages_request_status  ON messages(request_status) WHERE request_status IS NOT NULL;
+CREATE INDEX idx_documents_client         ON documents(client_id);
+CREATE INDEX idx_documents_unread         ON documents(client_id, is_read) WHERE is_read = false;
+CREATE INDEX idx_payments_invoice         ON payments(invoice_id);
+CREATE INDEX idx_payments_client          ON payments(client_id);
+CREATE INDEX idx_expenses_date            ON expenses(expense_date);
+CREATE INDEX idx_workflow_client          ON workflow_events(client_id);
+CREATE INDEX idx_workflow_type            ON workflow_events(event_type);
+CREATE INDEX idx_workflow_ws              ON workflow_events(ws_broadcast) WHERE ws_broadcast = true;
+CREATE INDEX idx_ws_active                ON ws_connections(is_active) WHERE is_active = true;
+CREATE INDEX idx_ws_client                ON ws_connections(client_id);
+CREATE INDEX idx_ws_connected             ON ws_connections(connected_at DESC);
+CREATE INDEX idx_pv_created               ON page_views(created_at);
+CREATE INDEX idx_pv_session               ON page_views(session_id);
+CREATE INDEX idx_pv_client                ON page_views(client_id);
+CREATE INDEX idx_pv_page                  ON page_views(page);
 
 -- ============================================================
 -- ÉTAPE 4: Compte admin VNK
@@ -388,7 +392,8 @@ VALUES (
 );
 
 -- ============================================================
--- ÉTAPE 5: Données de test (commenter si non voulu)
+-- ÉTAPE 5: Données de test
+-- (commenter ce bloc si non voulu)
 -- ============================================================
 
 -- Client test
@@ -537,95 +542,68 @@ FROM information_schema.tables t
 WHERE table_schema = 'public'
 ORDER BY table_name;
 
--- Résultat attendu : 17 tables
+-- Résultat attendu : 18 tables
 -- admins, clients, contact_messages, contracts, disputes, documents,
 -- expenses, invoices, mandate_logs, mandates, messages,
--- payments, quotes, refunds, tax_declarations, workflow_events, ws_connections
-
+-- page_views, payments, quotes, refunds, tax_declarations,
+-- workflow_events, ws_connections
 
 -- ============================================================
--- MIGRATION v3.0 → v4.0 (SANS réinitialiser la base)
--- À exécuter sur une base existante
+-- MIGRATION v4.0 → v5.0 (SANS réinitialiser la base)
+-- À exécuter sur une base existante (Railway actif)
 -- NE PAS exécuter si vous faites un DROP + CREATE complet
 -- ============================================================
 
-/*
--- 1. Colonne amount_ttc dans contracts
-ALTER TABLE contracts ADD COLUMN IF NOT EXISTS amount_ttc DECIMAL(10,2) DEFAULT 0;
+-- 1. Colonne request_status dans messages (NOUVEAU v5.0)
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS request_status VARCHAR(20) DEFAULT NULL;
+CREATE INDEX IF NOT EXISTS idx_messages_request_status ON messages(request_status) WHERE request_status IS NOT NULL;
 
--- 2. Colonne contract_id dans invoices
-ALTER TABLE invoices ADD COLUMN IF NOT EXISTS contract_id INTEGER REFERENCES contracts(id);
+-- Initialiser les demandes de projet existantes à 'new'
+UPDATE messages
+SET request_status = 'new'
+WHERE content LIKE '%NOUVELLE DEMANDE DE PROJET%'
+  AND request_status IS NULL;
 
--- 3. Colonne quote_id dans contracts (déjà présente en v3.0 via ALTER)
-ALTER TABLE contracts ADD COLUMN IF NOT EXISTS quote_id INTEGER REFERENCES quotes(id);
-
--- 4. Index nouveau sur invoices.contract_id
-CREATE INDEX IF NOT EXISTS idx_invoices_contract ON invoices(contract_id);
-
--- 5. Index nouveau sur documents.is_read
-CREATE INDEX IF NOT EXISTS idx_documents_unread ON documents(client_id, is_read) WHERE is_read = false;
-
--- 6. Vérification
-SELECT table_name, column_name, data_type
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name IN ('contracts', 'invoices', 'documents')
-  AND column_name IN ('amount_ttc', 'contract_id', 'quote_id', 'is_read')
-ORDER BY table_name, column_name;
--- 7. Colonne channel dans messages (unification chat + email)
-ALTER TABLE messages ADD COLUMN IF NOT EXISTS channel VARCHAR(30) DEFAULT 'chat';
-
--- Mettre à jour les messages existants
-UPDATE messages SET channel = 'chat' WHERE channel IS NULL;
-
--- 8. Vérification finale
-SELECT column_name, data_type FROM information_schema.columns
-WHERE table_schema = 'public' AND table_name = 'messages'
-ORDER BY ordinal_position;
-*/
-
--- ============================================================
--- ANALYTICS — Trafic site et présence portail
--- ============================================================
-
+-- 2. Table page_views si manquante (ajoutée en cours de dev)
 CREATE TABLE IF NOT EXISTS page_views (
     id          SERIAL PRIMARY KEY,
     session_id  VARCHAR(64),
     client_id   INTEGER REFERENCES clients(id) ON DELETE SET NULL,
-    page        VARCHAR(255)    NOT NULL,
+    page        VARCHAR(255) NOT NULL,
     referrer    VARCHAR(512),
     user_agent  VARCHAR(512),
     ip_hash     VARCHAR(64),
     duration_ms INTEGER,
-    created_at  TIMESTAMP       DEFAULT NOW()
+    created_at  TIMESTAMP DEFAULT NOW()
 );
+CREATE INDEX IF NOT EXISTS idx_pv_created ON page_views(created_at);
+CREATE INDEX IF NOT EXISTS idx_pv_session ON page_views(session_id);
+CREATE INDEX IF NOT EXISTS idx_pv_client  ON page_views(client_id);
+CREATE INDEX IF NOT EXISTS idx_pv_page    ON page_views(page);
 
-CREATE INDEX IF NOT EXISTS idx_pv_created   ON page_views(created_at);
-CREATE INDEX IF NOT EXISTS idx_pv_session   ON page_views(session_id);
-CREATE INDEX IF NOT EXISTS idx_pv_client    ON page_views(client_id);
-CREATE INDEX IF NOT EXISTS idx_pv_page      ON page_views(page);
+-- 3. Autres colonnes v4.x déjà appliquées (idempotentes)
+ALTER TABLE messages  ADD COLUMN IF NOT EXISTS channel          VARCHAR(30)  DEFAULT 'chat';
+ALTER TABLE invoices  ADD COLUMN IF NOT EXISTS payment_method   VARCHAR(50);
+ALTER TABLE invoices  ADD COLUMN IF NOT EXISTS invoice_phase    VARCHAR(20);
+ALTER TABLE invoices  ADD COLUMN IF NOT EXISTS phase_number     INT          DEFAULT 1;
+ALTER TABLE invoices  ADD COLUMN IF NOT EXISTS contract_id      INTEGER REFERENCES contracts(id);
+ALTER TABLE quotes    ADD COLUMN IF NOT EXISTS payment_plan     VARCHAR(30)  DEFAULT 'split_50_50';
+ALTER TABLE quotes    ADD COLUMN IF NOT EXISTS payment_pct1     INT          DEFAULT 50;
+ALTER TABLE quotes    ADD COLUMN IF NOT EXISTS payment_pct2     INT          DEFAULT 50;
+ALTER TABLE quotes    ADD COLUMN IF NOT EXISTS payment_conditions TEXT;
+ALTER TABLE quotes    ADD COLUMN IF NOT EXISTS client_signature_data TEXT;
+ALTER TABLE quotes    ADD COLUMN IF NOT EXISTS signed_at        TIMESTAMP;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS category         VARCHAR(100);
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS status           VARCHAR(50)  DEFAULT 'Disponible';
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS is_read          BOOLEAN      DEFAULT FALSE;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS amount_ttc       DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS quote_id         INTEGER REFERENCES quotes(id);
+ALTER TABLE payments  ADD COLUMN IF NOT EXISTS payment_method   VARCHAR(100);
+CREATE INDEX IF NOT EXISTS idx_invoices_contract ON invoices(contract_id);
+CREATE INDEX IF NOT EXISTS idx_documents_unread  ON documents(client_id, is_read) WHERE is_read = false;
 
--- ============================================================
--- COLONNES AJOUTÉES EN COURS DE DEV (ALTER TABLE)
--- ============================================================
-
--- invoices
-ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_method   VARCHAR(50);
-ALTER TABLE invoices ADD COLUMN IF NOT EXISTS invoice_phase    VARCHAR(20);
-ALTER TABLE invoices ADD COLUMN IF NOT EXISTS phase_number     INT DEFAULT 1;
-
--- quotes
-ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_plan       VARCHAR(30) DEFAULT 'split_50_50';
-ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_pct1       INT DEFAULT 50;
-ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_pct2       INT DEFAULT 50;
-ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_conditions TEXT;
-ALTER TABLE quotes ADD COLUMN IF NOT EXISTS client_signature_data TEXT;
-ALTER TABLE quotes ADD COLUMN IF NOT EXISTS signed_at          TIMESTAMP;
-
--- documents
-ALTER TABLE documents ADD COLUMN IF NOT EXISTS category        VARCHAR(100);
-ALTER TABLE documents ADD COLUMN IF NOT EXISTS status          VARCHAR(50)  DEFAULT 'Disponible';
-ALTER TABLE documents ADD COLUMN IF NOT EXISTS is_read         BOOLEAN      DEFAULT FALSE;
-
--- payments
-ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_method   VARCHAR(100);
+-- 4. Vérification
+SELECT column_name, data_type, column_default
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'messages'
+ORDER BY ordinal_position;

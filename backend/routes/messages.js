@@ -1,7 +1,7 @@
 /* ============================================
    VNK Automatisation Inc. — Messages Routes
    Chat client ↔ VNK (portail + admin)
-   v3.0 — WebSocket temps réel
+   v3.1 — WebSocket temps réel + request_status
 ============================================ */
 'use strict';
 const express = require('express');
@@ -42,7 +42,7 @@ function authenticateAdmin(req, res, next) {
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT id, sender, content, attachment_data, is_read, created_at
+            `SELECT id, sender, content, attachment_data, is_read, request_status, created_at
              FROM messages
              WHERE client_id = $1
              ORDER BY created_at ASC`,
@@ -56,7 +56,6 @@ router.get('/', authenticateToken, async (req, res) => {
                  WHERE client_id = $1 AND sender = 'vnk' AND is_read = false`,
                 [req.user.id]
             );
-            // Retourner avec is_read=true mis à jour
             result.rows.forEach(m => { if (m.sender === 'vnk') m.is_read = true; });
         }
 
@@ -75,23 +74,29 @@ router.post('/', authenticateToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Message vide.' });
         }
 
+        // Détecter si c'est une demande de projet → initialiser request_status à 'new'
+        const text = String(content).trim();
+        const isProjectRequest = text.includes('NOUVELLE DEMANDE DE PROJET');
+        const requestStatus = isProjectRequest ? 'new' : null;
+
         const result = await pool.query(
-            `INSERT INTO messages (client_id, sender, content, is_read)
-             VALUES ($1, 'client', $2, false)
-             RETURNING id, sender, content, is_read, created_at`,
-            [req.user.id, String(content).trim()]
+            `INSERT INTO messages (client_id, sender, content, is_read, request_status)
+             VALUES ($1, 'client', $2, false, $3)
+             RETURNING id, sender, content, is_read, request_status, created_at`,
+            [req.user.id, text, requestStatus]
         );
 
         const msg = result.rows[0];
 
         // Notifier l'admin en temps réel
         wsBroadcast({
-            event: 'new_message_client',
+            event: isProjectRequest ? 'new_project_request' : 'new_message_client',
             data: { message: msg, clientId: req.user.id },
             adminOnly: true
         });
 
         res.json({ success: true, message: msg });
+
         // Notifier admin par email
         if (_email) {
             pool.query('SELECT * FROM clients WHERE id=$1', [req.user.id]).then(r => {
@@ -124,7 +129,7 @@ router.get('/admin/unread-count', authenticateAdmin, async (req, res) => {
 router.get('/admin/:clientId', authenticateAdmin, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT id, sender, content, attachment_data, is_read, created_at
+            `SELECT id, sender, content, attachment_data, is_read, request_status, created_at
              FROM messages
              WHERE client_id = $1
              ORDER BY created_at ASC`,
@@ -191,6 +196,57 @@ router.put('/admin/mark-all-read', authenticateAdmin, async (req, res) => {
         );
         res.json({ success: true });
     } catch (e) {
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    }
+});
+
+// PUT /admin/:messageId/request-status — changer le statut d'une demande de projet
+router.put('/admin/:messageId/request-status', authenticateAdmin, async (req, res) => {
+    try {
+        const { request_status } = req.body;
+        const validStatuses = ['new', 'in_progress', 'converted', 'closed'];
+
+        if (!validStatuses.includes(request_status)) {
+            return res.status(400).json({ success: false, message: 'Statut invalide.' });
+        }
+
+        const result = await pool.query(
+            `UPDATE messages
+             SET request_status = $1
+             WHERE id = $2
+             RETURNING id, client_id, request_status`,
+            [request_status, req.params.messageId]
+        );
+
+        if (!result.rows.length) {
+            return res.status(404).json({ success: false, message: 'Message introuvable.' });
+        }
+
+        const updated = result.rows[0];
+
+        // Notifier le client en temps réel via WebSocket
+        const statusLabels = {
+            in_progress: 'En traitement',
+            converted: 'Devis en cours',
+            closed: 'Traitée'
+        };
+
+        if (statusLabels[request_status]) {
+            wsBroadcast({
+                event: 'request_status_updated',
+                data: {
+                    message_id: updated.id,
+                    status: request_status,
+                    label: statusLabels[request_status]
+                },
+                clientId: String(updated.client_id),
+                notifyAdmin: false
+            });
+        }
+
+        res.json({ success: true, message: updated });
+    } catch (e) {
+        console.error('PUT /api/messages/admin/:id/request-status error:', e);
         res.status(500).json({ success: false, message: 'Erreur serveur.' });
     }
 });
