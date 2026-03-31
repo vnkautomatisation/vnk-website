@@ -3734,14 +3734,7 @@ function _npRenderStep() {
     } else if (_npStep === 3) {
         // Charger les créneaux
         if (btnBack) { btnBack.style.display = 'inline-block'; btnBack.textContent = '← Retour'; }
-        if (btnNext) {
-            btnNext.style.display = 'flex';
-            btnNext.style.background = 'var(--primary,#1B4F8A)';
-            const hasSlot = !!_npSelectedSlot;
-            btnNext.innerHTML = hasSlot
-                ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg> Réviser ma demande'
-                : 'Passer cette étape →';
-        }
+        _npUpdateStep3Btn();
         setTimeout(function () { _npInitBookingSlots(); }, 200);
     } else if (_npStep === 4) {
         // Remplir le résumé avec le créneau sélectionné
@@ -3755,6 +3748,25 @@ function _npRenderStep() {
     if (_npStep < 4 && footer) footer.style.display = 'flex';
     if (_npStep >= 5 && footer) footer.style.display = 'none';
     const fb = el('np-feedback'); if (fb) fb.style.display = 'none';
+}
+
+
+function _npUpdateStep3Btn() {
+    const btnNext = document.getElementById('np-btn-next');
+    if (!btnNext) return;
+    btnNext.style.display = 'flex';
+    if (_npSelectedSlot) {
+        const ds = _npSelectedSlot.ds;
+        const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
+        btnNext.style.background = 'linear-gradient(135deg,#059669,#047857)';
+        btnNext.style.boxShadow = '0 2px 12px rgba(5,150,105,0.35)';
+        btnNext.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmer · ' + dateStr + ' ' + _npSelectedSlot.time;
+    } else {
+        btnNext.style.background = 'rgba(255,255,255,0.15)';
+        btnNext.style.boxShadow = 'none';
+        btnNext.style.color = 'rgba(255,255,255,0.7)';
+        btnNext.innerHTML = 'Passer cette étape <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>';
+    }
 }
 
 function _npBuildSummary() {
@@ -3946,7 +3958,7 @@ function submitNewProject() { npGoStep(1); }
 
 
 // ── BOOKING INTÉGRÉ DANS LE MODAL NOUVEAU PROJET ────────────────
-let _npBookingSlots = [], _npBookingMonthOffset = 0, _npSelectedSlot = null;
+let _npBookingSlots = [], _npBookingMonthOffset = 0, _npSelectedSlot = null, _npMyApptTimes = new Set(), _npSelectedDate = null;
 
 async function _npInitBookingSlots() {
     const loadEl = document.getElementById('np-booking-loading');
@@ -3963,6 +3975,15 @@ async function _npInitBookingSlots() {
         });
         const data = await resp.json();
         _npBookingSlots = data.slots || [];
+        _npMyApptTimes = new Set();
+        try {
+            const r2 = await fetch('/api/calendar/my-appointments', { headers: { 'Authorization': 'Bearer ' + token } });
+            const d2 = await r2.json();
+            (d2.appointments || []).forEach(function (a) {
+                if (a.status !== 'cancelled')
+                    _npMyApptTimes.add((a.appointment_date || '').split('T')[0] + '_' + (a.start_time || '').substring(0, 5));
+            });
+        } catch (e2) { }
     } catch (e) {
         _npBookingSlots = [];
     }
@@ -3990,6 +4011,7 @@ async function _npInitBookingSlots() {
 
 function npBookingNavMonth(dir) {
     _npBookingMonthOffset += dir;
+    _npSelectedDate = null; // Reset sélection au changement de mois
     _npRenderBookingCal();
     // Cacher les créneaux du jour
     const dayEl = document.getElementById('np-booking-day-slots');
@@ -4004,82 +4026,90 @@ function _npRenderBookingCal() {
     const year = target.getFullYear();
     const month = target.getMonth();
     const today = now.toISOString().split('T')[0];
-
     const lbl = document.getElementById('np-booking-month-label');
     if (lbl) lbl.textContent = target.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
-
-    const datesWithSlots = new Set(_npBookingSlots.map(s => (s.slot_date || '').split('T')[0]));
+    const datesWithSlots = new Set(_npBookingSlots.map(function (s) { return (s.slot_date || '').split('T')[0]; }));
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    let startDow = firstDay.getDay() - 1;
-    if (startDow < 0) startDow = 6;
-
+    let startDow = firstDay.getDay() - 1; if (startDow < 0) startDow = 6;
     const grid = document.getElementById('np-booking-cal-grid');
     if (!grid) return;
-
     let html = '';
     for (let i = 0; i < startDow; i++) html += '<div></div>';
-
     for (let d = 1; d <= lastDay.getDate(); d++) {
         const ds = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
         const hasSlot = datesWithSlots.has(ds);
         const isPast = ds < today;
         const isToday = ds === today;
-
-        let style = 'text-align:center;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;transition:all .12s;';
-
-        if (!isPast && hasSlot) {
-            style += 'background:#1B4F8A;color:white;font-weight:700;cursor:pointer;';
-            html += '<div onclick="npSelectBookingDate(\'' + ds + '\')" style="' + style + '" '
-                + 'onmouseenter="this.style.background=\'#2563EB\'" '
-                + 'onmouseleave="this.style.background=\'#1B4F8A\'">'
-                + d + '</div>';
-        } else if (isToday && !hasSlot) {
-            style += 'border:2px solid #1B4F8A;color:#1B4F8A;font-weight:600;';
-            html += '<div style="' + style + '">' + d + '</div>';
+        const isSelected = ds === _npSelectedDate;
+        const daySlotsList = _npBookingSlots.filter(function (s) { return (s.slot_date || '').split('T')[0] === ds; });
+        const allTaken = daySlotsList.length > 0 && daySlotsList.every(function (s) { return _npMyApptTimes.has(ds + '_' + (s.start_time || '').substring(0, 5)); });
+        const someTaken = !allTaken && daySlotsList.some(function (s) { return _npMyApptTimes.has(ds + '_' + (s.start_time || '').substring(0, 5)); });
+        const base = 'text-align:center;width:32px;height:32px;margin:0 auto;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;transition:all .15s;';
+        if (isPast) {
+            html += '<div style="' + base + 'color:#D1D5DB;">' + d + '</div>';
+        } else if (!hasSlot) {
+            const ts = isToday ? 'border:2px solid #CBD5E0;font-weight:600;color:#64748B;' : 'color:#CBD5E0;';
+            html += '<div style="' + base + ts + '">' + d + '</div>';
+        } else if (allTaken) {
+            html += '<div style="' + base + 'background:#FEE2E2;color:#EF4444;font-weight:600;cursor:not-allowed;" title="Deja reserve">' + d + '</div>';
         } else {
-            style += 'color:' + (isPast ? '#D1D5DB' : '#9CA3AF') + ';';
-            html += '<div style="' + style + '">' + d + '</div>';
+            const bg = isSelected ? '#2563EB' : (isToday ? '#0F3460' : '#1B4F8A');
+            const ring = isSelected ? 'box-shadow:0 0 0 3px rgba(37,99,235,0.4),0 0 0 7px rgba(37,99,235,0.1);transform:scale(1.12);' : '';
+            const check = isSelected ? '<div style="position:absolute;top:-3px;right:-3px;width:12px;height:12px;border-radius:50%;background:#22C55E;border:2px solid white;display:flex;align-items:center;justify-content:center;"><svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>' : '';
+            const dot = someTaken ? '<div style="position:absolute;bottom:1px;right:1px;width:5px;height:5px;border-radius:50%;background:#F97316;border:1px solid white"></div>' : '';
+            html += '<div onclick="npSelectBookingDate(\'' + ds + '\')" '
+                + 'style="' + base + ring + 'background:' + bg + ';color:white;font-weight:700;cursor:pointer;position:relative;" '
+                + 'onmouseenter="this.style.background=\'#2563EB\';this.style.transform=\'scale(1.1)\'" '
+                + 'onmouseleave="this.style.background=\'' + bg + '\';this.style.transform=\'' + (isSelected ? 'scale(1.12)' : '') + '\'">'
+                + d + check + dot + '</div>';
         }
     }
     grid.innerHTML = html;
 }
 
 function npSelectBookingDate(ds) {
-    const daySlots = _npBookingSlots.filter(s => (s.slot_date || '').split('T')[0] === ds);
+    _npSelectedDate = ds;
+    _npRenderBookingCal(); // Re-render pour appliquer le highlight
+    const daySlots = _npBookingSlots.filter(function (s) { return (s.slot_date || '').split('T')[0] === ds; });
     const dayEl = document.getElementById('np-booking-day-slots');
     const lbl = document.getElementById('np-booking-day-label');
     const timesEl = document.getElementById('np-booking-times');
     const formEl = document.getElementById('np-booking-form');
     const successEl = document.getElementById('np-booking-success');
-
     if (formEl) formEl.style.display = 'none';
     if (successEl) successEl.style.display = 'none';
     _npSelectedSlot = null;
-
+    var badge = document.getElementById('np-slot-selected-badge');
+    if (badge) badge.style.display = 'none';
+    _npUpdateStep3Btn();
     if (!dayEl || !lbl || !timesEl) return;
     dayEl.style.display = 'block';
-
-    const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', {
-        weekday: 'long', day: 'numeric', month: 'long'
-    });
-    lbl.textContent = dateStr;
-
+    const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+    lbl.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
     if (!daySlots.length) {
-        timesEl.innerHTML = '<div style="font-size:0.78rem;color:#94A3B8">Aucun créneau ce jour.</div>';
+        timesEl.innerHTML = '<div style="font-size:0.78rem;color:#94A3B8;grid-column:1/-1">Aucun creneau ce jour.</div>';
         return;
     }
-
     timesEl.innerHTML = daySlots.map(function (s) {
         const time = (s.start_time || '').substring(0, 5);
         const dur = s.duration_min || 30;
+        const isTaken = _npMyApptTimes.has(ds + '_' + time);
+        if (isTaken) {
+            return '<div style="padding:0.45rem 0.4rem;border:2px solid #FCA5A5;border-radius:8px;background:#FEF2F2;'
+                + 'color:#EF4444;font-size:0.75rem;font-weight:600;text-align:center;cursor:not-allowed" title="Vous avez deja un RDV">'
+                + '<div>' + time + '</div>'
+                + '<div style="font-size:0.58rem;opacity:0.7;margin-top:1px">Pris</div>'
+                + '</div>';
+        }
         return '<button onclick="npSelectBookingSlot(' + s.id + ', \'' + ds + '\', \'' + time + '\', ' + dur + ')" '
             + 'data-slot-id="' + s.id + '" '
-            + 'style="padding:0.45rem 0.85rem;border:2px solid #E2E8F0;border-radius:8px;background:white;'
-            + 'color:#334155;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s" '
-            + 'onmouseenter="if(!this.classList.contains(\'np-sel\')){this.style.borderColor=\'#1B4F8A\';this.style.color=\'#1B4F8A\'}" '
-            + 'onmouseleave="if(!this.classList.contains(\'np-sel\')){this.style.borderColor=\'#E2E8F0\';this.style.color=\'#334155\'}">'
-            + time + ' <span style="font-size:0.65rem;opacity:0.6">(' + dur + ' min)</span>'
+            + 'style="padding:0.45rem 0.4rem;border:2px solid #E2E8F0;border-radius:8px;background:white;'
+            + 'color:#1B4F8A;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;text-align:center;width:100%" '
+            + 'onmouseenter="if(!this.classList.contains(\'np-sel\')){this.style.borderColor=\'#1B4F8A\';this.style.background=\'#EBF5FB\'}" '
+            + 'onmouseleave="if(!this.classList.contains(\'np-sel\')){this.style.borderColor=\'#E2E8F0\';this.style.background=\'white\'}">'
+            + '<div>' + time + '</div>'
+            + '<div style="font-size:0.6rem;color:#64748B;font-weight:400;margin-top:1px">' + dur + ' min</div>'
             + '</button>';
     }).join('');
 }
@@ -4107,6 +4137,21 @@ function npSelectBookingSlot(slotId, ds, time, dur) {
     const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
     if (txtEl) txtEl.textContent = dateStr + ' à ' + time + ' (' + dur + ' min)';
     if (formEl) formEl.style.display = 'block';
+
+    // Badge step 3
+    var b3 = document.getElementById('np-slot-selected-badge');
+    var b3t = document.getElementById('np-slot-selected-text');
+    if (b3) { b3.style.display = 'flex'; }
+    if (b3t) { b3t.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1) + ' à ' + time; }
+    // Bouton footer dynamique
+    _npUpdateStep3Btn();
+
+    // Badge step 3 + bouton footer dynamique
+    var b3 = document.getElementById('np-slot-selected-badge');
+    var b3t = document.getElementById('np-slot-selected-text');
+    if (b3) { b3.style.display = 'flex'; }
+    if (b3t) { b3t.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1) + ' à ' + time; }
+    _npUpdateStep3Btn();
 }
 
 async function npConfirmBooking() {

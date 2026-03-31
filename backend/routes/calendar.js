@@ -9,6 +9,67 @@ const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 const { authenticateAdmin } = require('./admin');
 
+// ── ADMIN : Paramètres de disponibilités ─────────────────────────
+
+// GET /api/calendar/settings — charger les disponibilités depuis la DB
+router.get('/settings', authenticateAdmin, async (req, res) => {
+    try {
+        // Créer la table si elle n'existe pas
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS admin_settings (
+                key   VARCHAR(100) PRIMARY KEY,
+                value TEXT,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        const keys = ['vnk-cal-settings', 'vnk-cal-exceptions', 'vnk-cal-default-dur',
+            'vnk-cal-timezone', 'vnk-cal-buffer', 'vnk-cal-notice', 'vnk-cal-horizon',
+            'vnk-cal-auto-approve', 'vnk-cal-meeting-link'];
+        const rows = await pool.query(
+            `SELECT key, value FROM admin_settings WHERE key = ANY($1)`,
+            [keys]
+        );
+        const settings = {};
+        rows.rows.forEach(r => { settings[r.key] = r.value; });
+        res.json({ success: true, settings });
+    } catch (e) {
+        console.error('GET /api/calendar/settings error:', e);
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// PUT /api/calendar/settings — sauvegarder les disponibilités en DB
+router.put('/settings', authenticateAdmin, async (req, res) => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS admin_settings (
+                key   VARCHAR(100) PRIMARY KEY,
+                value TEXT,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        const allowed = ['vnk-cal-settings', 'vnk-cal-exceptions', 'vnk-cal-default-dur',
+            'vnk-cal-timezone', 'vnk-cal-buffer', 'vnk-cal-notice', 'vnk-cal-horizon',
+            'vnk-cal-auto-approve', 'vnk-cal-meeting-link'];
+        const { settings } = req.body;
+        if (!settings || typeof settings !== 'object') {
+            return res.status(400).json({ success: false, message: 'settings requis' });
+        }
+        for (const [key, value] of Object.entries(settings)) {
+            if (!allowed.includes(key)) continue;
+            await pool.query(`
+                INSERT INTO admin_settings (key, value, updated_at)
+                VALUES ($1, $2, NOW())
+                ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()
+            `, [key, typeof value === 'string' ? value : JSON.stringify(value)]);
+        }
+        res.json({ success: true });
+    } catch (e) {
+        console.error('PUT /api/calendar/settings error:', e);
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
 // ── ADMIN : Gestion des créneaux ─────────────────────────────────
 
 // GET /api/calendar/slots?start=YYYY-MM-DD&end=YYYY-MM-DD
@@ -90,10 +151,15 @@ router.get('/appointments', authenticateAdmin, async (req, res) => {
         if (start) { params.push(start); conds.push(`a.appointment_date >= $${params.length}`); }
         if (end) { params.push(end); conds.push(`a.appointment_date <= $${params.length}`); }
         const rows = await pool.query(
-            `SELECT a.*, c.full_name as client_full_name, c.company_name
+            `SELECT a.id, a.status,
+                TO_CHAR(a.appointment_date, 'YYYY-MM-DD') as appointment_date,
+                a.start_time::text, a.end_time::text, a.duration_min,
+                a.subject, a.notes_client, a.notes_admin,
+                a.meeting_link, a.meeting_type, a.meeting_id, a.meeting_password,
+                a.client_id, a.client_name, a.client_email, a.client_company,
+                a.slot_id, a.created_at
              FROM appointments a
-             LEFT JOIN clients c ON a.client_id = c.id
-             WHERE ${conds.join(' AND ')}
+             ${conds.length ? 'WHERE ' + conds.join(' AND ') : ''}
              ORDER BY a.appointment_date, a.start_time`,
             params
         );
@@ -101,86 +167,39 @@ router.get('/appointments', authenticateAdmin, async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-// PATCH /api/calendar/appointments/:id — ajouter lien meeting, notes, statut
+// PATCH /api/calendar/appointments/:id — modifier un RDV (admin)
 router.patch('/appointments/:id', authenticateAdmin, async (req, res) => {
     try {
-        const { meeting_link, meeting_type, meeting_id, meeting_password, notes_admin, status } = req.body;
+        const { meeting_link, meeting_type, meeting_id, meeting_password, notes_admin, status, cancellation_reason, subject } = req.body;
         const r = await pool.query(
             `UPDATE appointments SET
-                meeting_link     = COALESCE($1, meeting_link),
-                meeting_type     = COALESCE($2, meeting_type),
-                meeting_id       = COALESCE($3, meeting_id),
-                meeting_password = COALESCE($4, meeting_password),
-                notes_admin      = COALESCE($5, notes_admin),
-                status           = COALESCE($6, status),
-                updated_at       = NOW()
-             WHERE id=$7 RETURNING *`,
+                meeting_link         = COALESCE($1, meeting_link),
+                meeting_type         = COALESCE($2, meeting_type),
+                meeting_id           = COALESCE($3, meeting_id),
+                meeting_password     = COALESCE($4, meeting_password),
+                notes_admin          = COALESCE($5, notes_admin),
+                status               = COALESCE($6, status),
+                subject              = COALESCE($9, subject),
+                cancelled_at         = CASE WHEN $6 = 'cancelled' THEN NOW() ELSE cancelled_at END,
+                cancelled_by         = CASE WHEN $6 = 'cancelled' THEN 'admin' ELSE cancelled_by END,
+                cancellation_reason  = CASE WHEN $6 = 'cancelled' AND $8 IS NOT NULL THEN $8 ELSE cancellation_reason END,
+                updated_at           = NOW()
+             WHERE id = $7 RETURNING *`,
             [meeting_link || null, meeting_type || null, meeting_id || null,
-            meeting_password || null, notes_admin || null, status || null, req.params.id]
+            meeting_password || null, notes_admin || null, status || null, req.params.id, cancellation_reason || null, subject || null]
         );
         if (!r.rows.length) return res.status(404).json({ success: false, message: 'RDV introuvable' });
-
-        // Si lien meeting ajouté → envoyer message au client
         const appt = r.rows[0];
-        if (meeting_link && appt.client_id) {
-            const dateStr = new Date(appt.appointment_date).toLocaleDateString('fr-CA');
+
+        // Si annulé par l'admin → libérer le créneau
+        if (status === 'cancelled' && appt.slot_id) {
             await pool.query(
-                `INSERT INTO messages (client_id, sender, content, is_read, created_at)
-                 VALUES ($1, 'admin', $2, false, NOW())`,
-                [appt.client_id,
-                `📅 Lien de réunion pour votre RDV du ${dateStr} à ${appt.start_time.substring(0, 5)}\n\nType : ${meeting_type || 'Vidéo'}\nLien : ${meeting_link}${meeting_password ? '\nMot de passe : ' + meeting_password : ''}\n\nÀ bientôt !`]
+                `UPDATE availability_slots SET status='available', updated_at=NOW() WHERE id=$1`,
+                [appt.slot_id]
             );
         }
+
         res.json({ success: true, appointment: appt });
-    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
-});
-
-// POST /api/calendar/appointments/admin-create — admin crée un RDV direct
-router.post('/appointments/admin-create', authenticateAdmin, async (req, res) => {
-    try {
-        const { slot_id, client_id, client_name, client_email, client_company,
-            appointment_date, start_time, end_time, duration_min,
-            subject, meeting_type } = req.body;
-
-        // Créer le RDV
-        const apptRes = await pool.query(
-            `INSERT INTO appointments
-             (slot_id, client_id, client_name, client_email, client_company,
-              appointment_date, start_time, end_time, duration_min,
-              subject, meeting_type, status)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'confirmed') RETURNING *`,
-            [slot_id, client_id, client_name, client_email, client_company || null,
-                appointment_date, start_time, end_time, duration_min || 30,
-                subject || 'Consultation VNK', meeting_type || 'video']
-        );
-
-        // Marquer le créneau comme réservé
-        if (slot_id) {
-            await pool.query(
-                `UPDATE availability_slots SET status='booked', updated_at=NOW() WHERE id=$1`, [slot_id]
-            );
-        }
-
-        // Notifier le client par message
-        if (client_id) {
-            const dateStr = new Date(appointment_date).toLocaleDateString('fr-CA', {
-                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-            });
-            const time = start_time.substring(0, 5);
-            await pool.query(
-                `INSERT INTO messages (client_id, sender, content, is_read, created_at)
-                 VALUES ($1, 'admin', $2, false, NOW())`,
-                [client_id,
-                    `📅 Rendez-vous confirmé — ${dateStr} à ${time}
-
-Durée : ${duration_min || 30} minutes
-Objet : ${subject || 'Consultation VNK'}
-
-Votre lien de réunion vous sera envoyé prochainement. À bientôt !`]
-            );
-        }
-
-        res.json({ success: true, appointment: apptRes.rows[0] });
     } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -210,7 +229,6 @@ router.post('/book', authenticateToken, async (req, res) => {
         const { slot_id, subject, notes_client, meeting_type = 'video' } = req.body;
         const clientId = req.user.id;
 
-        // Vérifier le créneau
         const slotRes = await pool.query(
             `SELECT * FROM availability_slots WHERE id=$1 AND status='available'`, [slot_id]
         );
@@ -218,34 +236,24 @@ router.post('/book', authenticateToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Créneau non disponible' });
         const slot = slotRes.rows[0];
 
-        // Récupérer infos client
         const clientRes = await pool.query(`SELECT * FROM clients WHERE id=$1`, [clientId]);
         const client = clientRes.rows[0];
 
-        // Créer le RDV
         const apptRes = await pool.query(
             `INSERT INTO appointments
              (slot_id, client_id, client_name, client_email, client_company,
               appointment_date, start_time, end_time, duration_min,
               subject, notes_client, meeting_type, status)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'confirmed') RETURNING *`,
-            [slot_id, clientId, client.full_name, client.email, client.company_name || null,
-                slot.slot_date, slot.start_time, slot.end_time, slot.duration_min,
-                subject || null, notes_client || null, meeting_type]
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'confirmed')
+             RETURNING *`,
+            [slot.id, clientId, client.full_name, client.email, client.company_name || null,
+            slot.slot_date, slot.start_time, slot.end_time, slot.duration_min,
+            subject || 'Appel de qualification', notes_client || null, meeting_type]
         );
 
-        // Marquer le créneau comme réservé
         await pool.query(
-            `UPDATE availability_slots SET status='booked', updated_at=NOW() WHERE id=$1`, [slot_id]
-        );
-
-        // Message de confirmation au client
-        const dateStr = new Date(slot.slot_date).toLocaleDateString('fr-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        await pool.query(
-            `INSERT INTO messages (client_id, sender, content, is_read, created_at)
-             VALUES ($1, 'admin', $2, false, NOW())`,
-            [clientId,
-                `✅ RDV confirmé — ${dateStr} à ${slot.start_time.substring(0, 5)}\n\nDurée : ${slot.duration_min} minutes\nObjet : ${subject || 'Consultation VNK'}\n\nVotre lien de réunion vous sera envoyé dans ce chat d\'ici 24h. À bientôt !`]
+            `UPDATE availability_slots SET status='booked', updated_at=NOW() WHERE id=$1`,
+            [slot.id]
         );
 
         res.json({ success: true, appointment: apptRes.rows[0] });
@@ -287,7 +295,6 @@ router.delete('/appointments/:id/cancel', authenticateToken, async (req, res) =>
         if (!r.rows.length)
             return res.status(404).json({ success: false, message: 'RDV introuvable ou déjà annulé' });
 
-        // Libérer le créneau
         if (r.rows[0].slot_id) {
             await pool.query(
                 `UPDATE availability_slots SET status='available', updated_at=NOW() WHERE id=$1`,

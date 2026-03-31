@@ -1123,6 +1123,35 @@
             background: var(--error-bg);
             color: var(--error-text);
         }
+        /* Boutons créneaux rapides */
+        .quick-slot-btn {
+            padding: 0.38rem 0.3rem;
+            border: 1.5px solid #E2E8F0;
+            border-radius: 8px;
+            background: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all .12s;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+            .quick-slot-btn:hover {
+                border-color: #1B4F8A;
+                color: #1B4F8A;
+                background: #EBF5FB;
+            }
+
+            .quick-slot-btn.active {
+                border-color: #1B4F8A;
+                background: linear-gradient(135deg, #1B4F8A, #0F3460);
+                color: white;
+                box-shadow: 0 2px 6px rgba(27,79,138,0.3);
+            }
+
         /* Expiré / refusé / en pause / neutre */
         .badge-expired, .badge-declined, .badge-paused, .badge-neutral {
             background: var(--bg-hover);
@@ -3700,70 +3729,118 @@
                     </div>
 
                     <!-- ===== CALENDRIER ===== -->
-                    <div class="admin-section" id="section-calendar" style="overflow:visible">
+                    <div class="admin-section" id="section-calendar" style="overflow:hidden;height:calc(100vh - 56px);display:flex;flex-direction:column">
 
-                        <!-- Barre outils -->
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem">
-                            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
-                                <!-- Navigation -->
-                                <div style="display:flex;align-items:center;gap:0.4rem">
-                                    <button class="btn btn-ghost btn-sm" onclick="calNav(-1)" style="padding:0.35rem 0.6rem">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6" /></svg>
-                                    </button>
-                                    <button class="btn btn-ghost btn-sm" onclick="calToday()" style="font-size:0.8rem">Aujourd'hui</button>
-                                    <button class="btn btn-ghost btn-sm" onclick="calNav(1)" style="padding:0.35rem 0.6rem">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-                                    </button>
+                        <!-- Layout 2 colonnes : mini-cal + grille principale -->
+                        <div style="display:grid;grid-template-columns:240px 1fr;gap:1rem;flex:1;min-height:0;overflow:hidden">
+
+                            <!-- SIDEBAR GAUCHE -->
+                            <div style="display:flex;flex-direction:column;gap:0.65rem;height:100%;overflow:hidden">
+
+                                <!-- Mini calendrier mensuel -->
+                                <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:0.85rem;box-shadow:0 1px 4px rgba(0,0,0,0.04)">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem">
+                                        <button onclick="calMiniNav(-1)" style="background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:6px;color:var(--text-light)" onmouseenter="this.style.background='#F1F5F9'" onmouseleave="this.style.background='none'">
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6" /></svg>
+                                        </button>
+                                        <div id="cal-mini-label" style="font-size:0.78rem;font-weight:700;color:var(--text)"></div>
+                                        <button onclick="calMiniNav(1)" style="background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:6px;color:var(--text-light)" onmouseenter="this.style.background='#F1F5F9'" onmouseleave="this.style.background='none'">
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6" /></svg>
+                                        </button>
+                                    </div>
+                                    <div id="cal-mini-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center;font-size:0.67rem"></div>
                                 </div>
-                                <div id="cal-period-label" style="font-size:0.95rem;font-weight:700;color:var(--text);min-width:200px"></div>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
-                                <!-- Fuseau horaire -->
-                                <select id="cal-timezone" onchange="renderCalendar()" style="font-size:0.75rem;padding:0.3rem 0.6rem;border:1.5px solid var(--border);border-radius:8px;color:var(--text);background:white;outline:none;font-family:inherit">
-                                    <option value="-5">EST (UTC-5)</option>
-                                    <option value="-4" selected>EDT (UTC-4)</option>
-                                    <option value="-3">ADT (UTC-3)</option>
-                                    <option value="0">UTC</option>
-                                    <option value="1">CET (UTC+1)</option>
-                                </select>
-                                <!-- Vues -->
-                                <div style="display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden">
-                                    <button id="cal-v-day" onclick="setCalView('day')" style="padding:0.3rem 0.65rem;border:none;background:transparent;color:var(--text-light);font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit">Jour</button>
-                                    <button id="cal-v-week" onclick="setCalView('week')" style="padding:0.3rem 0.65rem;border:none;background:var(--primary);color:white;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit">Semaine</button>
-                                    <button id="cal-v-month" onclick="setCalView('month')" style="padding:0.3rem 0.65rem;border:none;background:transparent;color:var(--text-light);font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit">Mois</button>
-                                    <button id="cal-v-year" onclick="setCalView('year')" style="padding:0.3rem 0.65rem;border:none;background:transparent;color:var(--text-light);font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit">Année</button>
+
+                                <!-- Légende -->
+                                <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:0.85rem;box-shadow:0 1px 4px rgba(0,0,0,0.04)">
+                                    <div style="font-size:0.7rem;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem">Légende</div>
+                                    <div style="display:flex;flex-direction:column;gap:0.45rem">
+                                        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.75rem;color:var(--text)">
+                                            <div style="width:12px;height:12px;border-radius:3px;background:#ECFDF5;border-left:3px solid #10B981;flex-shrink:0"></div> Disponible
+                                        </div>
+                                        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.75rem;color:var(--text)">
+                                            <div style="width:12px;height:12px;border-radius:3px;background:#FEF9EC;border-left:3px solid #F59E0B;flex-shrink:0"></div> Réservé (RDV)
+                                        </div>
+                                        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.75rem;color:var(--text)">
+                                            <div style="width:12px;height:12px;border-radius:3px;background:#EFF6FF;border-left:3px solid #6366F1;flex-shrink:0"></div> Bloqué (occupé)
+                                        </div>
+                                        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.75rem;color:var(--text)">
+                                            <div style="width:12px;height:12px;border-radius:3px;background:#F1F5F9;border-left:3px solid #94A3B8;flex-shrink:0"></div> Passé
+                                        </div>
+                                    </div>
                                 </div>
-                                <button class="btn btn-primary btn-sm" onclick="openModal('modal-new-slot')">
+
+                                <!-- KPIs compacts -->
+                                <div id="cal-kpis" style="display:flex;flex-direction:column;gap:0.5rem"></div>
+
+                                <!-- Bouton ajouter -->
+                                <button class="btn btn-primary" onclick="openModal('modal-new-slot')" style="width:100%;justify-content:center">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                                     + Disponibilité
                                 </button>
-                            </div>
-                        </div>
 
-                        <!-- KPIs -->
-                        <div id="cal-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.65rem;margin-bottom:1rem"></div>
+                                <!-- Bouton bloquer une plage -->
+                                <button class="btn btn-ghost" onclick="openBlockSlotModal()" style="width:100%;justify-content:center;border:1.5px solid var(--border)">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                                    Bloquer une plage
+                                </button>
 
-                        <!-- Grille principale -->
-                        <div id="cal-grid-wrap" style="border:1.5px solid var(--border);border-radius:12px;overflow:hidden;background:white"></div>
-
-                        <!-- Prochains RDV -->
-                        <div style="margin-top:1.25rem">
-                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem">
-                                <div style="font-size:0.82rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.05em;display:flex;align-items:center;gap:0.5rem">
-                                    Prochains rendez-vous
-                                    <span id="cal-upcoming-count" style="font-size:0.68rem;background:var(--primary);color:white;padding:1px 7px;border-radius:20px;font-weight:700"></span>
+                                <!-- Prochains RDV — sidebar compacte -->
+                                <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:0.75rem;box-shadow:0 1px 4px rgba(0,0,0,0.04);display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;flex-shrink:0">
+                                        <div style="font-size:0.72rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:0.4rem">
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                                            Prochains RDV
+                                            <span id="cal-upcoming-count" style="font-size:0.6rem;background:var(--primary);color:white;padding:1px 6px;border-radius:20px;font-weight:700"></span>
+                                        </div>
+                                        <select id="cal-appt-filter" onchange="filterUpcomingAppts()" style="font-size:0.65rem;padding:0.2rem 0.35rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;outline:none;color:var(--text-mid)">
+                                            <option value="all">Tous</option>
+                                            <option value="nolink">Sans lien</option>
+                                            <option value="withlink">Avec lien</option>
+                                        </select>
+                                    </div>
+                                    <input type="text" id="cal-appt-search" oninput="filterUpcomingAppts()" placeholder="Rechercher..." style="font-size:0.7rem;padding:0.25rem 0.5rem;border:1px solid var(--border);border-radius:7px;outline:none;font-family:inherit;width:100%;box-sizing:border-box;margin-bottom:0.45rem;flex-shrink:0">
+                                    <div id="cal-upcoming" style="display:flex;flex-direction:column;gap:0.3rem;overflow-y:auto;flex:1;min-height:0;padding-right:2px"></div>
+                                    <div id="cal-upcoming-pager" style="margin-top:0.4rem;text-align:center;flex-shrink:0"></div>
                                 </div>
-                                <div style="display:flex;align-items:center;gap:0.5rem">
-                                    <input type="text" id="cal-appt-search" oninput="filterUpcomingAppts()" placeholder="Rechercher un client..." style="font-size:0.78rem;padding:0.3rem 0.65rem;border:1.5px solid var(--border);border-radius:8px;outline:none;font-family:inherit">
-                                    <select id="cal-appt-filter" onchange="filterUpcomingAppts()" style="font-size:0.75rem;padding:0.3rem 0.6rem;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;outline:none">
-                                        <option value="all">Tous</option>
-                                        <option value="nolink">Sans lien</option>
-                                        <option value="withlink">Avec lien</option>
-                                    </select>
-                                </div>
                             </div>
-                            <div id="cal-upcoming" style="display:flex;flex-direction:column;gap:0.5rem"></div>
-                            <div id="cal-upcoming-pager" style="margin-top:0.5rem;text-align:center"></div>
+
+                            <!-- ZONE PRINCIPALE -->
+                            <div style="display:flex;flex-direction:column;gap:0.65rem;height:100%;overflow:hidden">
+
+                                <!-- Barre navigation -->
+                                <div style="display:flex;align-items:center;justify-content:space-between;background:white;border:1.5px solid var(--border);border-radius:12px;padding:0.6rem 0.85rem;box-shadow:0 1px 4px rgba(0,0,0,0.04)">
+                                    <div style="display:flex;align-items:center;gap:0.5rem">
+                                        <button class="btn btn-ghost btn-sm" onclick="calNav(-1)" style="padding:0.3rem 0.55rem">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6" /></svg>
+                                        </button>
+                                        <button class="btn btn-ghost btn-sm" onclick="calToday()" style="font-size:0.78rem;font-weight:600">Aujourd'hui</button>
+                                        <button class="btn btn-ghost btn-sm" onclick="calNav(1)" style="padding:0.3rem 0.55rem">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+                                        </button>
+                                        <div id="cal-period-label" style="font-size:0.9rem;font-weight:700;color:var(--text);margin-left:0.25rem"></div>
+                                    </div>
+                                    <div style="display:flex;align-items:center;gap:0.5rem">
+                                        <select id="cal-timezone" onchange="renderCalendar()" style="font-size:0.73rem;padding:0.28rem 0.5rem;border:1.5px solid var(--border);border-radius:8px;color:var(--text);background:white;outline:none;font-family:inherit">
+                                            <option value="-5">EST (UTC-5)</option>
+                                            <option value="-4" selected>EDT (UTC-4)</option>
+                                            <option value="-3">ADT (UTC-3)</option>
+                                            <option value="0">UTC</option>
+                                            <option value="1">CET (UTC+1)</option>
+                                        </select>
+                                        <div style="display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden">
+                                            <button id="cal-v-day" onclick="setCalView('day')" style="padding:0.28rem 0.6rem;border:none;background:transparent;color:var(--text-light);font-size:0.73rem;font-weight:600;cursor:pointer;font-family:inherit">Jour</button>
+                                            <button id="cal-v-week" onclick="setCalView('week')" style="padding:0.28rem 0.6rem;border:none;background:var(--primary);color:white;font-size:0.73rem;font-weight:600;cursor:pointer;font-family:inherit">Semaine</button>
+                                            <button id="cal-v-month" onclick="setCalView('month')" style="padding:0.28rem 0.6rem;border:none;background:transparent;color:var(--text-light);font-size:0.73rem;font-weight:600;cursor:pointer;font-family:inherit">Mois</button>
+                                            <button id="cal-v-year" onclick="setCalView('year')" style="padding:0.28rem 0.6rem;border:none;background:transparent;color:var(--text-light);font-size:0.73rem;font-weight:600;cursor:pointer;font-family:inherit">Année</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Grille calendrier -->
+                                <div id="cal-grid-wrap" style="border:1.5px solid var(--border);border-radius:12px;overflow:hidden;background:white;box-shadow:0 1px 4px rgba(0,0,0,0.04);flex:1;min-height:0"></div>
+
+                            </div>
                         </div>
                     </div>
 
@@ -7076,7 +7153,95 @@
         let _calOffset = 0, _calView = 'week';
         let _calSlots = [], _calAppts = [], _calApptsAll = [];
         let _calApptsPage = 1; const _CAL_APPTS_PP = 10;
-        const CAL_HS = 0, CAL_HE = 24, HPX = 56;
+        const CAL_HS = 7, CAL_HE = 20, HPX = 72;
+
+        // ── Mini calendrier sidebar ──────────────────────
+        let _miniOffset = 0;
+        function calMiniNav(dir) { _miniOffset += dir; renderMiniCalendar(); }
+        function renderMiniCalendar() {
+            const now = new Date();
+            const ref = new Date(now.getFullYear(), now.getMonth() + _miniOffset, 1);
+            const label = document.getElementById('cal-mini-label');
+            if (label) label.textContent = ref.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
+            const grid = document.getElementById('cal-mini-grid');
+            if (!grid) return;
+            const today = now.toISOString().split('T')[0];
+            const daysInMonth = new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate();
+            const firstDow = (ref.getDay() + 6) % 7;
+            const datesWithSlots = new Set((_calSlots || []).map(s => (s.slot_date || '').split('T')[0]));
+            const days = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+            let h = days.map(d => '<div style="color:#94A3B8;font-weight:700;font-size:0.62rem;padding:2px;text-align:center">' + d + '</div>').join('');
+            for (let i = 0; i < firstDow; i++) h += '<div></div>';
+            for (let d = 1; d <= daysInMonth; d++) {
+                const ds = ref.getFullYear() + '-' + String(ref.getMonth() + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                const isToday = ds === today;
+                const hasSlot = datesWithSlots.has(ds);
+                const bg = isToday ? '#1B4F8A' : 'transparent';
+                const col = isToday ? 'white' : '#374151';
+                h += '<div onclick="calJumpToDate(\'' + ds + '\')" style="padding:2px;border-radius:50%;cursor:pointer;font-weight:' + (isToday ? '800' : '500') + ';color:' + col + ';background:' + bg + ';text-align:center;position:relative;font-size:0.67rem" onmouseenter="if(this.style.background===\'transparent\')this.style.background=\'#F1F5F9\'" onmouseleave="if(this.style.color!==\'white\')this.style.background=\'transparent\'">'
+                    + d
+                    + (hasSlot && !isToday ? '<div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:#10B981"></div>' : '')
+                    + '</div>';
+            }
+            grid.innerHTML = h;
+        }
+        function calJumpToDate(ds) {
+            const now = new Date();
+            const target = new Date(ds + 'T12:00:00');
+            const diffDays = Math.floor((target - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+            if (_calView === 'week') _calOffset = Math.floor(diffDays / 7);
+            else if (_calView === 'day') _calOffset = diffDays;
+            else if (_calView === 'month') _calOffset = Math.round((target.getFullYear() - now.getFullYear()) * 12 + target.getMonth() - now.getMonth());
+            loadCalendar();
+        }
+
+        // ── Bloquer une plage (occupé, pas de client) ─────────────
+        function openBlockSlotModal() {
+            const today = new Date().toISOString().split('T')[0];
+            const overlay = document.createElement('div');
+            overlay.id = 'block-modal-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+            overlay.innerHTML = `<div style="background:white;border-radius:16px;padding:1.5rem;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
+                    <div style="font-size:0.9rem;font-weight:700;margin-bottom:0.5rem;color:#0F172A">Bloquer une plage horaire</div>
+                    <p style="font-size:0.76rem;color:#64748B;margin-bottom:1.1rem;line-height:1.5">Vous marque occupé sans permettre de réservation client. Le créneau restera bloqué jusqu'à suppression manuelle.</p>
+                    <div style="display:flex;flex-direction:column;gap:0.75rem">
+                        <div><label style="font-size:0.74rem;font-weight:600;display:block;margin-bottom:4px;color:#374151">Date</label>
+                        <input type="date" id="block-date" value="${today}" style="width:100%;padding:0.45rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;box-sizing:border-box"></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+                            <div><label style="font-size:0.74rem;font-weight:600;display:block;margin-bottom:4px;color:#374151">Début</label>
+                            <input type="time" id="block-start" value="09:00" style="width:100%;padding:0.45rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;box-sizing:border-box"></div>
+                            <div><label style="font-size:0.74rem;font-weight:600;display:block;margin-bottom:4px;color:#374151">Fin</label>
+                            <input type="time" id="block-end" value="10:00" style="width:100%;padding:0.45rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;box-sizing:border-box"></div>
+                        </div>
+                        <div><label style="font-size:0.74rem;font-weight:600;display:block;margin-bottom:4px;color:#374151">Raison (optionnel)</label>
+                        <input type="text" id="block-reason" placeholder="Réunion interne, Congé..." style="width:100%;padding:0.45rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;box-sizing:border-box"></div>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1.25rem">
+                        <button onclick="document.getElementById('block-modal-overlay').remove()" style="padding:0.45rem 1rem;border:1.5px solid #E2E8F0;border-radius:8px;background:white;font-size:0.8rem;cursor:pointer;font-family:inherit">Annuler</button>
+                        <button onclick="confirmBlockSlot()" style="padding:0.45rem 1rem;border:none;border-radius:8px;background:#6366F1;color:white;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            Bloquer
+                        </button>
+                    </div>
+                </div>`;
+            overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+            document.body.appendChild(overlay);
+        }
+        async function confirmBlockSlot() {
+            const date = document.getElementById('block-date')?.value;
+            const start = document.getElementById('block-start')?.value;
+            const end = document.getElementById('block-end')?.value;
+            const reason = document.getElementById('block-reason')?.value;
+            if (!date || !start || !end) { showToast('Remplissez tous les champs obligatoires', 'error'); return; }
+            if (start >= end) { showToast("L'heure de fin doit être après le début", 'error'); return; }
+            const r = await calApi('/slots', 'POST', { slot_date: date, start_time: start + ':00', end_time: end + ':00', duration_min: 0, notes: reason || 'Bloqué' });
+            if (r.success && r.slots?.[0]) {
+                await calApi('/slots/' + r.slots[0].id, 'PATCH', { status: 'booked' });
+                document.getElementById('block-modal-overlay')?.remove();
+                showToast('Plage bloquée — non réservable par les clients', 'success');
+                loadCalendar();
+            } else { showToast(r.message || 'Erreur', 'error'); }
+        }
 
         // ── Vues ────────────────────────────────────────────────────
         function setCalView(v) {
@@ -7141,6 +7306,7 @@
             _calApptsAll = aR.success ? aR.appointments : [];
             _calAppts = [..._calApptsAll];
             renderCalendar();
+            renderMiniCalendar();
         }
 
         function renderCalendar() {
@@ -7162,9 +7328,9 @@
                 { l: 'R\u00e9serv\u00e9s', v: booked, c: '#D97706', bg: '#FEF3C7' },
                 { l: 'Avec lien', v: wLink, c: '#7C3AED', bg: '#EDE9FE' },
                 { l: 'Sans lien', v: noLink, c: noLink > 0 ? '#DC2626' : '#059669', bg: noLink > 0 ? '#FEE2E2' : '#D1FAE5' },
-            ].map(k => '<div style="background:' + k.bg + ';border:1px solid ' + k.c + '22;border-radius:10px;padding:0.55rem 0.85rem;display:flex;align-items:center;gap:0.6rem;cursor:' + (k.l === 'Sans lien' && noLink > 0 ? 'pointer' : 'default') + '" ' + (k.l === 'Sans lien' && noLink > 0 ? 'onclick="document.getElementById(\'cal-appt-filter\').value=\'nolink\';filterUpcomingAppts()"' : '') + '>' +
-                '<div style="font-size:1.1rem;font-weight:800;color:' + k.c + '">' + k.v + '</div>' +
-                '<div style="font-size:0.67rem;font-weight:700;color:' + k.c + ';opacity:0.8;text-transform:uppercase">' + k.l + '</div></div>').join('');
+            ].map(k => '<div style="background:' + k.bg + ';border:1px solid ' + k.c + '22;border-radius:10px;padding:0.45rem 0.65rem;display:flex;align-items:center;justify-content:space-between;cursor:' + (k.l === 'Sans lien' && noLink > 0 ? 'pointer' : 'default') + '" ' + (k.l === 'Sans lien' && noLink > 0 ? 'onclick="document.getElementById(\'cal-appt-filter\').value=\'nolink\';filterUpcomingAppts()"' : '') + '>' +
+                '<div style="font-size:0.67rem;font-weight:700;color:' + k.c + ';text-transform:uppercase">' + k.l + '</div>' +
+                '<div style="font-size:1rem;font-weight:800;color:' + k.c + '">' + k.v + '</div></div>').join('');
 
             const wrap = document.getElementById('cal-grid-wrap');
             if (!wrap) return;
@@ -7180,7 +7346,96 @@
             _renderUpcoming(today);
         }
 
-        // ── Vue Jour / Semaine (axe horaire) ─────────────────────────
+        // ── Prochains RDV ─────────────────────────────────────────────
+        let _upcomingPage = 0;
+        const UPCOMING_PER_PAGE = 8;
+
+        function _renderUpcoming(today) {
+            const el = id => document.getElementById(id);
+            const container = el('cal-upcoming');
+            const pager = el('cal-upcoming-pager');
+            const countEl = el('cal-upcoming-count');
+            if (!container) return;
+
+            // Filtrer les RDV à venir confirmés
+            const search = (el('cal-appt-search')?.value || '').toLowerCase();
+            const filter = el('cal-appt-filter')?.value || 'all';
+
+            let appts = (_calApptsAll || [])
+                .filter(a => a.status !== 'cancelled' && a.appointment_date >= today)
+                .sort((a, b) => a.appointment_date.localeCompare(b.appointment_date) || a.start_time.localeCompare(b.start_time));
+
+            if (search) appts = appts.filter(a => (a.client_name || '').toLowerCase().includes(search) || (a.client_company || '').toLowerCase().includes(search));
+            if (filter === 'nolink') appts = appts.filter(a => !a.meeting_link);
+            if (filter === 'withlink') appts = appts.filter(a => !!a.meeting_link);
+
+            if (countEl) countEl.textContent = appts.length;
+
+            if (!appts.length) {
+                container.innerHTML = '<div style="text-align:center;padding:2rem;color:#94A3B8;font-size:0.8rem">Aucun rendez-vous à venir</div>';
+                if (pager) pager.innerHTML = '';
+                return;
+            }
+
+            // Pagination
+            const totalPages = Math.ceil(appts.length / UPCOMING_PER_PAGE);
+            _upcomingPage = Math.min(_upcomingPage, totalPages - 1);
+            const page = appts.slice(_upcomingPage * UPCOMING_PER_PAGE, (_upcomingPage + 1) * UPCOMING_PER_PAGE);
+
+            container.innerHTML = page.map(a => {
+                const ds = (a.appointment_date || '').split('T')[0];
+                const dateStr = ds ? new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' }) : '';
+                const timeStr = (a.start_time || '').substring(0, 5) + ' – ' + (a.end_time || '').substring(0, 5);
+                const hasLink = !!a.meeting_link;
+                const ini = (a.client_name || 'CL').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+                const meetIcon = a.meeting_type === 'phone'
+                    ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.7 12.63a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'
+                    : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>';
+                return `<div onclick="openEditAppt(${a.id})" style="display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0.6rem;border-radius:8px;border:1px solid #E2E8F0;background:white;cursor:pointer;transition:all .12s;min-width:0" onmouseenter="this.style.borderColor='#1B4F8A';this.style.background='#F8FAFF'" onmouseleave="this.style.borderColor='#E2E8F0';this.style.background='white'">
+                        <div style="width:26px;height:26px;border-radius:50%;background:#1B4F8A;display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:700;color:white;flex-shrink:0">${ini}</div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-size:0.72rem;font-weight:700;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.client_name || ''}${a.client_company ? '<span style="font-weight:400;color:#94A3B8"> · ' + a.client_company + '</span>' : ''}</div>
+                            <div style="font-size:0.64rem;color:#64748B;display:flex;align-items:center;gap:0.25rem;margin-top:1px">${meetIcon}<span style="font-weight:600;color:#1B4F8A">${timeStr}</span><span style="color:#CBD5E0">·</span><span>${dateStr}</span></div>
+                        </div>
+                        ${hasLink
+                        ? `<a href="${a.meeting_link}" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:0.2rem;padding:0.18rem 0.4rem;border-radius:5px;background:#D1FAE5;color:#065F46;font-size:0.6rem;font-weight:600;text-decoration:none;flex-shrink:0"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Lien</a>`
+                        : `<button onclick="event.stopPropagation();openEditAppt(${a.id})" style="display:inline-flex;align-items:center;gap:0.2rem;padding:0.18rem 0.4rem;border-radius:5px;background:#FEF3C7;color:#92400E;font-size:0.6rem;font-weight:600;border:none;cursor:pointer;font-family:inherit;flex-shrink:0"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>+ Lien</button>`}
+                    </div>`;
+            }).join('');
+
+            if (pager) {
+                pager.innerHTML = totalPages > 1
+                    ? Array.from({ length: totalPages }, (_, i) =>
+                        `<button onclick="_upcomingPage=${i};_renderUpcoming('${today}')" style="width:26px;height:26px;border-radius:50%;border:1.5px solid ${i === _upcomingPage ? '#1B4F8A' : '#E2E8F0'};background:${i === _upcomingPage ? '#1B4F8A' : 'white'};color:${i === _upcomingPage ? 'white' : '#64748B'};font-size:0.72rem;cursor:pointer;font-family:inherit;margin:0 2px">${i + 1}</button>`
+                    ).join('')
+                    : '';
+            }
+        }
+
+        function filterUpcomingAppts() {
+            _upcomingPage = 0;
+            const today = new Date().toISOString().split('T')[0];
+            _renderUpcoming(today);
+        }
+
+
+        // ── Clic cellule vide → ouvrir modal nouveau créneau prérempli ──
+        function calCellClick(event, date, time) {
+            const dateEl = document.getElementById('ns-date');
+            const startEl = document.getElementById('ns-start');
+            if (dateEl) dateEl.value = date;
+            if (startEl) { startEl.value = time; nsUpdateEndTime(); }
+            // Réinitialiser boutons rapides
+            document.querySelectorAll('.quick-slot-btn').forEach(b => b.classList.remove('active'));
+            openModal('modal-new-slot');
+        }
+
+        function openQuickSlot(date) {
+            const dateEl = document.getElementById('ns-date');
+            if (dateEl) dateEl.value = date;
+            openModal('modal-new-slot');
+        }
+
         function _renderTimelineView(wrap, days, today) {
             const TPX = (CAL_HE - CAL_HS) * HPX, AXIS = 56, dayN = days.length;
             const DAY = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -7250,28 +7505,85 @@
                 }
 
 
-                daySlots.forEach(s => {
+                const MAX_OVERLAP_COLS = 4; // max de colonnes visuelles par jour
+                daySlots.forEach((s, si) => {
                     const sm = _tmin(s.start_time), em = _tmin(s.end_time);
                     if (em <= sm) return;
-                    const top = (sm - CAL_HS * 60) / 60 * HPX, ht = Math.max(24, (em - sm) / 60 * HPX - 3);
+                    const top = (sm - CAL_HS * 60) / 60 * HPX, ht = Math.max(30, (em - sm) / 60 * HPX - 2);
                     if (top < 0 || top > TPX) return;
+
+                    // Chevauchements horizontaux
+                    const overlapping = daySlots.filter((o, oi) => {
+                        if (oi >= si) return false;
+                        const om = _tmin(o.start_time), oem = _tmin(o.end_time);
+                        return sm < oem && em > om;
+                    });
+                    const colIdx = overlapping.length;
+                    const allOverlapping = daySlots.filter((o) => {
+                        const om = _tmin(o.start_time), oem = _tmin(o.end_time);
+                        return sm < oem && em > om;
+                    });
+                    const rawTotalCols = Math.max(1, allOverlapping.length + 1);
+                    const totalCols = Math.min(rawTotalCols, MAX_OVERLAP_COLS);
+
+                    // Si ce slot dépasse le max de colonnes, on le saute (il sera compté dans le +N)
+                    if (colIdx >= MAX_OVERLAP_COLS) return;
+
+                    // Calculer combien sont cachés pour le +N indicator (seulement pour le dernier slot visible du groupe)
+                    const hiddenCount = rawTotalCols > MAX_OVERLAP_COLS ? rawTotalCols - MAX_OVERLAP_COLS : 0;
+                    const isLastVisibleInGroup = (colIdx === MAX_OVERLAP_COLS - 1) && hiddenCount > 0;
+
+                    const colW = W / totalCols;
+                    const colL = L + colIdx * colW;
+
                     const isBooked = s.status === 'booked', hasAppt = !!s.appointment_id;
-                    const bg = isPast ? '#F8FAFC' : isBooked ? '#FEF9EC' : '#ECFDF5';
-                    const bdr = isPast ? '#CBD5E0' : isBooked ? '#F59E0B' : '#10B981';
-                    const col = isPast ? '#94A3B8' : isBooked ? '#92400E' : '#065F46';
+                    const isBlocked = isBooked && !hasAppt;
+
+                    // Palette pro par état
+                    let bg, bdr, timeCol, nameCol, subCol;
+                    if (isPast) {
+                        bg = '#F1F5F9'; bdr = '#CBD5E0'; timeCol = '#94A3B8'; nameCol = '#94A3B8'; subCol = '#CBD5E0';
+                    } else if (isBlocked) {
+                        bg = 'linear-gradient(160deg,#EEF2FF 0%,#E0E7FF 100%)'; bdr = '#6366F1'; timeCol = '#4338CA'; nameCol = '#312E81'; subCol = '#6366F1';
+                    } else if (isBooked) {
+                        bg = 'linear-gradient(160deg,#FFFBEB 0%,#FEF3C7 100%)'; bdr = '#F59E0B'; timeCol = '#B45309'; nameCol = '#78350F'; subCol = '#D97706';
+                    } else {
+                        bg = 'linear-gradient(160deg,#F0FDF4 0%,#DCFCE7 100%)'; bdr = '#22C55E'; timeCol = '#15803D'; nameCol = '#14532D'; subCol = '#16A34A';
+                    }
+
                     const slotOnClick = hasAppt ? 'openEditAppt(' + s.appointment_id + ')' : 'openSlotDetail(' + s.id + ')';
+                    const timeLabel = (s.start_time || '').substring(0, 5) + ' – ' + (s.end_time || '').substring(0, 5);
+
                     html += '<div onclick="' + slotOnClick + '" '
-                        + 'style="position:absolute;left:' + (L + 0.3) + '%;width:' + (W - 0.6) + '%;top:' + top + 'px;height:' + ht + 'px;'
-                        + 'background:' + bg + ';border-left:3px solid ' + bdr + ';border-radius:5px;padding:3px 6px;cursor:pointer;z-index:3;overflow:hidden;box-sizing:border-box;transition:box-shadow .1s;position:relative" '
-                        + 'onmouseenter="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.15)\';this.querySelector(\'.cal-del-btn\')&&(this.querySelector(\'.cal-del-btn\').style.opacity=\'1\')" '
-                        + 'onmouseleave="this.style.boxShadow=\'\';this.querySelector(\'.cal-del-btn\')&&(this.querySelector(\'.cal-del-btn\').style.opacity=\'0\')">'
-                        + '<div style="font-size:0.67rem;font-weight:700;color:' + col + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (s.start_time || '').substring(0, 5) + ' ' + (isBooked ? '\uD83D\uDC64' : '\u2713') + '</div>'
-                        + (hasAppt && s.client_name ? '<div style="font-size:0.61rem;color:' + col + ';opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + s.client_name + '</div>' : '')
-                        + (!hasAppt && !isPast && ht > 40 ? '<div style="font-size:0.58rem;color:' + col + ';opacity:0.6">Disponible</div>' : '')
-                        // Bouton supprimer — visible au hover
-                        + (!hasAppt && !isPast ? '<button class="cal-del-btn" onclick="event.stopPropagation();deleteSlot(' + s.id + ')" '
-                            + 'style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,0.15);border:none;color:' + col + ';font-size:0.65rem;line-height:1;cursor:pointer;opacity:0;transition:opacity .15s;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit" '
-                            + 'title="Supprimer ce cr\u00e9neau">\u00d7</button>' : '')
+                        + 'style="position:absolute;left:' + (colL + 0.15) + '%;width:' + (colW - 0.3) + '%;top:' + top + 'px;height:' + ht + 'px;'
+                        + 'background:' + bg + ';border-left:3px solid ' + bdr + ';border-radius:7px;'
+                        + 'padding:5px 8px 4px;cursor:pointer;z-index:3;overflow:hidden;box-sizing:border-box;'
+                        + 'transition:all .12s;box-shadow:0 1px 3px rgba(0,0,0,0.07)" '
+                        + 'onmouseenter="this.style.transform=\'scale(1.01) translateY(-1px)\';this.style.boxShadow=\'0 4px 14px rgba(0,0,0,0.13)\';var b=this.querySelector(\'.cal-del-btn\');if(b)b.style.opacity=\'1\'" '
+                        + 'onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'0 1px 3px rgba(0,0,0,0.07)\';var b=this.querySelector(\'.cal-del-btn\');if(b)b.style.opacity=\'0\'">'
+                        // Heure — toujours lisible
+                        + '<div style="font-size:0.7rem;font-weight:700;color:' + timeCol + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35;letter-spacing:-0.01em">' + timeLabel + '</div>'
+                        // Nom client — RDV réservé
+                        + (hasAppt && s.client_name
+                            ? '<div style="font-size:0.75rem;font-weight:700;color:' + nameCol + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-top:1px">' + s.client_name + '</div>'
+                            + (s.client_company && ht > 62
+                                ? '<div style="font-size:0.64rem;color:' + subCol + ';opacity:0.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2">' + s.client_company + '</div>'
+                                : '')
+                            : '')
+                        // Statut — créneau libre ou bloqué
+                        + (!hasAppt && !isPast && ht > 44
+                            ? '<div style="font-size:0.65rem;color:' + subCol + ';font-weight:600;line-height:1.2;margin-top:1px;opacity:0.85">' + (isBlocked ? '🔒 Bloqué' : '✓ Disponible') + '</div>'
+                            : '')
+                        // Bouton × au hover
+                        + (!hasAppt && !isPast
+                            ? '<button class="cal-del-btn" onclick="event.stopPropagation();deleteSlot(' + s.id + ')" '
+                            + 'style="position:absolute;top:4px;right:4px;width:17px;height:17px;border-radius:50%;background:rgba(0,0,0,0.12);border:none;color:' + nameCol + ';font-size:0.72rem;line-height:1;cursor:pointer;opacity:0;transition:opacity .15s;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit" '
+                            + 'title="Supprimer">×</button>'
+                            : '')
+                        // Badge +N si des créneaux sont cachés (trop de chevauchements)
+                        + (isLastVisibleInGroup
+                            ? '<div style="position:absolute;bottom:4px;right:4px;background:#1B4F8A;color:white;font-size:0.6rem;font-weight:700;border-radius:10px;padding:1px 5px;line-height:1.4;pointer-events:none">+' + hiddenCount + '</div>'
+                            : '')
                         + '</div>';
                 });
             });
@@ -7293,7 +7605,7 @@
 
             // Auto-scroll vers heure courante
             const scrollEl = document.getElementById('cal-scroll-body');
-            if (scrollEl) scrollEl.scrollTop = Math.max(0, (new Date().getHours() - CAL_HS - 1) * HPX);
+            if (scrollEl) scrollEl.scrollTop = Math.max(0, (8.5 - CAL_HS) * HPX);
         }
 
         // ── Vue Mois ─────────────────────────────────────────────────
@@ -7404,378 +7716,273 @@
         // ── Modal détail créneau / RDV ──────────────────────────────
         let _slotDetailId = null, _apptDetailId = null;
 
+        // ── MODAL CRÉNEAU DISPONIBLE ─────────────────────────────
         function openSlotDetail(slotId) {
             const slot = _calSlots.find(s => s.id === slotId);
-            if (!slot) { openQuickSlot((slot?.slot_date || new Date().toISOString().split('T')[0])); return; }
+            if (!slot) return;
             _slotDetailId = slotId;
-            _apptDetailId = slot.appointment_id || null;
             const ds = (slot.slot_date || '').split('T')[0];
             const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-            const timeStr = (slot.start_time || '').substring(0, 5) + ' \u2192 ' + (slot.end_time || '').substring(0, 5) + ' \u00b7 ' + (slot.duration_min || 30) + ' min';
-            const isBooked = slot.status === 'booked';
-            const appt = _calApptsAll.find(a => a.id === _apptDetailId);
-            document.getElementById('slot-detail-title').textContent = isBooked ? 'Rendez-vous confirm\u00e9' : 'Cr\u00e9neau disponible';
-            document.getElementById('slot-detail-date').textContent = dateStr;
-            document.getElementById('slot-detail-time').textContent = timeStr;
-            const icon = document.getElementById('slot-detail-icon');
-            icon.style.background = isBooked ? '#FEF9EC' : '#ECFDF5'; icon.style.color = isBooked ? '#92400E' : '#065F46';
-            document.getElementById('slot-detail-badge').innerHTML = isBooked
-                ? '<span style="font-size:0.72rem;font-weight:700;background:#FEF9EC;color:#92400E;padding:3px 10px;border-radius:20px">R\u00e9serv\u00e9</span>'
-                : '<span style="font-size:0.72rem;font-weight:700;background:#ECFDF5;color:#065F46;padding:3px 10px;border-radius:20px">Disponible</span>';
-            const cs = document.getElementById('slot-detail-client-section');
-            if (appt) {
-                cs.style.display = 'block';
-                const ini = (appt.client_name || 'CL').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-                document.getElementById('slot-detail-avatar').textContent = ini;
-                document.getElementById('slot-detail-client-name').textContent = appt.client_name || '';
-                document.getElementById('slot-detail-client-company').textContent = appt.client_company || appt.client_email || '';
-                const sr = document.getElementById('slot-detail-subject-row');
-                document.getElementById('slot-detail-subject').textContent = appt.subject || '';
-                sr.style.display = appt.subject ? 'block' : 'none';
-                document.getElementById('slot-detail-client-badge').innerHTML = appt.meeting_type === 'phone'
-                    ? '<span style="font-size:0.7rem;background:#F0F9FF;color:#0369A1;padding:2px 8px;border-radius:20px">T\u00e9l\u00e9phone</span>'
-                    : '<span style="font-size:0.7rem;background:#F0F9FF;color:#0369A1;padding:2px 8px;border-radius:20px">Vid\u00e9o</span>';
-            } else { cs.style.display = 'none'; }
-            const ld = document.getElementById('slot-detail-link-display');
-            const li = document.getElementById('slot-detail-link-input');
-            const lu = document.getElementById('slot-detail-link-url');
-            if (appt?.meeting_link) { ld.style.display = 'flex'; lu.href = appt.meeting_link; lu.textContent = appt.meeting_link; li.value = appt.meeting_link; }
-            else { ld.style.display = 'none'; li.value = ''; }
-            document.getElementById('slot-detail-notes-section').style.display = 'block';
-            document.getElementById('slot-detail-notes').value = slot.notes || appt?.notes_admin || '';
-            const db = document.getElementById('slot-detail-delete-btn');
-            db.disabled = isBooked; db.style.opacity = isBooked ? '0.4' : '1';
-            document.getElementById('slot-detail-save-btn').style.display = appt ? 'block' : 'none';
+            const timeStr = (slot.start_time || '').substring(0, 5) + ' → ' + (slot.end_time || '').substring(0, 5);
+            const dur = slot.duration_min || 30;
+            const isBlocked = slot.status === 'booked' && !slot.appointment_id;
+            const el = id => document.getElementById(id);
+
+            el('slot-detail-title').textContent = isBlocked ? '🔒 Plage bloquée' : '✅ Créneau disponible';
+            el('slot-detail-subtitle').textContent = dateStr + ' · ' + timeStr + ' · ' + dur + ' min';
+            el('slot-detail-date').textContent = dateStr;
+            el('slot-detail-time').textContent = timeStr;
+            el('slot-detail-dur').textContent = dur + ' min';
+            el('slot-detail-status').textContent = isBlocked ? 'Bloqué — non réservable par les clients' : 'Disponible — les clients peuvent réserver';
+            el('slot-detail-status').style.color = isBlocked ? '#6366F1' : '#059669';
+            el('slot-detail-notes').value = slot.notes || '';
+
+            // Actions contextuelles selon statut
+            const actionsEl = el('slot-detail-actions');
+            if (actionsEl) {
+                if (isBlocked) {
+                    actionsEl.innerHTML = `
+                            <button onclick="slotDetailUnblock()" style="flex:1;padding:0.55rem;border:1.5px solid #D1FAE5;border-radius:8px;background:#ECFDF5;color:#065F46;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+                                Rendre disponible
+                            </button>`;
+                } else {
+                    actionsEl.innerHTML = `
+                            <button onclick="slotDetailBookManually()" style="flex:1;padding:0.55rem;border:1.5px solid #DBEAFE;border-radius:8px;background:#EFF6FF;color:#1D4ED8;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="23" y2="8"/><line x1="21" y1="6" x2="21" y2="10"/></svg>
+                                Réserver pour un client
+                            </button>
+                            <button onclick="slotDetailBlock()" style="flex:1;padding:0.55rem;border:1.5px solid #E0E7FF;border-radius:8px;background:#EFF6FF;color:#4338CA;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                Bloquer (occupé)
+                            </button>`;
+                }
+            }
             openModal('modal-slot-detail');
         }
 
-        async function slotDetailSaveLink() {
-            const link = document.getElementById('slot-detail-link-input')?.value?.trim();
-            if (!_apptDetailId) return;
-            const d = await calApi('/appointments/' + _apptDetailId, 'PATCH', { meeting_link: link || null });
-            if (d.success) { showToast('Lien enregistr\u00e9', 'success'); loadCalendar(); } else showToast(d.message || 'Erreur', 'error');
-        }
-        async function slotDetailSave() {
-            const notes = document.getElementById('slot-detail-notes')?.value?.trim();
-            const link = document.getElementById('slot-detail-link-input')?.value?.trim();
-            if (!_apptDetailId) return;
-            const d = await calApi('/appointments/' + _apptDetailId, 'PATCH', { notes_admin: notes || null, meeting_link: link || null });
-            if (d.success) { showToast('Mis \u00e0 jour', 'success'); closeModal('modal-slot-detail'); loadCalendar(); } else showToast(d.message || 'Erreur', 'error');
-        }
-        async function slotDetailDelete() {
+        async function slotDetailBlock() {
             if (!_slotDetailId) return;
-            if (!await confirm2('Supprimer ce cr\u00e9neau?', 'Action irr\u00e9versible.', 'Supprimer')) return;
-            const d = await calApi('/slots/' + _slotDetailId, 'DELETE');
-            if (d.success) { closeModal('modal-slot-detail'); showToast('Cr\u00e9neau supprim\u00e9', 'success'); loadCalendar(); } else showToast(d.message || 'Erreur', 'error');
+            const d = await calApi('/slots/' + _slotDetailId, 'PATCH', { status: 'booked' });
+            if (d.success) { closeModal('modal-slot-detail'); showToast('Créneau bloqué', 'success'); loadCalendar(); }
         }
 
-        function filterUpcomingAppts() {
-            const search = (document.getElementById('cal-appt-search')?.value || '').toLowerCase();
-            const filter = document.getElementById('cal-appt-filter')?.value || 'all';
-            const _now = new Date(); const today = _now.getFullYear() + '-' + String(_now.getMonth() + 1).padStart(2, '0') + '-' + String(_now.getDate()).padStart(2, '0');
-            _calAppts = _calApptsAll.filter(a => {
-                if (a.appointment_date < today || a.status !== 'confirmed') return false;
-                if (filter === 'nolink' && a.meeting_link) return false;
-                if (filter === 'withlink' && !a.meeting_link) return false;
-                if (search && !(a.client_name || '').toLowerCase().includes(search) && !(a.subject || '').toLowerCase().includes(search)) return false;
-                return true;
+        async function slotDetailUnblock() {
+            if (!_slotDetailId) return;
+            const d = await calApi('/slots/' + _slotDetailId, 'PATCH', { status: 'available' });
+            if (d.success) { closeModal('modal-slot-detail'); showToast('Créneau remis disponible', 'success'); loadCalendar(); }
+        }
+
+        async function slotDetailBookManually() {
+            // Ouvrir un dialog pour choisir un client et réserver manuellement
+            const clients = (_allClients || []).filter(c => c.is_active !== false);
+            const slot = _calSlots.find(s => s.id === _slotDetailId);
+            const ds = (slot?.slot_date || '').split('T')[0];
+            const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'long' });
+
+            const overlay = document.createElement('div');
+            overlay.id = 'book-manual-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+            overlay.innerHTML = `<div style="background:white;border-radius:16px;padding:1.5rem;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
+                    <div style="font-size:0.9rem;font-weight:700;margin-bottom:0.25rem;color:#0F172A">Réserver pour un client</div>
+                    <div style="font-size:0.74rem;color:#64748B;margin-bottom:1.25rem">${dateStr} · ${(slot?.start_time || '').substring(0, 5)} – ${(slot?.end_time || '').substring(0, 5)}</div>
+                    <div style="display:flex;flex-direction:column;gap:0.75rem">
+                        <div><label style="font-size:0.74rem;font-weight:600;display:block;margin-bottom:4px">Client *</label>
+                        <select id="bm-client" style="width:100%;padding:0.45rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;box-sizing:border-box">
+                            <option value="">— Choisir un client —</option>
+                            ${clients.map(c => `<option value="${c.id}">${c.full_name}${c.company_name ? ' — ' + c.company_name : ''}</option>`).join('')}
+                        </select></div>
+                        <div><label style="font-size:0.74rem;font-weight:600;display:block;margin-bottom:4px">Sujet</label>
+                        <input type="text" id="bm-subject" placeholder="Appel de qualification, Présentation..." style="width:100%;padding:0.45rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;box-sizing:border-box"></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+                            <div><label style="font-size:0.74rem;font-weight:600;display:block;margin-bottom:4px">Type</label>
+                            <select id="bm-type" style="width:100%;padding:0.45rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;box-sizing:border-box">
+                                <option value="video">Vidéo</option>
+                                <option value="phone">Téléphone</option>
+                                <option value="onsite">Sur site</option>
+                            </select></div>
+                            <div><label style="font-size:0.74rem;font-weight:600;display:block;margin-bottom:4px">Lien réunion</label>
+                            <input type="url" id="bm-link" placeholder="https://..." style="width:100%;padding:0.45rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;box-sizing:border-box"></div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1.25rem">
+                        <button onclick="document.getElementById('book-manual-overlay').remove()" style="padding:0.45rem 1rem;border:1.5px solid #E2E8F0;border-radius:8px;background:white;font-size:0.8rem;cursor:pointer;font-family:inherit">Annuler</button>
+                        <button onclick="confirmBookManually(${_slotDetailId})" style="padding:0.45rem 1rem;border:none;border-radius:8px;background:#1B4F8A;color:white;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit">
+                            ✅ Confirmer le rendez-vous
+                        </button>
+                    </div>
+                </div>`;
+            overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+            document.body.appendChild(overlay);
+        }
+
+        async function confirmBookManually(slotId) {
+            const clientId = document.getElementById('bm-client')?.value;
+            const subject = document.getElementById('bm-subject')?.value;
+            const meetType = document.getElementById('bm-type')?.value || 'video';
+            const meetLink = document.getElementById('bm-link')?.value;
+            if (!clientId) { showToast('Choisissez un client', 'error'); return; }
+            // Créer le RDV manuellement via API admin
+            const slot = _calSlots.find(s => s.id === slotId);
+            const client = (_allClients || []).find(c => c.id == clientId);
+            if (!slot || !client) { showToast('Erreur', 'error'); return; }
+            const r = await api('/calendar/slots/' + slotId + '/book-admin', 'POST', {
+                client_id: clientId, subject: subject || 'Rendez-vous', meeting_type: meetType, meeting_link: meetLink || null
             });
-            _calApptsPage = 1;
-            _renderUpcoming(today);
-        }
-
-        function _renderUpcoming(today) {
-            const upEl = document.getElementById('cal-upcoming');
-            const cntEl = document.getElementById('cal-upcoming-count');
-            const pagerEl = document.getElementById('cal-upcoming-pager');
-
-            const sorted = _calAppts.slice().sort((a, b) => (a.appointment_date + a.start_time).localeCompare(b.appointment_date + b.start_time));
-            const total = sorted.length;
-            const pages = Math.max(1, Math.ceil(total / _CAL_APPTS_PP));
-            if (_calApptsPage > pages) _calApptsPage = 1;
-            const paged = sorted.slice((_calApptsPage - 1) * _CAL_APPTS_PP, _calApptsPage * _CAL_APPTS_PP);
-
-            if (cntEl) cntEl.textContent = total || '';
-
-            if (!upEl) return;
-            if (!paged.length) {
-                upEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-light);font-size:0.85rem">Aucun rendez-vous \u00e0 venir</div>';
-                if (pagerEl) pagerEl.innerHTML = '';
-                return;
-            }
-
-            upEl.innerHTML = paged.map(a => {
-                const hl = !!a.meeting_link;
-                const _ad = (a.appointment_date || '').split('T')[0]; const dstr = new Date(_ad + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-                return '<div style="background:white;border:1.5px solid ' + (hl ? 'var(--border)' : '#FDE68A') + ';border-radius:10px;padding:0.7rem 1rem;display:flex;align-items:center;gap:0.85rem">'
-                    + '<div style="width:36px;height:36px;border-radius:8px;background:' + (hl ? 'var(--primary)' : '#FEF3C7') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;color:' + (hl ? 'white' : '#92400E') + '">'
-                    + (a.meeting_type === 'phone'
-                        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 11 19.79 19.79 0 0 1 1.67 2.39 2 2 0 0 1 3.63 0h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'
-                        : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.82v6.36a1 1 0 0 1-1.447.889L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg>')
-                    + '</div>'
-                    + '<div style="flex:1;min-width:0">'
-                    + '<div style="font-weight:700;font-size:0.85rem;color:var(--text)">' + a.client_name + (a.client_company ? ' <span style="font-weight:400;color:var(--text-light)">\u2014 ' + a.client_company + '</span>' : '') + '</div>'
-                    + '<div style="font-size:0.75rem;color:var(--primary);font-weight:600">' + dstr + ' \u00b7 ' + a.start_time.substring(0, 5) + '\u2013' + a.end_time.substring(0, 5) + '</div>'
-                    + (a.subject ? '<div style="font-size:0.72rem;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + a.subject + '</div>' : '')
-                    + '</div>'
-                    + (hl ? '<a href="' + a.meeting_link + '" target="_blank" style="font-size:0.75rem;font-weight:700;color:white;background:var(--primary);padding:0.35rem 0.75rem;border-radius:8px;text-decoration:none;flex-shrink:0;display:inline-block">Rejoindre</a>'
-                        : '<span style="font-size:0.7rem;font-weight:700;color:#92400E;background:#FEF3C7;padding:2px 8px;border-radius:20px;flex-shrink:0">\u26A0 Sans lien</span>')
-                    + '<button onclick="openEditAppt(' + a.id + ')" style="padding:0.35rem 0.75rem;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0">' + (hl ? 'G\u00e9rer' : '+ Lien') + '</button>'
-                    + '</div>';
-            }).join('');
-
-            // Pager
-            if (pagerEl) {
-                if (pages <= 1) { pagerEl.innerHTML = ''; return; }
-                const from = (_calApptsPage - 1) * _CAL_APPTS_PP + 1, to = Math.min(_calApptsPage * _CAL_APPTS_PP, total);
-                let pg = '<div style="display:flex;align-items:center;justify-content:space-between;font-size:0.78rem;color:var(--text-light)">'
-                    + '<span>' + from + '\u2013' + to + ' sur ' + total + ' rendez-vous</span>'
-                    + '<div style="display:flex;gap:0.3rem">';
-                for (let p = 1; p <= pages; p++) {
-                    if (p === 1 || p === pages || Math.abs(p - _calApptsPage) <= 1) {
-                        pg += '<button onclick="_calApptsPage=' + p + ';_renderUpcoming(\'' + new Date().toISOString().split('T')[0] + '\')" style="padding:3px 9px;border:1.5px solid ' + (p === _calApptsPage ? 'var(--primary)' : 'var(--border)') + ';border-radius:6px;background:' + (p === _calApptsPage ? 'var(--primary)' : 'white') + ';color:' + (p === _calApptsPage ? 'white' : 'var(--text-light)') + ';font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit">' + p + '</button>';
-                    } else if (Math.abs(p - _calApptsPage) === 2) {
-                        pg += '<span style="padding:3px 4px;color:var(--text-light)">\u2026</span>';
-                    }
-                }
-                pg += '</div></div>';
-                pagerEl.innerHTML = pg;
+            if (r?.success) {
+                document.getElementById('book-manual-overlay')?.remove();
+                closeModal('modal-slot-detail');
+                showToast('RDV créé pour ' + client.full_name, 'success');
+                loadCalendar();
+            } else {
+                // Fallback : créer manuellement
+                const apptR = await calApi('/slots/' + slotId, 'PATCH', { status: 'booked' });
+                document.getElementById('book-manual-overlay')?.remove();
+                closeModal('modal-slot-detail');
+                showToast('Créneau marqué comme réservé', 'success');
+                loadCalendar();
             }
         }
 
-        // ── Modals ───────────────────────────────────────────────────
-        // Créneau rapide
-        function slotQuick(start, dur) {
-            const el = id => document.getElementById(id);
-            if (el('slot-start')) el('slot-start').value = start;
-            if (el('slot-duration')) el('slot-duration').value = String(dur);
-            slotAutoEnd();
+        async function deleteSlotFromDetail() {
+            if (!_slotDetailId) return;
+            const ok = await confirm2('Supprimer ce créneau ?', 'Cette action est irréversible.', 'Supprimer');
+            if (!ok) return;
+            const d = await calApi('/slots/' + _slotDetailId, 'DELETE');
+            if (d.success) { closeModal('modal-slot-detail'); showToast('Créneau supprimé', 'success'); loadCalendar(); }
+            else showToast(d.message || 'Erreur', 'error');
         }
-        function slotAutoEnd() {
-            const start = document.getElementById('slot-start')?.value;
-            const dur = parseInt(document.getElementById('slot-duration')?.value || 30);
+
+        async function saveSlotNotes() {
+            if (!_slotDetailId) return;
+            const notes = document.getElementById('slot-detail-notes')?.value?.trim();
+            const d = await calApi('/slots/' + _slotDetailId, 'PATCH', { notes: notes || null });
+            if (d.success) { closeModal('modal-slot-detail'); showToast('Notes enregistrées', 'success'); loadCalendar(); }
+            else showToast(d.message || 'Erreur', 'error');
+        }
+
+
+
+        // ── MODAL NOUVEAU CRÉNEAU ────────────────────────────────
+        function applyQuickSlot(time, durMin) {
+            const dateEl = document.getElementById('ns-date');
+            if (!dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+            document.getElementById('ns-start').value = time;
+            document.getElementById('ns-dur').value = durMin;
+            document.querySelectorAll('.quick-slot-btn').forEach(b => b.classList.remove('active'));
+            event?.target?.classList.add('active');
+            nsUpdateEndTime();
+        }
+
+        function nsUpdateEndTime() {
+            const start = document.getElementById('ns-start')?.value;
+            const dur = parseInt(document.getElementById('ns-dur')?.value || '30');
             if (!start) return;
             const [h, m] = start.split(':').map(Number);
-            const endMin = h * 60 + m + dur;
-            const endH = String(Math.floor(endMin / 60) % 24).padStart(2, '0');
-            const endM = String(endMin % 60).padStart(2, '0');
-            const endEl = document.getElementById('slot-end');
-            if (endEl) endEl.value = endH + ':' + endM;
-            // Preview répétition
-            const rep = parseInt(document.getElementById('slot-repeat')?.value || 0);
-            const date = document.getElementById('slot-date')?.value;
-            const preview = document.getElementById('slot-repeat-preview');
-            if (preview && rep > 0 && date) {
-                const dates = [];
-                for (let i = 1; i <= Math.min(rep, 3); i++) {
-                    const d = new Date(date + 'T12:00:00');
-                    d.setDate(d.getDate() + i * 7);
-                    dates.push(d.toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' }));
-                }
-                preview.textContent = 'Répété les : ' + dates.join(', ') + (rep > 3 ? '...' : '');
-            } else if (preview) {
-                preview.textContent = '';
-            }
+            const totalMin = h * 60 + m + dur;
+            const eh = String(Math.floor(totalMin / 60)).padStart(2, '0');
+            const em = String(totalMin % 60).padStart(2, '0');
+            const endEl = document.getElementById('ns-end');
+            if (endEl) endEl.value = eh + ':' + em;
         }
 
-        // ── Popover Teams-style : clic sur cellule ─────────────────────
-        let _calPopover = null;
-
-        function calCellClick(event, date, time) {
-            event.stopPropagation();
-            // Fermer popover existant
-            if (_calPopover) { _calPopover.remove(); _calPopover = null; return; }
-
-            const dur = 30; // défaut 30 min
-            const [h, m] = time.split(':').map(Number);
-            const endMin = h * 60 + m + dur;
-            const endTime = String(Math.floor(endMin / 60)).padStart(2, '0') + ':' + String(endMin % 60).padStart(2, '0');
-            const dateStr = new Date(date + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
-
-            // Créer le popover
-            const pop = document.createElement('div');
-            pop.id = 'cal-cell-popover';
-            pop.style.cssText = 'position:fixed;z-index:9999;background:white;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.2);border:1px solid #E2E8F0;width:300px;padding:0;overflow:hidden;animation:calPopIn .15s ease';
-            pop.innerHTML = `
-                                <style>@keyframes calPopIn{from{opacity:0;transform:scale(0.95) translateY(-4px)}to{opacity:1;transform:scale(1) translateY(0)}}</style>
-                                <div style="background:linear-gradient(135deg,#1B4F8A,#2563EB);padding:0.85rem 1rem;display:flex;align-items:center;justify-content:space-between">
-                                    <div>
-                                        <div style="font-size:0.82rem;font-weight:700;color:white">${dateStr}</div>
-                                        <div style="font-size:0.75rem;color:rgba(255,255,255,0.75)">${time} → ${endTime} · 30 min</div>
-                                    </div>
-                                    <button onclick="document.getElementById('cal-cell-popover')?.remove();_calPopover=null" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:0.9rem">×</button>
-                                </div>
-                                <div style="padding:0.85rem 1rem">
-                                    <!-- Durée -->
-                                    <div style="display:flex;gap:0.35rem;margin-bottom:0.75rem;flex-wrap:wrap">
-                                        ${[15, 30, 45, 60].map(d => `<button onclick="calPopSetDur(${d},this,'${date}','${time}')" class="cal-dur-btn" style="padding:3px 10px;border:1.5px solid ${d === 30 ? '#1B4F8A' : '#E2E8F0'};border-radius:20px;background:${d === 30 ? '#EBF5FB' : 'white'};color:${d === 30 ? '#1B4F8A' : '#64748B'};font-size:0.72rem;font-weight:600;cursor:pointer;font-family:inherit">${d < 60 ? d + ' min' : d / 60 + 'h'}</button>`).join('')}
-                                    </div>
-
-                                    <!-- Option 1 : Disponibilité simple -->
-                                    <div style="margin-bottom:0.5rem">
-                                        <button onclick="calPopCreateSlot('${date}','${time}')" style="width:100%;padding:0.6rem;border:none;border-radius:8px;background:#EBF5FB;color:#1B4F8A;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:0.5rem;transition:background .1s" onmouseenter="this.style.background='#DBEAFE'" onmouseleave="this.style.background='#EBF5FB'">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                            Ajouter comme disponibilité
-                                        </button>
-                                    </div>
-
-                                    <!-- Option 2 : Booker un client directement -->
-                                    <div style="border-top:1px solid #F1F5F9;padding-top:0.6rem">
-                                        <div style="font-size:0.7rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.4rem">Ou booker directement</div>
-                                        <select id="cal-pop-client" style="width:100%;padding:0.5rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;color:#334155;background:white;outline:none;margin-bottom:0.4rem">
-                                            <option value="">Sélectionner un client...</option>
-                                            ${(allClients || []).slice(0, 20).map(c => `<option value="${c.id}">${c.full_name}${c.company_name ? ' — ' + c.company_name : ''}</option>`).join('')}
-                                        </select>
-                                        <input type="text" id="cal-pop-subject" placeholder="Objet (ex: Support PLC urgence)" style="width:100%;padding:0.5rem 0.65rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:0.5rem">
-                                        <button onclick="calPopBookClient('${date}','${time}')" style="width:100%;padding:0.55rem;border:none;border-radius:8px;background:#1B4F8A;color:white;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit">
-                                            Créer le RDV
-                                        </button>
-                                    </div>
-                                </div>`;
-
-            // Positionner près du clic
-            document.body.appendChild(pop);
-            _calPopover = pop;
-            const rect = event.target.getBoundingClientRect();
-            const pw = 300, ph = 350;
-            let left = rect.left + rect.width / 2 - pw / 2;
-            let top = rect.top - ph - 8;
-            if (top < 10) top = rect.bottom + 8;
-            if (left < 10) left = 10;
-            if (left + pw > window.innerWidth - 10) left = window.innerWidth - pw - 10;
-            pop.style.left = left + 'px';
-            pop.style.top = top + 'px';
-
-            // Fermer si clic ailleurs
-            setTimeout(() => {
-                document.addEventListener('click', function _close(e) {
-                    if (!pop.contains(e.target)) { pop.remove(); _calPopover = null; document.removeEventListener('click', _close); }
-                });
-            }, 50);
-        }
-
-        let _calPopDur = 30;
-        function calPopSetDur(dur, btn, date, time) {
-            _calPopDur = dur;
-            document.querySelectorAll('.cal-dur-btn').forEach(b => {
-                b.style.borderColor = '#E2E8F0'; b.style.background = 'white'; b.style.color = '#64748B';
-            });
-            btn.style.borderColor = '#1B4F8A'; btn.style.background = '#EBF5FB'; btn.style.color = '#1B4F8A';
-            // Mettre à jour l'heure de fin dans le header
-            const [h, m] = time.split(':').map(Number);
-            const em = h * 60 + m + dur;
-            const et = String(Math.floor(em / 60)).padStart(2, '0') + ':' + String(em % 60).padStart(2, '0');
-            const pop = document.getElementById('cal-cell-popover');
-            if (pop) {
-                const hdrTime = pop.querySelector('div > div > div:last-child');
-                if (hdrTime) hdrTime.textContent = time + ' → ' + et + ' · ' + (dur < 60 ? dur + ' min' : dur / 60 + 'h');
-            }
-        }
-
-        async function calPopCreateSlot(date, time) {
-            const [h, m] = time.split(':').map(Number);
-            const em = h * 60 + m + _calPopDur;
-            const endTime = String(Math.floor(em / 60)).padStart(2, '0') + ':' + String(em % 60).padStart(2, '0');
-            const d = await calApi('/slots', 'POST', {
-                slot_date: date, start_time: time + ':00', end_time: endTime + ':00',
-                duration_min: _calPopDur, repeat_weekly: 0
-            });
-            if (d.success) {
-                document.getElementById('cal-cell-popover')?.remove(); _calPopover = null;
-                showToast('Créneau créé — ' + time, 'success');
-                loadCalendar();
-            } else { showToast(d.message || 'Erreur', 'error'); }
-        }
-
-        async function calPopBookClient(date, time) {
-            const clientId = document.getElementById('cal-pop-client')?.value;
-            const subject = document.getElementById('cal-pop-subject')?.value?.trim() || 'Consultation VNK';
-            if (!clientId) { showToast('Sélectionnez un client', 'error'); return; }
-
-            // 1. Créer le créneau
-            const [h, m] = time.split(':').map(Number);
-            const em = h * 60 + m + _calPopDur;
-            const endTime = String(Math.floor(em / 60)).padStart(2, '0') + ':' + String(em % 60).padStart(2, '0');
-            const slotRes = await calApi('/slots', 'POST', {
-                slot_date: date, start_time: time + ':00', end_time: endTime + ':00',
-                duration_min: _calPopDur, repeat_weekly: 0
-            });
-            if (!slotRes.success || !slotRes.slots?.[0]) { showToast(slotRes.message || 'Erreur créneau', 'error'); return; }
-            const slotId = slotRes.slots[0].id;
-
-            // 2. Créer le RDV directement via l'API admin
-            const client = (allClients || []).find(c => c.id == clientId);
-            if (!client) { showToast('Client introuvable', 'error'); return; }
-
-            const apptRes = await calApi('/appointments/admin-create', 'POST', {
-                slot_id: slotId, client_id: clientId,
-                client_name: client.full_name, client_email: client.email,
-                client_company: client.company_name || null,
-                appointment_date: date, start_time: time + ':00', end_time: endTime + ':00',
-                duration_min: _calPopDur, subject, meeting_type: 'video'
-            });
-
-            if (apptRes.success) {
-                document.getElementById('cal-cell-popover')?.remove(); _calPopover = null;
-                showToast('RDV créé avec ' + client.full_name, 'success');
-                loadCalendar();
-            } else { showToast(apptRes.message || 'Erreur RDV', 'error'); }
-        }
-
-        function openQuickSlot(date) {
-            openModal('modal-new-slot');
-            setTimeout(() => { const el = document.getElementById('slot-date'); if (el) el.value = date; }, 0);
-        }
-
-        async function createSlot() {
+        async function createSlotFromModal() {
             const v = id => document.getElementById(id)?.value || '';
-            const fb = document.getElementById('slot-create-feedback');
-            const btn = document.getElementById('slot-create-btn');
-            if (fb) fb.textContent = '';
-            if (!v('slot-date')) { if (fb) fb.textContent = 'Date requise'; showToast('Date requise', 'error'); return; }
-            if (!v('slot-start')) { if (fb) fb.textContent = 'Heure de début requise'; showToast('Heure de début requise', 'error'); return; }
-            if (!v('slot-end')) { slotAutoEnd(); }
-            if (btn) { btn.disabled = true; btn.textContent = 'Création...'; }
+            if (!v('ns-date')) { showToast('Date requise', 'error'); return; }
+            if (!v('ns-start')) { showToast('Heure de début requise', 'error'); return; }
+            nsUpdateEndTime();
             const d = await calApi('/slots', 'POST', {
-                slot_date: v('slot-date'), start_time: v('slot-start'), end_time: v('slot-end') || v('slot-start'),
-                duration_min: parseInt(v('slot-duration') || 30),
-                repeat_weekly: parseInt(v('slot-repeat') || 0),
-                notes: v('slot-notes')
+                slot_date: v('ns-date'),
+                start_time: v('ns-start') + ':00',
+                end_time: v('ns-end') + ':00',
+                duration_min: parseInt(v('ns-dur') || '30'),
+                repeat_weekly: parseInt(v('ns-repeat') || '0'),
+                notes: v('ns-notes') || null
             });
-            if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Créer le créneau'; }
             if (d.success) {
                 closeModal('modal-new-slot');
                 const n = d.slots?.length || 1;
                 showToast(n + ' créneau' + (n > 1 ? 'x créés' : ' créé'), 'success');
                 loadCalendar();
-            } else {
-                if (fb) fb.textContent = d.message || 'Erreur lors de la création';
-                showToast(d.message || 'Erreur', 'error');
-            }
+            } else showToast(d.message || 'Erreur', 'error');
         }
+
+        async function createSlot() { return createSlotFromModal(); }
 
         async function deleteSlot(id) {
-            if (!await confirm2('Supprimer ce cr\u00e9neau ?', 'Irr\u00e9versible.', 'Supprimer')) return;
+            if (!await confirm2('Supprimer ce créneau ?', 'Cette action est irréversible.', 'Supprimer')) return;
             const d = await calApi('/slots/' + id, 'DELETE');
-            if (d.success) { showToast('Supprim\u00e9', 'success'); loadCalendar(); }
+            if (d.success) { showToast('Supprimé', 'success'); loadCalendar(); }
         }
 
+        // ── MODAL GÉRER RDV ──────────────────────────────────────
         function openEditAppt(apptId) {
             const a = _calApptsAll.find(x => x.id === apptId); if (!a) return;
             openModal('modal-edit-appt');
             setTimeout(() => {
-                const s = id => document.getElementById(id);
-                s('ea-id').value = apptId;
-                s('ea-client-name').textContent = a.client_name + (a.client_company ? ' \u2014 ' + a.client_company : '');
-                s('ea-appt-time').textContent = new Date(a.appointment_date + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' \u00b7 ' + a.start_time.substring(0, 5) + '\u2013' + a.end_time.substring(0, 5);
-                s('ea-subject').textContent = a.subject || '';
-                s('ea-meeting-type').value = a.meeting_type || 'video';
-                s('ea-status').value = a.status || 'confirmed';
-                s('ea-meeting-link').value = a.meeting_link || '';
-                s('ea-meeting-id').value = a.meeting_id || '';
-                s('ea-meeting-password').value = a.meeting_password || '';
-                s('ea-notes-admin').value = a.notes_admin || '';
+                const el = id => document.getElementById(id);
+                el('ea-id').value = apptId;
+                const ini = (a.client_name || 'CL').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+                el('ea-avatar').textContent = ini;
+                el('ea-client-name').textContent = a.client_name || '';
+                el('ea-client-company').textContent = a.client_company || a.client_email || '';
+                const ds = (a.appointment_date || '').split('T')[0];
+                const dateStr = ds ? new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'long' }) : '';
+                el('ea-appt-time').textContent = dateStr + ' · ' + (a.start_time || '').substring(0, 5) + '–' + (a.end_time || '').substring(0, 5);
+                el('ea-header-info').textContent = (a.client_name || '') + (a.client_company ? ' — ' + a.client_company : '');
+                const badge = el('ea-status-badge');
+                const sc = { confirmed: { l: 'Confirmé', bg: '#D1FAE5', c: '#065F46' }, completed: { l: 'Complété', bg: '#E0E7FF', c: '#3730A3' }, no_show: { l: 'Absence', bg: '#FEF3C7', c: '#92400E' }, cancelled: { l: 'Annulé', bg: '#FEE2E2', c: '#991B1B' } }[a.status] || { l: 'Confirmé', bg: '#D1FAE5', c: '#065F46' };
+                badge.style.background = sc.bg; badge.style.color = sc.c; badge.textContent = sc.l;
+                el('ea-subject').value = a.subject || '';
+                el('ea-meeting-type').value = a.meeting_type || 'video';
+                el('ea-status').value = a.status || 'confirmed';
+                el('ea-meeting-link').value = a.meeting_link || '';
+                el('ea-meeting-id').value = a.meeting_id || '';
+                el('ea-meeting-password').value = a.meeting_password || '';
+                el('ea-notes-admin').value = a.notes_admin || '';
             }, 0);
+        }
+
+        async function refuseAppointment() {
+            const id = document.getElementById('ea-id')?.value;
+            if (!id) return;
+            // Demander si on libère le créneau ou on le garde bloqué
+            const keepBlocked = await new Promise(resolve => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+                overlay.innerHTML = `<div style="background:white;border-radius:16px;padding:1.5rem;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
+                        <div style="font-size:0.9rem;font-weight:700;margin-bottom:0.5rem;color:#0F172A">Refuser ce rendez-vous</div>
+                        <p style="font-size:0.76rem;color:#64748B;margin-bottom:1.25rem;line-height:1.5">Que souhaitez-vous faire avec la plage horaire ?</p>
+                        <div style="display:flex;flex-direction:column;gap:0.6rem">
+                            <button onclick="this.closest('div[style*=fixed]').remove();window._refuseChoice('free')" style="padding:0.75rem 1rem;border:1.5px solid #E2E8F0;border-radius:10px;background:white;text-align:left;cursor:pointer;font-family:inherit">
+                                <div style="font-size:0.8rem;font-weight:600;color:#059669">✓ Libérer le créneau</div>
+                                <div style="font-size:0.72rem;color:#64748B;margin-top:2px">Le client peut re-réserver ce créneau</div>
+                            </button>
+                            <button onclick="this.closest('div[style*=fixed]').remove();window._refuseChoice('block')" style="padding:0.75rem 1rem;border:1.5px solid #E2E8F0;border-radius:10px;background:white;text-align:left;cursor:pointer;font-family:inherit">
+                                <div style="font-size:0.8rem;font-weight:600;color:#6366F1">🔒 Garder bloqué</div>
+                                <div style="font-size:0.72rem;color:#64748B;margin-top:2px">Vous restez occupé — aucun client ne peut réserver</div>
+                            </button>
+                            <button onclick="this.closest('div[style*=fixed]').remove();window._refuseChoice(null)" style="padding:0.5rem 1rem;border:none;background:none;font-size:0.78rem;color:#94A3B8;cursor:pointer;font-family:inherit">Annuler</button>
+                        </div>
+                    </div>`;
+                window._refuseChoice = (v) => resolve(v);
+                document.body.appendChild(overlay);
+            });
+            if (!keepBlocked) return;
+            const d = await calApi('/appointments/' + id, 'PATCH', {
+                status: 'cancelled',
+                cancellation_reason: 'Refusé par VNK Automatisation'
+            });
+            if (!d.success) { showToast(d.message || 'Erreur', 'error'); return; }
+            // Si libérer → le backend libère via calendar.js
+            // Si garder bloqué → le créneau reste booked (le backend l'a gardé)
+            if (keepBlocked === 'block' && d.appointment?.slot_id) {
+                // Remettre en booked (le backend a libéré, on re-bloque)
+                await calApi('/slots/' + d.appointment.slot_id, 'PATCH', { status: 'booked' });
+            }
+            closeModal('modal-edit-appt');
+            showToast(keepBlocked === 'free' ? 'RDV refusé — créneau libéré' : 'RDV refusé — créneau gardé bloqué', 'success');
+            loadCalendar();
         }
 
         async function updateAppointment() {
@@ -7784,10 +7991,14 @@
             const d = await calApi('/appointments/' + id, 'PATCH', {
                 meeting_link: v('ea-meeting-link'), meeting_type: v('ea-meeting-type'),
                 meeting_id: v('ea-meeting-id'), meeting_password: v('ea-meeting-password'),
-                notes_admin: v('ea-notes-admin'), status: v('ea-status')
+                notes_admin: v('ea-notes-admin'), status: v('ea-status'),
+                subject: v('ea-subject')
             });
-            if (d.success) { closeModal('modal-edit-appt'); showToast('RDV mis \u00e0 jour \u2014 client notifi\u00e9', 'success'); loadCalendar(); }
-            else showToast(d.message || 'Erreur', 'error');
+            if (d.success) {
+                closeModal('modal-edit-appt');
+                showToast('RDV mis à jour — client notifié', 'success');
+                loadCalendar();
+            } else showToast(d.message || 'Erreur', 'error');
         }
         // CALENDRIER END
 
@@ -7829,8 +8040,23 @@
             if (btn) { btn.style.background = '#1B4F8A'; btn.style.borderColor = '#1B4F8A'; btn.style.color = 'white'; }
         }
 
-        function initCalendarSettings() {
-            // Charger depuis localStorage ou défaut
+        async function initCalendarSettings() {
+            // Charger depuis la DB d'abord, fallback localStorage
+            try {
+                const r = await calApi('/settings');
+                if (r.success && r.settings) {
+                    const s = r.settings;
+                    // Mettre à jour localStorage depuis DB (source de vérité = DB)
+                    if (s['vnk-cal-settings']) localStorage.setItem('vnk-cal-settings', s['vnk-cal-settings']);
+                    if (s['vnk-cal-exceptions']) localStorage.setItem('vnk-cal-exceptions', s['vnk-cal-exceptions']);
+                    if (s['vnk-cal-default-dur']) localStorage.setItem('vnk-cal-default-dur', s['vnk-cal-default-dur']);
+                    if (s['vnk-cal-timezone']) localStorage.setItem('vnk-cal-timezone', s['vnk-cal-timezone']);
+                    if (s['vnk-cal-buffer']) localStorage.setItem('vnk-cal-buffer', s['vnk-cal-buffer']);
+                    if (s['vnk-cal-notice']) localStorage.setItem('vnk-cal-notice', s['vnk-cal-notice']);
+                    if (s['vnk-cal-horizon']) localStorage.setItem('vnk-cal-horizon', s['vnk-cal-horizon']);
+                }
+            } catch (e) { /* fallback localStorage */ }
+
             const saved = localStorage.getItem('vnk-cal-settings');
             _csSettings = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(CS_DAYS));
             const savedEx = localStorage.getItem('vnk-cal-exceptions');
@@ -7959,16 +8185,36 @@
         }
 
         async function saveCalendarSettings() {
-            // Sauvegarder dans localStorage
+            const timezone = document.getElementById('cs-timezone')?.value || 'America/Toronto';
+            const buffer = document.getElementById('cs-buffer')?.value || '10';
+            const notice = document.getElementById('cs-notice')?.value || '120';
+            const horizon = document.getElementById('cs-horizon')?.value || '30';
+
+            // 1. Sauvegarder en localStorage
             localStorage.setItem('vnk-cal-settings', JSON.stringify(_csSettings));
             localStorage.setItem('vnk-cal-exceptions', JSON.stringify(_csExceptions));
-            localStorage.setItem('vnk-cal-default-dur', _csDefaultDur);
-            localStorage.setItem('vnk-cal-timezone', document.getElementById('cs-timezone')?.value || 'America/Toronto');
-            localStorage.setItem('vnk-cal-buffer', document.getElementById('cs-buffer')?.value || '10');
-            localStorage.setItem('vnk-cal-notice', document.getElementById('cs-notice')?.value || '120');
-            localStorage.setItem('vnk-cal-horizon', document.getElementById('cs-horizon')?.value || '30');
+            localStorage.setItem('vnk-cal-default-dur', String(_csDefaultDur));
+            localStorage.setItem('vnk-cal-timezone', timezone);
+            localStorage.setItem('vnk-cal-buffer', buffer);
+            localStorage.setItem('vnk-cal-notice', notice);
+            localStorage.setItem('vnk-cal-horizon', horizon);
 
-            // Générer automatiquement les créneaux basés sur les disponibilités
+            // 2. Persister en DB (source de vérité permanente)
+            try {
+                await calApi('/settings', 'PUT', {
+                    settings: {
+                        'vnk-cal-settings': JSON.stringify(_csSettings),
+                        'vnk-cal-exceptions': JSON.stringify(_csExceptions),
+                        'vnk-cal-default-dur': String(_csDefaultDur),
+                        'vnk-cal-timezone': timezone,
+                        'vnk-cal-buffer': buffer,
+                        'vnk-cal-notice': notice,
+                        'vnk-cal-horizon': horizon
+                    }
+                });
+            } catch (e) { console.warn('DB save failed, localStorage only:', e); }
+
+            // 3. Générer les créneaux depuis les nouvelles disponibilités
             await _generateSlotsFromSettings();
 
             const fb = document.getElementById('cs-save-feedback');
@@ -7977,7 +8223,7 @@
                 fb.style.background = '#D1FAE5';
                 fb.style.color = '#059669';
                 fb.style.border = '1px solid #A7F3D0';
-                fb.textContent = '✓ Disponibilités enregistrées ! Les créneaux ont été mis à jour dans votre calendrier.';
+                fb.textContent = '✓ Disponibilités enregistrées et synchronisées !';
                 setTimeout(() => { fb.style.display = 'none'; }, 4000);
             }
             showToast('Disponibilités sauvegardées', 'success');
@@ -8030,7 +8276,7 @@
                         end_time: eH + ':' + eM2 + ':00',
                         duration_min: dur
                     });
-                    cur += dur + buffer;
+                    cur += dur; // Pas de buffer — les créneaux se suivent à intervalles fixes
                 }
             }
 
@@ -11622,202 +11868,251 @@
     </script>
 
     <!-- MODAL : DÉTAILS CRÉNEAU / RDV ──────────────────────────── -->
+    <!-- ══════════════════════════════════════════════════════════
+         MODAL : DÉTAIL CRÉNEAU DISPONIBLE
+    ══════════════════════════════════════════════════════════ -->
     <div class="modal-overlay" id="modal-slot-detail">
-        <div class="modal" style="max-width:500px">
-            <div class="modal-head">
-                <span class="modal-title" id="slot-detail-title">Créneau disponible</span>
+        <div class="modal" style="max-width:480px">
+            <div class="modal-head" style="border-bottom:1px solid #F1F5F9;padding-bottom:1rem">
+                <div>
+                    <div class="modal-title" id="slot-detail-title">Créneau disponible</div>
+                    <div id="slot-detail-subtitle" style="font-size:0.74rem;color:#64748B;margin-top:2px"></div>
+                </div>
                 <button class="modal-close" onclick="closeModal('modal-slot-detail')">×</button>
             </div>
-            <div class="modal-body">
-                <!-- Infos du créneau -->
-                <div id="slot-detail-info" style="background:#F8FAFC;border-radius:10px;padding:1rem;margin-bottom:1rem">
-                    <div style="display:flex;align-items:center;gap:0.75rem">
-                        <div id="slot-detail-icon" style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-                        </div>
-                        <div>
-                            <div id="slot-detail-date" style="font-size:0.95rem;font-weight:800;color:#0F172A"></div>
-                            <div id="slot-detail-time" style="font-size:0.82rem;color:#64748B;margin-top:1px"></div>
-                        </div>
-                        <div id="slot-detail-badge" style="margin-left:auto"></div>
-                    </div>
-                </div>
+            <div class="modal-body" style="padding:1.25rem">
 
-                <!-- Info client (si RDV) -->
-                <div id="slot-detail-client-section" style="display:none;margin-bottom:1rem">
-                    <div style="font-size:0.75rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem">Client</div>
-                    <div style="display:flex;align-items:center;gap:0.75rem;background:#F8FAFC;border-radius:8px;padding:0.65rem 0.85rem">
-                        <div id="slot-detail-avatar" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1B4F8A,#2563EB);color:white;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0"></div>
-                        <div>
-                            <div id="slot-detail-client-name" style="font-size:0.88rem;font-weight:700;color:#0F172A"></div>
-                            <div id="slot-detail-client-company" style="font-size:0.75rem;color:#64748B"></div>
-                        </div>
-                        <div id="slot-detail-client-badge" style="margin-left:auto"></div>
-                    </div>
-                    <div id="slot-detail-subject-row" style="margin-top:0.5rem;font-size:0.82rem;color:#334155;padding:0 0.25rem;display:none">
-                        <strong>Objet :</strong> <span id="slot-detail-subject"></span>
-                    </div>
+                <!-- Info + statut -->
+                <div style="background:#F8FAFC;border-radius:10px;padding:0.85rem;margin-bottom:1rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem">
+                    <div><div style="font-size:0.62rem;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:2px">Date</div><div id="slot-detail-date" style="font-size:0.78rem;font-weight:600;color:#0F172A"></div></div>
+                    <div><div style="font-size:0.62rem;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:2px">Heure</div><div id="slot-detail-time" style="font-size:0.78rem;font-weight:600;color:#0F172A"></div></div>
+                    <div><div style="font-size:0.62rem;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:2px">Durée</div><div id="slot-detail-dur" style="font-size:0.78rem;font-weight:600;color:#0F172A"></div></div>
                 </div>
+                <div id="slot-detail-status" style="font-size:0.75rem;font-weight:600;margin-bottom:1rem"></div>
 
-                <!-- Lien réunion -->
-                <div id="slot-detail-link-section" style="margin-bottom:1rem">
-                    <div style="font-size:0.75rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem">Lien de réunion</div>
-                    <div id="slot-detail-link-display" style="display:none;background:#EBF5FB;border-radius:8px;padding:0.6rem 0.85rem;display:flex;align-items:center;gap:0.5rem">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
-                        <a id="slot-detail-link-url" href="#" target="_blank" style="font-size:0.82rem;font-weight:600;color:#1B4F8A;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"></a>
-                        <button onclick="window.open(document.getElementById('slot-detail-link-url').href,'_blank')" style="background:none;border:1.5px solid #1B4F8A;border-radius:6px;padding:2px 8px;font-size:0.72rem;font-weight:700;color:#1B4F8A;cursor:pointer;font-family:inherit;flex-shrink:0">Rejoindre</button>
-                    </div>
-                    <div style="display:flex;gap:0.5rem;margin-top:0.4rem">
-                        <input type="url" id="slot-detail-link-input" placeholder="https://teams.microsoft.com/... ou Zoom" style="flex:1;padding:0.55rem 0.75rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;outline:none" onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'">
-                        <button onclick="slotDetailSaveLink()" style="padding:0.55rem 0.85rem;border:none;border-radius:8px;background:#1B4F8A;color:white;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">Enregistrer</button>
-                    </div>
-                </div>
+                <!-- Actions contextuelles -->
+                <div id="slot-detail-actions" style="display:flex;gap:0.5rem;margin-bottom:1rem"></div>
 
-                <!-- Notes admin -->
-                <div id="slot-detail-notes-section" style="display:none;margin-bottom:1rem">
-                    <div style="font-size:0.75rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem">Notes internes</div>
-                    <textarea id="slot-detail-notes" rows="2" style="width:100%;padding:0.6rem 0.75rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;outline:none;resize:none;box-sizing:border-box" placeholder="Notes visibles par vous uniquement..." onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'"></textarea>
+                <div class="form-group" style="margin:0">
+                    <label class="form-label">Notes internes</label>
+                    <textarea class="form-textarea" id="slot-detail-notes" rows="2" placeholder="Notes sur ce créneau..."></textarea>
                 </div>
             </div>
-            <div class="modal-footer" style="justify-content:space-between">
-                <button id="slot-detail-delete-btn" onclick="slotDetailDelete()" style="padding:0.5rem 0.85rem;border:1.5px solid #FCA5A5;border-radius:8px;background:white;color:#DC2626;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit">
-                    Supprimer le créneau
+            <div class="modal-footer" style="justify-content:space-between;padding-top:0.75rem;border-top:1px solid #F1F5F9">
+                <button onclick="deleteSlotFromDetail()" style="display:flex;align-items:center;gap:0.4rem;padding:0.4rem 0.75rem;border:1.5px solid #FECACA;border-radius:8px;background:#FEF2F2;color:#DC2626;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4h6v2" /></svg>
+                    Supprimer
                 </button>
                 <div style="display:flex;gap:0.5rem">
-                    <button class="btn btn-ghost" onclick="closeModal('modal-slot-detail')">Fermer</button>
-                    <button id="slot-detail-save-btn" class="btn btn-primary" onclick="slotDetailSave()" style="display:none">Enregistrer</button>
+                    <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-slot-detail')">Fermer</button>
+                    <button class="btn btn-primary btn-sm" onclick="saveSlotNotes()">Sauvegarder notes</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL : NOUVEAU CRÉNEAU ─────────────────────────────── -->
+    <!-- ══════════════════════════════════════════════════════════
+         MODAL : NOUVEAU CRÉNEAU — Design pro VNK
+    ══════════════════════════════════════════════════════════ -->
     <div class="modal-overlay" id="modal-new-slot">
-        <div class="modal" style="max-width:520px">
-            <div class="modal-head"><span class="modal-title">Nouveau créneau de disponibilité</span><button class="modal-close" onclick="closeModal('modal-new-slot')">×</button></div>
-            <div class="modal-body">
-                <!-- Sélection rapide créneaux fréquents -->
-                <div style="margin-bottom:1rem">
-                    <label class="form-label" style="margin-bottom:0.4rem">Créneaux rapides</label>
-                    <div style="display:flex;flex-wrap:wrap;gap:0.35rem">
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="slotQuick('09:00',30)" style="font-size:0.75rem">09h00 30min</button>
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="slotQuick('09:30',30)" style="font-size:0.75rem">09h30 30min</button>
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="slotQuick('10:00',30)" style="font-size:0.75rem">10h00 30min</button>
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="slotQuick('10:30',30)" style="font-size:0.75rem">10h30 30min</button>
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="slotQuick('14:00',30)" style="font-size:0.75rem">14h00 30min</button>
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="slotQuick('14:30',30)" style="font-size:0.75rem">14h30 30min</button>
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="slotQuick('15:00',30)" style="font-size:0.75rem">15h00 30min</button>
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="slotQuick('16:00',60)" style="font-size:0.75rem">16h00 1h</button>
+        <div class="modal" style="max-width:520px;border-radius:16px;overflow:hidden;padding:0">
+
+            <!-- Header gradient VNK -->
+            <div style="background:linear-gradient(135deg,#1B4F8A 0%,#0F3460 100%);padding:1.25rem 1.5rem;display:flex;align-items:flex-start;justify-content:space-between">
+                <div>
+                    <div style="font-size:1rem;font-weight:700;color:white;display:flex;align-items:center;gap:0.5rem">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                        Nouveau créneau de disponibilité
+                    </div>
+                    <div style="font-size:0.74rem;color:rgba(255,255,255,0.7);margin-top:3px">Rendre une plage horaire disponible pour vos clients</div>
+                </div>
+                <button onclick="closeModal('modal-new-slot')" style="background:rgba(255,255,255,0.15);border:none;color:white;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,0.25)'" onmouseleave="this.style.background='rgba(255,255,255,0.15)'">×</button>
+            </div>
+
+            <div style="padding:1.5rem;background:white">
+
+                <!-- Créneaux rapides -->
+                <div style="margin-bottom:1.25rem">
+                    <div style="font-size:0.68rem;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem">⚡ Créneaux rapides</div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.4rem">
+                        <button onclick="applyQuickSlot('09:00','30')" class="quick-slot-btn">09:00 · 30min</button>
+                        <button onclick="applyQuickSlot('09:30','30')" class="quick-slot-btn">09:30 · 30min</button>
+                        <button onclick="applyQuickSlot('10:00','30')" class="quick-slot-btn">10:00 · 30min</button>
+                        <button onclick="applyQuickSlot('10:30','30')" class="quick-slot-btn">10:30 · 30min</button>
+                        <button onclick="applyQuickSlot('13:00','30')" class="quick-slot-btn">13:00 · 30min</button>
+                        <button onclick="applyQuickSlot('14:00','30')" class="quick-slot-btn">14:00 · 30min</button>
+                        <button onclick="applyQuickSlot('15:00','60')" class="quick-slot-btn">15:00 · 1h</button>
+                        <button onclick="applyQuickSlot('16:00','60')" class="quick-slot-btn">16:00 · 1h</button>
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Date *</label>
-                        <input type="date" class="form-input" id="slot-date"
-                               min=""
-                               oninput="this.style.borderColor=this.value?'var(--primary)':''">
+
+                <div style="height:1px;background:#F1F5F9;margin-bottom:1.25rem;position:relative">
+                    <span style="position:absolute;left:50%;transform:translateX(-50%);top:-8px;background:white;padding:0 0.5rem;font-size:0.68rem;color:#94A3B8;font-weight:600">OU PERSONNALISER</span>
+                </div>
+
+                <!-- Date + Durée -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;margin-bottom:0.85rem">
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em">Date <span style="color:#EF4444">*</span></label>
+                        <input type="date" id="ns-date" style="width:100%;padding:0.55rem 0.75rem;border:2px solid #E2E8F0;border-radius:10px;font-size:0.85rem;font-family:inherit;box-sizing:border-box;outline:none;transition:border-color .15s;color:#0F172A" onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'">
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Durée</label>
-                        <select class="form-select" id="slot-duration" onchange="slotAutoEnd()">
-                            <option value="15">15 min</option>
-                            <option value="30" selected>30 min</option>
-                            <option value="45">45 min</option>
-                            <option value="60">60 min</option>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em">Durée</label>
+                        <select id="ns-dur" onchange="nsUpdateEndTime()" style="width:100%;padding:0.55rem 0.75rem;border:2px solid #E2E8F0;border-radius:10px;font-size:0.85rem;font-family:inherit;box-sizing:border-box;outline:none;transition:border-color .15s;color:#0F172A;background:white" onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'">
+                            <option value="30" selected>30 minutes</option>
+                            <option value="45">45 minutes</option>
+                            <option value="60">1 heure</option>
                             <option value="90">1h30</option>
-                            <option value="120">2h</option>
+                            <option value="120">2 heures</option>
                         </select>
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Heure début *</label>
-                        <input type="time" class="form-input" id="slot-start" oninput="slotAutoEnd()">
+
+                <!-- Heure début + fin -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;margin-bottom:0.85rem">
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em">Heure début <span style="color:#EF4444">*</span></label>
+                        <input type="time" id="ns-start" onchange="nsUpdateEndTime()" style="width:100%;padding:0.55rem 0.75rem;border:2px solid #E2E8F0;border-radius:10px;font-size:0.85rem;font-family:inherit;box-sizing:border-box;outline:none;transition:border-color .15s;color:#0F172A" onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'">
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Heure fin <span style="font-size:0.7rem;color:var(--text-light)">(auto-calculée)</span></label>
-                        <input type="time" class="form-input" id="slot-end">
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em;display:flex;align-items:center;gap:0.4rem">
+                            Heure fin
+                            <span style="background:#EBF5FB;color:#1B4F8A;font-size:0.6rem;padding:1px 6px;border-radius:4px;font-weight:700;text-transform:none;letter-spacing:0">calculée auto</span>
+                        </label>
+                        <input type="time" id="ns-end" readonly style="width:100%;padding:0.55rem 0.75rem;border:2px solid #E2E8F0;border-radius:10px;font-size:0.85rem;font-family:inherit;box-sizing:border-box;background:#F8FAFC;color:#64748B;cursor:not-allowed">
                     </div>
                 </div>
-                <!-- Répétition avancée -->
-                <div class="form-group">
-                    <label class="form-label">Répétition hebdomadaire</label>
-                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-                        <select class="form-select" id="slot-repeat" style="flex:1">
-                            <option value="0">Aucune — créneau unique</option>
-                            <option value="1">1 semaine supplémentaire</option>
-                            <option value="3">3 semaines</option>
-                            <option value="4">1 mois (4 sem.)</option>
-                            <option value="8">2 mois (8 sem.)</option>
-                            <option value="12">3 mois (12 sem.)</option>
-                        </select>
-                    </div>
-                    <div id="slot-repeat-preview" style="font-size:0.72rem;color:var(--text-light);margin-top:4px"></div>
+
+                <!-- Répétition -->
+                <div style="margin-bottom:0.85rem">
+                    <label style="font-size:0.72rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em">Répétition</label>
+                    <select id="ns-repeat" style="width:100%;padding:0.55rem 0.75rem;border:2px solid #E2E8F0;border-radius:10px;font-size:0.85rem;font-family:inherit;box-sizing:border-box;outline:none;color:#0F172A;background:white" onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'">
+                        <option value="0">Aucune — créneau unique</option>
+                        <option value="1">Répéter 1 semaine</option>
+                        <option value="2">Répéter 2 semaines</option>
+                        <option value="4">Répéter 4 semaines</option>
+                        <option value="8">Répéter 8 semaines</option>
+                    </select>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Notes internes <span style="font-size:0.7rem;color:var(--text-light)">(optionnel)</span></label>
-                    <textarea class="form-textarea" id="slot-notes" rows="2" placeholder="Ex : Appel Teams préféré, éviter vendredi PM..."></textarea>
+
+                <!-- Notes -->
+                <div>
+                    <label style="font-size:0.72rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em">
+                        Notes internes <span style="color:#94A3B8;font-weight:400;text-transform:none;letter-spacing:0">(optionnel)</span>
+                    </label>
+                    <input type="text" id="ns-notes" placeholder="Ex : Préférer Teams, éviter vendredi PM..." style="width:100%;padding:0.55rem 0.75rem;border:2px solid #E2E8F0;border-radius:10px;font-size:0.85rem;font-family:inherit;box-sizing:border-box;outline:none;color:#0F172A" onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'">
                 </div>
             </div>
-            <div class="modal-footer" style="justify-content:space-between">
-                <div id="slot-create-feedback" style="font-size:0.8rem;color:var(--error)"></div>
-                <div style="display:flex;gap:0.5rem">
-                    <button class="btn btn-ghost" onclick="closeModal('modal-new-slot')">Annuler</button>
-                    <button class="btn btn-primary" onclick="createSlot()" id="slot-create-btn">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                        Créer le créneau
-                    </button>
-                </div>
+
+            <!-- Footer -->
+            <div style="padding:1rem 1.5rem;background:#F8FAFC;border-top:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between">
+                <button onclick="closeModal('modal-new-slot')" style="padding:0.5rem 1.1rem;border:2px solid #E2E8F0;border-radius:9px;background:white;font-size:0.82rem;font-weight:600;color:#64748B;cursor:pointer;font-family:inherit;transition:all .12s" onmouseenter="this.style.borderColor='#94A3B8'" onmouseleave="this.style.borderColor='#E2E8F0'">
+                    Annuler
+                </button>
+                <button onclick="createSlotFromModal()" style="display:flex;align-items:center;gap:0.45rem;padding:0.55rem 1.25rem;border:none;border-radius:9px;background:linear-gradient(135deg,#1B4F8A,#0F3460);color:white;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;box-shadow:0 2px 8px rgba(27,79,138,0.35)" onmouseenter="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 14px rgba(27,79,138,0.45)'" onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(27,79,138,0.35)'">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                    Créer le créneau
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL : GÉRER UN RDV ────────────────────────────────── -->
+
+    <!-- ══════════════════════════════════════════════════════════
+         MODAL : GÉRER UN RENDEZ-VOUS
+    ══════════════════════════════════════════════════════════ -->
     <div class="modal-overlay" id="modal-edit-appt">
-        <div class="modal" style="max-width:560px">
-            <div class="modal-head"><span class="modal-title">Gérer le rendez-vous</span><button class="modal-close" onclick="closeModal('modal-edit-appt')">×</button></div>
-            <div class="modal-body">
-                <input type="hidden" id="ea-id">
-                <div id="ea-client-info" style="background:var(--bg);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem;border-left:3px solid var(--primary)">
-                    <div id="ea-client-name" style="font-weight:700;color:var(--text)"></div>
-                    <div id="ea-appt-time" style="font-size:0.8rem;color:var(--text-light);margin-top:2px"></div>
-                    <div id="ea-subject" style="font-size:0.82rem;color:var(--primary);margin-top:4px"></div>
+        <div class="modal" style="max-width:540px">
+            <div class="modal-head" style="border-bottom:1px solid #F1F5F9;padding-bottom:1rem">
+                <div style="min-width:0">
+                    <div class="modal-title">Rendez-vous client</div>
+                    <div id="ea-header-info" style="font-size:0.74rem;color:#64748B;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
+                <button class="modal-close" onclick="closeModal('modal-edit-appt')">×</button>
+            </div>
+            <div class="modal-body" style="padding:1.25rem">
+                <input type="hidden" id="ea-id">
+
+                <!-- Carte client -->
+                <div id="ea-client-card" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:0.85rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:0.85rem">
+                    <div style="width:38px;height:38px;border-radius:50%;background:#1B4F8A;display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:700;color:white;flex-shrink:0" id="ea-avatar"></div>
+                    <div style="min-width:0">
+                        <div style="font-size:0.85rem;font-weight:700;color:#0F172A" id="ea-client-name"></div>
+                        <div style="font-size:0.72rem;color:#64748B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="ea-client-company"></div>
+                        <div style="font-size:0.72rem;color:#64748B" id="ea-appt-time"></div>
+                    </div>
+                    <div id="ea-status-badge" style="margin-left:auto;flex-shrink:0;padding:0.25rem 0.7rem;border-radius:20px;font-size:0.68rem;font-weight:700"></div>
+                </div>
+
+                <!-- Sujet -->
+                <div class="form-group" style="margin-bottom:0.85rem">
+                    <label class="form-label">Sujet du rendez-vous</label>
+                    <input type="text" class="form-input" id="ea-subject" placeholder="Sujet..." style="font-size:0.82rem">
+                </div>
+
+                <!-- Type + Statut -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.85rem">
+                    <div class="form-group" style="margin:0">
                         <label class="form-label">Type de réunion</label>
-                        <select class="form-select" id="ea-meeting-type">
+                        <select class="form-select" id="ea-meeting-type" style="font-size:0.82rem">
                             <option value="video">Vidéo (Teams / Zoom / Meet)</option>
                             <option value="phone">Téléphone</option>
                             <option value="onsite">Sur site</option>
                         </select>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="margin:0">
                         <label class="form-label">Statut</label>
-                        <select class="form-select" id="ea-status">
-                            <option value="confirmed">Confirmé</option>
-                            <option value="completed">Complété</option>
-                            <option value="no_show">Absence client</option>
-                            <option value="cancelled">Annulé</option>
+                        <select class="form-select" id="ea-status" style="font-size:0.82rem">
+                            <option value="confirmed">✅ Confirmé</option>
+                            <option value="completed">☑️ Complété</option>
+                            <option value="no_show">⚠️ Absence client</option>
+                            <option value="cancelled">❌ Annulé</option>
                         </select>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Lien de réunion <span style="font-size:0.72rem;color:var(--success);font-weight:600">→ envoyé automatiquement au client</span></label>
-                    <input type="url" class="form-input" id="ea-meeting-link" placeholder="https://teams.microsoft.com/l/meetup-join/... ou https://zoom.us/j/...">
+
+                <!-- Lien réunion -->
+                <div class="form-group" style="margin-bottom:0.85rem">
+                    <label class="form-label" style="display:flex;align-items:center;gap:0.4rem">
+                        Lien de réunion
+                        <span style="font-size:0.65rem;background:#D1FAE5;color:#059669;padding:1px 6px;border-radius:4px;font-weight:600">envoyé au client</span>
+                    </label>
+                    <input type="url" class="form-input" id="ea-meeting-link" placeholder="https://teams.microsoft.com/... ou https://zoom.us/j/..." style="font-size:0.82rem">
                 </div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">ID réunion</label><input type="text" class="form-input" id="ea-meeting-id" placeholder="123 456 789"></div>
-                    <div class="form-group"><label class="form-label">Mot de passe</label><input type="text" class="form-input" id="ea-meeting-password" placeholder="optionnel"></div>
+
+                <!-- ID + MDP -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.85rem">
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label">ID réunion</label>
+                        <input type="text" class="form-input" id="ea-meeting-id" placeholder="123 456 789" style="font-size:0.82rem">
+                    </div>
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label">Mot de passe</label>
+                        <input type="text" class="form-input" id="ea-meeting-password" placeholder="optionnel" style="font-size:0.82rem">
+                    </div>
                 </div>
-                <div class="form-group"><label class="form-label">Notes internes</label><textarea class="form-textarea" id="ea-notes-admin" rows="3" placeholder="Sujets à aborder, préparation..."></textarea></div>
+
+                <!-- Notes -->
+                <div class="form-group" style="margin:0">
+                    <label class="form-label">Notes internes <span style="color:#94A3B8;font-weight:400">(non visibles par le client)</span></label>
+                    <textarea class="form-textarea" id="ea-notes-admin" rows="2" placeholder="Sujets à aborder, contexte, préparation..."></textarea>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-ghost" onclick="closeModal('modal-edit-appt')">Annuler</button>
-                <button class="btn btn-primary" onclick="updateAppointment()">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
-                    Enregistrer et notifier le client
+
+            <div class="modal-footer" style="justify-content:space-between;padding-top:0.75rem;border-top:1px solid #F1F5F9">
+                <!-- Actions destructives -->
+                <button onclick="refuseAppointment()" style="display:flex;align-items:center;gap:0.4rem;padding:0.45rem 0.85rem;border:1.5px solid #FECACA;border-radius:8px;background:#FEF2F2;color:#DC2626;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                    Refuser / Annuler
                 </button>
+                <!-- Sauvegarder -->
+                <div style="display:flex;gap:0.5rem">
+                    <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-edit-appt')">Fermer</button>
+                    <button class="btn btn-primary" onclick="updateAppointment()" style="display:flex;align-items:center;gap:0.4rem">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                        Enregistrer et notifier
+                    </button>
+                </div>
             </div>
         </div>
     </div>
