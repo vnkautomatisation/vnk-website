@@ -26,7 +26,6 @@
         // Sauvegarder une valeur (clé = page + champ)
         save: function (key, value) {
             try {
-                // Ne pas sauvegarder les recherches texte
                 if (SEARCH_KEYS.includes(key)) return;
                 const page = window.location.pathname.split('/').pop().replace('.html', '');
                 sessionStorage.setItem(PREFIX + page + '_' + key, JSON.stringify(value));
@@ -36,7 +35,6 @@
         // Lire une valeur
         get: function (key, defaultValue) {
             try {
-                // Ne pas restaurer les recherches texte
                 if (SEARCH_KEYS.includes(key)) return defaultValue;
                 const page = window.location.pathname.split('/').pop().replace('.html', '');
                 const raw = sessionStorage.getItem(PREFIX + page + '_' + key);
@@ -60,7 +58,6 @@
             if (saved !== undefined && saved !== null) {
                 el.value = saved;
             }
-            // Sauvegarder à chaque changement
             const self = this;
             el.addEventListener('input', function () { self.save(key, el.value); });
             el.addEventListener('change', function () { self.save(key, el.value); });
@@ -69,12 +66,10 @@
         // Initialiser la persistance sur tous les inputs de la page
         init: function () {
             const self = this;
-            // Attendre que le DOM soit prêt
             document.addEventListener('DOMContentLoaded', function () {
                 self._clearStaleSearchKeys();
                 self._bindAll();
             });
-            // Si déjà chargé
             if (document.readyState !== 'loading') {
                 setTimeout(function () { self._clearStaleSearchKeys(); self._bindAll(); }, 100);
             }
@@ -92,10 +87,9 @@
 
         _bindAll: function () {
             const self = this;
-            // Tous les inputs avec data-state-key (selects filtres uniquement)
             document.querySelectorAll('[data-state-key]').forEach(function (el) {
                 const key = el.getAttribute('data-state-key');
-                if (SEARCH_KEYS.includes(key)) return; // Ignorer les recherches texte
+                if (SEARCH_KEYS.includes(key)) return;
                 const saved = self.get(key);
                 if (saved !== undefined && saved !== null) el.value = saved;
                 el.addEventListener('input', function () { self.save(key, el.value); });
