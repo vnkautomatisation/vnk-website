@@ -102,7 +102,12 @@ function showDashboard() {
         // Lien admin messagerie : #messages-{clientId} → pas applicable côté client
         window.history.replaceState(null, '', window.location.pathname); // Nettoyer l'ancre
     } else if (savedTab && savedTab !== 'dashboard') {
-        showTab(savedTab);
+        // Migrer l'ancien 'mandates' + subtab requests vers le nouveau tab dédié
+        if (savedTab === 'mandates' && localStorage.getItem('vnk-portal-mandates-subtab') === 'requests') {
+            showTab('my-requests');
+        } else {
+            showTab(savedTab);
+        }
     }
 }
 
@@ -289,7 +294,7 @@ const _pageState = { quotes: 1, invoices: 1, mandates: 1, contracts: 1, document
 
 // Taille de page dynamique — cartes timeline = 6, liste compacte = 15, reste = 10
 function _getPageSize(tab) {
-    if (tab === 'mandates') return _mandateView === 'list' ? 15 : 6;
+    if (tab === 'mandates') return _mandateView === 'list' ? 10 : 12;
     return PAGE_SIZE;
 }
 
@@ -518,12 +523,53 @@ function _schedulePortalReconnect() {
 
 function _fallbackPoll() {
     if (!_pollingActive) return;
+    // Signature des statuts actuels pour éviter le re-render inutile
+    let _lastStatusSignature = '';
+
     async function _poll() {
         if (!_pollingActive) return;
-        await loadAllData();
-        _pollingInterval = setTimeout(_poll, document.hidden ? 30000 : 5000);
+
+        // Poll principal (mandats, devis, etc.) — seulement si on n'est pas sur my-requests
+        const myReqActive = document.getElementById('tab-my-requests')?.classList.contains('active');
+        if (!myReqActive) {
+            await loadAllData();
+        }
+
+        // Vérification silencieuse des statuts demandes
+        try {
+            const token = localStorage.getItem('vnk-token');
+            const r = await fetch('/api/messages', {
+                headers: { 'Authorization': 'Bearer ' + token, 'Cache-Control': 'no-store' }
+            });
+            const d = await r.json();
+            if (d.success) {
+                const msgs = d.messages || [];
+                const requests = msgs.filter(m => m.content && m.content.includes('NOUVELLE DEMANDE DE PROJET') && m.sender === 'client');
+
+                // Signature des statuts actuels
+                const sig = requests.map(m => m.id + ':' + (m.request_status || 'new')).join(',');
+
+                // Badge dot
+                const hasUpdate = requests.some(r => r.request_status === 'in_progress' || r.request_status === 'converted');
+                const dot = document.getElementById('dot-my-requests');
+                if (dot) dot.style.display = hasUpdate ? 'block' : 'none';
+
+                // Re-render SEULEMENT si statut a changé — évite le blink
+                if (sig !== _lastStatusSignature) {
+                    _lastStatusSignature = sig;
+                    if (myReqActive) {
+                        // Mise à jour douce sans re-render complet
+                        window._lastMyRequests = requests.map(m => ({ ...m, request_status: m.request_status || 'new' }));
+                        renderMyRequests(window._lastMyRequests);
+                    }
+                }
+            }
+        } catch (e) { }
+
+        const delay = document.hidden ? 30000 : (myReqActive ? 5000 : 10000);
+        _pollingInterval = setTimeout(_poll, delay);
     }
-    _pollingInterval = setTimeout(_poll, 2000); // Premier poll rapide
+    _pollingInterval = setTimeout(_poll, 3000);
 }
 
 async function _onPortalTabVisible() {
@@ -569,6 +615,21 @@ function _handlePortalWsEvent(event, data) {
             loadAllData();
             if (data.status === 'completed') pushPortalNotif('mandate', 'Mandat « ' + (data.title || '') + ' » terminé', 'mandates');
             else if (event === 'mandate_created') { pushPortalNotif('mandate', 'Nouveau mandat : « ' + (data.title || '') + ' »', 'mandates'); showDot('dot-mandates', true); }
+            break;
+        case 'request_status_updated':
+            // Statut d'une demande mis à jour par l'admin
+            if (window._lastMyRequests) {
+                const req = window._lastMyRequests.find(r => (r.message_id || r.id) === data.message_id);
+                if (req) req.request_status = data.status;
+            }
+            loadMyRequests();
+            const stLabels = { in_progress: 'En traitement', converted: 'Devis en cours', closed: 'Traitée' };
+            if (stLabels[data.status]) {
+                pushPortalNotif('mandate', 'Votre demande est maintenant : ' + stLabels[data.status], null);
+                const badge = document.getElementById('badge-my-requests');
+                if (badge) badge.style.display = 'inline-block';
+                if (typeof vnkNotif !== 'undefined') vnkNotif.sound();
+            }
             break;
         default: loadAllData();
     }
@@ -727,7 +788,9 @@ function showTab(tabName) {
     const titles = {
         profile: 'Mon profil',
         dashboard: 'Tableau de bord',
+        'my-requests': 'Mes demandes',
         mandates: 'Mes mandats',
+        'my-requests': 'Mes demandes',
         quotes: 'Mes devis',
         invoices: 'Mes factures',
         contracts: 'Mes contrats',
@@ -738,6 +801,10 @@ function showTab(tabName) {
 
     // 6. Persister l'onglet
     localStorage.setItem('vnk-portal-tab', tabName);
+    // Réinitialiser le sous-onglet mandats quand on quitte
+    if (tabName !== 'mandates') {
+        localStorage.removeItem('vnk-portal-mandates-subtab');
+    }
 
     // 7. Charger le profil quand on l'ouvre — données fraîches
     if (tabName === 'profile') {
@@ -745,6 +812,14 @@ function showTab(tabName) {
         _refreshUserFromAPI().then(() => {
             renderProfile(JSON.parse(localStorage.getItem('vnk-user') || '{}'));
         });
+    }
+
+    // 7b. Mes demandes — tab dédié
+    if (tabName === 'my-requests') {
+        loadMyRequests();
+        // Effacer le dot quand ouvert
+        const dot = document.getElementById('dot-my-requests');
+        if (dot) dot.style.display = 'none';
     }
 
     // 8. Documents — afficher seulement, ne PAS marquer lu automatiquement
@@ -1201,7 +1276,7 @@ function renderMandates(mandates) {
             const fmtDate = function (d) { return new Date(d).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short', year: 'numeric' }); };
 
             return '<div class="vnk-mandate-card" data-id="' + m.id + '" onclick="_openPortalMandateDetail(' + m.id + ')" '
-                + 'style="background:white;border:1px solid ' + (isLate ? '#FECACA' : '#E8EEF6') + ';border-radius:12px;padding:1rem 1.1rem 0.9rem;cursor:pointer;transition:border-color .15s,box-shadow .15s;margin-bottom:0.6rem" '
+                + 'style="background:white;border:1px solid ' + (isLate ? '#FECACA' : '#E8EEF6') + ';border-radius:12px;padding:1rem 1.1rem 0.9rem;cursor:pointer;transition:border-color .15s,box-shadow .15s" '
                 + 'onmouseenter="this.style.borderColor=\'' + (isLate ? '#F87171' : '#1B4F8A') + '\';this.style.boxShadow=\'0 2px 10px rgba(27,79,138,0.08)\'" '
                 + 'onmouseleave="this.style.borderColor=\'' + (isLate ? '#FECACA' : '#E8EEF6') + '\';this.style.boxShadow=\'\'">'
 
@@ -1239,7 +1314,7 @@ function renderMandates(mandates) {
                 + '</div>'
                 + '</div>';
         }).join('');
-        list.innerHTML = '<div>' + cards + '</div>';
+        list.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.65rem;padding:0.25rem 0">' + cards + '</div>';
         return;
     }
 
@@ -1261,28 +1336,39 @@ function renderMandates(mandates) {
         const nextStep = prog < 100 ? (STEPS[STEP_PCTS.findIndex(function (p) { return p > prog; })] || 'Livraison') : null;
 
         return '<div class="vnk-mandate-card" data-id="' + m.id + '" onclick="_openPortalMandateDetail(' + m.id + ')" '
-            + 'style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:0.75rem;padding:0.7rem 1rem;border-bottom:1px solid #F1F5F9;cursor:pointer;transition:background .1s" '
+            + 'style="display:grid;grid-template-columns:2fr 220px 1.5fr auto;align-items:center;gap:2rem;padding:1rem 1.5rem;border-bottom:1px solid #F1F5F9;cursor:pointer;transition:background .1s;min-height:72px" '
             + 'onmouseenter="this.style.background=\'#F8FAFC\'" onmouseleave="this.style.background=\'white\'">'
 
-            // Colonne gauche : titre + meta
+            // Col 1 : titre + retard + service
             + '<div style="min-width:0">'
-            + '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:3px">'
-            + '<div style="font-weight:600;font-size:0.85rem;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + m.title + '</div>'
-            + (isLate ? '<span style="font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:20px;background:#FEF2F2;color:#DC2626;flex-shrink:0">Retard</span>' : '')
+            + '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:5px">'
+            + '<div style="font-weight:700;font-size:0.95rem;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + m.title + '</div>'
+            + (isLate ? '<span style="font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:20px;background:#FEF2F2;color:#DC2626;flex-shrink:0">⚠ Retard</span>' : '')
             + '</div>'
-            // Barre + étape
-            + '<div style="display:flex;align-items:center;gap:0.6rem">'
-            + '<div style="width:120px;height:3px;background:#F1F5F9;border-radius:2px;overflow:hidden;flex-shrink:0"><div style="height:100%;width:' + prog + '%;background:' + progColor + ';border-radius:2px"></div></div>'
-            + '<span style="font-size:0.7rem;font-weight:700;color:' + progColor + '">' + prog + '%</span>'
-            + '<span style="font-size:0.7rem;color:#94A3B8">·</span>'
-            + '<span style="font-size:0.7rem;color:#64748B">' + (nextStep ? 'Prochaine: ' + nextStep : 'Terminé') + '</span>'
-            + '</div></div>'
+            + '<div style="font-size:0.75rem;color:#94A3B8;font-weight:500">' + (svl[m.service_type] || m.service_type || '') + '</div>'
+            + '</div>'
 
-            // Colonne droite : badge + date
-            + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'
-            + '<span style="font-size:0.66rem;font-weight:600;padding:2px 8px;border-radius:20px;background:' + bg + ';color:' + fg + '">' + label + '</span>'
-            + (m.end_date ? '<span style="font-size:0.68rem;color:' + (isLate ? '#DC2626' : '#94A3B8') + '">'
-                + new Date(m.end_date).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short' }) + '</span>' : '')
+            // Col 2 : barre de progression + %
+            + '<div style="display:flex;align-items:center;gap:0.65rem">'
+            + '<div style="flex:1;height:6px;background:#F1F5F9;border-radius:3px;overflow:hidden"><div style="height:100%;width:' + prog + '%;background:' + progColor + ';border-radius:3px;transition:width .4s"></div></div>'
+            + '<span style="font-size:0.78rem;font-weight:700;color:' + progColor + ';flex-shrink:0;min-width:32px">' + prog + '%</span>'
+            + '</div>'
+
+            // Col 3 : étape courante · suivante + dates
+            + '<div style="min-width:0">'
+            + '<div style="font-size:0.75rem;color:#475569;margin-bottom:4px">'
+            + (nextStep ? 'Étape : <strong style="color:#1B4F8A">' + stepLabel + '</strong>&nbsp;&nbsp;·&nbsp;&nbsp;Suivante : ' + nextStep : '<strong style="color:#059669">✓ Terminé</strong>')
+            + '</div>'
+            + '<div style="font-size:0.72rem;color:#94A3B8">'
+            + (m.start_date ? 'Début ' + new Date(m.start_date).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short', year: 'numeric' }) : '')
+            + (m.start_date && m.end_date ? '&nbsp;&nbsp;·&nbsp;&nbsp;' : '')
+            + (m.end_date ? '<span style="color:' + (isLate ? '#DC2626' : '#94A3B8') + ';font-weight:' + (isLate ? '700' : '400') + '">Fin ' + new Date(m.end_date).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short', year: 'numeric' }) + '</span>' : '')
+            + '</div>'
+            + '</div>'
+
+            // Col 4 : badge statut
+            + '<div style="display:flex;align-items:center;justify-content:flex-end;flex-shrink:0">'
+            + '<span style="font-size:0.72rem;font-weight:700;padding:4px 14px;border-radius:20px;background:' + bg + ';color:' + fg + ';white-space:nowrap">' + label + '</span>'
             + '</div>'
 
             + '</div>';
@@ -3543,6 +3629,8 @@ function openNewProjectModal() {
     _npSelectedSlot = null;
     _npBookingSlots = [];
     _npBookingMonthOffset = 0;
+    // Réinitialiser l'affichage des steps manuellement (fail-safe)
+    for (let i = 1; i <= 5; i++) { const s = document.getElementById('np-step-' + i); if (s) s.style.display = i === 1 ? 'block' : 'none'; }
     // Réactiver le bouton submit (désactivé après soumission)
     const btnNext = document.getElementById('np-btn-next');
     if (btnNext) { btnNext.disabled = false; btnNext.textContent = 'Suivant'; }
@@ -4432,3 +4520,276 @@ async function confirmBooking() {
 
 // Alias compatibilité
 function loadAvailableSlots() { initBookingTab(); }
+// ═══════════════════════════════════════════════════════════
+// MES DEMANDES — Page statut des demandes de projet du client
+// ═══════════════════════════════════════════════════════════
+async function loadMyRequests() {
+    const container = document.getElementById('my-requests-list');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align:center;padding:2rem;color:#94A3B8;font-size:0.82rem">Chargement...</div>';
+
+    try {
+        const token = localStorage.getItem('vnk-token');
+        // Cache:no-store pour toujours avoir le statut à jour
+        const resp = await fetch('/api/messages', {
+            headers: { 'Authorization': 'Bearer ' + token, 'Cache-Control': 'no-store' }
+        });
+        const data = await resp.json();
+        if (!data.success) throw new Error('Erreur chargement');
+
+        const allMsgs = [];
+        (data.threads || []).forEach(t => {
+            (t.messages || []).forEach(m => {
+                if (m.content && m.content.includes('🚀 NOUVELLE DEMANDE DE PROJET') && m.sender === 'client') {
+                    allMsgs.push({ ...m, request_status: m.request_status || 'new' });
+                }
+            });
+        });
+        (data.messages || []).forEach(m => {
+            if (m.content && m.content.includes('🚀 NOUVELLE DEMANDE DE PROJET') && m.sender === 'client') {
+                if (!allMsgs.find(x => x.id === m.id)) allMsgs.push({ ...m, request_status: m.request_status || 'new' });
+            }
+        });
+
+        // Badge dot si des demandes ont changé de statut
+        const hasUpdate = allMsgs.some(r => r.request_status === 'in_progress' || r.request_status === 'converted');
+        const badge = document.getElementById('badge-my-requests');
+        if (badge) badge.style.display = hasUpdate ? 'inline-block' : 'none';
+
+        // Tri
+        const sortVal = document.getElementById('req-sort-portal')?.value || 'urgent';
+        const statusFilter = document.getElementById('req-status-portal')?.value || 'all';
+
+        let filtered = [...allMsgs];
+        if (statusFilter !== 'all') filtered = filtered.filter(r => r.request_status === statusFilter);
+
+        if (sortVal === 'date_asc') filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        else if (sortVal === 'urgent') filtered.sort((a, b) => {
+            const u = r => { const l = (r.content || '').split('\n').find(x => x.startsWith('Urgence')); return l && l.includes('Critique') ? 0 : l && l.includes('Urgent') ? 1 : 2; };
+            const us = u(a) - u(b);
+            return us !== 0 ? us : new Date(b.created_at) - new Date(a.created_at);
+        });
+        else filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        window._lastMyRequests = filtered;
+        renderMyRequests(filtered);
+    } catch (e) {
+        if (container) container.innerHTML = '<div style="text-align:center;padding:2rem;color:#DC2626;font-size:0.82rem">Erreur de chargement. Vérifiez votre connexion.</div>';
+    }
+}
+
+
+function renderMyRequests(requests, force) {
+    const container = document.getElementById('my-requests-list');
+    if (!container) return;
+
+    if (!requests.length) {
+        container.innerHTML = '<div style="text-align:center;padding:3rem 1rem;color:#94A3B8">'
+            + '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto 0.75rem"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>'
+            + '<div style="font-size:0.85rem;font-weight:600;color:#475569">Aucune demande</div>'
+            + '<div style="font-size:0.75rem;margin-top:4px">Cliquez sur &quot;+ Démarrer un projet&quot; en haut à droite</div>'
+            + '</div>';
+        return;
+    }
+
+    // Si le nombre de cartes correspond et pas de force → patch doux sans re-render
+    const existingCards = container.querySelectorAll('[data-req-id]');
+    if (!force && existingCards.length === requests.length) {
+        requests.forEach(req => {
+            const st = req.request_status || 'new';
+            const card = container.querySelector('[data-req-id="' + (req.message_id || req.id) + '"]');
+            if (!card) return;
+            const prevSt = card.dataset.reqStatus;
+            if (prevSt === st) return; // Rien à changer
+            // Mettre à jour seulement le badge statut et la timeline
+            card.dataset.reqStatus = st;
+            const statusCfg = {
+                new: { label: 'Reçue', color: '#1B4F8A', bg: '#EBF5FB', step: 0, desc: "Votre demande a été reçue. Nous l'analysons." },
+                in_progress: { label: 'En traitement', color: '#D97706', bg: '#FEF3C7', step: 1, desc: 'Un technicien VNK travaille sur votre demande.' },
+                converted: { label: 'Devis en cours', color: '#059669', bg: '#D1FAE5', step: 2, desc: 'Un devis est en cours de préparation pour vous.' },
+                closed: { label: 'Traitée', color: '#64748B', bg: '#F1F5F9', step: 3, desc: 'Votre demande a été traitée. Vérifiez vos devis.' },
+            };
+            const sc = statusCfg[st] || statusCfg.new;
+            const badge = card.querySelector('[data-role="status-badge"]');
+            if (badge) {
+                badge.style.background = sc.bg;
+                badge.style.color = sc.color;
+                badge.innerHTML = '<span style="font-size:0.72rem;font-weight:700;color:' + sc.color + '">' + sc.label + '</span>'
+                    + '<span style="font-size:0.67rem;color:' + sc.color + ';opacity:0.8">— ' + sc.desc + '</span>';
+            }
+        });
+        return;
+    }
+
+    const statusCfg = {
+        new: { label: 'Reçue', color: '#1B4F8A', bg: '#EBF5FB', step: 0, desc: "Votre demande a été reçue. Nous l\'analysons." },
+        in_progress: { label: 'En traitement', color: '#D97706', bg: '#FEF3C7', step: 1, desc: 'Un technicien VNK travaille sur votre demande.' },
+        converted: { label: 'Devis en cours', color: '#059669', bg: '#D1FAE5', step: 2, desc: 'Un devis est en cours de préparation pour vous.' },
+        closed: { label: 'Traitée', color: '#64748B', bg: '#F1F5F9', step: 3, desc: 'Votre demande a été traitée. Vérifiez vos devis.' },
+    };
+    const STEPS = ['new', 'in_progress', 'converted', 'closed'];
+    const STEP_LABELS = ['Reçue', 'En traitement', 'Devis', 'Traitée'];
+
+    const relTime = iso => {
+        const d = Date.now() - new Date(iso).getTime();
+        if (d < 3600000) return Math.floor(d / 60000) + ' min';
+        if (d < 86400000) return Math.floor(d / 3600000) + 'h';
+        if (d < 604800000) return Math.floor(d / 86400000) + 'j';
+        return new Date(iso).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short' });
+    };
+    const fmtDate = d => new Date(d).toLocaleDateString('fr-CA', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    const view = (typeof _reqView !== 'undefined') ? _reqView : 'cards';
+
+    // ── VUE LISTE ──────────────────────────────────────────────
+    if (view === 'list') {
+        const rows = requests.map(req => {
+            const lines = (req.content || '').split('\n');
+            const pf = k => { const l = lines.find(x => x.startsWith(k)); return l ? l.replace(k, '').trim() : '—'; };
+            const service = pf('Service     :');
+            const automate = pf('Automate    :');
+            const urgency = pf('Urgence     :');
+            const st = req.request_status || 'new';
+            const sc = statusCfg[st] || statusCfg.new;
+            const isCrit = urgency.includes('Critique');
+            const isUrg = urgency.includes('Urgent') || isCrit;
+
+            return '<div style="display:grid;grid-template-columns:2fr 140px 1fr auto;align-items:center;gap:1rem;padding:0.75rem 1rem;border-bottom:1px solid #F1F5F9;cursor:default;transition:background .1s" onmouseenter="this.style.background=\'#F8FAFC\'" onmouseleave="this.style.background=\'white\'">'
+                // Col 1 : service + automate
+                + '<div style="min-width:0">'
+                + '<div style="font-weight:600;font-size:0.85rem;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + service + '</div>'
+                + '<div style="font-size:0.68rem;color:#94A3B8;margin-top:1px">'
+                + (automate !== '—' ? automate + ' · ' : '')
+                + fmtDate(req.created_at)
+                + '</div>'
+                + '</div>'
+                // Col 2 : timeline compacte
+                + '<div style="display:flex;align-items:center;gap:1px">'
+                + STEPS.map((s, i) => {
+                    const done = i <= sc.step;
+                    const cfg = statusCfg[s];
+                    return '<div style="width:' + (i < STEPS.length - 1 ? '24px' : '0') + ';height:2px;background:' + (i < sc.step ? cfg.color : '#E2E8F0') + '"></div>'
+                        + '<div style="width:10px;height:10px;border-radius:50%;background:' + (done ? cfg.bg : '#F8FAFC') + ';border:1.5px solid ' + (done ? cfg.color : '#E2E8F0') + ';flex-shrink:0" title="' + STEP_LABELS[i] + '"></div>';
+                }).join('')
+                + '</div>'
+                // Col 3 : urgence + temps
+                + '<div style="font-size:0.7rem;color:#94A3B8;text-align:right">'
+                + (isCrit ? '<span style="color:#DC2626;font-weight:700">🚨 Critique</span> · ' : isUrg ? '<span style="color:#D97706;font-weight:700">⚡ Urgent</span> · ' : '')
+                + relTime(req.created_at)
+                + '</div>'
+                // Col 4 : badge statut
+                + '<span style="font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:20px;background:' + sc.bg + ';color:' + sc.color + ';white-space:nowrap;flex-shrink:0">' + sc.label + '</span>'
+                + '</div>';
+        }).join('');
+        container.innerHTML = '<div style="background:white;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden">' + rows + '</div>';
+        return;
+    }
+
+    // ── VUE GRILLE 3 colonnes ──────────────────────────────────
+    const cards = requests.map(req => {
+        const lines = (req.content || '').split('\n');
+        const pf = k => { const l = lines.find(x => x.startsWith(k)); return l ? l.replace(k, '').trim() : '—'; };
+        const service = pf('Service     :');
+        const automate = pf('Automate    :');
+        const urgency = pf('Urgence     :');
+        const budget = pf('Budget est. :');
+        const di = lines.findIndex(l => l === 'DESCRIPTION :');
+        const desc = di > -1 ? lines.slice(di + 1).filter(l => l && !l.startsWith('DÉTAILS') && !l.startsWith('──')).join(' ').trim().substring(0, 100) : '';
+        const st = req.request_status || 'new';
+        const sc = statusCfg[st] || statusCfg.new;
+        const stepIdx = sc.step;
+        const isCrit = urgency.includes('Critique');
+        const isUrg = urgency.includes('Urgent') || isCrit;
+
+        // Timeline 4 étapes compacte
+        const timeline = '<div style="display:flex;align-items:center;gap:0;margin-bottom:0.6rem">'
+            + STEPS.map((s, i) => {
+                const done = i <= stepIdx;
+                const cur = i === stepIdx;
+                const cfg = statusCfg[s];
+                return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;z-index:1">'
+                    + '<div style="width:20px;height:20px;border-radius:50%;background:' + (done ? cfg.bg : '#F8FAFC') + ';border:2px solid ' + (done ? cfg.color : '#E2E8F0') + ';display:flex;align-items:center;justify-content:center;font-size:0.55rem;font-weight:800;color:' + (done ? cfg.color : '#CBD5E0') + '">'
+                    + (done && !cur ? '✓' : (i + 1))
+                    + '</div>'
+                    + '<span style="font-size:0.55rem;color:' + (done ? cfg.color : '#94A3B8') + ';font-weight:' + (cur ? '700' : '500') + ';text-align:center;line-height:1.2;white-space:nowrap">' + STEP_LABELS[i] + '</span>'
+                    + '</div>'
+                    + (i < STEPS.length - 1 ? '<div style="flex:1;height:1.5px;background:' + (i < stepIdx ? statusCfg[STEPS[i]].color : '#E2E8F0') + ';margin-bottom:14px"></div>' : '');
+            }).join('')
+            + '</div>';
+
+        return '<div data-req-id="' + (req.message_id || req.id) + '" data-req-status="' + st + '" style="background:white;border:1.5px solid ' + (isCrit ? '#FECACA' : '#E8EEF6') + ';border-radius:12px;padding:0.9rem;display:flex;flex-direction:column;gap:0.45rem;transition:box-shadow .15s" onmouseenter="this.style.boxShadow=\'0 2px 8px rgba(27,79,138,0.07)\'" onmouseleave="this.style.boxShadow=\'\'">'
+
+            // Ligne 1 : service + urgence + temps
+            + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem">'
+            + '<div style="min-width:0;flex:1">'
+            + '<div style="font-weight:700;font-size:0.82rem;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + service + '</div>'
+            + '<div style="font-size:0.67rem;color:#94A3B8;margin-top:1px">' + (automate !== '—' ? automate + ' · ' : '') + fmtDate(req.created_at) + '</div>'
+            + '</div>'
+            + '<div style="display:flex;align-items:center;gap:0.3rem;flex-shrink:0">'
+            + (isCrit ? '<span style="font-size:0.58rem;font-weight:700;color:#DC2626;background:#FEE2E2;padding:1px 5px;border-radius:5px">🚨</span>' : isUrg ? '<span style="font-size:0.58rem;font-weight:700;color:#D97706;background:#FEF3C7;padding:1px 5px;border-radius:5px">⚡</span>' : '')
+            + '<span style="font-size:0.62rem;color:#94A3B8">' + relTime(req.created_at) + '</span>'
+            + '</div>'
+            + '</div>'
+
+            // Timeline
+            + timeline
+
+            // Statut actuel
+            + '<div data-role="status-badge" style="background:' + sc.bg + ';border-radius:7px;padding:0.4rem 0.65rem;display:flex;align-items:center;gap:0.4rem">'
+            + '<span style="font-size:0.72rem;font-weight:700;color:' + sc.color + '">' + sc.label + '</span>'
+            + '<span style="font-size:0.67rem;color:' + sc.color + ';opacity:0.8">— ' + sc.desc + '</span>'
+            + '</div>'
+
+            // Description courte
+            + (desc ? '<div style="font-size:0.7rem;color:#64748B;line-height:1.4;border-left:2px solid #E2E8F0;padding-left:0.55rem">' + desc + (desc.length >= 100 ? '…' : '') + '</div>' : '')
+            + (budget !== '—' && budget !== 'Non défini' ? '<div style="font-size:0.67rem;color:#94A3B8">Budget : <strong style="color:#475569">' + budget + '</strong></div>' : '')
+
+            + '</div>';
+    }).join('');
+
+    container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem;padding:0.25rem 0">' + cards + '</div>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// SWITCHER MANDATS / MES DEMANDES
+// ═══════════════════════════════════════════════════════════
+let _reqView = 'cards'; // 'cards' ou 'list'
+
+function setReqView(view) {
+    _reqView = view;
+    const btnCards = document.getElementById('req-view-cards-btn');
+    const btnList = document.getElementById('req-view-list-btn');
+    if (btnCards) { btnCards.style.background = view === 'cards' ? '#1B4F8A' : 'transparent'; btnCards.style.color = view === 'cards' ? 'white' : '#94A3B8'; }
+    if (btnList) { btnList.style.background = view === 'list' ? '#1B4F8A' : 'transparent'; btnList.style.color = view === 'list' ? 'white' : '#94A3B8'; }
+    renderMyRequests(window._lastMyRequests || []);
+}
+
+function switchMandatesSubTab(tab) {
+    const mandats = document.getElementById('mandates-sub-content-mandats');
+    const requests = document.getElementById('mandates-sub-content-requests');
+    const btnMandats = document.getElementById('mandates-sub-mandats');
+    const btnRequests = document.getElementById('mandates-sub-requests');
+
+    // Persister le choix
+    localStorage.setItem('vnk-portal-mandates-subtab', tab);
+
+    if (tab === 'mandats') {
+        if (mandats) mandats.style.display = 'block';
+        if (requests) requests.style.display = 'none';
+        if (btnMandats) { btnMandats.style.background = '#1B4F8A'; btnMandats.style.color = 'white'; btnMandats.style.border = 'none'; }
+        if (btnRequests) { btnRequests.style.background = 'white'; btnRequests.style.color = '#64748B'; btnRequests.style.border = '1.5px solid #E2E8F0'; }
+        const svgReq = btnRequests?.querySelector('svg'); if (svgReq) svgReq.style.stroke = '#64748B';
+        const svgMan = btnMandats?.querySelector('svg'); if (svgMan) svgMan.style.stroke = 'white';
+    } else {
+        if (mandats) mandats.style.display = 'none';
+        if (requests) { requests.style.display = 'flex'; requests.style.flexDirection = 'column'; }
+        if (btnRequests) { btnRequests.style.background = '#1B4F8A'; btnRequests.style.color = 'white'; btnRequests.style.border = 'none'; }
+        if (btnMandats) { btnMandats.style.background = 'white'; btnMandats.style.color = '#64748B'; btnMandats.style.border = '1.5px solid #E2E8F0'; }
+        const svgReq = btnRequests?.querySelector('svg'); if (svgReq) svgReq.style.stroke = 'white';
+        const svgMan = btnMandats?.querySelector('svg'); if (svgMan) svgMan.style.stroke = '#64748B';
+        const badge = document.getElementById('badge-my-requests');
+        if (badge) badge.style.display = 'none';
+        loadMyRequests();
+    }
+}

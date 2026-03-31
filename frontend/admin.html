@@ -729,6 +729,17 @@
                 display: block;
             }
 
+        /* Demandes — plein écran sans scroll page */
+        #section-project-requests.active {
+            display: flex !important;
+            flex-direction: column;
+            height: calc(100vh - 56px);
+            overflow: hidden;
+            margin: -1.5rem -1.75rem -5rem;
+            padding: 1.5rem 1.75rem 0;
+            box-sizing: border-box;
+        }
+
         /* Messages — layout flex */
         #section-messages.active {
             display: flex !important;
@@ -2050,7 +2061,7 @@
             flex-direction: column;
             gap: 0.5rem;
             overflow-y: auto;
-            max-height: calc(100vh - 318px);
+            max-height: calc(100vh - 400px);
             min-height: 60px;
         }
 
@@ -3635,39 +3646,56 @@
                     </div>
 
                     <!-- ===== DEMANDES DE PROJET ===== -->
-                    <div class="admin-section" id="section-project-requests">
-                        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem">
-                            <div>
-                                <div class="section-title">Demandes de projet</div>
-                                <div class="section-subtitle">Nouvelles demandes envoyées depuis le portail client — <span id="requests-count" style="font-weight:700;color:var(--primary)">0 demandes</span></div>
-                            </div>
-                            <div style="display:flex;gap:0.5rem;align-items:center">
-                                <select class="sort-select" onchange="sortRequests(this.value)">
+                    <div class="admin-section" id="section-project-requests" style="display:flex;flex-direction:column;height:calc(100vh - 56px);overflow:hidden">
+
+                        <!-- En-tête fixe -->
+                        <div style="flex-shrink:0;padding-bottom:0.75rem">
+                            <!-- UNE SEULE LIGNE : titre | KPIs | filtres statut | filtres avancés | Actualiser -->
+                            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">
+                                <div style="flex-shrink:0;margin-right:0.25rem">
+                                    <div class="section-title" style="margin-bottom:0;line-height:1.1">Demandes de projet</div>
+                                    <div class="section-subtitle" style="font-size:0.68rem">Portail — <span id="requests-count" style="font-weight:700;color:var(--primary)">0</span></div>
+                                </div>
+                                <div id="requests-kpis" style="display:flex;gap:0.35rem;flex-shrink:0"></div>
+                                <div style="width:1px;height:22px;background:var(--border);flex-shrink:0"></div>
+                                <button class="filter-tab active" onclick="setRequestFilter('all',this)" data-filter="status">Tous</button>
+                                <button class="filter-tab" onclick="setRequestFilter('new',this)" data-filter="status">Nouvelles</button>
+                                <button class="filter-tab" onclick="setRequestFilter('in_progress',this)" data-filter="status">En traitement</button>
+                                <button class="filter-tab" onclick="setRequestFilter('converted',this)" data-filter="status">Converties</button>
+                                <button class="filter-tab" onclick="setRequestFilter('closed',this)" data-filter="status">Fermées</button>
+                                <div style="width:1px;height:22px;background:var(--border);flex-shrink:0"></div>
+                                <select id="req-filter-service" onchange="renderProjectRequests()" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:0.75rem;font-family:inherit;color:var(--text);background:var(--bg2);cursor:pointer;outline:none">
+                                    <option value="">Tous les services</option>
+                                    <option value="Support PLC">Support PLC</option>
+                                    <option value="Audit technique">Audit technique</option>
+                                    <option value="Documentation">Documentation</option>
+                                    <option value="Refactorisation PLC">Refactorisation PLC</option>
+                                </select>
+                                <select id="req-filter-urgency" onchange="renderProjectRequests()" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:0.75rem;font-family:inherit;color:var(--text);background:var(--bg2);cursor:pointer;outline:none">
+                                    <option value="">Toute urgence</option>
+                                    <option value="Critique">🚨 Critique</option>
+                                    <option value="Urgent">⚡ Urgent</option>
+                                    <option value="Normal">Normal</option>
+                                </select>
+                                <select id="req-sort" onchange="renderProjectRequests()" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:0.75rem;font-family:inherit;color:var(--text);background:var(--bg2);cursor:pointer;outline:none">
+                                    <option value="urgent">Urgentes d'abord</option>
                                     <option value="date_desc">Plus récentes</option>
                                     <option value="date_asc">Plus anciennes</option>
-                                    <option value="urgent">Urgentes d'abord</option>
                                 </select>
-                                <button class="btn btn-ghost btn-sm" onclick="loadProjectRequests()">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
+                                <input id="req-search" type="text" placeholder="Rechercher..." oninput="renderProjectRequests()" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:0.75rem;font-family:inherit;color:var(--text);background:var(--bg2);outline:none;width:120px">
+                                <button class="btn btn-ghost btn-sm" onclick="loadProjectRequests()" style="flex-shrink:0;margin-left:auto">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
                                     Actualiser
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Filtre statut -->
-                        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap">
-                            <button class="filter-tab active" onclick="setRequestFilter('all',this)">Toutes</button>
-                            <button class="filter-tab" onclick="setRequestFilter('new',this)">Nouvelles</button>
-                            <button class="filter-tab" onclick="setRequestFilter('in_progress',this)">En traitement</button>
-                            <button class="filter-tab" onclick="setRequestFilter('converted',this)">Converties</button>
-                            <button class="filter-tab" onclick="setRequestFilter('closed',this)">Fermées</button>
-                        </div>
-
-                        <div id="project-requests-list" style="display:flex;flex-direction:column;gap:0.75rem"></div>
+                        <!-- Grille scrollable -->
+                        <div id="project-requests-list" style="flex:1;overflow-y:auto;min-height:0;padding-top:0.25rem"></div>
                         <div id="project-requests-empty" style="display:none;text-align:center;padding:3rem 1rem;color:var(--text-light)">
                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto 0.75rem"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
                             <div style="font-weight:600">Aucune demande</div>
-                            <div style="font-size:0.82rem;margin-top:0.3rem">Les nouvelles demandes de projet apparaîtront ici</div>
+                            <div style="font-size:0.82rem;margin-top:0.3rem">Aucune demande ne correspond aux filtres sélectionnés</div>
                         </div>
                     </div>
 
@@ -5697,6 +5725,46 @@
         function v(id) { return document.getElementById(id)?.value || ''; }
         function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
         function prefill(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+
+        function openMandateFromRequest(clientId, content, msgId) {
+            // Parser le contenu de la demande
+            const lines = (content || '').split('\n');
+            const pf = k => { const l = lines.find(x => x.startsWith(k)); return l ? l.replace(k, '').trim() : ''; };
+            const service = pf('Service     :');
+            const automate = pf('Automate    :');
+            const urgency = pf('Urgence     :');
+            const budget = pf('Budget est. :');
+            const deadline = pf('Délai       :');
+            const di = lines.findIndex(l => l === 'DESCRIPTION :');
+            const desc = di > -1 ? lines.slice(di + 1).filter(l => l && !l.startsWith('DÉTAILS') && !l.startsWith('──')).join('\n').trim() : '';
+
+            // Type de service
+            const typeMap = { 'Support PLC': 'plc-support', 'Audit technique': 'audit', 'Documentation': 'documentation', 'Refactorisation PLC': 'refactoring' };
+            const svcType = typeMap[service] || 'plc-support';
+
+            // Titre auto
+            const clientName = (allClients || []).find(c => c.id == clientId)?.full_name || '';
+            const title = service + (automate && automate !== 'Non précisé' ? ' — ' + automate : '') + (clientName ? ' · ' + clientName : '');
+
+            // Description enrichie
+            const fullDesc = [
+                desc,
+                automate && automate !== 'Non précisé' ? 'Automate : ' + automate : '',
+                urgency ? 'Urgence : ' + urgency : '',
+                budget ? 'Budget estimé : ' + budget : '',
+                deadline ? 'Délai souhaité : ' + deadline : '',
+            ].filter(Boolean).join('\n');
+
+            _clearModalFields('modal-new-mandate');
+            prefill('nm-client', clientId);
+            prefill('nm-type', svcType);
+            prefill('nm-title', title);
+            prefill('nm-desc', fullDesc);
+            // Stocker le msgId pour auto-conversion après création
+            const modal = document.getElementById('modal-new-mandate');
+            if (modal && msgId) modal.dataset.sourceMsgId = msgId;
+            openModal('modal-new-mandate');
+        }
         function fmt(a) { return new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(a || 0); }
         function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('fr-CA'); }
         function initials(n) { return (n || '?').split(' ').map(x => x[0]).join('').substring(0, 2).toUpperCase(); }
@@ -5730,7 +5798,7 @@
             } catch { errEl.textContent = 'Erreur de connexion.'; errEl.style.display = 'block'; }
         });
 
-        function adminLogout() { adminToken = null; localStorage.removeItem('vnk-admin-token'); localStorage.removeItem('vnk-admin-section'); _adminWsActive = false; clearInterval(_adminWsPingTimer); clearTimeout(_adminWsReconnTimer); if (adminPollingInterval) { clearTimeout(adminPollingInterval); adminPollingInterval = null; } if (_adminWs) { _adminWs.onclose = null; _adminWs.close(); _adminWs = null; } document.removeEventListener('visibilitychange', _adminOnTabFocus); document.getElementById('admin-login').style.display = 'flex'; document.getElementById('admin-app').style.display = 'none'; var _nl = document.getElementById('mobile-bottom-nav'); if (_nl) _nl.style.display = 'none'; var _nd = document.getElementById('mobile-more-drawer'); if (_nd) _nd.style.display = 'none'; }
+        function adminLogout() { adminToken = null; localStorage.removeItem('vnk-admin-token'); localStorage.removeItem('vnk-admin-section'); _adminWsActive = false; clearInterval(_adminWsPingTimer); clearTimeout(_adminWsReconnTimer); if (adminPollingInterval) { clearTimeout(adminPollingInterval); adminPollingInterval = null; } if (typeof _syncMobileInterval !== 'undefined' && _syncMobileInterval) { clearInterval(_syncMobileInterval); _syncMobileInterval = null; } if (_adminWs) { _adminWs.onclose = null; _adminWs.close(); _adminWs = null; } document.removeEventListener('visibilitychange', _adminOnTabFocus); document.getElementById('admin-login').style.display = 'flex'; document.getElementById('admin-app').style.display = 'none'; var _nl = document.getElementById('mobile-bottom-nav'); if (_nl) _nl.style.display = 'none'; var _nd = document.getElementById('mobile-more-drawer'); if (_nd) _nd.style.display = 'none'; }
 
         window.addEventListener('DOMContentLoaded', () => {
             const saved = localStorage.getItem('vnk-admin-token');
@@ -5868,6 +5936,7 @@
         // Fallback polling si WebSocket indisponible
         function _adminFallbackPoll() {
             if (!_adminWsActive) return;
+            if (adminPollingInterval) return; // déjà en cours, pas de doublon
             async function _cycle() {
                 if (!_adminWsActive) return;
                 await _adminPollCycle();
@@ -5919,7 +5988,12 @@
 
                 // Rafraîchir calendrier si section active
                 if (activeSection === 'calendar') { loadCalendar().catch(() => { }); }
-                if (activeSection === 'project-requests') { loadProjectRequests().catch(() => { }); }
+                if (activeSection === 'project-requests') {
+                    loadProjectRequests().catch(() => { });
+                } else {
+                    // En arrière-plan : vérifier silencieusement les nouvelles demandes pour notifier
+                    loadProjectRequests().catch(() => { });
+                }
 
             } catch (e) { }
         }
@@ -6225,24 +6299,6 @@
                                             </div>
                                         </div>`;
                     }).join('');
-
-                    // Footer pagination
-                    if (pages > 1) {
-                        const from = (_requestPage - 1) * _REQUEST_PP + 1;
-                        const to = Math.min(_requestPage * _REQUEST_PP, total);
-                        let pagHtml = `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;margin-top:0.5rem;border-top:1px solid var(--border)">
-                                    <span style="font-size:0.8rem;color:var(--text-light)">${from}–${to} sur ${total} demandes</span>
-                                    <div style="display:flex;gap:0.35rem">`;
-                        for (let p = 1; p <= pages; p++) {
-                            if (p === 1 || p === pages || Math.abs(p - _requestPage) <= 1) {
-                                pagHtml += `<button onclick="_requestPage=${p};renderProjectRequests()" style="padding:4px 10px;border:1.5px solid ${p === _requestPage ? 'var(--primary)' : 'var(--border)'};border-radius:6px;background:${p === _requestPage ? 'var(--primary)' : 'white'};color:${p === _requestPage ? 'white' : 'var(--text-light)'};font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit">${p}</button>`;
-                            } else if (Math.abs(p - _requestPage) === 2) {
-                                pagHtml += '<span style="padding:4px 4px;color:var(--text-light)">…</span>';
-                            }
-                        }
-                        pagHtml += '</div></div>';
-                        list.innerHTML += pagHtml;
-                    }
 
                     const emptyMsg = count === 0 ? `<div style="padding:1.5rem 0.5rem;text-align:center;color:var(--text-light);font-size:0.78rem;border:1.5px dashed var(--border);border-radius:8px">Aucun client</div>` : '';
 
@@ -9418,7 +9474,32 @@
             const d = await api('/clients', 'POST', { full_name: v('nc-name'), email: v('nc-email'), password: v('nc-password'), company_name: v('nc-company'), phone: v('nc-phone'), address: v('nc-address'), city: v('nc-city'), province: v('nc-province'), postal_code: v('nc-postal'), sector: v('nc-sector'), technologies: techs, internal_notes: v('nc-notes') });
             if (d.success) { closeModal('modal-new-client');['nc-name', 'nc-email', 'nc-password', 'nc-company', 'nc-phone', 'nc-address', 'nc-city', 'nc-postal', 'nc-notes'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); document.querySelectorAll('#nc-tech-checkboxes input').forEach(cb => cb.checked = false); loadClients(); showToast('Client créé !', 'success'); } else showToast(d.message, 'error');
         }
-        async function createMandate() { if (!v('nm-client') || !v('nm-title')) { showToast('Client et titre requis', 'error'); return; } const d = await api('/mandates', 'POST', { client_id: v('nm-client'), title: v('nm-title'), description: v('nm-desc'), service_type: v('nm-type'), status: v('nm-status'), progress: parseInt(v('nm-progress') || '0'), start_date: v('nm-start') || null, end_date: v('nm-end') || null, notes: v('nm-notes') }); if (d.success) { closeModal('modal-new-mandate'); loadMandates(); loadDashboard(); showToast('Mandat créé !', 'success'); pushNotif('mandate', 'Mandat « ' + v('nm-title') + ' » créé — client notifié', 'mandates'); } else showToast(d.message, 'error'); }
+        async function createMandate() {
+            if (!v('nm-client') || !v('nm-title')) { showToast('Client et titre requis', 'error'); return; }
+            const d = await api('/mandates', 'POST', { client_id: v('nm-client'), title: v('nm-title'), description: v('nm-desc'), service_type: v('nm-type'), status: v('nm-status'), progress: parseInt(v('nm-progress') || '0'), start_date: v('nm-start') || null, end_date: v('nm-end') || null, notes: v('nm-notes') });
+            if (d.success) {
+                closeModal('modal-new-mandate');
+                loadMandates(); loadDashboard();
+                showToast('Mandat créé !', 'success');
+                pushNotif('mandate', 'Mandat « ' + v('nm-title') + ' » créé — client notifié', 'mandates');
+                // Auto-convertir la demande source si elle existe (stockée dans data-source-msg)
+                const srcMsgId = document.getElementById('modal-new-mandate')?.dataset?.sourceMsgId;
+                if (srcMsgId) {
+                    try {
+                        await fetch('/api/admin/messages/' + srcMsgId + '/request-status', {
+                            method: 'PUT',
+                            headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ request_status: 'converted' })
+                        });
+                        // Mettre à jour en mémoire
+                        const req = _allRequests.find(r => (r.message_id || r.id) == srcMsgId);
+                        if (req) req.status = 'converted';
+                        document.getElementById('modal-new-mandate').dataset.sourceMsgId = '';
+                        if (document.getElementById('section-project-requests')?.classList.contains('active')) renderProjectRequests();
+                    } catch (e) { }
+                }
+            } else showToast(d.message, 'error');
+        }
         function openEditMandate(id, status, progress, notes) {
             const m = allMandates.find(x => x.id === id);
             if (!m) return;
@@ -10046,12 +10127,29 @@
                             company_name: thread.company_name || '',
                             content: msg.content,
                             created_at: msg.created_at,
-                            status: msg.request_status || 'new',
+                            // Priorité : 1. mémoire courante, 2. localStorage, 3. base de données, 4. 'new'
+                            status: (function () {
+                                const existing = _allRequests.find(r => (r.message_id || r.id) === msg.id);
+                                if (existing && existing.status !== 'new') return existing.status;
+                                const saved = _loadReqStatuses();
+                                if (saved[msg.id]) return saved[msg.id];
+                                return msg.request_status || 'new';
+                            })(),
                         });
                     }
                 });
             });
-            _allRequests = requests.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            _allRequests = requests.sort((a, b) => {
+                // D'abord urgence : Critique > Urgent > Normal
+                const urgScore = r => {
+                    const l = (r.content || '').split('\n').find(x => x.startsWith('Urgence'));
+                    return l && l.includes('Critique') ? 0 : l && l.includes('Urgent') ? 1 : 2;
+                };
+                const us = urgScore(a) - urgScore(b);
+                if (us !== 0) return us;
+                // Ensuite plus récent
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
             renderProjectRequests();
             // Badge sidebar
             const newCount = _allRequests.filter(r => r.status === 'new').length;
@@ -10062,23 +10160,120 @@
         let _requestPage = 1;
         const _REQUEST_PP = 20;
 
+        function _reqRelTime(iso) {
+            const d = Date.now() - new Date(iso).getTime();
+            if (d < 60000) return "À l'instant";
+            if (d < 3600000) return Math.floor(d / 60000) + ' min';
+            if (d < 86400000) return Math.floor(d / 3600000) + 'h';
+            if (d < 604800000) return Math.floor(d / 86400000) + 'j';
+            return new Date(iso).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short' });
+        }
+
+        // Clé localStorage pour persistance statuts en attendant le backend
+        const _REQ_STATUS_KEY = 'vnk_request_statuses';
+        function _saveReqStatuses() {
+            const map = {};
+            _allRequests.forEach(r => { if (r.status && r.status !== 'new') map[r.message_id || r.id] = r.status; });
+            try { localStorage.setItem(_REQ_STATUS_KEY, JSON.stringify(map)); } catch (e) { }
+        }
+        function _loadReqStatuses() {
+            try { return JSON.parse(localStorage.getItem(_REQ_STATUS_KEY) || '{}'); } catch (e) { return {}; }
+        }
+
+        async function updateRequestStatus(msgId, newStatus) {
+            // 1. Mise à jour optimiste immédiate
+            const req = _allRequests.find(r => (r.message_id || r.id) === msgId);
+            if (req) req.status = newStatus;
+            _saveReqStatuses(); // Persister en localStorage
+            renderProjectRequests();
+
+            try {
+                const res = await fetch('/api/admin/messages/' + msgId + '/request-status', {
+                    method: 'PUT',
+                    headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ request_status: newStatus })
+                });
+                if (res.ok) {
+                    if (typeof showToast === 'function') showToast('Statut mis à jour', 'success');
+                } else if (res.status === 404) {
+                    // Route backend pas encore déployée — localStorage suffit pour l'instant
+                    if (typeof showToast === 'function') showToast('Statut sauvegardé localement — déployez messages.js pour persister', 'info');
+                } else {
+                    if (typeof showToast === 'function') showToast('Erreur mise à jour statut', 'error');
+                }
+            } catch (e) {
+                if (typeof showToast === 'function') showToast('Statut sauvegardé localement', 'info');
+            }
+        }
+
+
         function renderProjectRequests() {
             const list = document.getElementById('project-requests-list');
             const empty = document.getElementById('project-requests-empty');
             if (!list) return;
 
+            // Filtres avancés
+            const svcFilter = document.getElementById('req-filter-service')?.value || '';
+            const urgFilter = document.getElementById('req-filter-urgency')?.value || '';
+            const sortVal = document.getElementById('req-sort')?.value || 'date_desc';
+            const search = (document.getElementById('req-search')?.value || '').toLowerCase();
+
             let filtered = [..._allRequests];
             if (_requestFilter !== 'all') filtered = filtered.filter(r => r.status === _requestFilter);
+
+            // Filtre service
+            if (svcFilter) filtered = filtered.filter(r => {
+                const lines = (r.content || '').split('\n');
+                const svc = (lines.find(l => l.startsWith('Service     :')) || '').replace('Service     :', '').trim();
+                return svc.includes(svcFilter);
+            });
+            // Filtre urgence
+            if (urgFilter) filtered = filtered.filter(r => {
+                const lines = (r.content || '').split('\n');
+                const urg = (lines.find(l => l.startsWith('Urgence     :')) || '').replace('Urgence     :', '').trim();
+                return urg.includes(urgFilter);
+            });
+            // Recherche client
+            if (search) filtered = filtered.filter(r =>
+                (r.client_name || '').toLowerCase().includes(search) ||
+                (r.company_name || '').toLowerCase().includes(search)
+            );
+            // Tri
+            if (sortVal === 'date_asc') filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            else if (sortVal === 'urgent') filtered.sort((a, b) => {
+                const urg = r => { const l = (r.content || '').split('\n').find(x => x.startsWith('Urgence')); return l && l.includes('Critique') ? 0 : l && l.includes('Urgent') ? 1 : 2; };
+                return urg(a) - urg(b);
+            });
+            else filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            // KPIs
+            const kpiEl = document.getElementById('requests-kpis');
+            if (kpiEl) {
+                const all = _allRequests;
+                const kpis = [
+                    { label: 'Nouvelles', val: all.filter(r => r.status === 'new').length, bg: '#EBF5FB', fg: '#1B4F8A' },
+                    { label: 'En traitement', val: all.filter(r => r.status === 'in_progress').length, bg: '#FEF3C7', fg: '#D97706' },
+                    { label: 'Converties', val: all.filter(r => r.status === 'converted').length, bg: '#D1FAE5', fg: '#059669' },
+                    { label: 'Fermées', val: all.filter(r => r.status === 'closed').length, bg: '#F1F5F9', fg: '#64748B' },
+                ];
+                kpiEl.innerHTML = kpis.map(k =>
+                    `<div style="background:${k.bg};border-radius:8px;padding:3px 10px;display:flex;align-items:center;gap:0.4rem;cursor:pointer;flex-shrink:0" onclick="setRequestFilter('${k.label === 'Nouvelles' ? 'new' : k.label === 'En traitement' ? 'in_progress' : k.label === 'Converties' ? 'converted' : 'closed'}',null)">
+                            <span style="font-size:1rem;font-weight:800;color:${k.fg};line-height:1">${k.val}</span>
+                            <span style="font-size:0.62rem;font-weight:700;color:${k.fg};opacity:0.85;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap">${k.label}</span>
+                        </div>`
+                ).join('');
+            }
 
             // Compteur
             const countEl = document.getElementById('requests-count');
             if (countEl) countEl.textContent = filtered.length + ' demande' + (filtered.length !== 1 ? 's' : '');
 
-            // Pagination
+            // Pagination 4×4 = 16 par page
+            const _REQ_PP2 = 16;
             const total = filtered.length;
-            const pages = Math.max(1, Math.ceil(total / _REQUEST_PP));
+            const pages = Math.max(1, Math.ceil(total / _REQ_PP2));
             if (_requestPage > pages) _requestPage = 1;
-            const paged = filtered.slice((_requestPage - 1) * _REQUEST_PP, _requestPage * _REQUEST_PP);
+            const paged = filtered.slice((_requestPage - 1) * _REQ_PP2, _requestPage * _REQ_PP2);
 
             if (!paged.length) {
                 list.innerHTML = ''; empty.style.display = 'block'; return;
@@ -10092,66 +10287,77 @@
                 closed: { label: 'Fermée', color: '#64748B', bg: '#F1F5F9' },
             };
 
-            list.innerHTML = paged.map(req => {
+            const cards = paged.map(req => {
                 const sc = statusCfg[req.status] || statusCfg.new;
-                // Parser le contenu du message
-                const lines = req.content.split('\n');
-                const parseField = (key) => {
-                    const line = lines.find(l => l.startsWith(key));
-                    return line ? line.replace(key, '').trim() : '—';
-                };
+                const lines = (req.content || '').split('\n');
+                const parseField = (key) => { const l = lines.find(x => x.startsWith(key)); return l ? l.replace(key, '').trim() : '—'; };
                 const service = parseField('Service     :');
+                const automate = parseField('Automate    :');
                 const urgency = parseField('Urgence     :');
                 const budget = parseField('Budget est. :');
-                const deadline = parseField('Délai       :');
-                const descStart = lines.findIndex(l => l === 'DESCRIPTION :');
-                const desc = descStart > -1 ? lines.slice(descStart + 1).filter(l => !l.startsWith('DÉTAILS')).join(' ').substring(0, 200) : '';
-                const isUrgent = urgency.includes('Critique') || urgency.includes('Urgent');
+                const descIdx = lines.findIndex(l => l === 'DESCRIPTION :');
+                const desc = descIdx > -1 ? lines.slice(descIdx + 1).filter(l => l && !l.startsWith('DÉTAILS') && !l.startsWith('──')).join(' ').trim().substring(0, 120) : '';
+                const isCritique = urgency.includes('Critique');
+                const isUrgent = urgency.includes('Urgent') || isCritique;
+                const msgId = req.message_id || req.id;
 
-                return `<div style="background:white;border:1.5px solid ${isUrgent ? '#FECACA' : 'var(--border)'};border-radius:12px;padding:1.25rem;transition:box-shadow .15s" onmouseenter="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.08)'" onmouseleave="this.style.boxShadow=''">
-                                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:0.85rem">
-                                        <div style="flex:1;min-width:0">
-                                            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:3px">
-                                                <span style="font-weight:700;font-size:0.92rem;color:var(--text)">${req.client_name}</span>
-                                                ${req.company_name ? `<span style="font-size:0.75rem;color:var(--text-light)">— ${req.company_name}</span>` : ''}
-                                            </div>
-                                            <div style="font-size:0.75rem;color:var(--text-light)">${fmtDate(req.created_at)}</div>
-                                        </div>
-                                        <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
-                                            ${isUrgent ? '<span style="font-size:0.68rem;font-weight:700;color:#DC2626;background:#FEE2E2;padding:2px 8px;border-radius:8px">⚡ Urgent</span>' : ''}
-                                            <span style="font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:20px;background:${sc.bg};color:${sc.color}">${sc.label}</span>
-                                        </div>
-                                    </div>
+                return `<div style="background:white;border:1.5px solid ${isCritique ? '#FECACA' : isUrgent ? '#FEE2E2' : 'var(--border)'};border-radius:12px;padding:0.9rem;display:flex;flex-direction:column;gap:0.55rem;transition:box-shadow .15s;cursor:default" onmouseenter="this.style.boxShadow='0 2px 10px rgba(0,0,0,0.08)'" onmouseleave="this.style.boxShadow=''">
 
-                                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;margin-bottom:0.85rem">
-                                        <div style="background:var(--bg);border-radius:8px;padding:0.5rem 0.75rem">
-                                            <div style="font-size:0.6rem;color:var(--text-light);font-weight:700;text-transform:uppercase;margin-bottom:2px">Service</div>
-                                            <div style="font-size:0.78rem;font-weight:600;color:var(--text)">${service}</div>
-                                        </div>
-                                        <div style="background:var(--bg);border-radius:8px;padding:0.5rem 0.75rem">
-                                            <div style="font-size:0.6rem;color:var(--text-light);font-weight:700;text-transform:uppercase;margin-bottom:2px">Automate</div>
-                                            <div style="font-size:0.78rem;font-weight:600;color:var(--text)">${parseField('Automate    :') || '—'}</div>
-                                        </div>
-                                        <div style="background:var(--bg);border-radius:8px;padding:0.5rem 0.75rem">
-                                            <div style="font-size:0.6rem;color:var(--text-light);font-weight:700;text-transform:uppercase;margin-bottom:2px">Budget</div>
-                                            <div style="font-size:0.78rem;font-weight:600;color:var(--text)">${budget}</div>
-                                        </div>
-                                        <div style="background:var(--bg);border-radius:8px;padding:0.5rem 0.75rem">
-                                            <div style="font-size:0.6rem;color:var(--text-light);font-weight:700;text-transform:uppercase;margin-bottom:2px">Délai</div>
-                                            <div style="font-size:0.78rem;font-weight:600;color:var(--text)">${deadline}</div>
-                                        </div>
-                                    </div>
+                        <!-- Ligne 1 : client + temps + urgence -->
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem">
+                            <div style="min-width:0;flex:1">
+                                <div style="font-weight:700;font-size:0.85rem;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${req.client_name || '—'}</div>
+                                ${req.company_name ? `<div style="font-size:0.68rem;color:var(--text-light);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${req.company_name}</div>` : ''}
+                            </div>
+                            <span style="font-size:0.65rem;color:var(--text-light);white-space:nowrap;flex-shrink:0">${_reqRelTime(req.created_at)}</span>
+                        </div>
 
-                                    ${desc ? `<div style="font-size:0.82rem;color:var(--text-light);line-height:1.5;margin-bottom:0.85rem;border-left:2px solid var(--border);padding-left:0.75rem">${desc}${req.content.length > 200 ? '…' : ''}</div>` : ''}
+                        <!-- Ligne 2 : service + automate -->
+                        <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">
+                            <span style="font-size:0.68rem;font-weight:600;color:var(--primary);background:#EBF5FB;padding:2px 7px;border-radius:6px">${service}</span>
+                            ${automate !== '—' ? `<span style="font-size:0.68rem;color:var(--text-light)">${automate}</span>` : ''}
+                            ${isCritique ? '<span style="font-size:0.65rem;font-weight:700;color:#DC2626;background:#FEE2E2;padding:2px 6px;border-radius:6px">🚨 Critique</span>' : isUrgent ? '<span style="font-size:0.65rem;font-weight:700;color:#D97706;background:#FEF3C7;padding:2px 6px;border-radius:6px">⚡ Urgent</span>' : ''}
+                        </div>
 
-                                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-                                        <button onclick="showSection('messages');setTimeout(()=>openThread(${req.client_id}),400)" class="btn btn-primary btn-sm">Répondre</button>
-                                        <button onclick="prefill('nm-client',${req.client_id});prefill('nm-type','${service.includes('PLC') ? 'plc-support' : service.includes('Audit') ? 'audit' : service.includes('Doc') ? 'documentation' : 'refactoring'}');openModal('modal-new-mandate')" class="btn btn-outline btn-sm">Créer un mandat</button>
-                                        <button onclick="prefill('nq-client',${req.client_id});openModal('modal-new-quote')" class="btn btn-ghost btn-sm">Créer un devis</button>
-                                    </div>
-                                </div>`;
+                        <!-- Description courte -->
+                        ${desc ? `<div style="font-size:0.72rem;color:var(--text-light);line-height:1.45;border-left:2px solid var(--border);padding-left:0.6rem">${desc}${desc.length >= 120 ? '…' : ''}</div>` : ''}
+
+                        <!-- Budget si présent -->
+                        ${budget !== '—' && budget !== 'Non défini' ? `<div style="font-size:0.68rem;color:var(--text-light)">Budget : <strong style="color:var(--text)">${budget}</strong></div>` : ''}
+
+                        <!-- Séparateur + statut dropdown + actions -->
+                        <div style="border-top:1px solid var(--border);padding-top:0.55rem;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">
+                            <select onchange="updateRequestStatus(${msgId},this.value,this)" style="padding:3px 7px;border:1.5px solid var(--border);border-radius:7px;font-size:0.68rem;font-family:inherit;font-weight:700;color:${sc.color};background:${sc.bg};cursor:pointer;outline:none;flex-shrink:0">
+                                <option value="new"         ${req.status === 'new' ? 'selected' : ''}>Nouvelle</option>
+                                <option value="in_progress" ${req.status === 'in_progress' ? 'selected' : ''}>En traitement</option>
+                                <option value="converted"   ${req.status === 'converted' ? 'selected' : ''}>Convertie</option>
+                                <option value="closed"      ${req.status === 'closed' ? 'selected' : ''}>Fermée</option>
+                            </select>
+                            <div style="flex:1"></div>
+                            <button onclick="showSection('messages');setTimeout(()=>openThread(${req.client_id}),400)" style="padding:3px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:0.68rem;font-weight:600;color:var(--text);background:white;cursor:pointer;font-family:inherit">Répondre</button>
+                            <button onclick="openMandateFromRequest(${req.client_id},decodeURIComponent('${encodeURIComponent(req.content || '')}'),${req.message_id || req.id})" style="padding:3px 8px;border:none;border-radius:7px;font-size:0.68rem;font-weight:700;color:white;background:var(--primary);cursor:pointer;font-family:inherit">+ Mandat</button>
+                        </div>
+                    </div>`;
             }).join('');
+
+            // Pagination
+            let pagHtml = '';
+            if (pages > 1) {
+                pagHtml = `<div style="display:flex;align-items:center;justify-content:center;gap:0.4rem;padding:0.75rem 0 0.25rem;flex-shrink:0">`;
+                pagHtml += `<span style="font-size:0.72rem;color:var(--text-light);margin-right:0.5rem">${(_requestPage - 1) * _REQ_PP2 + 1}–${Math.min(_requestPage * _REQ_PP2, total)} sur ${total}</span>`;
+                for (let p = 1; p <= pages; p++) {
+                    if (p === 1 || p === pages || Math.abs(p - _requestPage) <= 1) {
+                        pagHtml += `<button onclick="_requestPage=${p};renderProjectRequests()" style="padding:4px 10px;border:1.5px solid ${p === _requestPage ? 'var(--primary)' : 'var(--border)'};border-radius:6px;background:${p === _requestPage ? 'var(--primary)' : 'white'};color:${p === _requestPage ? 'white' : 'var(--text-light)'};font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit">${p}</button>`;
+                    } else if (Math.abs(p - _requestPage) === 2) {
+                        pagHtml += `<span style="color:var(--text-light);font-size:0.78rem">…</span>`;
+                    }
+                }
+                pagHtml += `</div>`;
+            }
+
+            list.innerHTML = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.65rem;padding-bottom:0.5rem">${cards}</div>${pagHtml}`;
         }
+
         // ──────────────────────────────────────────────────────────────────────
 
         function showSection(name) {
@@ -10680,11 +10886,12 @@
         };
 
         // Also sync during polling
+        var _syncMobileInterval = null;
         var _origPoll = startAdminPolling;
         startAdminPolling = function () {
             _origPoll();
-            // Additional sync every 30s
-            setInterval(syncMobileBadges, 30000);
+            if (_syncMobileInterval) { clearInterval(_syncMobileInterval); }
+            _syncMobileInterval = setInterval(syncMobileBadges, 30000);
         };
 
 

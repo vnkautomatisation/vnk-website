@@ -465,6 +465,11 @@
                     <span class="portal-nav-badge" id="badge-mandates" style="display:none">0</span>
                     <span class="portal-nav-dot dot-success" id="dot-mandates"></span>
                 </button>
+                <button class="portal-nav-item" onclick="showTab('my-requests')" id="nav-my-requests">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5" /><path d="M3 21v-2a7 7 0 0 1 14 0v2" /><line x1="19" y1="8" x2="21" y2="8" /><line x1="19" y1="12" x2="23" y2="12" /></svg>
+                    Mes demandes
+                    <span class="portal-nav-dot dot-warning" id="dot-my-requests" style="display:none"></span>
+                </button>
                 <button class="portal-nav-item" onclick="showTab('quotes')">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
                     Devis
@@ -574,6 +579,26 @@
                                 Actualiser
                             </button>
                             <button onclick="openNewProjectModal()" id="mandate-start-btn" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:6px;font-size:0.82rem">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                Démarrer un projet
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mes demandes header -->
+                <div class="portal-tab-header" id="header-my-requests" style="display:none">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.6rem">
+                        <div style="display:flex;align-items:baseline;gap:0.75rem">
+                            <h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A">Mes demandes</h2>
+                            <span style="font-size:0.82rem;color:#94A3B8">Suivi de vos demandes envoyées à VNK</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:0.5rem">
+                            <button onclick="loadMyRequests()" class="portal-refresh-btn">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
+                                Actualiser
+                            </button>
+                            <button onclick="openNewProjectModal()" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:6px;font-size:0.82rem">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                                 Démarrer un projet
                             </button>
@@ -1069,54 +1094,96 @@
                 <!-- TAB: MANDATS -->
                 <div class="portal-tab" id="tab-mandates">
 
-                    <!-- ── ZONE FIGÉE : KPIs + barre outils ── -->
-                    <div class="portal-mandates-header">
-                        <!-- KPIs mandats -->
-                        <div id="portal-mandates-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem;margin-bottom:0.875rem"></div>
+                    <!-- ── MANDATS ACTIFS ── -->
+                    <div id="mandates-sub-content-mandats">
+                        <!-- ── ZONE FIGÉE : KPIs + barre outils ── -->
+                        <div class="portal-mandates-header">
+                            <!-- KPIs mandats -->
+                            <div id="portal-mandates-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem;margin-bottom:0.875rem"></div>
 
-                        <!-- Barre outils -->
-                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;padding-bottom:0.75rem;border-bottom:1px solid #E2E8F0">
-                            <div style="position:relative;flex:1;min-width:180px;max-width:300px">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);pointer-events:none"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-                                <input type="text" id="mandate-search" placeholder="Rechercher un mandat..." oninput="filterMandates()" style="width:100%;padding:0.5rem 0.875rem 0.5rem 2.1rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-family:inherit;color:#0F172A;background:white;outline:none" onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'">
+                            <!-- Barre outils -->
+                            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;padding-bottom:0.75rem;border-bottom:1px solid #E2E8F0">
+                                <div style="position:relative;flex:1;min-width:180px;max-width:300px">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);pointer-events:none"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                                    <input type="text" id="mandate-search" placeholder="Rechercher un mandat..." oninput="filterMandates()" style="width:100%;padding:0.5rem 0.875rem 0.5rem 2.1rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-family:inherit;color:#0F172A;background:white;outline:none" onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'">
+                                </div>
+                                <select id="mandate-filter" onchange="filterMandates()" style="padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;color:#475569;background:white;outline:none">
+                                    <option value="all">Tous les statuts</option>
+                                    <option value="active">En cours</option>
+                                    <option value="pending">En attente</option>
+                                    <option value="completed">Complété</option>
+                                    <option value="paused">En pause</option>
+                                </select>
+                                <!-- Toggle vue cartes / liste -->
+                                <div style="display:flex;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;flex-shrink:0" title="Changer la vue">
+                                    <button id="mandate-view-cards" onclick="setMandateView('cards')" title="Vue cartes" style="padding:0.38rem 0.65rem;border:none;background:#1B4F8A;color:white;cursor:pointer;display:flex;align-items:center;transition:background .15s">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+                                    </button>
+                                    <button id="mandate-view-list" onclick="setMandateView('list')" title="Vue liste" style="padding:0.38rem 0.65rem;border:none;background:transparent;color:#94A3B8;cursor:pointer;display:flex;align-items:center;transition:background .15s">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
+                                    </button>
+                                </div>
                             </div>
-                            <select id="mandate-filter" onchange="filterMandates()" style="padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;color:#475569;background:white;outline:none">
-                                <option value="all">Tous les statuts</option>
-                                <option value="active">En cours</option>
-                                <option value="pending">En attente</option>
-                                <option value="completed">Complété</option>
-                                <option value="paused">En pause</option>
+                        </div><!-- fin portal-mandates-header -->
+                        <!-- ── ZONE SCROLLABLE : liste + panel ── -->
+                        <div class="portal-mandates-scroll">
+                            <div id="portal-mandates-layout" style="display:flex;gap:1rem;align-items:flex-start;padding-top:0.875rem">
+                                <div style="flex:1;min-width:0">
+                                    <div id="mandates-list">
+                                        <div style="text-align:center;padding:3rem 1rem;color:#94A3B8">
+                                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto 0.75rem"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
+                                            <div style="font-size:0.9rem;font-weight:600;color:#475569">Aucun mandat actif</div>
+                                            <div style="font-size:0.78rem;margin-top:0.3rem">Vos projets apparaîtront ici</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Panel de détail latéral (desktop) -->
+                                <div id="portal-mandate-side-panel" style="display:none;width:340px;flex-shrink:0;background:white;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;position:sticky;top:0;max-height:calc(100vh - 280px);overflow-y:auto;box-shadow:0 2px 12px rgba(0,0,0,0.06)"></div>
+                            </div>
+                        </div><!-- fin portal-mandates-scroll -->
+                    </div><!-- fin mandates-sub-content-mandats -->
+                </div><!-- fin tab-mandates -->
+                <!-- TAB: MES DEMANDES -->
+                <div class="portal-tab" id="tab-my-requests">
+                    <div class="portal-mandates-header">
+                        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;padding-bottom:0.75rem;border-bottom:1px solid #E2E8F0">
+                            <select id="req-sort-portal" onchange="loadMyRequests()" style="padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;color:#475569;background:white;outline:none">
+                                <option value="urgent">Urgentes d'abord</option>
+                                <option value="date_desc">Plus récentes</option>
+                                <option value="date_asc">Plus anciennes</option>
                             </select>
-                            <!-- Toggle vue cartes / liste -->
-                            <div style="display:flex;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;flex-shrink:0" title="Changer la vue">
-                                <button id="mandate-view-cards" onclick="setMandateView('cards')" title="Vue cartes" style="padding:0.38rem 0.65rem;border:none;background:#1B4F8A;color:white;cursor:pointer;display:flex;align-items:center;transition:background .15s">
+                            <select id="req-status-portal" onchange="loadMyRequests()" style="padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;color:#475569;background:white;outline:none">
+                                <option value="all">Tous les statuts</option>
+                                <option value="new">Reçues</option>
+                                <option value="in_progress">En traitement</option>
+                                <option value="converted">Devis en cours</option>
+                                <option value="closed">Traitées</option>
+                            </select>
+                            <!-- Toggle vue grille / liste -->
+                            <div style="display:flex;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;flex-shrink:0">
+                                <button id="req-view-cards-btn" onclick="setReqView('cards')" title="Vue cartes" style="padding:0.38rem 0.65rem;border:none;background:#1B4F8A;color:white;cursor:pointer;display:flex;align-items:center;transition:background .15s">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
                                 </button>
-                                <button id="mandate-view-list" onclick="setMandateView('list')" title="Vue liste" style="padding:0.38rem 0.65rem;border:none;background:transparent;color:#94A3B8;cursor:pointer;display:flex;align-items:center;transition:background .15s">
+                                <button id="req-view-list-btn" onclick="setReqView('list')" title="Vue liste" style="padding:0.38rem 0.65rem;border:none;background:transparent;color:#94A3B8;cursor:pointer;display:flex;align-items:center;transition:background .15s">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
                                 </button>
                             </div>
+                            <button onclick="loadMyRequests()" style="padding:0.38rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;background:white;font-size:0.78rem;font-weight:600;color:#64748B;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.35rem;margin-left:auto">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
+                                Actualiser
+                            </button>
                         </div>
-                    </div><!-- fin portal-mandates-header -->
-                    <!-- ── ZONE SCROLLABLE : liste + panel ── -->
-                    <div class="portal-mandates-scroll">
-                        <div id="portal-mandates-layout" style="display:flex;gap:1rem;align-items:flex-start;padding-top:0.875rem">
-                            <div style="flex:1;min-width:0">
-                                <div id="mandates-list">
-                                    <div style="text-align:center;padding:3rem 1rem;color:#94A3B8">
-                                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto 0.75rem"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
-                                        <div style="font-size:0.9rem;font-weight:600;color:#475569">Aucun mandat actif</div>
-                                        <div style="font-size:0.78rem;margin-top:0.3rem">Vos projets apparaîtront ici</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Panel de détail latéral (desktop) -->
-                            <div id="portal-mandate-side-panel" style="display:none;width:340px;flex-shrink:0;background:white;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;position:sticky;top:0;max-height:calc(100vh - 280px);overflow-y:auto;box-shadow:0 2px 12px rgba(0,0,0,0.06)"></div>
+                    </div>
+                    <!-- Contenu scrollable — même container que mandats -->
+                    <div class="portal-mandates-scroll" id="my-requests-list">
+                        <div style="text-align:center;padding:3rem 1rem;color:#94A3B8">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto 0.75rem"><circle cx="12" cy="12" r="3" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M4.93 4.93a10 10 0 0 0 0 14.14" /></svg>
+                            <div style="font-size:0.85rem;font-weight:600;color:#475569">Aucune demande</div>
+                            <div style="font-size:0.75rem;margin-top:4px">Cliquez sur "+ Démarrer un projet" en haut à droite</div>
                         </div>
-                    </div><!-- fin portal-mandates-scroll -->
-                </div>
+                    </div>
+                </div><!-- fin tab-my-requests -->
 
-                <!-- TAB: DEVIS -->
                 <div class="portal-tab" id="tab-quotes">
                     <div id="quotes-list" class="portal-list">
                         <div class="portal-empty-state">
@@ -1229,7 +1296,7 @@
     <script src="js/main.js"></script>
     <script src="js/stripe-payment.js"></script>
     <script src="js/state.js"></script>
-    <script src="js/portal.js"></script>
+    <script src="js/portal.js?v=20260331"></script>
     <script src="js/chat-widget.js"></script>
 
     <script src="js/notifications.js"></script>
@@ -1297,7 +1364,7 @@
             <div style="overflow-y:auto;flex:1;padding:1.5rem">
 
                 <!-- ── ÉTAPE 1 : Service + Description ── -->
-                <div id="np-step-1" class="np-step">
+                <div id="np-step-1" class="np-step" style="display:block">
                     <!-- Client info -->
                     <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:0.75rem">
                         <div id="np-client-avatar" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1B4F8A,#2E75B6);color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0">--</div>
