@@ -62,22 +62,33 @@ router.post('/login', async (req, res) => {
 // ============================================
 router.get('/dashboard', authenticateAdmin, async (req, res) => {
     try {
-        const [clients, mandates, invoicesUnpaid, monthRevenue, pendingQuotes, unreadMsgs, openDisputes, activity] = await Promise.all([
+        const [clients, mandates, invoicesUnpaid, monthRevenue, lastMonthRevenue, pendingQuotes, unreadMsgs, openDisputes, newClientsThisMonth, pendingMandates, activity] = await Promise.all([
             pool.query("SELECT COUNT(*) FROM clients WHERE is_active = true"),
             pool.query("SELECT COUNT(*) FROM mandates WHERE status IN ('active','in_progress')"),
             pool.query("SELECT COUNT(*), COALESCE(SUM(amount_ttc),0) as total FROM invoices WHERE status = 'unpaid'"),
             pool.query(`SELECT COALESCE(SUM(amount_ttc),0) as total FROM invoices WHERE status = 'paid' AND EXTRACT(MONTH FROM paid_at) = EXTRACT(MONTH FROM NOW()) AND EXTRACT(YEAR FROM paid_at) = EXTRACT(YEAR FROM NOW())`),
+            pool.query(`SELECT COALESCE(SUM(amount_ttc),0) as total FROM invoices WHERE status = 'paid' AND paid_at >= date_trunc('month', NOW()) - INTERVAL '1 month' AND paid_at < date_trunc('month', NOW())`),
             pool.query("SELECT COUNT(*) FROM quotes WHERE status = 'pending'"),
             pool.query("SELECT COUNT(*) FROM messages WHERE sender='client' AND is_read=false"),
             pool.query("SELECT COUNT(*) FROM disputes WHERE status IN ('open','in_progress')").catch(() => ({ rows: [{ count: 0 }] })),
+            pool.query(`SELECT COUNT(*) FROM clients WHERE created_at >= date_trunc('month', NOW())`),
+            pool.query("SELECT COUNT(*) FROM mandates WHERE status = 'pending'"),
             pool.query(`
-                SELECT 'invoice' as type, CONCAT('Facture ', i.invoice_number, ' — ', i.title) as description, i.amount_ttc as amount, i.status, i.created_at as date, c.full_name as client_name FROM invoices i JOIN clients c ON i.client_id = c.id
+                SELECT 'payment' as type, CONCAT('Paiement reçu — ', i.invoice_number) as description, i.amount_ttc as amount, 'paid' as status, i.paid_at as date, c.full_name as client_name, NULL::int as progress FROM invoices i JOIN clients c ON i.client_id = c.id WHERE i.status = 'paid' AND i.paid_at IS NOT NULL
                 UNION ALL
-                SELECT 'quote' as type, CONCAT('Devis ', q.quote_number, ' — ', q.title) as description, q.amount_ttc as amount, q.status, q.created_at as date, c.full_name as client_name FROM quotes q JOIN clients c ON q.client_id = c.id
+                SELECT 'invoice' as type, CONCAT('Facture ', i.invoice_number, ' — ', i.title) as description, i.amount_ttc as amount, i.status, i.created_at as date, c.full_name as client_name, NULL::int as progress FROM invoices i JOIN clients c ON i.client_id = c.id WHERE i.status != 'paid'
                 UNION ALL
-                SELECT 'mandate' as type, CONCAT('Mandat : ', m.title) as description, NULL as amount, m.status, m.updated_at as date, c.full_name as client_name FROM mandates m JOIN clients c ON m.client_id = c.id
+                SELECT 'quote' as type, CONCAT('Devis ', q.quote_number, ' — ', q.title) as description, q.amount_ttc as amount, q.status, q.created_at as date, c.full_name as client_name, NULL::int as progress FROM quotes q JOIN clients c ON q.client_id = c.id
+                UNION ALL
+                SELECT 'mandate' as type, CONCAT('Mandat ', m.title, ' mis à jour') as description, NULL as amount, m.status, m.updated_at as date, c.full_name as client_name, m.progress FROM mandates m JOIN clients c ON m.client_id = c.id
+                UNION ALL
+                SELECT 'document' as type, CONCAT('Document uploadé — ', d.title) as description, NULL as amount, d.status, d.created_at as date, c.full_name as client_name, NULL::int as progress FROM documents d JOIN clients c ON d.client_id = c.id
                 ORDER BY date DESC LIMIT 15`)
         ]);
+
+        const thisMonthRev = parseFloat(monthRevenue.rows[0].total);
+        const lastMonthRev = parseFloat(lastMonthRevenue.rows[0].total);
+        const revenueVsLastMonth = lastMonthRev > 0 ? Math.round(((thisMonthRev - lastMonthRev) / lastMonthRev) * 100) : null;
 
         res.json({
             success: true,
@@ -86,10 +97,13 @@ router.get('/dashboard', authenticateAdmin, async (req, res) => {
                 activeMandates: parseInt(mandates.rows[0].count),
                 unpaidInvoices: parseInt(invoicesUnpaid.rows[0].count),
                 unpaidAmount: parseFloat(invoicesUnpaid.rows[0].total),
-                monthRevenue: parseFloat(monthRevenue.rows[0].total),
+                monthRevenue: thisMonthRev,
                 pendingQuotes: parseInt(pendingQuotes.rows[0].count),
                 unreadMessages: parseInt(unreadMsgs.rows[0].count),
-                openDisputes: parseInt(openDisputes.rows[0].count)
+                openDisputes: parseInt(openDisputes.rows[0].count),
+                newClientsThisMonth: parseInt(newClientsThisMonth.rows[0].count),
+                pendingMandates: parseInt(pendingMandates.rows[0].count),
+                revenueVsLastMonth
             },
             activity: activity.rows
         });
@@ -201,14 +215,26 @@ router.post('/mandates', authenticateAdmin, async (req, res) => {
 
 router.put('/mandates/:id', authenticateAdmin, async (req, res) => {
     try {
-        const { status, progress, notes } = req.body;
+        const { title, description, status, service_type, progress, start_date, end_date, notes } = req.body;
         const result = await pool.query(
-            `UPDATE mandates SET status=$1, progress=$2, notes=$3, updated_at=NOW() WHERE id=$4 RETURNING *`,
-            [status, progress, notes || null, req.params.id]
+            `UPDATE mandates SET
+                title = COALESCE($1, title),
+                description = COALESCE($2, description),
+                status = $3,
+                service_type = COALESCE($4, service_type),
+                progress = $5,
+                start_date = COALESCE($6, start_date),
+                end_date = $7,
+                notes = $8,
+                updated_at = NOW()
+             WHERE id = $9 RETURNING *`,
+            [title || null, description || null, status, service_type || null, progress,
+            start_date || null, end_date || null, notes || null, req.params.id]
         );
         if (!result.rows.length) return res.status(404).json({ success: false, message: 'Mandat non trouvé.' });
         res.json({ success: true, mandate: result.rows[0] });
     } catch (err) {
+        console.error('PUT mandate:', err);
         res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
@@ -1156,3 +1182,4 @@ router.delete('/clients/:id', authenticateAdmin, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.authenticateAdmin = authenticateAdmin;

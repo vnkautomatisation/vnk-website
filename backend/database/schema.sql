@@ -382,7 +382,7 @@ CREATE INDEX idx_ws_connected         ON ws_connections(connected_at DESC);
 -- ============================================================
 INSERT INTO admins (email, password_hash, full_name)
 VALUES (
-    'admin@vnk.ca',
+    'vnkautomatisation@gmail.com',
     '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TqrqMGwsyMkBUFJsqVVvSxzBPvYK',
     'Yan Verone Kengne'
 );
@@ -583,3 +583,49 @@ SELECT column_name, data_type FROM information_schema.columns
 WHERE table_schema = 'public' AND table_name = 'messages'
 ORDER BY ordinal_position;
 */
+
+-- ============================================================
+-- ANALYTICS — Trafic site et présence portail
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS page_views (
+    id          SERIAL PRIMARY KEY,
+    session_id  VARCHAR(64),
+    client_id   INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+    page        VARCHAR(255)    NOT NULL,
+    referrer    VARCHAR(512),
+    user_agent  VARCHAR(512),
+    ip_hash     VARCHAR(64),
+    duration_ms INTEGER,
+    created_at  TIMESTAMP       DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pv_created   ON page_views(created_at);
+CREATE INDEX IF NOT EXISTS idx_pv_session   ON page_views(session_id);
+CREATE INDEX IF NOT EXISTS idx_pv_client    ON page_views(client_id);
+CREATE INDEX IF NOT EXISTS idx_pv_page      ON page_views(page);
+
+-- ============================================================
+-- COLONNES AJOUTÉES EN COURS DE DEV (ALTER TABLE)
+-- ============================================================
+
+-- invoices
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_method   VARCHAR(50);
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS invoice_phase    VARCHAR(20);
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS phase_number     INT DEFAULT 1;
+
+-- quotes
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_plan       VARCHAR(30) DEFAULT 'split_50_50';
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_pct1       INT DEFAULT 50;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_pct2       INT DEFAULT 50;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_conditions TEXT;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS client_signature_data TEXT;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS signed_at          TIMESTAMP;
+
+-- documents
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS category        VARCHAR(100);
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS status          VARCHAR(50)  DEFAULT 'Disponible';
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS is_read         BOOLEAN      DEFAULT FALSE;
+
+-- payments
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_method   VARCHAR(100);

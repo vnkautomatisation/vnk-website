@@ -34,13 +34,53 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://js.stripe.com/v3/"></script>
     <style>
+        /* ── Variables sémantiques portail (alignées avec admin) ── */
+        :root {
+            --success: #059669;
+            --success-bg: #ECFDF5;
+            --success-text: #065F46;
+            --warning: #D97706;
+            --warning-bg: #FFFBEB;
+            --warning-text: #92400E;
+            --error: #DC2626;
+            --error-bg: #FEF2F2;
+            --error-text: #991B1B;
+            --info: #0284C7;
+            --info-bg: #F0F9FF;
+            --info-text: #0C4A6E;
+        }
+
+        /* ── Scrollbars custom ── */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #CBD5E0 transparent;
+        }
+
+            *::-webkit-scrollbar {
+                width: 5px;
+                height: 5px;
+            }
+
+            *::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            *::-webkit-scrollbar-thumb {
+                background: #CBD5E0;
+                border-radius: 10px;
+            }
+
+                *::-webkit-scrollbar-thumb:hover {
+                    background: #94A3B8;
+                }
+
         /* ── Nav dots ── */
         .portal-nav-dot {
             margin-left: auto;
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
-            background: #E74C3C;
+            background: #DC2626;
             flex-shrink: 0;
             display: none;
             box-shadow: 0 0 0 2px rgba(231,76,60,0.2);
@@ -224,6 +264,7 @@
             }
     </style>
     <script>/* Anti-flash auth check */(function () { var t = localStorage.getItem("vnk-token"); if (t) { document.addEventListener("DOMContentLoaded", function () { var l = document.getElementById("login-section"); var d = document.getElementById("dashboard-section"); if (l) l.style.display = "none"; if (d) d.style.display = "grid"; }); } else { document.addEventListener("DOMContentLoaded", function () { var l = document.getElementById("login-section"); if (l) l.style.display = ""; }); } })();</script>
+    <script src="/vnk-tracker.js" defer></script>
 </head>
 <body class="portal-body">
     <!-- Loader de chargement -->
@@ -448,6 +489,10 @@
                     <span class="portal-nav-badge" id="badge-documents" style="display:none">0</span>
                     <span class="portal-nav-dot" id="dot-documents"></span>
                 </button>
+                <button class="portal-nav-item" onclick="showTab('booking')" id="nav-booking" style="background:linear-gradient(135deg,rgba(27,79,138,0.08),rgba(16,185,129,0.08));border:1px solid rgba(27,79,138,0.15)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                    <span style="color:#1B4F8A;font-weight:700">Réserver un appel</span>
+                </button>
             </nav>
             <div class="portal-sidebar-footer">
                 <!-- Cloche notifications -->
@@ -512,6 +557,11 @@
                 </div>
 
                 <!-- Mandats header -->
+                <div class="portal-tab-header" id="header-booking" style="display:none">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.6rem">
+                        <div><h2 style="font-size:1.3rem;font-weight:700;color:#1B4F8A">Réserver un appel</h2><span style="font-size:0.82rem;color:#94A3B8">Choisissez un créneau selon mes disponibilités</span></div>
+                    </div>
+                </div>
                 <div class="portal-tab-header" id="header-mandates" style="display:none">
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.6rem">
                         <div style="display:flex;align-items:baseline;gap:0.75rem">
@@ -523,10 +573,10 @@
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-.08-4.36" /></svg>
                                 Actualiser
                             </button>
-                            <a href="contact.html" id="mandate-start-btn" class="btn btn-outline btn-sm" style="display:inline-flex;align-items:center;gap:6px;font-size:0.82rem">
+                            <button onclick="openNewProjectModal()" id="mandate-start-btn" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:6px;font-size:0.82rem">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                                 Démarrer un projet
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -706,26 +756,364 @@
                     </div>
                 </div>
 
-                <!-- TAB: MANDATS -->
-                <div class="portal-tab" id="tab-mandates">
-                    <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
-                        <input type="text" id="mandate-search" class="portal-search-input" placeholder="Rechercher un mandat..." oninput="filterMandates()" style="flex:1;min-width:200px">
-                        <select id="mandate-filter" class="portal-filter-select" onchange="filterMandates()">
-                            <option value="all">Tous les statuts</option>
-                            <option value="active">En cours</option>
-                            <option value="in_progress">En progression</option>
-                            <option value="pending">En attente</option>
-                            <option value="completed">Complété</option>
-                            <option value="paused">En pause</option>
-                        </select>
+                <!-- TAB: BOOKING ─────────────────────────────────────────── -->
+                <div class="portal-tab" id="tab-booking">
+                    <style>
+                        /* ── Booking page styles ───────────────────── */
+                        .bk-appt-card {
+                            background: white;
+                            border-radius: 12px;
+                            border: 1.5px solid #E2E8F0;
+                            padding: 0.85rem 1rem;
+                            display: flex;
+                            align-items: center;
+                            gap: 0.85rem;
+                            transition: box-shadow .15s,border-color .15s;
+                            cursor: default
+                        }
+
+                            .bk-appt-card:hover {
+                                box-shadow: 0 3px 12px rgba(0,0,0,.08);
+                                border-color: #CBD5E0
+                            }
+
+                            .bk-appt-card.confirmed {
+                                border-left: 4px solid #10B981
+                            }
+
+                            .bk-appt-card.cancelled {
+                                border-left: 4px solid #EF4444;
+                                opacity: .7
+                            }
+
+                            .bk-appt-card.pending {
+                                border-left: 4px solid #F59E0B
+                            }
+
+                        .bk-slot-btn {
+                            padding: .55rem .5rem;
+                            border: 1.5px solid #E2E8F0;
+                            border-radius: 9px;
+                            background: #FAFAFA;
+                            color: #334155;
+                            font-size: .82rem;
+                            font-weight: 700;
+                            cursor: pointer;
+                            font-family: inherit;
+                            text-align: center;
+                            transition: all .12s;
+                            line-height: 1.2
+                        }
+
+                            .bk-slot-btn:hover {
+                                border-color: #1B4F8A;
+                                background: #EBF5FB;
+                                color: #1B4F8A
+                            }
+
+                            .bk-slot-btn.selected {
+                                border-color: #1B4F8A;
+                                background: #1B4F8A;
+                                color: white
+                            }
+
+                        .bk-cal-day {
+                            width: 36px;
+                            height: 36px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            border-radius: 50%;
+                            font-size: .82rem;
+                            transition: all .12s;
+                            margin: 2px auto;
+                            cursor: default
+                        }
+
+                            .bk-cal-day.available {
+                                background: #1B4F8A;
+                                color: white;
+                                font-weight: 700;
+                                cursor: pointer;
+                                box-shadow: 0 1px 4px rgba(27,79,138,.25)
+                            }
+
+                                .bk-cal-day.available:hover {
+                                    background: #2563EB;
+                                    transform: scale(1.08)
+                                }
+
+                            .bk-cal-day.today {
+                                border: 2px solid #1B4F8A;
+                                color: #1B4F8A;
+                                font-weight: 700
+                            }
+
+                            .bk-cal-day.past {
+                                color: #D1D5DB
+                            }
+
+                            .bk-cal-day.other {
+                                color: #94A3B8
+                            }
+
+                        .bk-filter-btn {
+                            padding: .3rem .85rem;
+                            border: 1.5px solid #E2E8F0;
+                            border-radius: 20px;
+                            background: white;
+                            color: #64748B;
+                            font-size: .75rem;
+                            font-weight: 600;
+                            cursor: pointer;
+                            font-family: inherit;
+                            transition: all .12s
+                        }
+
+                            .bk-filter-btn.active {
+                                background: #1B4F8A;
+                                border-color: #1B4F8A;
+                                color: white;
+                                font-weight: 700
+                            }
+
+                        .bk-meet-btn {
+                            flex: 1;
+                            padding: .55rem;
+                            border: 1.5px solid #E2E8F0;
+                            border-radius: 9px;
+                            background: #FAFAFA;
+                            color: #64748B;
+                            font-size: .78rem;
+                            font-weight: 600;
+                            cursor: pointer;
+                            font-family: inherit;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: .4rem;
+                            transition: all .12s
+                        }
+
+                            .bk-meet-btn.active {
+                                border-color: #1B4F8A;
+                                background: #EBF5FB;
+                                color: #1B4F8A;
+                                font-weight: 700
+                            }
+                    </style>
+
+                    <!-- ══ Section 1: Mes rendez-vous ══════════════════════════════════════ -->
+                    <div id="booking-my-appts-section" style="display:none;margin-bottom:2rem">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;flex-wrap:wrap;gap:.5rem">
+                            <div>
+                                <div style="font-size:.95rem;font-weight:800;color:#0F172A">Mes rendez-vous</div>
+                                <div style="font-size:.75rem;color:#94A3B8;margin-top:1px">Cliquez pour voir les détails</div>
+                            </div>
+                            <div style="display:flex;gap:.35rem">
+                                <button onclick="bkFilterAppts('all',this)" class="bk-filter-btn active">Tous</button>
+                                <button onclick="bkFilterAppts('confirmed',this)" class="bk-filter-btn">Confirmés</button>
+                                <button onclick="bkFilterAppts('cancelled',this)" class="bk-filter-btn">Annulés</button>
+                            </div>
+                        </div>
+                        <div id="booking-my-appts-list" style="display:flex;flex-direction:column;gap:.45rem"></div>
+                        <div id="booking-appts-pager" style="margin-top:.65rem;display:flex;align-items:center;justify-content:space-between;font-size:.78rem;color:#94A3B8"></div>
                     </div>
-                    <div id="mandates-list" class="portal-list">
-                        <div class="portal-empty-state">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
-                            <p>Aucun mandat actif pour l'instant.</p>
-                            <a href="contact.html" class="btn btn-outline btn-sm">Démarrer un projet</a>
+
+                    <!-- ══ Divider ══════════════════════════════════════════════════════════ -->
+                    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem">
+                        <div style="flex:1;height:1px;background:#E2E8F0"></div>
+                        <span style="font-size:.72rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">+ Réserver un appel de qualification</span>
+                        <div style="flex:1;height:1px;background:#E2E8F0"></div>
+                    </div>
+
+                    <!-- ══ Section 2: Calendrier de réservation ═════════════════════════════ -->
+                    <div style="background:white;border:1.5px solid #E2E8F0;border-radius:16px;overflow:hidden;display:grid;grid-template-columns:200px 1fr 300px;min-height:460px;box-shadow:0 1px 4px rgba(0,0,0,.05)">
+
+                        <!-- Col 1: Info réunion -->
+                        <div style="background:#F8FAFC;border-right:1px solid #E2E8F0;padding:1.5rem 1.25rem;display:flex;flex-direction:column;gap:.85rem">
+                            <div style="width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#1B4F8A,#2563EB);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                <svg width="20" height="20" viewBox="0 0 40 40" fill="none"><polygon points="20,4 36,32 4,32" fill="white" /></svg>
+                            </div>
+                            <div>
+                                <div style="font-size:.68rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">VNK Automatisation</div>
+                                <div style="font-size:.95rem;font-weight:800;color:#0F172A;line-height:1.3">Appel de qualification</div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:.45rem">
+                                <div style="display:flex;align-items:center;gap:.45rem">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                                    <span style="font-size:.8rem;color:#334155;font-weight:600">30 minutes</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:.45rem">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.82v6.36a1 1 0 0 1-1.447.889L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z" /></svg>
+                                    <span style="font-size:.8rem;color:#334155;font-weight:600">Vidéo ou téléphone</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:.45rem">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                    <span style="font-size:.8rem;color:#059669;font-weight:700">Gratuit</span>
+                                </div>
+                            </div>
+                            <div style="border-top:1px solid #E2E8F0;padding-top:.75rem">
+                                <div style="font-size:.7rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem">À propos</div>
+                                <div style="font-size:.78rem;color:#64748B;line-height:1.55">Évaluation de votre besoin d'automatisation — technologies PLC, SCADA et prochaines étapes.</div>
+                            </div>
+                            <!-- Badge créneau sélectionné -->
+                            <div id="booking-selected-info" style="display:none;border-top:1px solid #E2E8F0;padding-top:.75rem;margin-top:auto">
+                                <div style="font-size:.68rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem">Créneau sélectionné</div>
+                                <div style="background:#EBF5FB;border-radius:8px;padding:.5rem .7rem">
+                                    <div id="booking-selected-slot-label" style="font-size:.82rem;font-weight:700;color:#1B4F8A"></div>
+                                    <div id="booking-selected-duration" style="font-size:.7rem;color:#64748B;margin-top:1px"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Col 2: Calendrier -->
+                        <div style="border-right:1px solid #E2E8F0;display:flex;flex-direction:column">
+                            <!-- Nav mois -->
+                            <div style="padding:1rem 1.25rem .6rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #F1F5F9;flex-shrink:0">
+                                <button onclick="bookingNavMonth(-1)" style="width:30px;height:30px;border:1.5px solid #E2E8F0;border-radius:7px;background:white;cursor:pointer;font-size:.9rem;color:#475569;font-family:inherit;display:flex;align-items:center;justify-content:center;transition:border-color .12s" onmouseenter="this.style.borderColor='#1B4F8A'" onmouseleave="this.style.borderColor='#E2E8F0'">‹</button>
+                                <div id="booking-month-label" style="font-size:.88rem;font-weight:700;color:#0F172A;text-transform:capitalize"></div>
+                                <button onclick="bookingNavMonth(1)" style="width:30px;height:30px;border:1.5px solid #E2E8F0;border-radius:7px;background:white;cursor:pointer;font-size:.9rem;color:#475569;font-family:inherit;display:flex;align-items:center;justify-content:center;transition:border-color .12s" onmouseenter="this.style.borderColor='#1B4F8A'" onmouseleave="this.style.borderColor='#E2E8F0'">›</button>
+                            </div>
+                            <!-- Headers jours -->
+                            <div style="display:grid;grid-template-columns:repeat(7,1fr);padding:.6rem 1rem .25rem">
+                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">L</div>
+                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">M</div>
+                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">M</div>
+                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">J</div>
+                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">V</div>
+                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">S</div>
+                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">D</div>
+                            </div>
+                            <!-- Grille jours -->
+                            <div id="booking-month-grid" style="display:grid;grid-template-columns:repeat(7,1fr);padding:.15rem 1rem .75rem;flex-shrink:0"></div>
+                            <!-- Date + créneaux -->
+                            <div id="booking-day-separator" style="display:none;border-top:1px solid #F1F5F9;padding:.65rem 1.25rem .35rem;flex-shrink:0">
+                                <div id="booking-slots-date-label" style="font-size:.78rem;font-weight:700;color:#1B4F8A;text-transform:capitalize"></div>
+                            </div>
+                            <div style="padding:.25rem 1rem .75rem;flex:1;overflow-y:auto">
+                                <div id="booking-slots-day" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem">
+                                    <div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem .5rem;color:#CBD5E0;text-align:center">
+                                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:.5rem"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                                        <div style="font-size:.78rem;font-weight:600;color:#CBD5E0">Sélectionnez une date bleue</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Col 3: Confirmation -->
+                        <div style="display:flex;flex-direction:column">
+                            <div id="booking-form-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.25rem;text-align:center">
+                                <div style="width:52px;height:52px;border-radius:50%;background:#F1F5F9;display:flex;align-items:center;justify-content:center;margin-bottom:.85rem">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                </div>
+                                <div style="font-size:.85rem;font-weight:700;color:#CBD5E0">Aucun créneau choisi</div>
+                                <div style="font-size:.73rem;color:#E2E8F0;margin-top:.3rem;line-height:1.5">Choisissez une date puis une heure dans le calendrier</div>
+                            </div>
+                            <div id="booking-form-content" style="display:none;flex-direction:column;flex:1;padding:1.25rem;gap:.85rem">
+                                <!-- Client -->
+                                <div style="display:flex;align-items:center;gap:.6rem;background:#F8FAFC;border-radius:9px;padding:.6rem .8rem">
+                                    <div id="booking-client-avatar" style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1B4F8A,#2563EB);color:white;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:800;flex-shrink:0"></div>
+                                    <div style="min-width:0">
+                                        <div id="booking-client-name-label" style="font-size:.82rem;font-weight:700;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+                                        <div style="font-size:.65rem;color:#64748B">Client vérifié ✓</div>
+                                    </div>
+                                </div>
+                                <!-- Objet -->
+                                <div>
+                                    <label style="font-size:.7rem;font-weight:700;color:#334155;display:block;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Objet</label>
+                                    <input type="text" id="booking-subject" style="width:100%;padding:.58rem .78rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:.83rem;font-family:inherit;outline:none;box-sizing:border-box;background:#FAFAFA;transition:all .15s" placeholder="Ex: Diagnostic PLC ligne 3" onfocus="this.style.borderColor='#1B4F8A';this.style.background='white'" onblur="this.style.borderColor='#E2E8F0';this.style.background='#FAFAFA'">
+                                </div>
+                                <!-- Type réunion -->
+                                <div>
+                                    <label style="font-size:.7rem;font-weight:700;color:#334155;display:block;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Type</label>
+                                    <div style="display:flex;gap:.4rem">
+                                        <button onclick="bkSetMeetType('video',this)" class="bk-meet-btn active">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.82v6.36a1 1 0 0 1-1.447.889L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z" /></svg>
+                                            Vidéo
+                                        </button>
+                                        <button onclick="bkSetMeetType('phone',this)" class="bk-meet-btn">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 11 19.79 19.79 0 0 1 1.67 2.39 2 2 0 0 1 3.63 0h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                                            Tél.
+                                        </button>
+                                    </div>
+                                    <input type="hidden" id="booking-meet-type" value="video">
+                                </div>
+                                <!-- Note -->
+                                <div style="flex:1">
+                                    <label style="font-size:.7rem;font-weight:700;color:#334155;display:block;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Note <span style="font-weight:400;color:#94A3B8;text-transform:none">(optionnel)</span></label>
+                                    <textarea id="booking-notes" rows="3" style="width:100%;padding:.58rem .78rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:.8rem;font-family:inherit;outline:none;box-sizing:border-box;resize:none;background:#FAFAFA;transition:all .15s" placeholder="Décrivez brièvement..." onfocus="this.style.borderColor='#1B4F8A';this.style.background='white'" onblur="this.style.borderColor='#E2E8F0';this.style.background='#FAFAFA'"></textarea>
+                                </div>
+                                <!-- Résultat -->
+                                <div id="booking-result" style="display:none;background:#ECFDF5;border:1.5px solid #A7F3D0;border-radius:10px;padding:.85rem;text-align:center">
+                                    <div style="font-size:1.2rem;margin-bottom:.25rem">✅</div>
+                                    <div style="font-weight:800;color:#065F46;font-size:.9rem">RDV confirmé !</div>
+                                    <div id="booking-result-text" style="font-size:.75rem;color:#065F46;margin-top:2px"></div>
+                                    <div style="font-size:.68rem;color:#6B7280;margin-top:.3rem">Confirmation envoyée dans votre messagerie</div>
+                                </div>
+                                <div id="booking-error" style="display:none;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:8px;padding:.6rem;color:#DC2626;font-size:.78rem"></div>
+                                <!-- Actions -->
+                                <div style="display:flex;flex-direction:column;gap:.35rem">
+                                    <button id="booking-confirm-btn" onclick="confirmBooking()" style="width:100%;padding:.75rem;border:none;border-radius:9px;background:#1B4F8A;color:white;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:.45rem;transition:opacity .12s" onmouseenter="this.style.opacity='.88'" onmouseleave="this.style.opacity='1'">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                        Confirmer le rendez-vous
+                                    </button>
+                                    <button onclick="resetBookingSelection()" style="width:100%;padding:.45rem;border:1.5px solid #E2E8F0;border-radius:8px;background:transparent;color:#94A3B8;font-size:.75rem;cursor:pointer;font-family:inherit" onmouseenter="this.style.color='#475569'" onmouseleave="this.style.color='#94A3B8'">← Autre créneau</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </div>
+
+
+                <!-- TAB: MANDATS -->
+                <div class="portal-tab" id="tab-mandates">
+
+                    <!-- ── ZONE FIGÉE : KPIs + barre outils ── -->
+                    <div class="portal-mandates-header">
+                        <!-- KPIs mandats -->
+                        <div id="portal-mandates-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem;margin-bottom:0.875rem"></div>
+
+                        <!-- Barre outils -->
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;padding-bottom:0.75rem;border-bottom:1px solid #E2E8F0">
+                            <div style="position:relative;flex:1;min-width:180px;max-width:300px">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);pointer-events:none"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                                <input type="text" id="mandate-search" placeholder="Rechercher un mandat..." oninput="filterMandates()" style="width:100%;padding:0.5rem 0.875rem 0.5rem 2.1rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-family:inherit;color:#0F172A;background:white;outline:none" onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'">
+                            </div>
+                            <select id="mandate-filter" onchange="filterMandates()" style="padding:0.5rem 0.75rem;border:1px solid #E2E8F0;border-radius:8px;font-size:0.82rem;font-family:inherit;color:#475569;background:white;outline:none">
+                                <option value="all">Tous les statuts</option>
+                                <option value="active">En cours</option>
+                                <option value="pending">En attente</option>
+                                <option value="completed">Complété</option>
+                                <option value="paused">En pause</option>
+                            </select>
+                            <!-- Toggle vue cartes / liste -->
+                            <div style="display:flex;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;flex-shrink:0" title="Changer la vue">
+                                <button id="mandate-view-cards" onclick="setMandateView('cards')" title="Vue cartes" style="padding:0.38rem 0.65rem;border:none;background:#1B4F8A;color:white;cursor:pointer;display:flex;align-items:center;transition:background .15s">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+                                </button>
+                                <button id="mandate-view-list" onclick="setMandateView('list')" title="Vue liste" style="padding:0.38rem 0.65rem;border:none;background:transparent;color:#94A3B8;cursor:pointer;display:flex;align-items:center;transition:background .15s">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div><!-- fin portal-mandates-header -->
+                    <!-- ── ZONE SCROLLABLE : liste + panel ── -->
+                    <div class="portal-mandates-scroll">
+                        <div id="portal-mandates-layout" style="display:flex;gap:1rem;align-items:flex-start;padding-top:0.875rem">
+                            <div style="flex:1;min-width:0">
+                                <div id="mandates-list">
+                                    <div style="text-align:center;padding:3rem 1rem;color:#94A3B8">
+                                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto 0.75rem"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
+                                        <div style="font-size:0.9rem;font-weight:600;color:#475569">Aucun mandat actif</div>
+                                        <div style="font-size:0.78rem;margin-top:0.3rem">Vos projets apparaîtront ici</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Panel de détail latéral (desktop) -->
+                            <div id="portal-mandate-side-panel" style="display:none;width:340px;flex-shrink:0;background:white;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;position:sticky;top:0;max-height:calc(100vh - 280px);overflow-y:auto;box-shadow:0 2px 12px rgba(0,0,0,0.06)"></div>
+                        </div>
+                    </div><!-- fin portal-mandates-scroll -->
                 </div>
 
                 <!-- TAB: DEVIS -->
@@ -760,7 +1148,7 @@
 
                 <!-- TAB: DOCUMENTS -->
                 <div class="portal-tab" id="tab-documents">
-                    <div id="documents-list" class="portal-list" style="overflow-y:auto;max-height:calc(100vh - 180px);padding-right:4px">
+                    <div id="documents-list" class="portal-list" style="padding-right:4px">
                         <div class="portal-empty-state">
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>
                             <p>Aucun document disponible pour l'instant.</p>
@@ -864,6 +1252,360 @@
             </div>
         </div>
     </div>
+
+
+    <!-- ═══════════════════════════════════════════════
+         MODAL : NOUVEAU PROJET (multi-étapes)
+    ═══════════════════════════════════════════════ -->
+    <div id="new-project-overlay" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,0.75);z-index:9000;backdrop-filter:blur(4px)" onclick="if(event.target===this)closeNewProjectModal()">
+        <div id="new-project-modal" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:18px;width:100%;max-width:680px;max-height:92vh;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.35);display:flex;flex-direction:column">
+
+            <!-- Header fixe -->
+            <div style="background:linear-gradient(135deg,#1B4F8A,#2E75B6);padding:1.25rem 1.5rem;flex-shrink:0">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between">
+                    <div>
+                        <div style="font-size:1.1rem;font-weight:800;color:white;margin-bottom:2px">Démarrer un nouveau projet</div>
+                        <div id="np-step-label" style="font-size:0.78rem;color:rgba(255,255,255,0.65)">Étape 1 sur 4 — Type de service</div>
+                    </div>
+                    <button onclick="closeNewProjectModal()" style="background:rgba(255,255,255,0.15);border:none;border-radius:8px;color:white;font-size:1.1rem;cursor:pointer;padding:0.3rem 0.6rem;line-height:1;flex-shrink:0">×</button>
+                </div>
+                <!-- Progress bar + étapes -->
+                <div style="margin-top:1rem;display:flex;align-items:center;gap:0">
+                    <div id="np-step-1-dot" class="np-dot np-dot-active" style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px">
+                        <div style="width:26px;height:26px;border-radius:50%;background:white;color:#1B4F8A;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">1</div>
+                        <span style="font-size:0.6rem;color:white;font-weight:700;text-align:center">Service</span>
+                    </div>
+                    <div id="np-line-1" style="flex:1;height:2px;background:rgba(255,255,255,0.3);margin-bottom:14px"></div>
+                    <div id="np-step-2-dot" class="np-dot" style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px">
+                        <div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.25);color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">2</div>
+                        <span style="font-size:0.6rem;color:rgba(255,255,255,0.6);font-weight:600;text-align:center">Détails</span>
+                    </div>
+                    <div id="np-line-2" style="flex:1;height:2px;background:rgba(255,255,255,0.3);margin-bottom:14px"></div>
+                    <div id="np-step-3-dot" class="np-dot" style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px">
+                        <div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.25);color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">3</div>
+                        <span style="font-size:0.6rem;color:rgba(255,255,255,0.6);font-weight:600;text-align:center">Créneau</span>
+                    </div>
+                    <div id="np-line-3" style="flex:1;height:2px;background:rgba(255,255,255,0.3);margin-bottom:14px"></div>
+                    <div id="np-step-4-dot" class="np-dot" style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px">
+                        <div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.25);color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800">4</div>
+                        <span style="font-size:0.6rem;color:rgba(255,255,255,0.6);font-weight:600;text-align:center">Révision</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Corps scrollable -->
+            <div style="overflow-y:auto;flex:1;padding:1.5rem">
+
+                <!-- ── ÉTAPE 1 : Service + Description ── -->
+                <div id="np-step-1" class="np-step">
+                    <!-- Client info -->
+                    <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:0.75rem">
+                        <div id="np-client-avatar" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1B4F8A,#2E75B6);color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0">--</div>
+                        <div style="flex:1;min-width:0">
+                            <div id="np-client-name" style="font-weight:700;font-size:0.88rem;color:#0F172A">Chargement...</div>
+                            <div id="np-client-company" style="font-size:0.72rem;color:#64748B;margin-top:1px"></div>
+                        </div>
+                        <div style="font-size:0.68rem;color:#059669;background:#D1FAE5;padding:2px 9px;border-radius:20px;font-weight:700;flex-shrink:0">Client vérifié ✓</div>
+                    </div>
+
+                    <label style="font-size:0.78rem;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:0.65rem">Quel type de service vous intéresse ? *</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;margin-bottom:1.25rem">
+                        <div class="np-service-card" onclick="npSelectService(this,'plc-support')" style="border:2px solid #E2E8F0;border-radius:12px;padding:1rem;cursor:pointer;transition:all .15s">
+                            <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:5px">
+                                <div style="width:28px;height:28px;border-radius:8px;background:#EBF5FB;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+                                </div>
+                                <div style="font-size:0.88rem;font-weight:700;color:#0F172A">Support PLC</div>
+                            </div>
+                            <div style="font-size:0.72rem;color:#64748B;line-height:1.4">Diagnostic, dépannage et programmation d'automates à distance</div>
+                        </div>
+                        <div class="np-service-card" onclick="npSelectService(this,'audit')" style="border:2px solid #E2E8F0;border-radius:12px;padding:1rem;cursor:pointer;transition:all .15s">
+                            <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:5px">
+                                <div style="width:28px;height:28px;border-radius:8px;background:#EBF5FB;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
+                                </div>
+                                <div style="font-size:0.88rem;font-weight:700;color:#0F172A">Audit technique</div>
+                            </div>
+                            <div style="font-size:0.72rem;color:#64748B;line-height:1.4">Évaluation complète de votre infrastructure d'automatisation</div>
+                        </div>
+                        <div class="np-service-card" onclick="npSelectService(this,'documentation')" style="border:2px solid #E2E8F0;border-radius:12px;padding:1rem;cursor:pointer;transition:all .15s">
+                            <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:5px">
+                                <div style="width:28px;height:28px;border-radius:8px;background:#EBF5FB;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                                </div>
+                                <div style="font-size:0.88rem;font-weight:700;color:#0F172A">Documentation</div>
+                            </div>
+                            <div style="font-size:0.72rem;color:#64748B;line-height:1.4">Schémas, manuels opérateurs et procédures industrielles</div>
+                        </div>
+                        <div class="np-service-card" onclick="npSelectService(this,'refactoring')" style="border:2px solid #E2E8F0;border-radius:12px;padding:1rem;cursor:pointer;transition:all .15s">
+                            <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:5px">
+                                <div style="width:28px;height:28px;border-radius:8px;background:#EBF5FB;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-3.82" /></svg>
+                                </div>
+                                <div style="font-size:0.88rem;font-weight:700;color:#0F172A">Refactorisation PLC</div>
+                            </div>
+                            <div style="font-size:0.72rem;color:#64748B;line-height:1.4">Modernisation et migration de programmes automates</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="np-service" value="">
+
+                    <label style="font-size:0.78rem;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:0.4rem">Décrivez votre besoin *</label>
+                    <textarea id="np-description" rows="4" style="width:100%;padding:0.75rem 1rem;border:1.5px solid #E2E8F0;border-radius:10px;font-size:0.85rem;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;transition:border-color .15s" placeholder="Décrivez votre équipement, le problème rencontré ou votre projet. Plus c'est précis, plus vite nous pourrons vous proposer une solution." onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'"></textarea>
+                </div>
+
+                <!-- ── ÉTAPE 2 : Détails techniques ── -->
+                <div id="np-step-2" class="np-step" style="display:none">
+                    <div style="background:#F8FAFC;border-left:3px solid #1B4F8A;border-radius:0 8px 8px 0;padding:0.75rem 1rem;margin-bottom:1.25rem">
+                        <div style="font-size:0.7rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;margin-bottom:2px">Service sélectionné</div>
+                        <div id="np-service-recap" style="font-size:0.9rem;font-weight:700;color:#0F172A"></div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+                        <div>
+                            <label style="font-size:0.78rem;font-weight:700;color:#334155;display:block;margin-bottom:0.4rem">Marque d'automate</label>
+                            <select id="np-plc" style="width:100%;padding:0.65rem 0.85rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-family:inherit;color:#334155;background:white;outline:none">
+                                <option value="">Sélectionner</option>
+                                <option value="siemens">Siemens</option>
+                                <option value="rockwell">Rockwell Allen-Bradley</option>
+                                <option value="br">B&amp;R Automation</option>
+                                <option value="schneider">Schneider Electric</option>
+                                <option value="mitsubishi">Mitsubishi</option>
+                                <option value="omron">Omron</option>
+                                <option value="other">Autre / Je ne sais pas</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:0.78rem;font-weight:700;color:#334155;display:block;margin-bottom:0.4rem">Niveau d'urgence *</label>
+                            <select id="np-urgency" style="width:100%;padding:0.65rem 0.85rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-family:inherit;color:#334155;background:white;outline:none">
+                                <option value="normal">Normal — dans les prochaines semaines</option>
+                                <option value="urgent">Urgent — cette semaine</option>
+                                <option value="critical">🚨 Critique — production arrêtée</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+                        <div>
+                            <label style="font-size:0.78rem;font-weight:700;color:#334155;display:block;margin-bottom:0.4rem">Budget estimé</label>
+                            <select id="np-budget" style="width:100%;padding:0.65rem 0.85rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-family:inherit;color:#334155;background:white;outline:none">
+                                <option value="">Non défini</option>
+                                <option value="lt2k">Moins de 2 000 $</option>
+                                <option value="2k5k">2 000 $ – 5 000 $</option>
+                                <option value="5k15k">5 000 $ – 15 000 $</option>
+                                <option value="15k50k">15 000 $ – 50 000 $</option>
+                                <option value="gt50k">Plus de 50 000 $</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:0.78rem;font-weight:700;color:#334155;display:block;margin-bottom:0.4rem">Délai souhaité</label>
+                            <select id="np-deadline" style="width:100%;padding:0.65rem 0.85rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-family:inherit;color:#334155;background:white;outline:none">
+                                <option value="">Non défini</option>
+                                <option value="asap">Dès que possible</option>
+                                <option value="1month">Dans 1 mois</option>
+                                <option value="3months">Dans 3 mois</option>
+                                <option value="6months">Dans 6 mois</option>
+                                <option value="flexible">Flexible</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size:0.78rem;font-weight:700;color:#334155;display:block;margin-bottom:0.4rem">Informations complémentaires</label>
+                        <textarea id="np-extra" rows="3" style="width:100%;padding:0.65rem 0.85rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;transition:border-color .15s" placeholder="Numéro de modèle, version logicielle, contraintes particulières..." onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'"></textarea>
+                    </div>
+                </div>
+
+                <!-- ── ÉTAPE 3 : Choisir un créneau ── -->
+                <div id="np-step-3" class="np-step" style="display:none">
+                    <div style="margin-bottom:1rem">
+                        <div style="font-size:0.88rem;font-weight:700;color:#0F172A;margin-bottom:4px">Réservez votre appel de qualification</div>
+                        <div style="font-size:0.78rem;color:#64748B">30 min · Gratuit · Choisissez selon vos disponibilités</div>
+                    </div>
+
+                    <!-- Chargement -->
+                    <div id="np-booking-loading" style="text-align:center;padding:2rem;color:#94A3B8;font-size:0.85rem">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-right:6px;animation:np-spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                        Chargement des disponibilités...
+                    </div>
+
+                    <!-- Aucun créneau -->
+                    <div id="np-booking-empty" style="display:none;background:#FEF3C7;border:1px solid #FDE68A;border-radius:10px;padding:1rem;text-align:center">
+                        <div style="font-size:0.85rem;font-weight:600;color:#92400E;margin-bottom:4px">Aucun créneau disponible</div>
+                        <div style="font-size:0.78rem;color:#92400E">VNK vous contactera dans les 24h pour fixer l'appel.</div>
+                        <div style="font-size:0.72rem;color:#78350F;margin-top:6px">Vous pouvez quand même envoyer votre demande →</div>
+                    </div>
+
+                    <!-- Calendrier -->
+                    <div id="np-booking-slots" style="display:none">
+                        <!-- Navigation mois -->
+                        <div style="display:flex;align-items:center;justify-content:space-between;background:#F8FAFC;border-radius:10px;padding:0.6rem 0.85rem;margin-bottom:0.75rem">
+                            <button onclick="npBookingNavMonth(-1)" style="background:white;border:1.5px solid #E2E8F0;border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-size:0.85rem;color:#64748B;font-family:inherit">←</button>
+                            <div id="np-booking-month-label" style="font-size:0.85rem;font-weight:700;color:#0F172A"></div>
+                            <button onclick="npBookingNavMonth(1)" style="background:white;border:1.5px solid #E2E8F0;border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-size:0.85rem;color:#64748B;font-family:inherit">→</button>
+                        </div>
+
+                        <!-- En-têtes jours -->
+                        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">
+                            <div style="text-align:center;font-size:0.62rem;font-weight:700;color:#94A3B8;padding:2px">L</div>
+                            <div style="text-align:center;font-size:0.62rem;font-weight:700;color:#94A3B8;padding:2px">M</div>
+                            <div style="text-align:center;font-size:0.62rem;font-weight:700;color:#94A3B8;padding:2px">M</div>
+                            <div style="text-align:center;font-size:0.62rem;font-weight:700;color:#94A3B8;padding:2px">J</div>
+                            <div style="text-align:center;font-size:0.62rem;font-weight:700;color:#94A3B8;padding:2px">V</div>
+                            <div style="text-align:center;font-size:0.62rem;font-weight:700;color:#94A3B8;padding:2px">S</div>
+                            <div style="text-align:center;font-size:0.62rem;font-weight:700;color:#94A3B8;padding:2px">D</div>
+                        </div>
+
+                        <!-- Grille jours du mois -->
+                        <div id="np-booking-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:0.75rem"></div>
+
+                        <!-- Créneaux du jour sélectionné -->
+                        <div id="np-booking-day-slots" style="display:none;border-top:1px solid #E2E8F0;padding-top:0.65rem">
+                            <div id="np-booking-day-label" style="font-size:0.72rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.5rem"></div>
+                            <div id="np-booking-times" style="display:flex;flex-wrap:wrap;gap:0.4rem"></div>
+                        </div>
+                    </div>
+
+                    <!-- Créneau sélectionné (confirmation visuelle) -->
+                    <div id="np-slot-selected-badge" style="display:none;margin-top:0.75rem;background:#EBF5FB;border:1.5px solid #1B4F8A22;border-radius:10px;padding:0.7rem 1rem;display:flex;align-items:center;gap:0.65rem">
+                        <div style="width:28px;height:28px;border-radius:50%;background:#1B4F8A;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        </div>
+                        <div>
+                            <div style="font-size:0.78rem;font-weight:700;color:#0F172A" id="np-slot-selected-text"></div>
+                            <div style="font-size:0.68rem;color:#64748B">Créneau sélectionné · 30 min</div>
+                        </div>
+                        <button onclick="npClearSlotSelection()" style="margin-left:auto;background:none;border:none;color:#94A3B8;cursor:pointer;font-size:0.8rem;padding:0">✕</button>
+                    </div>
+
+                    <div style="margin-top:0.75rem;font-size:0.75rem;color:#94A3B8;text-align:center">
+                        Vous pouvez passer cette étape — VNK vous contactera pour fixer l'appel.
+                    </div>
+                </div>
+
+                <!-- ── ÉTAPE 4 : Révision + Envoi ── -->
+                <div id="np-step-4" class="np-step" style="display:none">
+                    <div style="font-size:0.88rem;font-weight:700;color:#0F172A;margin-bottom:0.85rem">Vérifiez votre demande avant envoi</div>
+
+                    <!-- Résumé complet -->
+                    <div id="np-summary" style="background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;padding:1.1rem 1.25rem;font-size:0.85rem;line-height:1.8;margin-bottom:0.85rem"></div>
+
+                    <!-- Créneau réservé -->
+                    <div id="np-summary-slot" style="display:none;background:#EBF5FB;border:1.5px solid #1B4F8A22;border-radius:10px;padding:0.75rem 1rem;margin-bottom:0.85rem;display:flex;align-items:center;gap:0.65rem">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                        <div>
+                            <div style="font-size:0.78rem;font-weight:700;color:#1B4F8A">Appel de qualification réservé</div>
+                            <div id="np-summary-slot-text" style="font-size:0.75rem;color:#334155;margin-top:1px"></div>
+                        </div>
+                    </div>
+
+                    <div id="np-summary-no-slot" style="background:#FEF9EC;border:1px solid #FDE68A;border-radius:8px;padding:0.65rem 0.85rem;font-size:0.78rem;color:#92400E;margin-bottom:0.85rem">
+                        Aucun créneau sélectionné — VNK vous contactera dans les 24h.
+                    </div>
+                </div>
+
+
+                <!-- ── ÉTAPE 5 : Envoyé + confirmation créneau ── -->
+                <div id="np-step-5" class="np-step" style="display:none">
+                    <div style="text-align:center;padding:1.5rem 0.5rem">
+                        <div style="width:60px;height:60px;border-radius:50%;background:#D1FAE5;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        </div>
+                        <div style="font-size:1rem;font-weight:800;color:#0F172A;margin-bottom:0.35rem">Demande envoyée avec succès !</div>
+                        <div style="font-size:0.82rem;color:#64748B;margin-bottom:1.5rem">L'équipe VNK vous répondra dans les 24h ouvrables.</div>
+
+                        <!-- Confirmation créneau si sélectionné -->
+                        <div id="np-sent-slot" style="display:none;background:#EBF5FB;border:1.5px solid #1B4F8A22;border-radius:12px;padding:1rem;margin-bottom:1.25rem;text-align:left">
+                            <div style="font-size:0.7rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.35rem">
+                                Appel de qualification réservé
+                            </div>
+                            <div id="np-sent-slot-text" style="font-size:0.9rem;font-weight:700;color:#0F172A;margin-bottom:2px"></div>
+                            <div style="font-size:0.75rem;color:#64748B">Le lien de réunion vous sera envoyé dans votre messagerie VNK.</div>
+                        </div>
+
+                        <!-- Si pas de créneau -->
+                        <div id="np-sent-no-slot" style="display:none;background:#FEF9EC;border:1px solid #FDE68A;border-radius:10px;padding:0.75rem;margin-bottom:1.25rem;font-size:0.82rem;color:#92400E;text-align:left">
+                            Aucun créneau réservé — VNK vous contactera pour fixer l'appel de qualification.
+                        </div>
+
+                        <!-- Prochaines étapes -->
+                        <div style="background:#F8FAFC;border-radius:12px;padding:1.1rem;text-align:left;margin-bottom:1.25rem">
+                            <div style="font-size:0.72rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.65rem">Prochaines étapes</div>
+                            <div style="display:flex;flex-direction:column;gap:0.55rem">
+                                <div style="display:flex;gap:0.65rem;align-items:flex-start">
+                                    <div style="width:20px;height:20px;border-radius:50%;background:#1B4F8A;color:white;font-size:0.6rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div>
+                                    <div><div style="font-size:0.82rem;font-weight:600;color:#0F172A">Appel de qualification — 30 min</div><div style="font-size:0.72rem;color:#64748B">Un technicien VNK analyse votre besoin précisément</div></div>
+                                </div>
+                                <div style="display:flex;gap:0.65rem;align-items:flex-start">
+                                    <div style="width:20px;height:20px;border-radius:50%;background:#1B4F8A;color:white;font-size:0.6rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div>
+                                    <div><div style="font-size:0.82rem;font-weight:600;color:#0F172A">Devis formel sous 48h</div><div style="font-size:0.72rem;color:#64748B">Proposition avec périmètre, délais et tarifs</div></div>
+                                </div>
+                                <div style="display:flex;gap:0.65rem;align-items:flex-start">
+                                    <div style="width:20px;height:20px;border-radius:50%;background:#1B4F8A;color:white;font-size:0.6rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</div>
+                                    <div><div style="font-size:0.82rem;font-weight:600;color:#0F172A">Signature et démarrage</div><div style="font-size:0.72rem;color:#64748B">Contrat électronique et début immédiat</div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="closeNewProjectModal()" style="padding:0.7rem 2rem;border:none;border-radius:8px;background:#1B4F8A;color:white;font-size:0.875rem;font-weight:700;cursor:pointer;font-family:inherit">Fermer</button>
+                    </div>
+                </div>
+
+                <!-- Message d'erreur global -->
+                <div id="np-feedback" style="display:none;padding:0.75rem 1rem;border-radius:8px;font-size:0.85rem;margin-top:0.75rem"></div>
+            </div>
+
+            <!-- Footer fixe avec boutons navigation -->
+            <div id="np-footer" style="padding:1rem 1.5rem;border-top:1px solid #F1F5F9;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:white">
+                <button id="np-btn-back" onclick="npGoStep(-1)" style="padding:0.65rem 1.25rem;border:1.5px solid #E2E8F0;border-radius:8px;background:white;color:#64748B;font-size:0.875rem;font-weight:600;cursor:pointer;font-family:inherit;display:none">← Retour</button>
+                <div style="flex:1"></div>
+                <button id="np-btn-next" onclick="npGoStep(1)" style="padding:0.65rem 1.5rem;border:none;border-radius:8px;background:#1B4F8A;color:white;font-size:0.875rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:0.5rem">
+                    Suivant →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .np-service-card:hover {
+            border-color: #1B4F8A !important;
+            background: #EBF5FB;
+        }
+
+        .np-service-card.selected {
+            border-color: #1B4F8A !important;
+            background: #EBF5FB;
+        }
+
+            .np-service-card.selected > div:first-child > div:last-child {
+                color: #1B4F8A;
+            }
+
+        .np-step {
+            animation: npFadeIn 0.2s ease;
+        }
+
+        @keyframes np-spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes npFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 
 </body>
 </html>
