@@ -11,17 +11,55 @@
     "title": "PLC, SCADA & HMI Solutions for Industry",
     "subtitle": "Remote technical support, audits, documentation and modernization of automated systems for industrial companies in Quebec.",
     "cta_primary": "Book a Consultation",
-    "cta_secondary": "View Services"
+    "cta_secondary": "View Services",
+    "title1": "PLC, SCADA",
+    "title2": "& HMI Solutions",
+    "title3": "for Industry",
+    "slogan": "VALUE · NETWORK · KNOWLEDGE",
+    "cta": {
+      "primary": "Book a Consultation",
+      "secondary": "View Services"
+    },
+    "stats": {
+      "brands": "PLC Brands",
+      "services": "Services",
+      "market": "B2B Industrial"
+    }
   },
   "services": {
     "title": "Our Services",
     "plc": {
       "title": "Remote PLC Support",
-      "price": "$120–150 CAD/h"
+      "price": "$120–150 CAD/h",
+      "rate": "Hourly rate",
+      "monthly": "Monthly retainer",
+      "pack": "10-hour pack",
+      "pack_note": "Prepaid",
+      "priority": "Priority plan",
+      "priority_note": "Guaranteed 2-hr response",
+      "lead": "Remote diagnostic and programming support for your PLCs.",
+      "desc": "Rapid remote interventions to keep your production running.",
+      "inc1": "Remote diagnosis via VPN",
+      "inc2": "PLC program modification",
+      "inc3": "Alarm analysis",
+      "inc4": "Performance optimization",
+      "inc5": "Intervention report"
     },
     "audit": {
       "title": "Technical Audit",
-      "price": "$1,500–4,000 CAD"
+      "price": "$1,500–4,000 CAD",
+      "small": "Small system audit",
+      "small_note": "1–5 PLCs",
+      "full": "Complete plant audit",
+      "full_note": "5+ PLCs",
+      "lead": "Complete assessment of your automated systems.",
+      "desc": "Identify risks, gaps and improvement opportunities in your systems.",
+      "inc1": "On-site or remote assessment",
+      "inc2": "Detailed technical report",
+      "inc3": "Risk and gap analysis",
+      "inc4": "Improvement recommendations",
+      "inc5": "Executive summary",
+      "inc6": "Follow-up call included"
     },
     "documentation": {
       "title": "Industrial Documentation",
@@ -30,9 +68,230 @@
     "refactoring": {
       "title": "PLC Refactoring",
       "price": "$3,000–50,000 CAD"
+    },
+    "page_title": "Our Services",
+    "page_subtitle": "Complete industrial automation solutions",
+    "subtitle": "Technical expertise at the service of industry",
+    "tag": {
+      "code": "Code",
+      "legacy": "Legacy",
+      "maintenance": "Maintenance",
+      "operator": "Operator",
+      "report": "Report"
+    },
+    "all": "All Services",
+    "includes": "Includes",
+    "pricing": "Pricing",
+    "brands": "Supported Brands",
+    "learn_more": "Learn More",
+    "cta": "Request a Quote",
+    "doc": {
+      "title": "Industrial Documentation",
+      "price": "$800–5,000 CAD",
+      "basic": "Basic documentation",
+      "complete": "Complete documentation",
+      "lead": "Professional documentation of your automated systems.",
+      "desc": "Clear, structured documentation for operations and maintenance.",
+      "inc1": "PLC program documentation",
+      "inc2": "Process flow diagrams",
+      "inc3": "I/O and wiring documentation",
+      "inc4": "Operator manuals",
+      "inc5": "Maintenance procedures",
+      "inc6": "Version-controlled delivery"
+    },
+    "refactor": {
+      "title": "PLC Refactoring",
+      "price": "$3,000–50,000 CAD",
+      "small": "System migration",
+      "new": "New development",
+      "full": "Full modernization",
+      "lead": "Modernize or migrate your legacy PLC systems.",
+      "desc": "Transform legacy code into maintainable, documented systems.",
+      "inc1": "Legacy code analysis",
+      "inc2": "Migration planning",
+      "inc3": "New structured programming",
+      "inc4": "Testing and validation",
+      "inc5": "Full documentation",
+      "inc6": "Training and knowledge transfer"
     }
   },
   "footer": {
-    "copyright": "© 2026 VNK Automatisation Inc. All rights reserved."
+    "copyright": "© 2026 VNK Automatisation Inc. All rights reserved.",
+    "company": "VNK Automatisation Inc.",
+    "desc": "Industrial automation experts — PLC, SCADA & HMI.",
+    "services": "Services",
+    "contact": "Contact"
+  },
+  "portal": {
+    "login": {
+      "remember": "Remember me",
+      "forgot": "Forgot your password?"
+    }
+  },
+  "about": {
+    "badge": {
+      "title": "About",
+      "sub": "Our story"
+    },
+    "page_title": "About VNK Automatisation",
+    "page_subtitle": "Industrial automation expertise at the service of Quebec industry",
+    "tag": "About",
+    "founder_tag": "Founder",
+    "skills_tag": "Skills",
+    "commitment_tag": "Our commitments",
+    "founder": {
+      "title": "Yan Verone Kengne",
+      "role": "Founder & Industrial Automation Expert",
+      "card_role": "Founder & President",
+      "desc1": "10+ years of experience in industrial automation, PLC programming and SCADA systems.",
+      "desc2": "Committed to delivering reliable, documented and secure solutions for Quebec industry."
+    },
+    "founded": "Founded",
+    "founded_date": "2024",
+    "location": "Québec, QC",
+    "market": "B2B Industrial",
+    "market_label": "Market",
+    "sector": "Automation & Controls",
+    "sector_label": "Sector",
+    "value": {
+      "desc": "Delivering measurable value on every mandate."
+    },
+    "network": {
+      "desc": "A network of qualified specialists for complex projects."
+    },
+    "knowledge": {
+      "desc": "Documented expertise transferred to your teams."
+    },
+    "protocols_title": "Supported Protocols",
+    "safety_title": "Safety Standards",
+    "expertise": {
+      "title": "Technical Expertise",
+      "subtitle": "Technologies and standards mastered"
+    },
+    "commitment": {
+      "title": "Our Commitments",
+      "subtitle": "What sets us apart",
+      "responsive": "Rapid Response",
+      "responsive_desc": "Response within 4 hours, intervention within 24–48 hours.",
+      "report": "Intervention Report",
+      "report_desc": "Detailed report after each mandate.",
+      "contract": "Clear Contract",
+      "contract_desc": "Transparent pricing, no surprises.",
+      "confidential": "Confidentiality",
+      "confidential_desc": "NDA available on request."
+    },
+    "contact_btn": "Contact Us"
+  },
+  "brands": {
+    "on_request": "On request",
+    "other": "Other brands on request"
+  },
+  "cta": {
+    "title": "Ready to optimize your systems?",
+    "subtitle": "Contact us for a free consultation.",
+    "button": "Book a Consultation",
+    "view_services": "View Services",
+    "view_prices": "View Prices",
+    "view_about": "About Us"
+  },
+  "why": {
+    "tag": "Why VNK",
+    "title": "Why Choose VNK Automatisation?",
+    "badge": {
+      "title": "Why VNK",
+      "sub": "Our differentiators"
+    },
+    "intro": "We combine technical expertise, rigorous documentation and rapid availability to support your industrial projects.",
+    "remote": {
+      "title": "Remote Expertise",
+      "desc": "Secure interventions without travel costs."
+    },
+    "specialized": {
+      "title": "Specialized",
+      "desc": "Focus on PLC/SCADA/HMI — nothing else."
+    },
+    "documented": {
+      "title": "Documented",
+      "desc": "Every intervention is documented and tracked."
+    },
+    "structured": {
+      "title": "Structured",
+      "desc": "Contracts, reports and clear deliverables."
+    },
+    "learn_more": "Learn More"
+  },
+  "process": {
+    "title": "How It Works",
+    "subtitle": "A clear and structured process",
+    "step5": "Delivery & Report",
+    "step5_desc": "Documented deliverables and post-mandate follow-up."
+  },
+  "stats": {
+    "brands": "Supported PLC Brands",
+    "documented": "Documented Interventions",
+    "plc_rate": "Remote Resolution Rate",
+    "response": "Response Time"
+  },
+  "testimonials": {
+    "tag": "Testimonials",
+    "title": "What Our Clients Say",
+    "coming_soon": "Testimonials coming soon.",
+    "1": {
+      "name": "Client 1",
+      "role": "Plant Manager",
+      "text": "Excellent service, rapid and professional."
+    },
+    "2": {
+      "name": "Client 2",
+      "role": "Maintenance Director",
+      "text": "Quality documentation and reliable expertise."
+    },
+    "3": {
+      "name": "Client 3",
+      "role": "Operations Manager",
+      "text": "Fast response and structured approach."
+    }
+  },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "Get in touch for a free consultation",
+    "form": {
+      "title": "Send a Message",
+      "name": "Full Name",
+      "email": "Email Address",
+      "phone": "Phone",
+      "company": "Company",
+      "service": "Service Needed",
+      "select": "Select a service...",
+      "plc_brand": "PLC Brand",
+      "other": "Other / Not sure",
+      "message": "Message",
+      "desc": "Describe your project...",
+      "submit": "Send Message"
+    },
+    "info": {
+      "title": "Contact Information",
+      "email": "Email",
+      "location": "Location",
+      "remote": "Remote interventions available across Canada",
+      "response": "Response Time",
+      "response_time": "Within 4 hours on business days",
+      "company": "VNK Automatisation Inc."
+    },
+    "process": {
+      "title": "Our Process",
+      "step1": "Initial Contact",
+      "step1_desc": "You send us your request.",
+      "step2": "Qualification Call",
+      "step2_desc": "30-minute free call to assess your needs.",
+      "step3": "Quote",
+      "step3_desc": "Detailed quote within 48 hours.",
+      "step4": "Contract & Start",
+      "step4_desc": "Signed contract and work begins."
+    },
+    "calendly": {
+      "title": "Book a Consultation",
+      "desc": "Schedule a free 30-minute qualification call."
+    }
   }
 }
