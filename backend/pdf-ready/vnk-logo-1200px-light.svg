@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="200" viewBox="0 0 1200 200">
+  <polygon points="100,12 180,55 180,145 100,188 20,145 20,55" fill="#1B4F8A"/>
+  <polygon points="100,12 180,55 180,145 100,188 20,145 20,55" fill="none" stroke="#2E86AB" stroke-width="4"/>
+  <text x="100" y="116" text-anchor="middle" font-size="44" font-weight="800" fill="white" font-family="Arial,sans-serif" letter-spacing="2">VNK</text>
+  <text x="210" y="98" font-size="58" font-weight="700" fill="#1B4F8A" font-family="Arial,sans-serif">Automatisation Inc.</text>
+  <text x="212" y="138" font-size="22" fill="#64748B" font-family="Arial,sans-serif" letter-spacing="5">VALUE · NETWORK · KNOWLEDGE</text>
+</svg>
