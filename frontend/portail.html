@@ -784,309 +784,363 @@
                 <!-- TAB: BOOKING ─────────────────────────────────────────── -->
                 <div class="portal-tab" id="tab-booking">
                     <style>
-                        /* ── Booking page styles ───────────────────── */
-                        .bk-appt-card {
-                            background: white;
-                            border-radius: 12px;
-                            border: 1.5px solid #E2E8F0;
-                            padding: 0.85rem 1rem;
-                            display: flex;
-                            align-items: center;
-                            gap: 0.85rem;
-                            transition: box-shadow .15s,border-color .15s;
-                            cursor: default
+                        #tab-booking {
+                            display: none;
+                            flex-direction: column;
+                            flex: 1;
+                            min-height: 0;
+                            overflow: hidden;
                         }
 
-                            .bk-appt-card:hover {
-                                box-shadow: 0 3px 12px rgba(0,0,0,.08);
-                                border-color: #CBD5E0
+                            #tab-booking.active {
+                                display: flex;
                             }
 
-                            .bk-appt-card.confirmed {
-                                border-left: 4px solid #10B981
+                            #tab-booking .bk-wrap {
+                                display: flex;
+                                flex: 1;
+                                min-height: 0;
+                                overflow: hidden;
                             }
 
-                            .bk-appt-card.cancelled {
-                                border-left: 4px solid #EF4444;
-                                opacity: .7
+                            #tab-booking .bk-cal-col {
+                                flex: 1;
+                                display: flex;
+                                flex-direction: column;
+                                overflow: hidden;
+                                min-width: 0;
+                                max-width: 100%;
+                                background: #fff;
                             }
 
-                            .bk-appt-card.pending {
-                                border-left: 4px solid #F59E0B
+                            #tab-booking .bk-panel {
+                                width: 360px;
+                                flex-shrink: 0;
+                                border-left: 1px solid #E2E8F0;
+                                display: flex;
+                                flex-direction: column;
+                                overflow: hidden;
+                                background: #FAFCFF;
                             }
 
-                        .bk-slot-btn {
-                            padding: .55rem .5rem;
-                            border: 1.5px solid #E2E8F0;
-                            border-radius: 9px;
-                            background: #FAFAFA;
-                            color: #334155;
-                            font-size: .82rem;
-                            font-weight: 700;
-                            cursor: pointer;
-                            font-family: inherit;
-                            text-align: center;
-                            transition: all .12s;
-                            line-height: 1.2
-                        }
-
-                            .bk-slot-btn:hover {
-                                border-color: #1B4F8A;
-                                background: #EBF5FB;
-                                color: #1B4F8A
+                            #tab-booking .bk-grid {
+                                display: grid;
+                                grid-template-columns: repeat(7,1fr);
+                                padding: 0 1.5rem .5rem;
+                                gap: 3px;
                             }
 
-                            .bk-slot-btn.selected {
-                                border-color: #1B4F8A;
-                                background: #1B4F8A;
-                                color: white
+                            #tab-booking .bk-day {
+                                height: 46px;
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                justify-content: center;
+                                border-radius: 8px;
+                                font-size: .85rem;
+                                font-weight: 500;
+                                cursor: default;
+                                transition: all .12s;
+                                color: #D1D5DB;
+                                position: relative;
                             }
 
-                        .bk-cal-day {
-                            width: 36px;
-                            height: 36px;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            border-radius: 50%;
-                            font-size: .82rem;
-                            transition: all .12s;
-                            margin: 2px auto;
-                            cursor: default
-                        }
-
-                            .bk-cal-day.available {
-                                background: #1B4F8A;
-                                color: white;
-                                font-weight: 700;
-                                cursor: pointer;
-                                box-shadow: 0 1px 4px rgba(27,79,138,.25)
-                            }
-
-                                .bk-cal-day.available:hover {
-                                    background: #2563EB;
-                                    transform: scale(1.08)
+                                #tab-booking .bk-day.available {
+                                    color: #0F172A;
+                                    font-weight: 600;
+                                    cursor: pointer;
+                                    background: #F8FAFC;
+                                    border: 1.5px solid #E2E8F0;
                                 }
 
-                            .bk-cal-day.today {
-                                border: 2px solid #1B4F8A;
-                                color: #1B4F8A;
-                                font-weight: 700
+                                    #tab-booking .bk-day.available:hover {
+                                        background: #EFF6FF;
+                                        border-color: #93C5FD;
+                                        transform: translateY(-1px);
+                                        box-shadow: 0 2px 8px rgba(27,79,138,.12);
+                                    }
+
+                                    #tab-booking .bk-day.available .bk-dot {
+                                        width: 5px;
+                                        height: 5px;
+                                        border-radius: 50%;
+                                        background: #1B4F8A;
+                                        position: absolute;
+                                        bottom: 5px;
+                                    }
+
+                                #tab-booking .bk-day.selected {
+                                    background: #1B4F8A !important;
+                                    color: white !important;
+                                    border-color: #1B4F8A !important;
+                                    font-weight: 700;
+                                    box-shadow: 0 3px 12px rgba(27,79,138,.3);
+                                    transform: translateY(-1px);
+                                }
+
+                                    #tab-booking .bk-day.selected .bk-dot {
+                                        background: rgba(255,255,255,.6);
+                                    }
+
+                                #tab-booking .bk-day.today {
+                                    border: 2px solid #1B4F8A;
+                                    color: #1B4F8A;
+                                    font-weight: 700;
+                                }
+
+                                    #tab-booking .bk-day.today.available {
+                                        background: #EFF6FF;
+                                    }
+
+                                #tab-booking .bk-day.past {
+                                    color: #E5E7EB;
+                                }
+
+                                #tab-booking .bk-day.other-month {
+                                    color: #E5E7EB;
+                                }
+
+                            #tab-booking .bk-slot {
+                                padding: .55rem .4rem;
+                                border: 1.5px solid #E2E8F0;
+                                border-radius: 8px;
+                                background: white;
+                                color: #374151;
+                                font-size: .82rem;
+                                font-weight: 600;
+                                cursor: pointer;
+                                font-family: inherit;
+                                text-align: center;
+                                transition: all .12s;
                             }
 
-                            .bk-cal-day.past {
-                                color: #D1D5DB
+                                #tab-booking .bk-slot:hover {
+                                    border-color: #93C5FD;
+                                    background: #EFF6FF;
+                                    color: #1B4F8A;
+                                }
+
+                                #tab-booking .bk-slot.selected {
+                                    border-color: #1B4F8A;
+                                    background: #1B4F8A;
+                                    color: white;
+                                }
+
+                            #tab-booking .bk-fmt {
+                                flex: 1;
+                                padding: .55rem .4rem;
+                                border: 1.5px solid #E2E8F0;
+                                border-radius: 8px;
+                                background: white;
+                                color: #64748B;
+                                font-size: .78rem;
+                                font-weight: 600;
+                                cursor: pointer;
+                                font-family: inherit;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                gap: .35rem;
+                                transition: all .12s;
                             }
 
-                            .bk-cal-day.other {
-                                color: #94A3B8
+                                #tab-booking .bk-fmt.active {
+                                    border-color: #1B4F8A;
+                                    background: #EFF6FF;
+                                    color: #1B4F8A;
+                                    font-weight: 700;
+                                }
+
+                            #tab-booking .bk-filt {
+                                padding: .2rem .6rem;
+                                border: 1.5px solid #E2E8F0;
+                                border-radius: 20px;
+                                background: white;
+                                color: #64748B;
+                                font-size: .68rem;
+                                font-weight: 600;
+                                cursor: pointer;
+                                font-family: inherit;
+                                transition: all .1s;
                             }
 
-                        .bk-filter-btn {
-                            padding: .3rem .85rem;
-                            border: 1.5px solid #E2E8F0;
-                            border-radius: 20px;
-                            background: white;
-                            color: #64748B;
-                            font-size: .75rem;
-                            font-weight: 600;
-                            cursor: pointer;
-                            font-family: inherit;
-                            transition: all .12s
-                        }
-
-                            .bk-filter-btn.active {
-                                background: #1B4F8A;
-                                border-color: #1B4F8A;
-                                color: white;
-                                font-weight: 700
-                            }
-
-                        .bk-meet-btn {
-                            flex: 1;
-                            padding: .55rem;
-                            border: 1.5px solid #E2E8F0;
-                            border-radius: 9px;
-                            background: #FAFAFA;
-                            color: #64748B;
-                            font-size: .78rem;
-                            font-weight: 600;
-                            cursor: pointer;
-                            font-family: inherit;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            gap: .4rem;
-                            transition: all .12s
-                        }
-
-                            .bk-meet-btn.active {
-                                border-color: #1B4F8A;
-                                background: #EBF5FB;
-                                color: #1B4F8A;
-                                font-weight: 700
-                            }
+                                #tab-booking .bk-filt.active {
+                                    background: #1B4F8A;
+                                    border-color: #1B4F8A;
+                                    color: white;
+                                }
                     </style>
 
-                    <!-- ══ Section 1: Mes rendez-vous ══════════════════════════════════════ -->
-                    <div id="booking-my-appts-section" style="display:none;margin-bottom:2rem">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;flex-wrap:wrap;gap:.5rem">
-                            <div>
-                                <div style="font-size:.95rem;font-weight:800;color:#0F172A">Mes rendez-vous</div>
-                                <div style="font-size:.75rem;color:#94A3B8;margin-top:1px">Cliquez pour voir les détails</div>
-                            </div>
-                            <div style="display:flex;gap:.35rem">
-                                <button onclick="bkFilterAppts('all',this)" class="bk-filter-btn active">Tous</button>
-                                <button onclick="bkFilterAppts('confirmed',this)" class="bk-filter-btn">Confirmés</button>
-                                <button onclick="bkFilterAppts('cancelled',this)" class="bk-filter-btn">Annulés</button>
-                            </div>
-                        </div>
-                        <div id="booking-my-appts-list" style="display:flex;flex-direction:column;gap:.45rem"></div>
-                        <div id="booking-appts-pager" style="margin-top:.65rem;display:flex;align-items:center;justify-content:space-between;font-size:.78rem;color:#94A3B8"></div>
-                    </div>
+                    <div class="bk-wrap">
 
-                    <!-- ══ Divider ══════════════════════════════════════════════════════════ -->
-                    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem">
-                        <div style="flex:1;height:1px;background:#E2E8F0"></div>
-                        <span style="font-size:.72rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">+ Réserver un appel de qualification</span>
-                        <div style="flex:1;height:1px;background:#E2E8F0"></div>
-                    </div>
+                        <!-- ══ GAUCHE : Calendrier ══════════════════════════════════ -->
+                        <div class="bk-cal-col">
 
-                    <!-- ══ Section 2: Calendrier de réservation ═════════════════════════════ -->
-                    <div style="background:white;border:1.5px solid #E2E8F0;border-radius:16px;overflow:hidden;display:grid;grid-template-columns:200px 1fr 300px;min-height:460px;box-shadow:0 1px 4px rgba(0,0,0,.05)">
-
-                        <!-- Col 1: Info réunion -->
-                        <div style="background:#F8FAFC;border-right:1px solid #E2E8F0;padding:1.5rem 1.25rem;display:flex;flex-direction:column;gap:.85rem">
-                            <div style="width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#1B4F8A,#2563EB);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                                <svg width="20" height="20" viewBox="0 0 40 40" fill="none"><polygon points="20,4 36,32 4,32" fill="white" /></svg>
-                            </div>
-                            <div>
-                                <div style="font-size:.68rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">VNK Automatisation</div>
-                                <div style="font-size:.95rem;font-weight:800;color:#0F172A;line-height:1.3">Appel de qualification</div>
-                            </div>
-                            <div style="display:flex;flex-direction:column;gap:.45rem">
-                                <div style="display:flex;align-items:center;gap:.45rem">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                                    <span style="font-size:.8rem;color:#334155;font-weight:600">30 minutes</span>
+                            <!-- Info service + étapes -->
+                            <div style="padding:1rem 2rem .75rem;border-bottom:1px solid #F1F5F9;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:1rem">
+                                <div style="display:flex;align-items:center;gap:.75rem">
+                                    <div style="width:40px;height:40px;border-radius:10px;background:#0F172A;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                                    </div>
+                                    <div>
+                                        <div style="font-size:.95rem;font-weight:700;color:#0F172A">Appel de qualification</div>
+                                        <div style="display:flex;align-items:center;gap:.75rem;margin-top:2px">
+                                            <span style="font-size:.72rem;color:#64748B;font-weight:500">30 min</span>
+                                            <span style="font-size:.72rem;color:#94A3B8">&middot;</span>
+                                            <span style="font-size:.72rem;color:#64748B;font-weight:500">Vidéo ou téléphone</span>
+                                            <span style="font-size:.72rem;color:#94A3B8">&middot;</span>
+                                            <span style="font-size:.72rem;color:#059669;font-weight:600">Gratuit</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div style="display:flex;align-items:center;gap:.45rem">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.82v6.36a1 1 0 0 1-1.447.889L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z" /></svg>
-                                    <span style="font-size:.8rem;color:#334155;font-weight:600">Vidéo ou téléphone</span>
-                                </div>
-                                <div style="display:flex;align-items:center;gap:.45rem">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12" /></svg>
-                                    <span style="font-size:.8rem;color:#059669;font-weight:700">Gratuit</span>
+                                <!-- Étapes -->
+                                <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+                                    <div id="bk-step1-dot" style="display:flex;align-items:center;gap:.3rem">
+                                        <div style="width:20px;height:20px;border-radius:50%;background:#1B4F8A;color:white;font-size:.6rem;font-weight:800;display:flex;align-items:center;justify-content:center">1</div>
+                                        <span style="font-size:.7rem;font-weight:700;color:#1B4F8A">Date</span>
+                                    </div>
+                                    <div style="width:20px;height:1px;background:#E2E8F0"></div>
+                                    <div id="bk-step2-wrap" style="display:flex;align-items:center;gap:.3rem;opacity:.35">
+                                        <div class="bk-step-dot2" style="width:20px;height:20px;border-radius:50%;background:#94A3B8;color:white;font-size:.6rem;font-weight:800;display:flex;align-items:center;justify-content:center">2</div>
+                                        <span style="font-size:.7rem;font-weight:600;color:#64748B">Créneau</span>
+                                    </div>
+                                    <div style="width:20px;height:1px;background:#E2E8F0"></div>
+                                    <div id="bk-step3-wrap" style="display:flex;align-items:center;gap:.3rem;opacity:.35">
+                                        <div class="bk-step-dot3" style="width:20px;height:20px;border-radius:50%;background:#94A3B8;color:white;font-size:.6rem;font-weight:800;display:flex;align-items:center;justify-content:center">3</div>
+                                        <span style="font-size:.7rem;font-weight:600;color:#64748B">Confirmer</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div style="border-top:1px solid #E2E8F0;padding-top:.75rem">
-                                <div style="font-size:.7rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem">À propos</div>
-                                <div style="font-size:.78rem;color:#64748B;line-height:1.55">Évaluation de votre besoin d'automatisation — technologies PLC, SCADA et prochaines étapes.</div>
-                            </div>
-                            <!-- Badge créneau sélectionné -->
-                            <div id="booking-selected-info" style="display:none;border-top:1px solid #E2E8F0;padding-top:.75rem;margin-top:auto">
-                                <div style="font-size:.68rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem">Créneau sélectionné</div>
-                                <div style="background:#EBF5FB;border-radius:8px;padding:.5rem .7rem">
-                                    <div id="booking-selected-slot-label" style="font-size:.82rem;font-weight:700;color:#1B4F8A"></div>
-                                    <div id="booking-selected-duration" style="font-size:.7rem;color:#64748B;margin-top:1px"></div>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Col 2: Calendrier -->
-                        <div style="border-right:1px solid #E2E8F0;display:flex;flex-direction:column">
-                            <!-- Nav mois -->
-                            <div style="padding:1rem 1.25rem .6rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #F1F5F9;flex-shrink:0">
-                                <button onclick="bookingNavMonth(-1)" style="width:30px;height:30px;border:1.5px solid #E2E8F0;border-radius:7px;background:white;cursor:pointer;font-size:.9rem;color:#475569;font-family:inherit;display:flex;align-items:center;justify-content:center;transition:border-color .12s" onmouseenter="this.style.borderColor='#1B4F8A'" onmouseleave="this.style.borderColor='#E2E8F0'">‹</button>
-                                <div id="booking-month-label" style="font-size:.88rem;font-weight:700;color:#0F172A;text-transform:capitalize"></div>
-                                <button onclick="bookingNavMonth(1)" style="width:30px;height:30px;border:1.5px solid #E2E8F0;border-radius:7px;background:white;cursor:pointer;font-size:.9rem;color:#475569;font-family:inherit;display:flex;align-items:center;justify-content:center;transition:border-color .12s" onmouseenter="this.style.borderColor='#1B4F8A'" onmouseleave="this.style.borderColor='#E2E8F0'">›</button>
+                            <!-- Navigation mois -->
+                            <div style="padding:.9rem 2rem .5rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+                                <button onclick="bookingNavMonth(-1)" style="width:34px;height:34px;border:1.5px solid #E2E8F0;border-radius:8px;background:white;cursor:pointer;color:#64748B;font-family:inherit;display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:all .12s" onmouseenter="this.style.borderColor='#1B4F8A';this.style.color='#1B4F8A'" onmouseleave="this.style.borderColor='#E2E8F0';this.style.color='#64748B'">&#8249;</button>
+                                <div id="booking-month-label" style="font-size:1rem;font-weight:700;color:#0F172A;text-transform:capitalize;letter-spacing:-.01em"></div>
+                                <button onclick="bookingNavMonth(1)" style="width:34px;height:34px;border:1.5px solid #E2E8F0;border-radius:8px;background:white;cursor:pointer;color:#64748B;font-family:inherit;display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:all .12s" onmouseenter="this.style.borderColor='#1B4F8A';this.style.color='#1B4F8A'" onmouseleave="this.style.borderColor='#E2E8F0';this.style.color='#64748B'">&#8250;</button>
                             </div>
-                            <!-- Headers jours -->
-                            <div style="display:grid;grid-template-columns:repeat(7,1fr);padding:.6rem 1rem .25rem">
-                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">L</div>
-                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">M</div>
-                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">M</div>
-                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">J</div>
-                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">V</div>
-                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">S</div>
-                                <div style="text-align:center;font-size:.62rem;font-weight:700;color:#94A3B8">D</div>
+
+                            <!-- Jours semaine -->
+                            <div style="display:grid;grid-template-columns:repeat(7,1fr);padding:0 2rem .4rem;flex-shrink:0">
+                                <div style="text-align:center;font-size:.7rem;font-weight:700;color:#94A3B8;padding:.25rem 0">Dim</div>
+                                <div style="text-align:center;font-size:.7rem;font-weight:700;color:#94A3B8;padding:.25rem 0">Lun</div>
+                                <div style="text-align:center;font-size:.7rem;font-weight:700;color:#94A3B8;padding:.25rem 0">Mar</div>
+                                <div style="text-align:center;font-size:.7rem;font-weight:700;color:#94A3B8;padding:.25rem 0">Mer</div>
+                                <div style="text-align:center;font-size:.7rem;font-weight:700;color:#94A3B8;padding:.25rem 0">Jeu</div>
+                                <div style="text-align:center;font-size:.7rem;font-weight:700;color:#94A3B8;padding:.25rem 0">Ven</div>
+                                <div style="text-align:center;font-size:.7rem;font-weight:700;color:#94A3B8;padding:.25rem 0">Sam</div>
                             </div>
+
                             <!-- Grille jours -->
-                            <div id="booking-month-grid" style="display:grid;grid-template-columns:repeat(7,1fr);padding:.15rem 1rem .75rem;flex-shrink:0"></div>
-                            <!-- Date + créneaux -->
-                            <div id="booking-day-separator" style="display:none;border-top:1px solid #F1F5F9;padding:.65rem 1.25rem .35rem;flex-shrink:0">
-                                <div id="booking-slots-date-label" style="font-size:.78rem;font-weight:700;color:#1B4F8A;text-transform:capitalize"></div>
+                            <div id="booking-month-grid" class="bk-grid" style="flex-shrink:0"></div>
+
+                            <!-- Date sélectionnée + créneaux -->
+                            <div id="booking-day-separator" style="display:none;padding:.75rem 2rem .4rem;border-top:1px solid #F1F5F9;flex-shrink:0">
+                                <div id="booking-slots-date-label" style="font-size:.85rem;font-weight:700;color:#0F172A;text-transform:capitalize;margin-bottom:.5rem"></div>
                             </div>
-                            <div style="padding:.25rem 1rem .75rem;flex:1;overflow-y:auto">
-                                <div id="booking-slots-day" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem">
-                                    <div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem .5rem;color:#CBD5E0;text-align:center">
-                                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:.5rem"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-                                        <div style="font-size:.78rem;font-weight:600;color:#CBD5E0">Sélectionnez une date bleue</div>
+                            <div style="flex:1;min-height:0;overflow-y:auto;padding:0 2rem .75rem">
+                                <div id="booking-slots-day" style="display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem">
+                                    <div style="grid-column:1/-1;padding:2rem 0;text-align:center;color:#CBD5E0;font-size:.82rem;font-weight:500">
+                                        Sélectionnez une date disponible
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- Mes RDV (bas) -->
+                            <div id="booking-my-appts-section" style="display:none;flex-direction:column;border-top:1px solid #E2E8F0;flex:1;min-height:0;overflow:hidden">
+                                <div onclick="bkToggleAppts()" style="display:flex;align-items:center;justify-content:space-between;padding:.55rem 2rem;cursor:pointer;background:#F8FAFC;flex-shrink:0">
+                                    <div style="display:flex;align-items:center;gap:.5rem">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                                        <span style="font-size:.75rem;font-weight:700;color:#1B4F8A">Mes rendez-vous</span>
+                                        <span id="bk-appts-count-badge" style="background:#1B4F8A;color:white;font-size:.58rem;font-weight:800;border-radius:20px;padding:1px 7px">0</span>
+                                    </div>
+                                    <svg id="bk-accordion-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.5" stroke-linecap="round" style="transition:transform .2s;transform:rotate(180deg)"><polyline points="6 9 12 15 18 9" /></svg>
+                                </div>
+                                <!-- Filtres figés -->
+                                <div style="padding:.3rem .75rem;display:flex;gap:.3rem;border-bottom:1px solid #F1F5F9;flex-shrink:0;background:white">
+                                    <button onclick="bkFilterAppts('all',this)" class="bk-filt active">Tous</button>
+                                    <button onclick="bkFilterAppts('confirmed',this)" class="bk-filt">Confirmés</button>
+                                    <button onclick="bkFilterAppts('cancelled',this)" class="bk-filt">Annulés</button>
+                                </div>
+                                <!-- Liste scrollable -->
+                                <div id="bk-appts-panel" style="flex:1;min-height:0;overflow-y:auto">
+                                    <div id="booking-my-appts-list"></div>
+                                </div>
+                                <!-- Pager figé en bas -->
+                                <div id="booking-appts-pager" style="padding:.28rem .75rem;font-size:.68rem;color:#94A3B8;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #F1F5F9;flex-shrink:0;background:white"></div>
                             </div>
                         </div>
 
-                        <!-- Col 3: Confirmation -->
-                        <div style="display:flex;flex-direction:column">
-                            <div id="booking-form-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.25rem;text-align:center">
-                                <div style="width:52px;height:52px;border-radius:50%;background:#F1F5F9;display:flex;align-items:center;justify-content:center;margin-bottom:.85rem">
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12" /></svg>
-                                </div>
-                                <div style="font-size:.85rem;font-weight:700;color:#CBD5E0">Aucun créneau choisi</div>
-                                <div style="font-size:.73rem;color:#E2E8F0;margin-top:.3rem;line-height:1.5">Choisissez une date puis une heure dans le calendrier</div>
+                        <!-- ══ DROITE : Panel confirmation ══════════════════════════ -->
+                        <div class="bk-panel">
+
+                            <!-- État vide -->
+                            <div id="booking-form-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2rem;text-align:center">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.2" stroke-linecap="round" style="margin-bottom:1rem"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                                <div style="font-size:.9rem;font-weight:600;color:#CBD5E0">Sélectionnez une date</div>
+                                <div style="font-size:.75rem;color:#E2E8F0;margin-top:.35rem;line-height:1.6">puis un créneau disponible</div>
                             </div>
-                            <div id="booking-form-content" style="display:none;flex-direction:column;flex:1;padding:1.25rem;gap:.85rem">
-                                <!-- Client -->
-                                <div style="display:flex;align-items:center;gap:.6rem;background:#F8FAFC;border-radius:9px;padding:.6rem .8rem">
-                                    <div id="booking-client-avatar" style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1B4F8A,#2563EB);color:white;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:800;flex-shrink:0"></div>
-                                    <div style="min-width:0">
-                                        <div id="booking-client-name-label" style="font-size:.82rem;font-weight:700;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
-                                        <div style="font-size:.65rem;color:#64748B">Client vérifié ✓</div>
+
+                            <!-- Formulaire -->
+                            <div id="booking-form-content" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+
+                                <!-- Date choisie — mise en avant -->
+                                <div style="padding:1.25rem 1.5rem;border-bottom:1px solid #F1F5F9;flex-shrink:0;background:white">
+                                    <div style="font-size:.6rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Créneau choisi</div>
+                                    <div id="bk-form-slot-label" style="font-size:1.05rem;font-weight:800;color:#0F172A;line-height:1.3"></div>
+                                    <div id="bk-form-slot-dur" style="font-size:.75rem;color:#64748B;margin-top:.3rem;font-weight:500"></div>
+                                    <button onclick="resetBookingSelection()" style="margin-top:.65rem;padding:.3rem .7rem;border:1.5px solid #E2E8F0;border-radius:6px;background:white;color:#64748B;font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .1s" onmouseenter="this.style.borderColor='#94A3B8'" onmouseleave="this.style.borderColor='#E2E8F0'">&larr; Changer</button>
+                                </div>
+
+                                <!-- Formulaire scroll -->
+                                <div style="flex:1;overflow-y:auto;padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:.9rem">
+
+                                    <!-- Client -->
+                                    <div style="display:flex;align-items:center;gap:.6rem;background:#F8FAFC;border-radius:10px;padding:.6rem .8rem;border:1px solid #F1F5F9">
+                                        <div id="booking-client-avatar" style="width:32px;height:32px;border-radius:50%;background:#0F172A;color:white;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:800;flex-shrink:0"></div>
+                                        <div style="min-width:0">
+                                            <div id="booking-client-name-label" style="font-size:.8rem;font-weight:700;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+                                            <div style="font-size:.62rem;color:#059669;font-weight:600">Client vérifié</div>
+                                        </div>
                                     </div>
-                                </div>
-                                <!-- Objet -->
-                                <div>
-                                    <label style="font-size:.7rem;font-weight:700;color:#334155;display:block;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Objet</label>
-                                    <input type="text" id="booking-subject" style="width:100%;padding:.58rem .78rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:.83rem;font-family:inherit;outline:none;box-sizing:border-box;background:#FAFAFA;transition:all .15s" placeholder="Ex: Diagnostic PLC ligne 3" onfocus="this.style.borderColor='#1B4F8A';this.style.background='white'" onblur="this.style.borderColor='#E2E8F0';this.style.background='#FAFAFA'">
-                                </div>
-                                <!-- Type réunion -->
-                                <div>
-                                    <label style="font-size:.7rem;font-weight:700;color:#334155;display:block;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Type</label>
-                                    <div style="display:flex;gap:.4rem">
-                                        <button onclick="bkSetMeetType('video',this)" class="bk-meet-btn active">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.82v6.36a1 1 0 0 1-1.447.889L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z" /></svg>
-                                            Vidéo
-                                        </button>
-                                        <button onclick="bkSetMeetType('phone',this)" class="bk-meet-btn">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 11 19.79 19.79 0 0 1 1.67 2.39 2 2 0 0 1 3.63 0h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
-                                            Tél.
-                                        </button>
+
+                                    <!-- Objet -->
+                                    <div>
+                                        <label style="font-size:.68rem;font-weight:700;color:#374151;display:block;margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.04em">Objet du rendez-vous</label>
+                                        <input type="text" id="booking-subject" style="width:100%;padding:.58rem .8rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:.83rem;font-family:inherit;outline:none;box-sizing:border-box;background:white;color:#0F172A;transition:border-color .12s" placeholder="Ex: Diagnostic PLC ligne 3" onfocus="this.style.borderColor='#1B4F8A'" onblur="this.style.borderColor='#E2E8F0'">
                                     </div>
-                                    <input type="hidden" id="booking-meet-type" value="video">
-                                </div>
-                                <!-- Note -->
-                                <div style="flex:1">
-                                    <label style="font-size:.7rem;font-weight:700;color:#334155;display:block;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">Note <span style="font-weight:400;color:#94A3B8;text-transform:none">(optionnel)</span></label>
-                                    <textarea id="booking-notes" rows="3" style="width:100%;padding:.58rem .78rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:.8rem;font-family:inherit;outline:none;box-sizing:border-box;resize:none;background:#FAFAFA;transition:all .15s" placeholder="Décrivez brièvement..." onfocus="this.style.borderColor='#1B4F8A';this.style.background='white'" onblur="this.style.borderColor='#E2E8F0';this.style.background='#FAFAFA'"></textarea>
-                                </div>
-                                <!-- Résultat -->
-                                <div id="booking-result" style="display:none;background:#ECFDF5;border:1.5px solid #A7F3D0;border-radius:10px;padding:.85rem;text-align:center">
-                                    <div style="font-size:1.2rem;margin-bottom:.25rem">✅</div>
-                                    <div style="font-weight:800;color:#065F46;font-size:.9rem">RDV confirmé !</div>
-                                    <div id="booking-result-text" style="font-size:.75rem;color:#065F46;margin-top:2px"></div>
-                                    <div style="font-size:.68rem;color:#6B7280;margin-top:.3rem">Confirmation envoyée dans votre messagerie</div>
-                                </div>
-                                <div id="booking-error" style="display:none;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:8px;padding:.6rem;color:#DC2626;font-size:.78rem"></div>
-                                <!-- Actions -->
-                                <div style="display:flex;flex-direction:column;gap:.35rem">
-                                    <button id="booking-confirm-btn" onclick="confirmBooking()" style="width:100%;padding:.75rem;border:none;border-radius:9px;background:#1B4F8A;color:white;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:.45rem;transition:opacity .12s" onmouseenter="this.style.opacity='.88'" onmouseleave="this.style.opacity='1'">
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+
+                                    <!-- Format -->
+                                    <div>
+                                        <label style="font-size:.68rem;font-weight:700;color:#374151;display:block;margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.04em">Format</label>
+                                        <div style="display:flex;gap:.4rem">
+                                            <button onclick="bkSetMeetType('video',this)" class="bk-fmt active">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg>Vidéo
+                                            </button>
+                                            <button onclick="bkSetMeetType('phone',this)" class="bk-fmt">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" /></svg>Téléphone
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Erreur -->
+                                    <div id="np-booking-err" style="display:none;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:8px;padding:.5rem .75rem;font-size:.75rem;color:#DC2626;font-weight:600"></div>
+
+                                    <!-- Succès -->
+                                    <div id="np-booking-success" style="display:none;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:8px;padding:.75rem .9rem">
+                                        <div style="font-size:.82rem;font-weight:700;color:#15803D;margin-bottom:3px">Rendez-vous confirmé</div>
+                                        <div id="np-booking-success-text" style="font-size:.73rem;color:#16A34A;line-height:1.5"></div>
+                                    </div>
+
+                                    <!-- Confirmer -->
+                                    <button id="np-booking-confirm-btn" onclick="confirmBookingSlot()" style="width:100%;padding:.72rem;border:none;border-radius:10px;background:#0F172A;color:white;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:.45rem;transition:background .15s" onmouseenter="this.style.background='#1B4F8A'" onmouseleave="this.style.background='#0F172A'">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12" /></svg>
                                         Confirmer le rendez-vous
                                     </button>
-                                    <button onclick="resetBookingSelection()" style="width:100%;padding:.45rem;border:1.5px solid #E2E8F0;border-radius:8px;background:transparent;color:#94A3B8;font-size:.75rem;cursor:pointer;font-family:inherit" onmouseenter="this.style.color='#475569'" onmouseleave="this.style.color='#94A3B8'">← Autre créneau</button>
+
                                 </div>
                             </div>
                         </div>
+
                     </div>
                 </div>
 
@@ -1526,7 +1580,7 @@
                         <!-- Créneaux du jour sélectionné -->
                         <div id="np-booking-day-slots" style="display:none;border-top:1px solid #E2E8F0;padding-top:0.65rem">
                             <div id="np-booking-day-label" style="font-size:0.72rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.5rem"></div>
-                            <div id="np-booking-times" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.4rem"></div>
+                            <div id="np-booking-times" style="display:flex;flex-wrap:wrap;gap:0.4rem"></div>
                         </div>
                     </div>
 
