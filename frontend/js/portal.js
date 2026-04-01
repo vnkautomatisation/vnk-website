@@ -907,7 +907,7 @@ function renderProfile(user) {
                         Modifier mes informations
                     </button>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+                <div class="profile-info-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
                     ${_profileRow('Nom complet', name)}
                     ${_profileRow('Courriel', user.email)}
                     ${_profileRow('Entreprise', user.company || user.company_name)}
@@ -926,7 +926,7 @@ function renderProfile(user) {
                     <h3 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em">Modifier mes informations</h3>
                     <button onclick="hideProfileEdit()" style="font-size:0.8rem;color:#64748B;background:none;border:none;cursor:pointer;font-weight:600;padding:4px 8px;border-radius:6px" onmouseenter="this.style.background='#F1F5F9'" onmouseleave="this.style.background='none'">Annuler</button>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
+                <div class="profile-edit-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
                     ${_editField('edit-fname', 'Prénom', (name.split(' ')[0] || ''), 'text')}
                     ${_editField('edit-lname', 'Nom de famille', (name.split(' ').slice(1).join(' ') || ''), 'text')}
                     ${_editField('edit-phone', 'Téléphone', user.phone || '', 'tel')}
@@ -962,7 +962,7 @@ function renderProfile(user) {
                     <h3 style="font-size:0.8rem;font-weight:700;color:#1B4F8A;text-transform:uppercase;letter-spacing:.05em">Modifier le mot de passe</h3>
                     <button onclick="hidePasswordEdit()" style="font-size:0.8rem;color:#64748B;background:none;border:none;cursor:pointer;font-weight:600;padding:4px 8px;border-radius:6px" onmouseenter="this.style.background='#F1F5F9'" onmouseleave="this.style.background='none'">Annuler</button>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;align-items:end;margin-bottom:1rem">
+                <div class="profile-pw-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;align-items:end;margin-bottom:1rem">
                     ${_editField('pw-current', 'Mot de passe actuel', '', 'password')}
                     ${_editField('pw-new', 'Nouveau mot de passe', '', 'password')}
                     ${_editField('pw-confirm', 'Confirmer', '', 'password')}
@@ -1333,7 +1333,7 @@ function renderMandates(mandates) {
                 + '</div>'
                 + '</div>';
         }).join('');
-        list.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.65rem;padding:0.25rem 0">' + cards + '</div>';
+        list.innerHTML = '<div class="mandate-cards-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.65rem;padding:0.25rem 0">' + cards + '</div>';
         return;
     }
 
@@ -1354,7 +1354,7 @@ function renderMandates(mandates) {
         STEP_PCTS.forEach(function (p, i) { if (prog >= p) stepLabel = STEPS[i]; });
         const nextStep = prog < 100 ? (STEPS[STEP_PCTS.findIndex(function (p) { return p > prog; })] || 'Livraison') : null;
 
-        return '<div class="vnk-mandate-card" data-id="' + m.id + '" onclick="_openPortalMandateDetail(' + m.id + ')" '
+        return '<div class="vnk-mandate-card mandate-list-row" data-id="' + m.id + '" onclick="_openPortalMandateDetail(' + m.id + ')" '
             + 'style="display:grid;grid-template-columns:2fr 220px 1.5fr auto;align-items:center;gap:2rem;padding:1rem 1.5rem;border-bottom:1px solid #F1F5F9;cursor:pointer;transition:background .1s;min-height:72px" '
             + 'onmouseenter="this.style.background=\'#F8FAFC\'" onmouseleave="this.style.background=\'white\'">'
 
@@ -1502,7 +1502,7 @@ function _openPortalMandateDetail(id) {
             + '</div>'
 
             // Dates
-            + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem">'
+            + '<div class="mandate-dates-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem">'
             + '<div style="background:#F8FAFC;border-radius:8px;padding:0.55rem 0.7rem">'
             + '<div style="font-size:0.6rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px">Début</div>'
             + '<div style="font-size:0.82rem;font-weight:600;color:#1E293B">' + (m.start_date ? new Date(m.start_date).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short', year: 'numeric' }) : '—') + '</div>'
@@ -1633,7 +1633,7 @@ function _vnkOpenMandateDetail(e, id) {
                 </div>
 
                 <!-- Dates -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem">
+                <div class="mandate-detail-dates" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem">
                     <div style="background:#F8FAFC;border-radius:8px;padding:0.75rem">
                         <div style="font-size:0.65rem;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:3px">Date de début</div>
                         <div style="font-size:0.88rem;font-weight:600;color:#1a1a18">${m.start_date ? new Date(m.start_date).toLocaleDateString('fr-CA') : '—'}</div>
@@ -3650,13 +3650,19 @@ function openNewProjectModal() {
     _npBookingMonthOffset = 0;
     // Réinitialiser l'affichage des steps manuellement (fail-safe)
     for (let i = 1; i <= 5; i++) { const s = document.getElementById('np-step-' + i); if (s) s.style.display = i === 1 ? 'block' : 'none'; }
-    // Réactiver le bouton submit (désactivé après soumission)
+    // Réactiver le bouton submit (désactivé après soumission) + reset couleur bleue
     const btnNext = document.getElementById('np-btn-next');
-    if (btnNext) { btnNext.disabled = false; btnNext.textContent = 'Suivant'; }
+    if (btnNext) { btnNext.disabled = false; btnNext.textContent = 'Suivant'; btnNext.style.background = '#1B4F8A'; }
     ['np-service', 'np-plc', 'np-description', 'np-extra', 'np-budget', 'np-deadline'].forEach(id => { const f = el(id); if (f) f.value = ''; });
     document.querySelectorAll('.np-service-card').forEach(c => c.classList.remove('selected'));
     el('np-urgency') && (el('np-urgency').value = 'normal');
     const fb = el('np-feedback'); if (fb) fb.style.display = 'none';
+    // Forcer le footer visible (peut être caché après step 5)
+    const footer = el('np-footer'); if (footer) footer.style.display = 'flex';
+    // Forcer le bouton Back caché à step 1
+    const btnBack = el('np-btn-back'); if (btnBack) btnBack.style.display = 'none';
+    // Cacher le badge créneau sélectionné
+    const slotBadge = el('np-slot-selected-badge'); if (slotBadge) slotBadge.style.display = 'none';
 
     _npRenderStep();
     overlay.style.display = 'block';
@@ -3731,20 +3737,26 @@ function _npRenderStep() {
 
     if (_npStep === 1) {
         if (btnBack) btnBack.style.display = 'none';
-        if (btnNext) { btnNext.style.display = 'flex'; btnNext.innerHTML = 'Suivant <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>'; }
+        if (btnNext) { btnNext.style.display = 'flex'; btnNext.style.background = '#1B4F8A'; btnNext.innerHTML = 'Suivant <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>'; }
     } else if (_npStep === 2) {
         if (btnBack) { btnBack.style.display = 'inline-block'; btnBack.textContent = '← Retour'; }
-        if (btnNext) { btnNext.style.display = 'flex'; btnNext.style.background = 'var(--primary,#1B4F8A)'; btnNext.innerHTML = 'Choisir un créneau <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>'; }
+        if (btnNext) { btnNext.style.display = 'flex'; btnNext.style.background = '#1B4F8A'; btnNext.innerHTML = 'Choisir un créneau <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>'; }
     } else if (_npStep === 3) {
         // Charger les créneaux
         if (btnBack) { btnBack.style.display = 'inline-block'; btnBack.textContent = '← Retour'; }
         if (btnNext) {
             btnNext.style.display = 'flex';
-            btnNext.style.background = 'var(--primary,#1B4F8A)';
-            const hasSlot = !!_npSelectedSlot;
-            btnNext.innerHTML = hasSlot
-                ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg> Réviser ma demande'
-                : 'Passer cette étape →';
+            btnNext.style.background = _npSelectedSlot ? '#059669' : 'var(--primary,#1B4F8A)';
+            btnNext.innerHTML = _npSelectedSlot
+                ? 'Réviser ma demande <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>'
+                : 'Passer cette étape <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>';
+        }
+        // Reset de la colonne droite
+        const noDate = document.getElementById('np-booking-no-date');
+        const daySlots = document.getElementById('np-booking-day-slots');
+        if (!_npSelectedSlot) {
+            if (noDate) noDate.style.display = 'flex';
+            if (daySlots) daySlots.style.display = 'none';
         }
         setTimeout(function () { _npInitBookingSlots(); }, 200);
     } else if (_npStep === 4) {
@@ -3995,11 +4007,11 @@ async function _npInitBookingSlots() {
 function npBookingNavMonth(dir) {
     _npBookingMonthOffset += dir;
     _npRenderBookingCal();
-    // Cacher les créneaux du jour
-    const dayEl = document.getElementById('np-booking-day-slots');
-    const formEl = document.getElementById('np-booking-form');
-    if (dayEl) dayEl.style.display = 'none';
-    if (formEl) formEl.style.display = 'none';
+    // Masquer les créneaux et remettre l'état vide
+    const daySlots = document.getElementById('np-booking-day-slots');
+    const noDate = document.getElementById('np-booking-no-date');
+    if (daySlots) daySlots.style.display = 'none';
+    if (noDate) noDate.style.display = 'flex';
 }
 
 function _npRenderBookingCal() {
@@ -4009,108 +4021,220 @@ function _npRenderBookingCal() {
     const month = target.getMonth();
     const today = now.toISOString().split('T')[0];
 
+    // Label mois capitalisé
     const lbl = document.getElementById('np-booking-month-label');
-    if (lbl) lbl.textContent = target.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
+    if (lbl) {
+        const raw = target.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
+        lbl.textContent = raw.charAt(0).toUpperCase() + raw.slice(1);
+    }
 
     const datesWithSlots = new Set(_npBookingSlots.map(s => (s.slot_date || '').split('T')[0]));
+
+    // Calculer le premier jour de la semaine (lundi = 0)
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    let startDow = firstDay.getDay(); // Dim=0
-
+    let startDow = firstDay.getDay(); // 0=dim, 1=lun...
+    startDow = startDow === 0 ? 6 : startDow - 1; // convertir en lundi=0
 
     const grid = document.getElementById('np-booking-cal-grid');
     if (!grid) return;
 
     let html = '';
-    for (let i = 0; i < startDow; i++) html += '<div></div>';
+    // Cellules vides avant le 1er
+    for (let i = 0; i < startDow; i++) {
+        html += '<div style="aspect-ratio:1"></div>';
+    }
+
+    const selectedDs = _npSelectedSlot ? _npSelectedSlot.ds : null;
 
     for (let d = 1; d <= lastDay.getDate(); d++) {
         const ds = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
         const hasSlot = datesWithSlots.has(ds);
         const isPast = ds < today;
         const isToday = ds === today;
-
-        let style = 'text-align:center;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;transition:all .12s;';
+        const isSelected = ds === selectedDs;
 
         if (!isPast && hasSlot) {
-            style += 'background:#1B4F8A;color:white;font-weight:700;cursor:pointer;';
-            html += '<div onclick="npSelectBookingDate(\'' + ds + '\')" style="' + style + '" '
-                + 'onmouseenter="this.style.background=\'#2563EB\'" '
-                + 'onmouseleave="this.style.background=\'#1B4F8A\'">'
-                + d + '</div>';
-        } else if (isToday && !hasSlot) {
-            style += 'border:2px solid #1B4F8A;color:#1B4F8A;font-weight:600;';
-            html += '<div style="' + style + '">' + d + '</div>';
+            // Jour disponible
+            const bg = isSelected ? '#1B4F8A' : 'white';
+            const color = isSelected ? 'white' : '#0F172A';
+            const border = isSelected ? '2px solid #1B4F8A' : '2px solid #E2E8F0';
+            const dotColor = isSelected ? 'rgba(255,255,255,0.6)' : '#059669';
+            html += '<div onclick="npSelectBookingDate(\'' + ds + '\')" '
+                + 'data-cal-date="' + ds + '" '
+                + 'style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:9px;background:' + bg + ';border:' + border + ';cursor:pointer;transition:all .15s;position:relative" '
+                + 'onmouseenter="npCalDayHover(this,true,\'' + ds + '\')" '
+                + 'onmouseleave="npCalDayHover(this,false,\'' + ds + '\')">'
+                + '<span style="font-size:0.75rem;font-weight:700;color:' + color + ';line-height:1">' + d + '</span>'
+                + '<span style="width:4px;height:4px;border-radius:50%;background:' + dotColor + ';margin-top:2px;display:block"></span>'
+                + '</div>';
+        } else if (isToday) {
+            // Aujourd'hui sans créneau
+            html += '<div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:9px;border:2px solid #CBD5E1;background:#F8FAFC">'
+                + '<span style="font-size:0.75rem;font-weight:700;color:#94A3B8;line-height:1">' + d + '</span>'
+                + '</div>';
         } else {
-            style += 'color:' + (isPast ? '#D1D5DB' : '#9CA3AF') + ';';
-            html += '<div style="' + style + '">' + d + '</div>';
+            // Jour passé ou sans créneau
+            html += '<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:9px">'
+                + '<span style="font-size:0.75rem;color:' + (isPast ? '#E2E8F0' : '#CBD5E1') + ';font-weight:500">' + d + '</span>'
+                + '</div>';
         }
     }
     grid.innerHTML = html;
 }
 
+function npCalDayHover(el, entering, ds) {
+    const isSelected = _npSelectedSlot && _npSelectedSlot.ds === ds;
+    if (isSelected) return;
+    if (entering) {
+        el.style.background = '#EBF5FB';
+        el.style.borderColor = '#1B4F8A';
+        el.querySelector('span').style.color = '#1B4F8A';
+    } else {
+        el.style.background = 'white';
+        el.style.borderColor = '#E2E8F0';
+        el.querySelector('span').style.color = '#0F172A';
+    }
+}
+
 function npSelectBookingDate(ds) {
-    const daySlots = _npBookingSlots.filter(s => (s.slot_date || '').split('T')[0] === ds);
-    const dayEl = document.getElementById('np-booking-day-slots');
+    // Mettre à jour visuellement les cases du calendrier
+    document.querySelectorAll('[data-cal-date]').forEach(function (el) {
+        const isThis = el.dataset.calDate === ds;
+        el.style.background = isThis ? '#1B4F8A' : 'white';
+        el.style.borderColor = isThis ? '#1B4F8A' : '#E2E8F0';
+        const span = el.querySelector('span');
+        if (span) span.style.color = isThis ? 'white' : '#0F172A';
+        const dot = el.querySelectorAll('span')[1];
+        if (dot) dot.style.background = isThis ? 'rgba(255,255,255,0.6)' : '#059669';
+    });
+
+    const daySlots = document.getElementById('np-booking-day-slots');
+    const noDate = document.getElementById('np-booking-no-date');
     const lbl = document.getElementById('np-booking-day-label');
     const timesEl = document.getElementById('np-booking-times');
-    const formEl = document.getElementById('np-booking-form');
-    const successEl = document.getElementById('np-booking-success');
 
-    if (formEl) formEl.style.display = 'none';
-    if (successEl) successEl.style.display = 'none';
-    _npSelectedSlot = null;
+    if (!daySlots || !lbl || !timesEl) return;
 
-    if (!dayEl || !lbl || !timesEl) return;
-    dayEl.style.display = 'block';
+    // Afficher la colonne droite
+    if (noDate) noDate.style.display = 'none';
+    daySlots.style.display = 'flex';
 
+    // Label date dans le badge bleu
     const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', {
         weekday: 'long', day: 'numeric', month: 'long'
     });
-    lbl.textContent = dateStr;
+    lbl.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
 
-    if (!daySlots.length) {
-        timesEl.innerHTML = '<div style="font-size:0.78rem;color:#94A3B8">Aucun créneau ce jour.</div>';
+    // Créneaux du jour
+    const daySlotsList = _npBookingSlots.filter(s => (s.slot_date || '').split('T')[0] === ds);
+
+    if (!daySlotsList.length) {
+        timesEl.innerHTML = '<div style="font-size:0.78rem;color:#94A3B8;grid-column:span 2">Aucun créneau ce jour.</div>';
         return;
     }
 
-    timesEl.innerHTML = daySlots.map(function (s) {
+    // Réinitialiser la sélection si on change de jour
+    if (_npSelectedSlot && _npSelectedSlot.ds !== ds) {
+        _npSelectedSlot = null;
+        const badge = document.getElementById('np-slot-selected-badge');
+        if (badge) badge.style.display = 'none';
+        _npUpdateNextBtn();
+    }
+
+    timesEl.innerHTML = daySlotsList.map(function (s) {
         const time = (s.start_time || '').substring(0, 5);
         const dur = s.duration_min || 30;
+        const isSelTime = _npSelectedSlot && _npSelectedSlot.id === s.id;
+        const bg = isSelTime ? '#1B4F8A' : 'white';
+        const color = isSelTime ? 'white' : '#334155';
+        const border = isSelTime ? '#1B4F8A' : '#E2E8F0';
         return '<button onclick="npSelectBookingSlot(' + s.id + ', \'' + ds + '\', \'' + time + '\', ' + dur + ')" '
             + 'data-slot-id="' + s.id + '" '
-            + 'style="padding:0.45rem 0.85rem;border:2px solid #E2E8F0;border-radius:8px;background:white;'
-            + 'color:#334155;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s" '
-            + 'onmouseenter="if(!this.classList.contains(\'np-sel\')){this.style.borderColor=\'#1B4F8A\';this.style.color=\'#1B4F8A\'}" '
-            + 'onmouseleave="if(!this.classList.contains(\'np-sel\')){this.style.borderColor=\'#E2E8F0\';this.style.color=\'#334155\'}">'
-            + time + ' <span style="font-size:0.65rem;opacity:0.6">(' + dur + ' min)</span>'
+            + 'style="padding:0.55rem 0.4rem;border:2px solid ' + border + ';border-radius:8px;background:' + bg + ';'
+            + 'color:' + color + ';font-size:0.8rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .12s;text-align:center" '
+            + 'onmouseenter="npTimeHover(this,true)" '
+            + 'onmouseleave="npTimeHover(this,false)">'
+            + time
             + '</button>';
     }).join('');
+}
+
+function npTimeHover(el, entering) {
+    const isSelected = el.style.background === 'rgb(27, 79, 138)' || el.style.borderColor === 'rgb(27, 79, 138)';
+    if (isSelected) return;
+    if (entering) {
+        el.style.background = '#F0F7FF';
+        el.style.borderColor = '#93C5FD';
+        el.style.color = '#1B4F8A';
+    } else {
+        el.style.background = 'white';
+        el.style.borderColor = '#E2E8F0';
+        el.style.color = '#334155';
+    }
 }
 
 function npSelectBookingSlot(slotId, ds, time, dur) {
     _npSelectedSlot = { id: slotId, ds, time, dur };
 
-    // Mettre à jour visuellement les boutons
+    // Mettre à jour les boutons de créneaux
     document.querySelectorAll('#np-booking-times button').forEach(function (btn) {
         const sel = parseInt(btn.dataset.slotId) === slotId;
-        btn.classList.toggle('np-sel', sel);
         btn.style.background = sel ? '#1B4F8A' : 'white';
         btn.style.color = sel ? 'white' : '#334155';
         btn.style.borderColor = sel ? '#1B4F8A' : '#E2E8F0';
     });
 
-    // Afficher formulaire
-    const formEl = document.getElementById('np-booking-form');
-    const txtEl = document.getElementById('np-booking-slot-text');
-    const errEl = document.getElementById('np-booking-err');
-    const btnEl = document.getElementById('np-booking-confirm-btn');
-    if (errEl) { errEl.style.display = 'none'; }
-    if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmer le rendez-vous'; }
+    // Afficher le badge créneau confirmé
+    const badge = document.getElementById('np-slot-selected-badge');
+    const txt = document.getElementById('np-slot-selected-text');
+    if (txt) {
+        const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+        txt.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1) + ' · ' + time;
+    }
+    if (badge) { badge.style.display = 'flex'; }
 
-    const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
-    if (txtEl) txtEl.textContent = dateStr + ' à ' + time + ' (' + dur + ' min)';
-    if (formEl) formEl.style.display = 'block';
+    // Mettre à jour le bouton Suivant
+    _npUpdateNextBtn();
+}
+
+function _npUpdateNextBtn() {
+    const btnNext = document.getElementById('np-btn-next');
+    if (!btnNext) return;
+    if (_npSelectedSlot) {
+        btnNext.innerHTML = 'Réviser ma demande <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>';
+        btnNext.style.background = '#059669';
+    } else {
+        btnNext.innerHTML = 'Passer cette étape <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>';
+        btnNext.style.background = '#1B4F8A';
+    }
+}
+
+function npClearSlotSelection() {
+    _npSelectedSlot = null;
+    const badge = document.getElementById('np-slot-selected-badge');
+    if (badge) badge.style.display = 'none';
+    // Remettre visuellement les boutons temps
+    document.querySelectorAll('#np-booking-times button').forEach(function (btn) {
+        btn.style.background = 'white';
+        btn.style.color = '#334155';
+        btn.style.borderColor = '#E2E8F0';
+    });
+    // Remettre visuellement les jours calendrier
+    document.querySelectorAll('[data-cal-date]').forEach(function (el) {
+        el.style.background = 'white';
+        el.style.borderColor = '#E2E8F0';
+        const span = el.querySelector('span');
+        if (span) span.style.color = '#0F172A';
+        const dot = el.querySelectorAll('span')[1];
+        if (dot) dot.style.background = '#059669';
+    });
+    // Remettre panneau vide
+    const daySlots = document.getElementById('np-booking-day-slots');
+    const noDate = document.getElementById('np-booking-no-date');
+    if (daySlots) daySlots.style.display = 'none';
+    if (noDate) noDate.style.display = 'flex';
+    _npUpdateNextBtn();
 }
 
 async function npConfirmBooking() {
@@ -4767,7 +4891,7 @@ function renderMyRequests(requests, force) {
             const isCrit = urgency.includes('Critique');
             const isUrg = urgency.includes('Urgent') || isCrit;
 
-            return '<div style="display:grid;grid-template-columns:2fr 140px 1fr auto;align-items:center;gap:1rem;padding:0.75rem 1rem;border-bottom:1px solid #F1F5F9;cursor:default;transition:background .1s" onmouseenter="this.style.background=\'#F8FAFC\'" onmouseleave="this.style.background=\'white\'">'
+            return '<div class="requests-list-row" style="display:grid;grid-template-columns:2fr 140px 1fr auto;align-items:center;gap:1rem;padding:0.75rem 1rem;border-bottom:1px solid #F1F5F9;cursor:default;transition:background .1s" onmouseenter="this.style.background=\'#F8FAFC\'" onmouseleave="this.style.background=\'white\'">'
                 // Col 1 : service + automate
                 + '<div style="min-width:0">'
                 + '<div style="font-weight:600;font-size:0.85rem;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + service + '</div>'
@@ -4860,7 +4984,7 @@ function renderMyRequests(requests, force) {
             + '</div>';
     }).join('');
 
-    container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem;padding:0.25rem 0">' + cards + '</div>';
+    container.innerHTML = '<div class="requests-cards-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem;padding:0.25rem 0">' + cards + '</div>';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5063,17 +5187,354 @@ function openApptDetailModal(apptId) {
         <!-- Footer -->
         <div style="padding:.85rem 1.5rem;border-top:1px solid #F1F5F9;display:flex;gap:.5rem">
             <button onclick="document.getElementById('appt-detail-overlay').remove()" style="flex:1;padding:.52rem;border:1.5px solid #E2E8F0;border-radius:10px;background:white;font-size:.8rem;cursor:pointer;font-family:inherit;color:#64748B;transition:all .12s" onmouseenter="this.style.borderColor='#94A3B8'" onmouseleave="this.style.borderColor='#E2E8F0'">Fermer</button>
-            ${!isCancelled && !isPast && a.meeting_link
-            ? `<a href="${a.meeting_link}" target="_blank" style="flex:2;padding:.52rem;border:none;border-radius:10px;background:linear-gradient(135deg,#1B4F8A,#2563EB);color:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:.4rem;box-shadow:0 2px 8px rgba(27,79,138,.3)">
+            ${!isCancelled && !isPast
+            ? `<button onclick="openRescheduleModal(${a.id})" style="flex:1;padding:.52rem;border:1.5px solid #DBEAFE;border-radius:10px;background:#EFF6FF;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;color:#1B4F8A;transition:all .12s;display:flex;align-items:center;justify-content:center;gap:.35rem" onmouseenter="this.style.background='#DBEAFE'" onmouseleave="this.style.background='#EFF6FF'">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Changer
+                </button>
+                <button onclick="document.getElementById('appt-detail-overlay').remove();cancelMyAppointment(${a.id})" style="flex:1;padding:.52rem;border:1.5px solid #FECACA;border-radius:10px;background:white;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;color:#DC2626;transition:all .12s" onmouseenter="this.style.background='#FEF2F2'" onmouseleave="this.style.background='white'">Annuler</button>`
+            : (a.meeting_link && !isCancelled && !isPast
+                ? `<a href="${a.meeting_link}" target="_blank" style="flex:2;padding:.52rem;border:none;border-radius:10px;background:linear-gradient(135deg,#1B4F8A,#2563EB);color:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:.4rem;box-shadow:0 2px 8px rgba(27,79,138,.3)">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.82v6.36a1 1 0 0 1-1.447.889L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg>
-                    Rejoindre la réunion
+                    Rejoindre
                 </a>`
-            : (!isCancelled && !isPast
-                ? `<button onclick="document.getElementById('appt-detail-overlay').remove();cancelMyAppointment(${a.id})" style="flex:1;padding:.52rem;border:1.5px solid #FECACA;border-radius:10px;background:white;font-size:.78rem;cursor:pointer;font-family:inherit;color:#DC2626;transition:all .12s" onmouseenter="this.style.background='#FEF2F2'" onmouseleave="this.style.background='white'">Annuler</button>`
                 : '')}
         </div>
     </div>`;
 
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
     document.body.appendChild(overlay);
+}
+
+// ════════════════════════════════════════════════════════════════
+// RESCHEDULE — Changer un rendez-vous existant
+// ════════════════════════════════════════════════════════════════
+
+let _rsApptId = null;
+let _rsSlots = [];
+let _rsMonthOffset = 0;
+let _rsSelectedSlot = null;
+let _rsSelectedDate = null;
+
+async function openRescheduleModal(apptId) {
+    _rsApptId = apptId;
+    _rsSlots = [];
+    _rsMonthOffset = 0;
+    _rsSelectedSlot = null;
+    _rsSelectedDate = null;
+
+    // Retirer le modal détail s'il est ouvert
+    const prev = document.getElementById('appt-detail-overlay');
+    if (prev) prev.remove();
+
+    // Créer l'overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'rs-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.75);z-index:9500;backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center';
+
+    overlay.innerHTML = `
+    <div style="background:white;border-radius:18px;width:100%;max-width:640px;max-height:92vh;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.35);display:flex;flex-direction:column">
+
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#1B4F8A,#2563EB);padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+            <div>
+                <div style="font-size:1rem;font-weight:800;color:white">Changer le rendez-vous</div>
+                <div style="font-size:0.75rem;color:rgba(255,255,255,.7);margin-top:2px">Choisissez un nouveau créneau</div>
+            </div>
+            <button onclick="document.getElementById('rs-overlay').remove()" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;color:white;font-size:1.1rem;cursor:pointer;padding:.3rem .65rem;line-height:1">×</button>
+        </div>
+
+        <!-- Corps -->
+        <div style="padding:1.25rem 1.5rem;overflow-y:auto;flex:1">
+
+            <!-- Info bande -->
+            <div style="display:flex;align-items:center;gap:.75rem;padding:.7rem .9rem;background:linear-gradient(135deg,#F0F7FF,#EBF5FB);border-radius:10px;margin-bottom:1rem;border:1px solid #DBEAFE">
+                <div style="width:32px;height:32px;border-radius:8px;background:#1B4F8A;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </div>
+                <div>
+                    <div style="font-size:.82rem;font-weight:700;color:#0F172A">Appel de qualification</div>
+                    <div style="font-size:.72rem;color:#64748B">30 min · Vidéo ou téléphone · Gratuit</div>
+                </div>
+            </div>
+
+            <!-- Chargement -->
+            <div id="rs-loading" style="text-align:center;padding:2.5rem;color:#94A3B8;font-size:.85rem">
+                <div style="width:32px;height:32px;border-radius:50%;border:3px solid #E2E8F0;border-top-color:#1B4F8A;animation:np-spin .8s linear infinite;margin:0 auto .85rem"></div>
+                Chargement des disponibilités...
+            </div>
+
+            <!-- Calendrier split -->
+            <div id="rs-cal-wrap" style="display:none">
+                <div style="display:grid;grid-template-columns:1fr 1fr;border:1.5px solid #E2E8F0;border-radius:14px;overflow:hidden">
+
+                    <!-- Gauche : calendrier -->
+                    <div style="padding:1rem;border-right:1.5px solid #E2E8F0;background:#FAFBFC">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem">
+                            <button onclick="rsNavMonth(-1)" style="width:28px;height:28px;border-radius:50%;background:white;border:1.5px solid #E2E8F0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748B;font-family:inherit;transition:all .12s" onmouseenter="this.style.borderColor='#1B4F8A';this.style.color='#1B4F8A'" onmouseleave="this.style.borderColor='#E2E8F0';this.style.color='#64748B'">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                            </button>
+                            <div id="rs-month-label" style="font-size:.82rem;font-weight:800;color:#0F172A;text-transform:capitalize"></div>
+                            <button onclick="rsNavMonth(1)" style="width:28px;height:28px;border-radius:50%;background:white;border:1.5px solid #E2E8F0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748B;font-family:inherit;transition:all .12s" onmouseenter="this.style.borderColor='#1B4F8A';this.style.color='#1B4F8A'" onmouseleave="this.style.borderColor='#E2E8F0';this.style.color='#64748B'">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                            </button>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:.35rem">
+                            ${['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(d => `<div style="text-align:center;font-size:.6rem;font-weight:700;color:#94A3B8;padding:3px 0">${d}</div>`).join('')}
+                        </div>
+                        <div id="rs-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
+                    </div>
+
+                    <!-- Droite : créneaux -->
+                    <div style="padding:1rem;display:flex;flex-direction:column">
+                        <div id="rs-no-date" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+                            <div style="width:40px;height:40px;border-radius:50%;background:#F1F5F9;display:flex;align-items:center;justify-content:center;margin-bottom:.65rem">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            </div>
+                            <div style="font-size:.78rem;font-weight:600;color:#94A3B8">Sélectionnez une date</div>
+                        </div>
+                        <div id="rs-day-slots" style="display:none;flex:1;flex-direction:column">
+                            <div id="rs-date-badge" style="background:#1B4F8A;border-radius:10px;padding:.7rem .9rem;margin-bottom:.85rem">
+                                <div style="font-size:.6rem;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Nouveau créneau</div>
+                                <div id="rs-date-label" style="font-size:.85rem;font-weight:800;color:white;text-transform:capitalize"></div>
+                                <div style="font-size:.68rem;color:rgba(255,255,255,.65);margin-top:1px">30 min · Vidéo ou téléphone</div>
+                            </div>
+                            <div style="font-size:.65rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Heure de début</div>
+                            <div id="rs-times" style="display:grid;grid-template-columns:1fr 1fr;gap:.35rem;overflow-y:auto;max-height:150px"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Badge sélectionné -->
+                <div id="rs-selected-badge" style="display:none;margin-top:.85rem;background:linear-gradient(135deg,#F0FDF4,#DCFCE7);border:1.5px solid #86EFAC;border-radius:12px;padding:.8rem 1rem;align-items:center;gap:.75rem">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(5,150,105,.3)">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <div style="flex:1">
+                        <div style="font-size:.72rem;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px">Nouveau créneau choisi</div>
+                        <div id="rs-selected-text" style="font-size:.85rem;font-weight:700;color:#0F172A"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aucun créneau -->
+            <div id="rs-empty" style="display:none;background:#FEF3C7;border:1px solid #FDE68A;border-radius:12px;padding:1.25rem;text-align:center">
+                <div style="font-size:.88rem;font-weight:700;color:#92400E;margin-bottom:4px">Aucun créneau disponible</div>
+                <div style="font-size:.78rem;color:#92400E">Contactez VNK directement pour reprogrammer.</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding:.9rem 1.5rem;border-top:1px solid #F1F5F9;display:flex;gap:.5rem;flex-shrink:0;background:white">
+            <button onclick="document.getElementById('rs-overlay').remove()" style="flex:1;padding:.65rem;border:1.5px solid #E2E8F0;border-radius:10px;background:white;font-size:.85rem;cursor:pointer;font-family:inherit;color:#64748B">Annuler</button>
+            <button id="rs-confirm-btn" onclick="rsConfirm()" disabled style="flex:2;padding:.65rem;border:none;border-radius:10px;background:#CBD5E1;color:white;font-size:.85rem;font-weight:700;cursor:not-allowed;font-family:inherit;transition:all .15s">Confirmer le nouveau créneau</button>
+        </div>
+    </div>`;
+
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+
+    // Charger les disponibilités
+    try {
+        const token = localStorage.getItem('vnk-token');
+        const resp = await fetch('/api/calendar/available', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await resp.json();
+        _rsSlots = data.slots || [];
+    } catch (e) { _rsSlots = []; }
+
+    document.getElementById('rs-loading').style.display = 'none';
+
+    if (!_rsSlots.length) {
+        document.getElementById('rs-empty').style.display = 'block';
+        return;
+    }
+
+    // Naviguer au premier mois disponible
+    const firstDate = _rsSlots[0]?.slot_date?.split('T')[0];
+    if (firstDate) {
+        const now = new Date();
+        const first = new Date(firstDate + 'T12:00:00');
+        _rsMonthOffset = (first.getFullYear() - now.getFullYear()) * 12 + (first.getMonth() - now.getMonth());
+    }
+
+    document.getElementById('rs-cal-wrap').style.display = 'block';
+    rsRenderCal();
+}
+
+function rsNavMonth(dir) {
+    _rsMonthOffset += dir;
+    rsRenderCal();
+    const daySlots = document.getElementById('rs-day-slots');
+    const noDate = document.getElementById('rs-no-date');
+    if (daySlots) daySlots.style.display = 'none';
+    if (noDate) noDate.style.display = 'flex';
+}
+
+function rsRenderCal() {
+    const now = new Date();
+    const target = new Date(now.getFullYear(), now.getMonth() + _rsMonthOffset, 1);
+    const year = target.getFullYear();
+    const month = target.getMonth();
+    const today = now.toISOString().split('T')[0];
+
+    const lbl = document.getElementById('rs-month-label');
+    if (lbl) { const r = target.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' }); lbl.textContent = r.charAt(0).toUpperCase() + r.slice(1); }
+
+    const datesWithSlots = new Set(_rsSlots.map(s => (s.slot_date || '').split('T')[0]));
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    let startDow = firstDay.getDay();
+    startDow = startDow === 0 ? 6 : startDow - 1;
+
+    const grid = document.getElementById('rs-cal-grid');
+    if (!grid) return;
+
+    let html = '';
+    for (let i = 0; i < startDow; i++) html += '<div style="aspect-ratio:1"></div>';
+
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+        const ds = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        const hasSlot = datesWithSlots.has(ds);
+        const isPast = ds < today;
+        const isSelected = ds === _rsSelectedDate;
+
+        if (!isPast && hasSlot) {
+            const bg = isSelected ? '#1B4F8A' : 'white';
+            const color = isSelected ? 'white' : '#0F172A';
+            const border = isSelected ? '2px solid #1B4F8A' : '2px solid #E2E8F0';
+            html += `<div onclick="rsSelectDate('${ds}')" data-rs-date="${ds}" style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:9px;background:${bg};border:${border};cursor:pointer;transition:all .15s" onmouseenter="rsCalHover(this,'${ds}',true)" onmouseleave="rsCalHover(this,'${ds}',false)"><span style="font-size:.75rem;font-weight:700;color:${color};line-height:1">${d}</span><span style="width:4px;height:4px;border-radius:50%;background:${isSelected ? 'rgba(255,255,255,.6)' : '#059669'};margin-top:2px;display:block"></span></div>`;
+        } else if (!isPast) {
+            html += `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:9px"><span style="font-size:.75rem;color:#CBD5E1;font-weight:500">${d}</span></div>`;
+        } else {
+            html += `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:9px"><span style="font-size:.75rem;color:#E2E8F0;font-weight:500">${d}</span></div>`;
+        }
+    }
+    grid.innerHTML = html;
+}
+
+function rsCalHover(el, ds, entering) {
+    if (ds === _rsSelectedDate) return;
+    if (entering) { el.style.background = '#EBF5FB'; el.style.borderColor = '#1B4F8A'; el.querySelector('span').style.color = '#1B4F8A'; }
+    else { el.style.background = 'white'; el.style.borderColor = '#E2E8F0'; el.querySelector('span').style.color = '#0F172A'; }
+}
+
+function rsSelectDate(ds) {
+    _rsSelectedDate = ds;
+    _rsSelectedSlot = null;
+
+    // Màj visuel calendrier
+    document.querySelectorAll('[data-rs-date]').forEach(function (el) {
+        const isThis = el.dataset.rsDate === ds;
+        el.style.background = isThis ? '#1B4F8A' : 'white';
+        el.style.borderColor = isThis ? '#1B4F8A' : '#E2E8F0';
+        const spans = el.querySelectorAll('span');
+        if (spans[0]) spans[0].style.color = isThis ? 'white' : '#0F172A';
+        if (spans[1]) spans[1].style.background = isThis ? 'rgba(255,255,255,.6)' : '#059669';
+    });
+
+    // Afficher colonne droite
+    document.getElementById('rs-no-date').style.display = 'none';
+    document.getElementById('rs-day-slots').style.display = 'flex';
+
+    // Label date badge
+    const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+    const lbl = document.getElementById('rs-date-label');
+    if (lbl) lbl.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+
+    // Cacher badge sélectionné
+    const selBadge = document.getElementById('rs-selected-badge');
+    if (selBadge) selBadge.style.display = 'none';
+    rsUpdateConfirmBtn();
+
+    // Créneaux du jour
+    const daySlotsList = _rsSlots.filter(s => (s.slot_date || '').split('T')[0] === ds);
+    const timesEl = document.getElementById('rs-times');
+    if (!timesEl) return;
+
+    if (!daySlotsList.length) {
+        timesEl.innerHTML = '<div style="font-size:.78rem;color:#94A3B8;grid-column:span 2">Aucun créneau ce jour.</div>';
+        return;
+    }
+
+    timesEl.innerHTML = daySlotsList.map(function (s) {
+        const time = (s.start_time || '').substring(0, 5);
+        return `<button onclick="rsSelectSlot(${s.id},'${ds}','${time}',${s.duration_min || 30})" data-rs-slot="${s.id}" style="padding:.55rem .4rem;border:2px solid #E2E8F0;border-radius:8px;background:white;color:#334155;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .12s;text-align:center" onmouseenter="rsTimeHover(this,true)" onmouseleave="rsTimeHover(this,false)">${time}</button>`;
+    }).join('');
+}
+
+function rsTimeHover(el, entering) {
+    if (el.style.background === 'rgb(27, 79, 138)') return;
+    if (entering) { el.style.background = '#F0F7FF'; el.style.borderColor = '#93C5FD'; el.style.color = '#1B4F8A'; }
+    else { el.style.background = 'white'; el.style.borderColor = '#E2E8F0'; el.style.color = '#334155'; }
+}
+
+function rsSelectSlot(slotId, ds, time, dur) {
+    _rsSelectedSlot = { id: slotId, ds, time, dur };
+
+    document.querySelectorAll('[data-rs-slot]').forEach(function (btn) {
+        const sel = parseInt(btn.dataset.rsSlot) === slotId;
+        btn.style.background = sel ? '#1B4F8A' : 'white';
+        btn.style.color = sel ? 'white' : '#334155';
+        btn.style.borderColor = sel ? '#1B4F8A' : '#E2E8F0';
+    });
+
+    const badge = document.getElementById('rs-selected-badge');
+    const txt = document.getElementById('rs-selected-text');
+    if (txt) {
+        const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+        txt.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1) + ' · ' + time;
+    }
+    if (badge) badge.style.display = 'flex';
+    rsUpdateConfirmBtn();
+}
+
+function rsUpdateConfirmBtn() {
+    const btn = document.getElementById('rs-confirm-btn');
+    if (!btn) return;
+    if (_rsSelectedSlot) {
+        btn.disabled = false;
+        btn.style.background = '#059669';
+        btn.style.cursor = 'pointer';
+        btn.textContent = 'Confirmer le nouveau créneau';
+    } else {
+        btn.disabled = true;
+        btn.style.background = '#CBD5E1';
+        btn.style.cursor = 'not-allowed';
+    }
+}
+
+async function rsConfirm() {
+    if (!_rsSelectedSlot || !_rsApptId) return;
+    const btn = document.getElementById('rs-confirm-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Confirmation...'; btn.style.background = '#64748B'; }
+
+    try {
+        const token = localStorage.getItem('vnk-token');
+        // Annuler l'ancien RDV
+        await fetch('/api/calendar/appointments/' + _rsApptId + '/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+        });
+        // Réserver le nouveau
+        const resp = await fetch('/api/calendar/book', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ slot_id: _rsSelectedSlot.id, subject: 'Appel de qualification — reprogrammé', meeting_type: 'video' })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            document.getElementById('rs-overlay').remove();
+            if (typeof pushPortalNotif === 'function') {
+                const dateStr = new Date(_rsSelectedSlot.ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+                pushPortalNotif('mandate', 'RDV reprogrammé — ' + dateStr + ' à ' + _rsSelectedSlot.time, 'booking');
+            }
+            if (typeof loadMyAppointments === 'function') loadMyAppointments();
+            if (typeof _bkRenderCal === 'function') _bkRenderCal();
+        } else {
+            throw new Error(data.message || 'Créneau non disponible');
+        }
+    } catch (e) {
+        if (btn) { btn.disabled = false; btn.style.background = '#DC2626'; btn.textContent = 'Erreur : ' + e.message; }
+        setTimeout(() => { if (btn) { btn.disabled = false; btn.style.background = '#059669'; btn.textContent = 'Confirmer le nouveau créneau'; } }, 3000);
+    }
 }

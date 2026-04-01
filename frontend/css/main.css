@@ -54,17 +54,31 @@ body {
     padding: 0;
 }
 
-/* Portail + Admin : jamais de scroll externe */
-html {
-    overflow: hidden;
-    height: 100%;
-    max-height: 100vh;
-}
+    /* Portail + Admin : jamais de scroll externe — UNIQUEMENT sur ces pages */
+    body.portal-body html,
+    html:has(body.portal-body) {
+        overflow: hidden;
+        height: 100%;
+        max-height: 100vh;
+    }
 
-body {
-    overflow: hidden;
-    height: 100%;
-    max-height: 100vh;
+    body.portal-body {
+        overflow: hidden;
+        height: 100%;
+        max-height: 100vh;
+    }
+
+    /* Pages publiques : scroll normal */
+    body:not(.portal-body) {
+        overflow-y: auto;
+        overflow-x: hidden;
+        height: auto;
+    }
+
+html:not(:has(body.portal-body)) {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: auto;
 }
 
 a {
