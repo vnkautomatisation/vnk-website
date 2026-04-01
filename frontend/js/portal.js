@@ -813,6 +813,11 @@ function showTab(tabName) {
     const mobileTitle = document.getElementById('mobile-tab-title');
     if (mobileTitle) mobileTitle.textContent = titles[tabName] || '';
 
+    // 5b. Synchroniser bottom nav
+    document.querySelectorAll('.portal-bnav-item').forEach(b => b.classList.remove('active'));
+    const bnav = document.getElementById('bnav-' + tabName);
+    if (bnav) bnav.classList.add('active');
+
     // 6. Persister l'onglet
     localStorage.setItem('vnk-portal-tab', tabName);
     // Réinitialiser le sous-onglet mandats quand on quitte

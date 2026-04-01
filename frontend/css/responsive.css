@@ -756,7 +756,512 @@
 
     .portal-stat-icon {
         width: 32px;
-        height: 32px;
+        height: 32px; /* ============================================
+   VNK Automatisation Inc. - Responsive CSS
+   Tablette: 768px - 1024px
+   Téléphone: < 768px
+   ============================================ */
+        /* ============================================
+   TABLETTE — 768px à 1024px
+   ============================================ */
+        @media (max-width: 1024px) {
+            /* ── Navigation mobile — design pro ── */
+            .nav-links {
+                display: flex;
+                flex-direction: column;
+                position: fixed;
+                top: var(--nav-height);
+                left: 0;
+                right: 0;
+                background: #0F2D52;
+                padding: 0.5rem 0 1rem;
+                z-index: 998;
+                gap: 0;
+                max-height: 0;
+                overflow: hidden;
+                opacity: 0;
+                transform: translateY(-8px);
+                transition: max-height 0.3s ease, opacity 0.25s ease, transform 0.25s ease;
+                pointer-events: none;
+            }
+
+                .nav-links.open {
+                    max-height: 420px;
+                    opacity: 1;
+                    transform: translateY(0);
+                    pointer-events: auto;
+                }
+
+            .nav-link {
+                padding: 0.85rem 1.5rem;
+                border-bottom: none !important;
+                border-radius: 0;
+                color: rgba(255,255,255,0.85) !important;
+                font-size: 0.95rem;
+                font-weight: 500;
+                display: block;
+                transition: background 0.15s, color 0.15s, padding-left 0.15s;
+                border-left: 3px solid transparent;
+            }
+
+                .nav-link:hover {
+                    background: rgba(255,255,255,0.08) !important;
+                    color: white !important;
+                    border-left-color: rgba(255,255,255,0.35) !important;
+                    padding-left: 1.75rem;
+                }
+
+                .nav-link.active {
+                    color: white !important;
+                    font-weight: 600;
+                    border-left-color: #4CA3DD !important;
+                    background: rgba(76,163,221,0.12) !important;
+                }
+
+            .nav-portal {
+                margin: 0.5rem 1.5rem 0 !important;
+                text-align: center !important;
+                border-radius: 8px !important;
+                padding: 0.6rem 1rem !important;
+                background: rgba(255,255,255,0.12) !important;
+                border: 1.5px solid rgba(255,255,255,0.3) !important;
+                color: white !important;
+                border-left: 1.5px solid rgba(255,255,255,0.3) !important;
+            }
+
+                .nav-portal:hover {
+                    background: rgba(255,255,255,0.22) !important;
+                    padding-left: 1rem !important;
+                }
+
+            .nav-toggle {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                width: 38px;
+                height: 38px;
+                border-radius: 8px;
+                background: rgba(255,255,255,0.1) !important;
+                border: 1.5px solid rgba(255,255,255,0.2) !important;
+                color: white !important;
+                cursor: pointer;
+                transition: background 0.15s;
+                flex-shrink: 0;
+            }
+
+                .nav-toggle:hover {
+                    background: rgba(255,255,255,0.18) !important;
+                }
+
+                .nav-toggle svg {
+                    display: block;
+                }
+            /* Overlay sombre */
+            .nav-mobile-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                top: var(--nav-height);
+                background: rgba(0,0,0,0.5);
+                z-index: 997;
+                backdrop-filter: blur(2px);
+            }
+
+                .nav-mobile-overlay.active {
+                    display: block;
+                }
+            /* ---------- Hero ---------- */
+            .hero-title {
+                font-size: 2.4rem;
+            }
+
+            .hero-stats {
+                gap: var(--spacing-md);
+            }
+
+            .stat-divider {
+                display: none;
+            }
+            /* ---------- Services grid ---------- */
+            .services-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            /* ---------- Stats section ---------- */
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stat-block {
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+
+                .stat-block:nth-child(3),
+                .stat-block:nth-child(4) {
+                    border-bottom: none;
+                }
+            /* ---------- Why VNK ---------- */
+            .why-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .why-image img {
+                height: 300px;
+            }
+
+            .why-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            /* ---------- Testimonials ---------- */
+            .testimonials-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            /* ---------- Services page ---------- */
+            .service-detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .service-detail-image img {
+                height: 250px;
+            }
+            /* ---------- Process steps ---------- */
+            .process-steps {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .process-step-block {
+                min-width: 160px;
+                max-width: 160px;
+            }
+
+            .process-arrow {
+                align-self: center;
+                margin-top: -1.5rem;
+            }
+            /* ---------- About page ---------- */
+            .founder-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .founder-visual {
+                position: static;
+            }
+
+            .founder-photo {
+                height: 280px;
+            }
+
+            .expertise-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .commitment-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            /* ---------- Contact page ---------- */
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
+            /* ---------- Page header ---------- */
+            .page-header-content h1 {
+                font-size: 2rem;
+            }
+
+            .page-header-nav {
+                flex-wrap: wrap;
+            }
+            /* ---------- Footer ---------- */
+            .footer-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: var(--spacing-md);
+            }
+            /* ---------- Portal LOGIN ---------- */
+            /* NOTE: Le portail dashboard (sidebar) reste identique sur tablette et PC */
+            /* Le hamburger menu mobile est uniquement activé sous 768px */
+        }
+        /* ============================================
+   TÉLÉPHONE — moins de 768px
+   ============================================ */
+        @media (max-width: 768px) {
+            /* ---------- Espacements généraux ---------- */
+            :root {
+                --spacing-xl: 3rem;
+                --spacing-lg: 2rem;
+            }
+
+            .container {
+                padding: 0 var(--spacing-sm);
+            }
+            /* ---------- Navigation ---------- */
+            .nav-container {
+                padding: 0 var(--spacing-sm);
+            }
+
+            .logo-text {
+                display: none;
+            }
+            /* ---------- Hero ---------- */
+            .hero-container {
+                padding: calc(var(--nav-height) + 2rem) var(--spacing-sm) 2rem;
+            }
+
+            .hero-title {
+                font-size: 1.9rem;
+            }
+
+            .hero-subtitle {
+                font-size: 0.95rem;
+            }
+
+            .hero-actions {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .btn-hero {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .hero-stats {
+                gap: var(--spacing-sm);
+                flex-wrap: wrap;
+            }
+
+            .stat-number {
+                font-size: 1.5rem;
+            }
+            /* ---------- Section headers ---------- */
+            .section-header h2 {
+                font-size: 1.5rem;
+            }
+            /* ---------- Brands ---------- */
+            .brands-grid {
+                gap: 0.5rem;
+                justify-content: center;
+            }
+
+            .brand-badge {
+                min-width: 90px;
+                padding: 0.6rem 0.75rem;
+            }
+
+            .brand-logo-svg {
+                width: 40px;
+                height: 26px;
+            }
+            /* ---------- Services preview ---------- */
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+            /* ---------- Stats section ---------- */
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .stat-big {
+                font-size: 2.2rem;
+            }
+            /* ---------- Why VNK ---------- */
+            .why-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .why-image img {
+                height: 220px;
+            }
+            /* ---------- Testimonials ---------- */
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+            /* ---------- CTA ---------- */
+            .cta-actions {
+                flex-direction: column;
+                align-items: center;
+                gap: 0.75rem;
+            }
+
+                .cta-actions .btn {
+                    width: 100%;
+                    max-width: 320px;
+                    justify-content: center;
+                }
+            /* ---------- Footer ---------- */
+            .footer-grid {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-md);
+            }
+
+            .footer-bottom {
+                padding-top: var(--spacing-sm);
+            }
+            /* ---------- Page header ---------- */
+            .page-header {
+                padding: calc(var(--nav-height) + 1.5rem) 0 1.5rem;
+                min-height: 200px;
+            }
+
+            .page-header-content h1 {
+                font-size: 1.6rem;
+            }
+
+            .page-header-content p {
+                font-size: 0.9rem;
+            }
+
+            .page-header-nav {
+                gap: 0.4rem;
+            }
+
+            .page-header-link {
+                font-size: 0.78rem;
+                padding: 0.3rem 0.7rem;
+            }
+            /* ---------- Services page ---------- */
+            .service-detail {
+                padding: var(--spacing-lg) 0;
+            }
+
+            .service-detail-grid {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-md);
+            }
+
+            .service-detail-icon-wrap {
+                width: 52px;
+                height: 52px;
+            }
+
+            .pricing-card {
+                position: static;
+            }
+            /* ---------- Process steps ---------- */
+            .process-steps {
+                flex-direction: column;
+                align-items: center;
+                gap: 0;
+            }
+
+            .process-step-block {
+                min-width: 100%;
+                max-width: 100%;
+                text-align: left;
+                display: flex;
+                align-items: flex-start;
+                gap: var(--spacing-sm);
+                padding: var(--spacing-sm) 0;
+                border-bottom: 1px solid var(--color-border);
+            }
+
+                .process-step-block:last-child {
+                    border-bottom: none;
+                }
+
+            .process-step-number {
+                font-size: 1.5rem;
+                min-width: 40px;
+            }
+
+            .process-step-icon {
+                display: none;
+            }
+
+            .process-arrow {
+                display: none;
+            }
+            /* ---------- About page ---------- */
+            .founder-photo {
+                height: 220px;
+            }
+
+            .expertise-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .commitment-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .vnk-values {
+                gap: var(--spacing-xs);
+            }
+            /* ---------- Contact page ---------- */
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .contact-info-card, .contact-process-card, .contact-calendly-card {
+                padding: var(--spacing-sm);
+            }
+            /* ---------- Portal LOGIN ---------- */
+            /* ============================================
+       PORTAIL DASHBOARD — MOBILE SEULEMENT
+       Sidebar cachée + hamburger menu
+       ============================================ */
+            /* Dashboard mobile — colonne unique */
+            /* Sidebar cachée par défaut — glisse depuis la gauche */
+            /* Overlay sombre */
+            /* Barre mobile en haut */
+            /* Nav verticale dans la sidebar */
+            /* Sidebar footer visible sur mobile */
+            /* Contenu principal */
+            /* Footer mobile */
+        }
+        /* ============================================
+   PETIT TÉLÉPHONE — moins de 480px
+   ============================================ */
+        @media (max-width: 480px) {
+
+            .hero-title {
+                font-size: 1.6rem;
+            }
+
+            .hero-badge {
+                font-size: 0.78rem;
+            }
+
+            .brands-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .brand-badge {
+                min-width: auto;
+                padding: 0.5rem;
+            }
+
+            .brand-sub {
+                display: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .stat-big {
+                font-size: 1.8rem;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .commitment-grid {
+                grid-template-columns: 1fr;
+            }
+            /* Portal petit mobile */
+
+            .page-header-nav {
+                display: none;
+            }
+
+            .cta-icon svg {
+                width: 28px;
+                height: 28px;
+            }
+        }
+
         margin: 0 auto;
     }
 

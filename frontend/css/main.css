@@ -3725,6 +3725,24 @@ img {
 }
 
 /* ── RESPONSIVE ── */
+/* ══════════════════════════════════════════════════════
+   PORTAIL — RESPONSIVE COMPLET v10
+   Architecture mobile pro :
+   - Topbar bleue slim (52px) sticky top
+   - portal-main-header MASQUÉ (pas de doublon)
+   - Sub-header léger par tab (filtres seulement)
+   - Bottom nav fixe (60px) — 5 items
+   - Contenu : calc(100vh - topbar - bottomnav)
+   ══════════════════════════════════════════════════════ */
+
+:root {
+    --portal-topbar-h: 52px;
+    --portal-bottomnav-h: 60px;
+}
+
+/* ══════════════════════════════════════════════════════
+   1280px
+   ══════════════════════════════════════════════════════ */
 @media (max-width: 1280px) {
     .portal-dashboard {
         grid-template-columns: 240px 1fr;
@@ -3735,84 +3753,619 @@ img {
     }
 
     .portal-stats-row {
-        grid-template-columns: repeat(2, minmax(0, 210px));
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 
+/* ══════════════════════════════════════════════════════
+   1024px — LAYOUT MOBILE COMPLET
+   ══════════════════════════════════════════════════════ */
 @media (max-width: 1024px) {
-    .portal-body {
-        overflow: auto;
+
+    /* ── Scroll body ── */
+    html:has(body.portal-body) {
+        overflow-y: auto;
     }
 
-    .portal-dashboard {
-        grid-template-columns: 1fr;
+    body.portal-body {
+        overflow-y: auto;
         height: auto;
-        min-height: calc(100vh - var(--nav-height));
-        overflow: visible;
+        max-height: none;
     }
 
+    /* ── Layout ── */
+    .portal-dashboard {
+        display: flex !important;
+        flex-direction: column !important;
+        grid-template-columns: unset !important;
+        height: auto !important;
+        min-height: calc(100vh - var(--nav-height));
+        max-height: none !important;
+        overflow: visible !important;
+        margin-top: var(--nav-height);
+    }
+
+    .portal-action-panel {
+        display: none !important;
+    }
+
+    /* ── Sidebar off-canvas ── */
     .portal-sidebar {
-        position: fixed;
-        left: -240px;
+        position: fixed !important;
+        left: -280px;
         top: var(--nav-height);
-        z-index: 200;
-        transition: left 0.3s ease;
+        width: 280px;
         height: calc(100vh - var(--nav-height));
-        box-shadow: 4px 0 20px rgba(0,0,0,0.12);
+        z-index: 600;
+        transition: left 0.28s cubic-bezier(0.4,0,0.2,1);
+        overflow-y: auto;
+        box-shadow: 4px 0 32px rgba(0,0,0,0.25);
+        flex-shrink: 0;
+        background: white;
     }
 
         .portal-sidebar.open {
             left: 0;
         }
 
-    .portal-main {
-        grid-column: 1;
-        height: auto;
-        overflow: visible;
-    }
-
-    .portal-main-header {
-        position: sticky;
-        top: var(--nav-height);
-        z-index: 10;
-    }
-
-    .portal-main-content {
-        overflow: visible;
-        height: auto;
-    }
-
-    .portal-mobile-topbar {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 0.75rem 1rem;
-        background: var(--color-white);
-        border-bottom: 1px solid var(--color-border);
-        flex-shrink: 0;
-        position: sticky;
-        top: var(--nav-height);
-        z-index: 9;
-    }
-
     .portal-overlay {
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(0,0,0,0.35);
-        z-index: 199;
+        top: var(--nav-height);
+        background: rgba(0,0,0,0.5);
+        z-index: 599;
+        backdrop-filter: blur(2px);
     }
 
         .portal-overlay.open {
             display: block;
         }
-}
 
-@media (max-width: 768px) {
-    .portal-stats-row {
-        grid-template-columns: 1fr 1fr;
+    /* ── Portal main ── */
+    .portal-main {
+        flex: 1 !important;
+        height: auto !important;
+        overflow: visible !important;
+        min-width: 0;
+        grid-column: unset !important;
     }
 
+    /* ══════════════════════════════════
+       TOPBAR BLEUE — slim, sticky
+    ══════════════════════════════════ */
+    .portal-mobile-topbar {
+        display: flex !important;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0 1rem;
+        height: var(--portal-topbar-h);
+        background: #0F2D52 !important;
+        flex-shrink: 0;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .portal-hamburger {
+        color: rgba(255,255,255,0.8) !important;
+        background: none !important;
+        border: none !important;
+        cursor: pointer;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        padding: 0.35rem;
+        flex-shrink: 0;
+        border-radius: 8px;
+        transition: background 0.15s;
+    }
+
+        .portal-hamburger:hover {
+            background: rgba(255,255,255,0.1) !important;
+        }
+
+    .portal-mobile-title {
+        color: white !important;
+        font-weight: 600 !important;
+        flex: 1;
+        font-size: 0.95rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .portal-mobile-avatar {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+        background: rgba(255,255,255,0.15) !important;
+        color: white !important;
+        border-radius: 50%;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.72rem;
+        font-weight: 800;
+        flex-shrink: 0;
+        border: 1.5px solid rgba(255,255,255,0.3) !important;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+        .portal-mobile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    /* ══════════════════════════════════
+       PORTAL-MAIN-HEADER — MASQUÉ
+       (titre dans topbar, boutons dans chaque tab)
+    ══════════════════════════════════ */
+    .portal-main-header {
+        display: none !important;
+    }
+
+    /* ══════════════════════════════════
+       CONTENU — pleine hauteur
+    ══════════════════════════════════ */
+    .portal-main-content {
+        overflow: visible !important;
+        height: auto !important;
+        flex: none !important;
+        padding: 0 !important;
+    }
+
+    .portal-content-frozen {
+        position: static;
+        padding: 0;
+    }
+
+    .portal-content-scroll {
+        overflow: visible !important;
+        height: auto !important;
+        padding: 0 0 calc(var(--portal-bottomnav-h) + 1rem);
+    }
+
+    /* ══════════════════════════════════
+       BOTTOM NAV — fixe en bas
+    ══════════════════════════════════ */
+    .portal-bottom-nav {
+        display: flex !important;
+        position: fixed !important;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: var(--portal-bottomnav-h);
+        background: white;
+        border-top: 1px solid #E2E8F0;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+        z-index: 200;
+        padding: 0 0.25rem;
+        padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    .portal-bnav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #94A3B8;
+        font-family: inherit;
+        font-size: 0.6rem;
+        font-weight: 500;
+        transition: color 0.15s;
+        position: relative;
+        padding: 0.5rem 0.25rem 0.35rem;
+        min-width: 0;
+    }
+
+        .portal-bnav-item svg {
+            flex-shrink: 0;
+            transition: transform 0.15s;
+        }
+
+        .portal-bnav-item.active {
+            color: #1B4F8A;
+        }
+
+            .portal-bnav-item.active svg {
+                transform: scale(1.05);
+            }
+
+        .portal-bnav-item span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+    /* Badge de notification */
+    .portal-bnav-badge {
+        position: absolute;
+        top: 6px;
+        right: calc(50% - 16px);
+        min-width: 16px;
+        height: 16px;
+        padding: 0 4px;
+        background: #E63946;
+        color: white;
+        border-radius: 8px;
+        font-size: 0.55rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1.5px solid white;
+        line-height: 1;
+    }
+    /* Bouton "+" central */
+    .portal-bnav-action {
+        color: #64748B;
+    }
+
+    .portal-bnav-plus {
+        width: 44px;
+        height: 44px;
+        background: linear-gradient(135deg, #1B4F8A, #2E75B6);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(27,79,138,0.4);
+        margin-bottom: 2px;
+        position: relative;
+        top: -8px;
+    }
+
+    .portal-bnav-action span {
+        position: relative;
+        top: -4px;
+        font-size: 0.58rem;
+    }
+
+    /* ══════════════════════════════════
+       DASHBOARD
+    ══════════════════════════════════ */
+    .portal-stats-row {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.75rem !important;
+        padding: 1rem 1rem 0 !important;
+    }
+
+    .portal-stat-card {
+        padding: 1rem 0.85rem !important;
+        gap: 0.6rem !important;
+        border-radius: 14px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+    }
+
+    .portal-stat-number {
+        font-size: 1.6rem !important;
+    }
+
+    .portal-stat-icon {
+        width: 36px !important;
+        height: 36px !important;
+        border-radius: 10px !important;
+    }
+
+    .portal-stat-label {
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
+    }
+
+    .portal-dashboard-grid {
+        grid-template-columns: 1fr !important;
+        padding: 0.85rem 1rem !important;
+        gap: 0.85rem !important;
+    }
+    /* Quick actions : inline sur mobile */
+    .portal-quick-actions {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.5rem !important;
+    }
+
+    .portal-quick-btn {
+        font-size: 0.8rem !important;
+        padding: 0.65rem 0.5rem !important;
+        text-align: center !important;
+        border-radius: 10px !important;
+    }
+
+    /* ══════════════════════════════════
+       MANDATS — sub-header sticky
+    ══════════════════════════════════ */
+    #tab-mandates .portal-mandates-header {
+        position: sticky !important;
+        top: var(--portal-topbar-h) !important;
+        z-index: 30 !important;
+        background: white !important;
+        padding: 0.65rem 1rem !important;
+        border-bottom: 1px solid #EBF5FB;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+        #tab-mandates .portal-mandates-header > div[style*="padding-bottom"] {
+            padding-bottom: 0 !important;
+            border-bottom: none !important;
+        }
+
+    .portal-mandates-scroll {
+        padding: 0 1rem calc(var(--portal-bottomnav-h) + 1rem) !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    #portal-mandates-kpis {
+        grid-template-columns: repeat(3,1fr) !important;
+        gap: 0.5rem !important;
+        margin-bottom: 0.65rem !important;
+    }
+
+    .mandate-cards-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .mandate-list-row {
+        grid-template-columns: 1fr !important;
+        gap: 0.4rem !important;
+        padding: 0.75rem 0 !important;
+    }
+
+    .mandate-dates-grid, .mandate-detail-dates {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    #portal-mandate-side-panel {
+        display: none !important;
+    }
+    /* Barre recherche mandats */
+    #tab-mandates .portal-mandates-header > div:last-child {
+        flex-wrap: wrap !important;
+        gap: 0.4rem !important;
+    }
+
+    #mandate-search {
+        min-width: 100% !important;
+    }
+
+    #mandate-filter {
+        flex: 1 !important;
+        font-size: 0.8rem !important;
+    }
+    /* Bouton Démarrer pleine largeur */
+    #tab-mandates .portal-mandates-header button[onclick*="openNewProject"] {
+        width: 100% !important;
+        justify-content: center !important;
+        margin-top: 0.35rem !important;
+    }
+
+    /* ══════════════════════════════════
+       DEMANDES
+    ══════════════════════════════════ */
+    #tab-my-requests .portal-mandates-header {
+        position: sticky !important;
+        top: var(--portal-topbar-h) !important;
+        z-index: 30 !important;
+        background: white !important;
+        padding: 0.65rem 1rem !important;
+        border-bottom: 1px solid #EBF5FB;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+        #tab-my-requests .portal-mandates-header > div:first-child {
+            flex-wrap: wrap !important;
+            gap: 0.4rem !important;
+            padding-bottom: 0 !important;
+            border-bottom: none !important;
+        }
+
+    #tab-my-requests .portal-mandates-scroll {
+        padding: 0 1rem calc(var(--portal-bottomnav-h) + 1rem) !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    .requests-cards-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .requests-list-row {
+        grid-template-columns: 1fr !important;
+        gap: 0.4rem !important;
+        padding: 0.75rem 0 !important;
+    }
+
+    #req-sort-portal, #req-status-portal {
+        flex: 1 !important;
+        min-width: 100px !important;
+        font-size: 0.8rem !important;
+    }
+    /* Bouton Démarrer */
+    #tab-my-requests .portal-mandates-header button[onclick*="openNewProject"] {
+        width: 100% !important;
+        justify-content: center !important;
+        margin-top: 0.35rem !important;
+    }
+
+    /* ══════════════════════════════════
+       FILTRES PARTAGÉS
+    ══════════════════════════════════ */
+    .portal-search-bar {
+        flex-wrap: wrap !important;
+        gap: 0.4rem !important;
+        margin-top: 0.4rem;
+        width: 100%;
+    }
+
+    .portal-search-input-wrap {
+        min-width: 100% !important;
+        flex: none !important;
+    }
+
+    .portal-filter-select {
+        font-size: 0.8rem !important;
+        flex: 1;
+    }
+
+    /* ══════════════════════════════════
+       DEVIS / FACTURES / CONTRATS
+    ══════════════════════════════════ */
+    #quotes-list, #invoices-list, #contracts-list {
+        padding: 0.75rem 1rem calc(var(--portal-bottomnav-h) + 1rem) !important;
+    }
+
+    .vnk-table-wrap {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 10px !important;
+    }
+
+    .vnk-table {
+        min-width: 440px;
+        font-size: 0.82rem !important;
+    }
+
+        .vnk-table thead th {
+            padding: 8px 10px !important;
+            font-size: 0.65rem !important;
+            white-space: nowrap;
+        }
+
+        .vnk-table td {
+            padding: 8px 10px !important;
+        }
+
+            .vnk-table td.title {
+                max-width: 120px !important;
+            }
+
+    [id^="sort-dropdown-"] {
+        max-width: calc(100vw - 2rem) !important;
+        right: 1rem !important;
+    }
+
+    /* ══════════════════════════════════
+       DOCUMENTS
+    ══════════════════════════════════ */
+    #documents-list {
+        padding: 0.75rem 1rem calc(var(--portal-bottomnav-h) + 1rem) !important;
+    }
+
+    .doc-card-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .doc-category-cards {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* ══════════════════════════════════
+       BOOKING — calendrier responsive
+    ══════════════════════════════════ */
+    #tab-booking {
+        padding-bottom: var(--portal-bottomnav-h) !important;
+    }
+
+        #tab-booking .bk-main {
+            flex-direction: column !important;
+            height: auto !important;
+            overflow: visible !important;
+        }
+
+        #tab-booking .bk-cal-col {
+            max-width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            border-bottom: 1px solid #E2E8F0;
+            padding-bottom: 1rem;
+        }
+
+        #tab-booking .bk-panel {
+            width: 100% !important;
+            border-left: none !important;
+            border-top: 1px solid #E2E8F0;
+            height: auto !important;
+            max-height: none !important;
+            padding-top: 0.75rem;
+        }
+
+    #booking-slots-day {
+        grid-template-columns: repeat(4,1fr) !important;
+        gap: 0.35rem !important;
+    }
+    /* Header booking */
+    #header-booking {
+        padding: 0.65rem 1rem !important;
+    }
+
+    /* ══════════════════════════════════
+       PROFIL
+    ══════════════════════════════════ */
+    .profile-info-grid, .profile-edit-grid, .profile-pw-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    #profile-content {
+        padding: 0.75rem 1rem calc(var(--portal-bottomnav-h) + 1rem) !important;
+    }
+
+    /* ══════════════════════════════════
+       MODALS sheet bottom
+    ══════════════════════════════════ */
+    #new-project-overlay {
+        align-items: flex-end !important;
+        padding: 0 !important;
+    }
+
+    #new-project-modal {
+        max-width: 100% !important;
+        width: 100% !important;
+        border-radius: 20px 20px 0 0 !important;
+        max-height: 94vh !important;
+    }
+
+    #np-booking-slots > div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    #np-booking-times {
+        grid-template-columns: repeat(3,1fr) !important;
+        max-height: 120px !important;
+    }
+
+    #rs-overlay {
+        align-items: flex-end !important;
+        padding: 0 !important;
+    }
+
+        #rs-overlay > div {
+            max-width: 100% !important;
+            width: 100% !important;
+            border-radius: 20px 20px 0 0 !important;
+            max-height: 94vh !important;
+        }
+
+    #rs-cal-wrap > div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    #rs-times {
+        grid-template-columns: repeat(3,1fr) !important;
+    }
+
+    /* ══════════════════════════════════
+       LOGIN
+    ══════════════════════════════════ */
     .portal-login-container {
         grid-template-columns: 1fr;
         max-width: 500px;
@@ -3822,20 +4375,117 @@ img {
         display: none;
     }
 
-    .portal-search-bar {
-        flex-wrap: wrap;
+    .portal-login-card {
+        padding: var(--spacing-md);
     }
 
-    .portal-search-input-wrap {
-        min-width: 100%;
+        .portal-login-card h2 {
+            font-size: 1.3rem;
+        }
+
+    /* Bouton Actualiser — masqué partout sur mobile (pull-to-refresh) */
+    .portal-refresh-btn {
+        display: none !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════
+   768px
+   ══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    .portal-stats-row {
+        gap: 0.5rem !important;
     }
 
-    .portal-main-header {
-        padding: 0.75rem 1rem 0.65rem;
+    .portal-stat-card {
+        padding: 0.85rem 0.7rem !important;
     }
 
-    .portal-main-content {
-        padding: 1rem;
+    .mandate-cards-grid, .requests-cards-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .vnk-table th:nth-child(3), .vnk-table td:nth-child(3) {
+        display: none !important;
+    }
+
+    .vnk-table {
+        min-width: 320px;
+    }
+
+    #booking-slots-day {
+        grid-template-columns: repeat(3,1fr) !important;
+    }
+
+    #np-booking-times {
+        grid-template-columns: repeat(3,1fr) !important;
+    }
+
+    #rs-times {
+        grid-template-columns: repeat(3,1fr) !important;
+    }
+
+    .portal-quick-actions {
+        grid-template-columns: 1fr !important;
+    }
+
+    #portal-mandates-kpis > div {
+        padding: 0.45rem 0.5rem !important;
+    }
+
+        #portal-mandates-kpis > div > div > div:first-child {
+            font-size: 1rem !important;
+        }
+
+        #portal-mandates-kpis > div > div > div:last-child {
+            font-size: 0.6rem !important;
+        }
+}
+
+/* ══════════════════════════════════════════════════════
+   480px
+   ══════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+    .portal-stats-row {
+        grid-template-columns: repeat(2,1fr) !important;
+        gap: 0.4rem !important;
+    }
+
+    .portal-stat-card {
+        padding: 0.75rem 0.6rem !important;
+    }
+
+    .portal-stat-icon {
+        width: 30px !important;
+        height: 30px !important;
+    }
+
+    .portal-stat-number {
+        font-size: 1.35rem !important;
+    }
+
+    .portal-stat-label {
+        font-size: 0.7rem !important;
+    }
+
+    #booking-slots-day {
+        grid-template-columns: repeat(3,1fr) !important;
+    }
+
+    #np-booking-times {
+        grid-template-columns: repeat(2,1fr) !important;
+    }
+
+    #rs-times {
+        grid-template-columns: repeat(2,1fr) !important;
+    }
+
+    .portal-quick-actions {
+        grid-template-columns: 1fr !important;
+    }
+
+    .portal-bnav-item {
+        font-size: 0.55rem !important;
     }
 }
 
