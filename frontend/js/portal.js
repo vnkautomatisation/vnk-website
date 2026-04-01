@@ -277,9 +277,8 @@ async function loadAllData() {
 
         // Mettre à jour l'avatar sidebar seulement (pas toute la page profil)
         await _refreshUserFromAPI();
-        // Rafraîchir mes RDV si l'onglet booking est actif
-        const _activeTab = localStorage.getItem('vnk-portal-tab');
-        if (_activeTab === 'booking') loadMyAppointments().catch(() => { });
+        // Toujours rafraîchir les RDV en arrière-plan (lien peut être mis à jour par admin)
+        loadMyAppointments().catch(() => { });
     } catch (error) { console.log('Data loading error:', error); }
 }
 
@@ -805,11 +804,11 @@ function showTab(tabName) {
         dashboard: 'Tableau de bord',
         'my-requests': 'Mes demandes',
         mandates: 'Mes mandats',
-        'my-requests': 'Mes demandes',
         quotes: 'Mes devis',
         invoices: 'Mes factures',
         contracts: 'Mes contrats',
-        documents: 'Mes documents'
+        documents: 'Mes documents',
+        booking: 'Réserver un appel'
     };
     const mobileTitle = document.getElementById('mobile-tab-title');
     if (mobileTitle) mobileTitle.textContent = titles[tabName] || '';
@@ -835,6 +834,11 @@ function showTab(tabName) {
         // Effacer le dot quand ouvert
         const dot = document.getElementById('dot-my-requests');
         if (dot) dot.style.display = 'none';
+    }
+
+    // 8b. Booking — initialiser le calendrier
+    if (tabName === 'booking') {
+        setTimeout(initBookingTab, 50);
     }
 
     // 8. Documents — afficher seulement, ne PAS marquer lu automatiquement
@@ -3734,7 +3738,14 @@ function _npRenderStep() {
     } else if (_npStep === 3) {
         // Charger les créneaux
         if (btnBack) { btnBack.style.display = 'inline-block'; btnBack.textContent = '← Retour'; }
-        _npUpdateStep3Btn();
+        if (btnNext) {
+            btnNext.style.display = 'flex';
+            btnNext.style.background = 'var(--primary,#1B4F8A)';
+            const hasSlot = !!_npSelectedSlot;
+            btnNext.innerHTML = hasSlot
+                ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg> Réviser ma demande'
+                : 'Passer cette étape →';
+        }
         setTimeout(function () { _npInitBookingSlots(); }, 200);
     } else if (_npStep === 4) {
         // Remplir le résumé avec le créneau sélectionné
@@ -3748,25 +3759,6 @@ function _npRenderStep() {
     if (_npStep < 4 && footer) footer.style.display = 'flex';
     if (_npStep >= 5 && footer) footer.style.display = 'none';
     const fb = el('np-feedback'); if (fb) fb.style.display = 'none';
-}
-
-
-function _npUpdateStep3Btn() {
-    const btnNext = document.getElementById('np-btn-next');
-    if (!btnNext) return;
-    btnNext.style.display = 'flex';
-    if (_npSelectedSlot) {
-        const ds = _npSelectedSlot.ds;
-        const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
-        btnNext.style.background = 'linear-gradient(135deg,#059669,#047857)';
-        btnNext.style.boxShadow = '0 2px 12px rgba(5,150,105,0.35)';
-        btnNext.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmer · ' + dateStr + ' ' + _npSelectedSlot.time;
-    } else {
-        btnNext.style.background = 'rgba(255,255,255,0.15)';
-        btnNext.style.boxShadow = 'none';
-        btnNext.style.color = 'rgba(255,255,255,0.7)';
-        btnNext.innerHTML = 'Passer cette étape <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>';
-    }
 }
 
 function _npBuildSummary() {
@@ -3958,7 +3950,7 @@ function submitNewProject() { npGoStep(1); }
 
 
 // ── BOOKING INTÉGRÉ DANS LE MODAL NOUVEAU PROJET ────────────────
-let _npBookingSlots = [], _npBookingMonthOffset = 0, _npSelectedSlot = null, _npMyApptTimes = new Set(), _npSelectedDate = null;
+let _npBookingSlots = [], _npBookingMonthOffset = 0, _npSelectedSlot = null;
 
 async function _npInitBookingSlots() {
     const loadEl = document.getElementById('np-booking-loading');
@@ -3975,15 +3967,6 @@ async function _npInitBookingSlots() {
         });
         const data = await resp.json();
         _npBookingSlots = data.slots || [];
-        _npMyApptTimes = new Set();
-        try {
-            const r2 = await fetch('/api/calendar/my-appointments', { headers: { 'Authorization': 'Bearer ' + token } });
-            const d2 = await r2.json();
-            (d2.appointments || []).forEach(function (a) {
-                if (a.status !== 'cancelled')
-                    _npMyApptTimes.add((a.appointment_date || '').split('T')[0] + '_' + (a.start_time || '').substring(0, 5));
-            });
-        } catch (e2) { }
     } catch (e) {
         _npBookingSlots = [];
     }
@@ -4011,7 +3994,6 @@ async function _npInitBookingSlots() {
 
 function npBookingNavMonth(dir) {
     _npBookingMonthOffset += dir;
-    _npSelectedDate = null; // Reset sélection au changement de mois
     _npRenderBookingCal();
     // Cacher les créneaux du jour
     const dayEl = document.getElementById('np-booking-day-slots');
@@ -4026,90 +4008,82 @@ function _npRenderBookingCal() {
     const year = target.getFullYear();
     const month = target.getMonth();
     const today = now.toISOString().split('T')[0];
+
     const lbl = document.getElementById('np-booking-month-label');
     if (lbl) lbl.textContent = target.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
-    const datesWithSlots = new Set(_npBookingSlots.map(function (s) { return (s.slot_date || '').split('T')[0]; }));
+
+    const datesWithSlots = new Set(_npBookingSlots.map(s => (s.slot_date || '').split('T')[0]));
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    let startDow = firstDay.getDay() - 1; if (startDow < 0) startDow = 6;
+    let startDow = firstDay.getDay(); // Dim=0
+
+
     const grid = document.getElementById('np-booking-cal-grid');
     if (!grid) return;
+
     let html = '';
     for (let i = 0; i < startDow; i++) html += '<div></div>';
+
     for (let d = 1; d <= lastDay.getDate(); d++) {
         const ds = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
         const hasSlot = datesWithSlots.has(ds);
         const isPast = ds < today;
         const isToday = ds === today;
-        const isSelected = ds === _npSelectedDate;
-        const daySlotsList = _npBookingSlots.filter(function (s) { return (s.slot_date || '').split('T')[0] === ds; });
-        const allTaken = daySlotsList.length > 0 && daySlotsList.every(function (s) { return _npMyApptTimes.has(ds + '_' + (s.start_time || '').substring(0, 5)); });
-        const someTaken = !allTaken && daySlotsList.some(function (s) { return _npMyApptTimes.has(ds + '_' + (s.start_time || '').substring(0, 5)); });
-        const base = 'text-align:center;width:32px;height:32px;margin:0 auto;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;transition:all .15s;';
-        if (isPast) {
-            html += '<div style="' + base + 'color:#D1D5DB;">' + d + '</div>';
-        } else if (!hasSlot) {
-            const ts = isToday ? 'border:2px solid #CBD5E0;font-weight:600;color:#64748B;' : 'color:#CBD5E0;';
-            html += '<div style="' + base + ts + '">' + d + '</div>';
-        } else if (allTaken) {
-            html += '<div style="' + base + 'background:#FEE2E2;color:#EF4444;font-weight:600;cursor:not-allowed;" title="Deja reserve">' + d + '</div>';
+
+        let style = 'text-align:center;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;transition:all .12s;';
+
+        if (!isPast && hasSlot) {
+            style += 'background:#1B4F8A;color:white;font-weight:700;cursor:pointer;';
+            html += '<div onclick="npSelectBookingDate(\'' + ds + '\')" style="' + style + '" '
+                + 'onmouseenter="this.style.background=\'#2563EB\'" '
+                + 'onmouseleave="this.style.background=\'#1B4F8A\'">'
+                + d + '</div>';
+        } else if (isToday && !hasSlot) {
+            style += 'border:2px solid #1B4F8A;color:#1B4F8A;font-weight:600;';
+            html += '<div style="' + style + '">' + d + '</div>';
         } else {
-            const bg = isSelected ? '#2563EB' : (isToday ? '#0F3460' : '#1B4F8A');
-            const ring = isSelected ? 'box-shadow:0 0 0 3px rgba(37,99,235,0.4),0 0 0 7px rgba(37,99,235,0.1);transform:scale(1.12);' : '';
-            const check = isSelected ? '<div style="position:absolute;top:-3px;right:-3px;width:12px;height:12px;border-radius:50%;background:#22C55E;border:2px solid white;display:flex;align-items:center;justify-content:center;"><svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>' : '';
-            const dot = someTaken ? '<div style="position:absolute;bottom:1px;right:1px;width:5px;height:5px;border-radius:50%;background:#F97316;border:1px solid white"></div>' : '';
-            html += '<div onclick="npSelectBookingDate(\'' + ds + '\')" '
-                + 'style="' + base + ring + 'background:' + bg + ';color:white;font-weight:700;cursor:pointer;position:relative;" '
-                + 'onmouseenter="this.style.background=\'#2563EB\';this.style.transform=\'scale(1.1)\'" '
-                + 'onmouseleave="this.style.background=\'' + bg + '\';this.style.transform=\'' + (isSelected ? 'scale(1.12)' : '') + '\'">'
-                + d + check + dot + '</div>';
+            style += 'color:' + (isPast ? '#D1D5DB' : '#9CA3AF') + ';';
+            html += '<div style="' + style + '">' + d + '</div>';
         }
     }
     grid.innerHTML = html;
 }
 
 function npSelectBookingDate(ds) {
-    _npSelectedDate = ds;
-    _npRenderBookingCal(); // Re-render pour appliquer le highlight
-    const daySlots = _npBookingSlots.filter(function (s) { return (s.slot_date || '').split('T')[0] === ds; });
+    const daySlots = _npBookingSlots.filter(s => (s.slot_date || '').split('T')[0] === ds);
     const dayEl = document.getElementById('np-booking-day-slots');
     const lbl = document.getElementById('np-booking-day-label');
     const timesEl = document.getElementById('np-booking-times');
     const formEl = document.getElementById('np-booking-form');
     const successEl = document.getElementById('np-booking-success');
+
     if (formEl) formEl.style.display = 'none';
     if (successEl) successEl.style.display = 'none';
     _npSelectedSlot = null;
-    var badge = document.getElementById('np-slot-selected-badge');
-    if (badge) badge.style.display = 'none';
-    _npUpdateStep3Btn();
+
     if (!dayEl || !lbl || !timesEl) return;
     dayEl.style.display = 'block';
-    const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
-    lbl.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+
+    const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', {
+        weekday: 'long', day: 'numeric', month: 'long'
+    });
+    lbl.textContent = dateStr;
+
     if (!daySlots.length) {
-        timesEl.innerHTML = '<div style="font-size:0.78rem;color:#94A3B8;grid-column:1/-1">Aucun creneau ce jour.</div>';
+        timesEl.innerHTML = '<div style="font-size:0.78rem;color:#94A3B8">Aucun créneau ce jour.</div>';
         return;
     }
+
     timesEl.innerHTML = daySlots.map(function (s) {
         const time = (s.start_time || '').substring(0, 5);
         const dur = s.duration_min || 30;
-        const isTaken = _npMyApptTimes.has(ds + '_' + time);
-        if (isTaken) {
-            return '<div style="padding:0.45rem 0.4rem;border:2px solid #FCA5A5;border-radius:8px;background:#FEF2F2;'
-                + 'color:#EF4444;font-size:0.75rem;font-weight:600;text-align:center;cursor:not-allowed" title="Vous avez deja un RDV">'
-                + '<div>' + time + '</div>'
-                + '<div style="font-size:0.58rem;opacity:0.7;margin-top:1px">Pris</div>'
-                + '</div>';
-        }
         return '<button onclick="npSelectBookingSlot(' + s.id + ', \'' + ds + '\', \'' + time + '\', ' + dur + ')" '
             + 'data-slot-id="' + s.id + '" '
-            + 'style="padding:0.45rem 0.4rem;border:2px solid #E2E8F0;border-radius:8px;background:white;'
-            + 'color:#1B4F8A;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;text-align:center;width:100%" '
-            + 'onmouseenter="if(!this.classList.contains(\'np-sel\')){this.style.borderColor=\'#1B4F8A\';this.style.background=\'#EBF5FB\'}" '
-            + 'onmouseleave="if(!this.classList.contains(\'np-sel\')){this.style.borderColor=\'#E2E8F0\';this.style.background=\'white\'}">'
-            + '<div>' + time + '</div>'
-            + '<div style="font-size:0.6rem;color:#64748B;font-weight:400;margin-top:1px">' + dur + ' min</div>'
+            + 'style="padding:0.45rem 0.85rem;border:2px solid #E2E8F0;border-radius:8px;background:white;'
+            + 'color:#334155;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s" '
+            + 'onmouseenter="if(!this.classList.contains(\'np-sel\')){this.style.borderColor=\'#1B4F8A\';this.style.color=\'#1B4F8A\'}" '
+            + 'onmouseleave="if(!this.classList.contains(\'np-sel\')){this.style.borderColor=\'#E2E8F0\';this.style.color=\'#334155\'}">'
+            + time + ' <span style="font-size:0.65rem;opacity:0.6">(' + dur + ' min)</span>'
             + '</button>';
     }).join('');
 }
@@ -4137,21 +4111,6 @@ function npSelectBookingSlot(slotId, ds, time, dur) {
     const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
     if (txtEl) txtEl.textContent = dateStr + ' à ' + time + ' (' + dur + ' min)';
     if (formEl) formEl.style.display = 'block';
-
-    // Badge step 3
-    var b3 = document.getElementById('np-slot-selected-badge');
-    var b3t = document.getElementById('np-slot-selected-text');
-    if (b3) { b3.style.display = 'flex'; }
-    if (b3t) { b3t.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1) + ' à ' + time; }
-    // Bouton footer dynamique
-    _npUpdateStep3Btn();
-
-    // Badge step 3 + bouton footer dynamique
-    var b3 = document.getElementById('np-slot-selected-badge');
-    var b3t = document.getElementById('np-slot-selected-text');
-    if (b3) { b3.style.display = 'flex'; }
-    if (b3t) { b3t.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1) + ' à ' + time; }
-    _npUpdateStep3Btn();
 }
 
 async function npConfirmBooking() {
@@ -4205,31 +4164,50 @@ let _availableSlots = [];
 let _bookingMonthOffset = 0;
 let _selectedSlotId = null;
 let _selectedSlotData = null;
+let _selectedDateDs = null;
 
 async function loadMyAppointments() {
     const section = document.getElementById('booking-my-appts-section');
     const list = document.getElementById('booking-my-appts-list');
     if (!section || !list) return;
-
     try {
         const token = localStorage.getItem('vnk-token');
-        const resp = await fetch('/api/calendar/my-appointments', {
-            headers: { Authorization: 'Bearer ' + token }
-        });
+        const resp = await fetch('/api/calendar/my-appointments', { headers: { Authorization: 'Bearer ' + token } });
         const data = await resp.json();
-        window._allMyAppts = data.appointments || [];
+        // Détecter si un lien a été ajouté pour notifier le client
+        const prev = window._allMyAppts || [];
+        const fresh = data.appointments || [];
+        fresh.forEach(a => {
+            const old = prev.find(p => p.id === a.id);
+            if (old && !old.meeting_link && a.meeting_link) {
+                if (typeof pushPortalNotif === 'function') {
+                    pushPortalNotif('mandate', 'Lien de réunion disponible — ' + (a.subject || 'Rendez-vous'), 'booking');
+                }
+            }
+        });
+        window._allMyAppts = fresh;
         window._bkApptFilter = window._bkApptFilter || 'all';
-        window._bkApptPage = 1;
+        // Ne pas reset la page courante sauf premier chargement
+        if (!window._bkApptPage) window._bkApptPage = 1;
+        // Update badge
+        const total = window._allMyAppts.filter(a => a.status !== 'cancelled').length;
+        const badge = document.getElementById('bk-appts-count-badge');
+        if (badge) badge.textContent = total;
+        // Open accordion if has appointments
+        if (total > 0) {
+            const panel = document.getElementById('bk-appts-panel');
+            const arrow = document.getElementById('bk-accordion-arrow');
+            if (panel) panel.style.display = 'flex';
+            if (arrow) arrow.style.transform = 'rotate(180deg)';
+        }
         _renderMyAppts();
-    } catch (e) {
-        console.warn('loadMyAppointments:', e);
-    }
+    } catch (e) { console.warn('loadMyAppointments:', e); }
 }
 
 function bkFilterAppts(filter, btn) {
     window._bkApptFilter = filter;
     window._bkApptPage = 1;
-    document.querySelectorAll('.bk-filter-btn').forEach(b => {
+    document.querySelectorAll('.bk-filt').forEach(b => {
         b.style.background = 'white';
         b.style.borderColor = '#E2E8F0';
         b.style.color = '#64748B';
@@ -4251,13 +4229,31 @@ function _renderMyAppts() {
     if (!list) return;
 
     const all = window._allMyAppts || [];
-    if (!all.length) { section.style.display = 'none'; return; }
-    section.style.display = 'block';
+    if (!all.length) { if (section) section.style.display = 'none'; return; }
+    if (section) section.style.display = 'flex';
 
     const filter = window._bkApptFilter || 'all';
-    const filtered = filter === 'all' ? all : all.filter(a => a.status === filter);
+    let filtered = filter === 'all' ? all.slice() : all.filter(a => a.status === filter);
 
-    const PER_PAGE = 8;
+    // Tri : groupe 1 = à venir avec lien (date ASC)
+    //        groupe 2 = à venir sans lien (date ASC)
+    //        groupe 3 = passés (date DESC)
+    const today = new Date().toISOString().split('T')[0];
+    filtered.sort((a, b) => {
+        const aHasLink = !!a.meeting_link;
+        const bHasLink = !!b.meeting_link;
+        const aFuture = a.appointment_date >= today;
+        const bFuture = b.appointment_date >= today;
+        const aGroup = aFuture && aHasLink ? 0 : aFuture ? 1 : 2;
+        const bGroup = bFuture && bHasLink ? 0 : bFuture ? 1 : 2;
+        if (aGroup !== bGroup) return aGroup - bGroup;
+        // Dans groupe 0 et 1 : date ASC (plus tôt d'abord)
+        // Dans groupe 2 (passés) : date DESC (plus récent d'abord)
+        const cmp = a.appointment_date.localeCompare(b.appointment_date);
+        return aGroup === 2 ? -cmp : cmp;
+    });
+
+    const PER_PAGE = 10;
     const page = window._bkApptPage || 1;
     const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
     const slice = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -4274,39 +4270,50 @@ function _renderMyAppts() {
         return;
     }
 
+    // Grille auto-fill — s'ajuste à la résolution, min 220px par carte
+    const _sectionW = document.getElementById('booking-my-appts-section')?.offsetWidth || window.innerWidth - 260;
+    const _cols = Math.max(2, Math.floor(_sectionW / 327));
+    list.style.display = 'grid';
+    list.style.gridTemplateColumns = 'repeat(' + _cols + ',1fr)';
+    list.style.gap = '.5rem';
+    list.style.padding = '.65rem .9rem';
+
     list.innerHTML = slice.map(function (a) {
         const st = STATUS[a.status] || STATUS.pending;
         const ds = (a.appointment_date || '').split('T')[0];
-        const dateStr = ds ? new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', {
-            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-        }) : '—';
-        const timeStr = (a.start_time || '').substring(0, 5) + ' → ' + (a.end_time || '').substring(0, 5);
+        const isPast = ds < new Date().toISOString().split('T')[0];
+        const dateObj = ds ? new Date(ds + 'T12:00:00') : null;
+        const dateStr = dateObj ? dateObj.toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' }) : '—';
+        const startT = (a.start_time || '').substring(0, 5);
+        const endT = (a.end_time || '').substring(0, 5);
+        const timeStr = startT + ' – ' + endT;
+        const dur = (a.duration_min || 30) + ' min';
+        const fmt = a.meeting_type === 'phone' ? 'Téléphone' : 'Vidéo';
+        const fmtIcon = a.meeting_type === 'phone'
+            ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'
+            : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>';
         const hasLink = !!a.meeting_link;
-        const isPast = ds < new Date().toLocaleDateString('fr-CA').split('/').reverse().join('-');
+        const isCancelled = a.status === 'cancelled';
+        const opacity = (isCancelled || isPast) ? ';opacity:.6' : '';
 
-        return '<div style="border:1.5px solid ' + st.border + ';border-radius:12px;background:' + st.bg + ';padding:0.85rem 1rem;display:flex;align-items:center;gap:0.85rem;transition:box-shadow .15s" onmouseenter="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.08)\'" onmouseleave="this.style.boxShadow=\'\'">'
-            // Icône
-            + '<div style="width:40px;height:40px;border-radius:10px;background:' + st.color + ';opacity:0.15;position:relative;flex-shrink:0"></div>'
-            + '<div style="position:relative;margin-left:-40px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;font-weight:700;color:' + st.color + '">' + st.icon + '</div>'
-            // Contenu
-            + '<div style="flex:1;min-width:0">'
-            + '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:2px">'
-            + '<span style="font-size:0.88rem;font-weight:700;color:#0F172A">' + dateStr + '</span>'
-            + '<span style="font-size:0.7rem;font-weight:700;background:white;color:' + st.color + ';padding:1px 8px;border-radius:20px;border:1px solid ' + st.border + '">' + st.label + '</span>'
+        return '<div onclick="openApptDetailModal(' + a.id + ')" style="background:white;border:1.5px solid #E2E8F0;border-radius:8px;padding:.75rem .9rem;cursor:pointer;transition:all .12s;display:flex;flex-direction:column;gap:.35rem' + opacity + '" onmouseenter="this.style.borderColor=\'#BFDBFE\';this.style.background=\'#F8FAFC\'" onmouseleave="this.style.borderColor=\'#E2E8F0\';this.style.background=\'white\'">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;gap:.4rem">'
+            + '<span style="font-size:.78rem;font-weight:700;color:#0F172A;text-transform:capitalize;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + dateStr + '</span>'
+            + '<span style="font-size:.6rem;font-weight:700;background:' + st.bg + ';color:' + st.color + ';padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap">' + st.label + '</span>'
             + '</div>'
-            + '<div style="font-size:0.78rem;color:#475569;font-weight:600;margin-bottom:2px">' + timeStr + ' · ' + (a.duration_min || 30) + ' min</div>'
-            + (a.subject ? '<div style="font-size:0.75rem;color:#64748B">' + a.subject + '</div>' : '')
-            + '<div style="font-size:0.7rem;color:#94A3B8;margin-top:2px">' + (a.meeting_type === 'phone' ? '📞 Téléphone' : '📹 Vidéo') + '</div>'
+            + '<div style="display:flex;align-items:center;gap:.4rem">'
+            + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+            + '<span style="font-size:.73rem;font-weight:600;color:#475569">' + timeStr + '</span>'
+            + '<span style="font-size:.68rem;color:#94A3B8">·</span>'
+            + '<span style="font-size:.68rem;color:#94A3B8">' + dur + '</span>'
             + '</div>'
-            // Actions
-            + '<div style="display:flex;flex-direction:column;gap:0.35rem;flex-shrink:0;min-width:100px;align-items:flex-end">'
-            + (hasLink
-                ? '<a href="' + a.meeting_link + '" target="_blank" style="display:block;padding:0.4rem 0.85rem;border:none;border-radius:8px;background:#1B4F8A;color:white;font-size:0.75rem;font-weight:700;text-decoration:none;text-align:center">Rejoindre</a>'
-                : (a.status === 'confirmed' ? '<span style="font-size:0.7rem;background:white;color:#D97706;padding:3px 8px;border-radius:6px;border:1px solid #FDE68A;white-space:nowrap">🔗 Lien à venir</span>' : ''))
-            + (!isPast && a.status === 'confirmed'
-                ? '<button onclick="cancelMyAppointment(' + a.id + ')" style="background:white;border:1.5px solid #FECACA;border-radius:6px;padding:2px 8px;font-size:0.7rem;color:#DC2626;cursor:pointer;font-family:inherit;white-space:nowrap">Annuler</button>'
-                : '')
+            + '<div style="display:flex;align-items:center;gap:.35rem;overflow:hidden">'
+            + '<span style="display:flex;align-items:center;gap:.2rem;font-size:.68rem;color:#64748B;flex-shrink:0">' + fmtIcon + ' ' + fmt + '</span>'
+            + (a.subject ? '<span style="font-size:.68rem;color:#94A3B8;flex-shrink:0">·</span><span style="font-size:.68rem;color:#64748B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + a.subject + '</span>' : '')
             + '</div>'
+            + (hasLink && !isCancelled && !isPast
+                ? '<a href="' + a.meeting_link + '" target="_blank" onclick="event.stopPropagation()" style="margin-top:.1rem;display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;font-weight:700;color:#1B4F8A;background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:6px;padding:3px 9px;text-decoration:none;align-self:flex-start">Rejoindre</a>'
+                : (!isCancelled && !isPast && !hasLink ? '<span style="font-size:.65rem;color:#D97706;font-weight:600;margin-top:.05rem">Lien à venir</span>' : ''))
             + '</div>';
     }).join('');
 
@@ -4411,11 +4418,12 @@ function renderBookingMonth() {
 
     const datesWithSlots = new Set(_availableSlots.map(s => (s.slot_date || '').split('T')[0]));
     const todayDs = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    const selectedDs = _selectedDateDs || (_selectedSlotData ? (_selectedSlotData.slot_date || '').split('T')[0] : null);
 
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    let startDow = firstDay.getDay() - 1;
-    if (startDow < 0) startDow = 6;
+    let startDow = firstDay.getDay(); // Dim=0
+
 
     const grid = document.getElementById('booking-month-grid');
     if (!grid) return;
@@ -4428,29 +4436,48 @@ function renderBookingMonth() {
         const hasSlot = datesWithSlots.has(ds);
         const isPast = ds < todayDs;
         const isToday = ds === todayDs;
+        const isSelected = ds === selectedDs;
         const slotCount = hasSlot ? _availableSlots.filter(s => (s.slot_date || '').split('T')[0] === ds).length : 0;
 
-        if (!isPast && hasSlot) {
-            html += '<div class="bk-cal-day available" onclick="selectBookingDate(\'' + ds + '\')" title="' + slotCount + ' créneau' + (slotCount > 1 ? 'x' : '') + '">' + d + '</div>';
-        } else if (isToday) {
-            html += '<div class="bk-cal-day today">' + d + '</div>';
+        if (isSelected) {
+            html += '<div class="bk-day selected" onclick="selectBookingDate(\'' + ds + '\')" title="' + slotCount + ' créneaux">'
+                + '<span style="font-size:.85rem">' + d + '</span>'
+                + '</div>';
+        } else if (!isPast && hasSlot) {
+            html += '<div class="bk-day available" onclick="selectBookingDate(\'' + ds + '\')" title="' + slotCount + ' créneaux">'
+                + '<span style="font-size:.85rem;display:block;line-height:1.1">' + d + '</span>'
+                + '<span style="font-size:.5rem;opacity:.8;display:block;line-height:1">' + slotCount + ' dispo</span>'
+                + '</div>';
+        } else if (isToday && !isPast) {
+            html += '<div class="bk-day today">' + d + '</div>';
         } else if (isPast) {
-            html += '<div class="bk-cal-day past">' + d + '</div>';
+            html += '<div class="bk-day past">' + d + '</div>';
         } else {
-            html += '<div class="bk-cal-day other">' + d + '</div>';
+            html += '<div class="bk-day other-month">' + d + '</div>';
         }
     }
     grid.innerHTML = html;
 }
 
 function bkSetMeetType(type, btn) {
-    document.querySelectorAll('.bk-meet-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.bk-fmt').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
     const hidden = document.getElementById('booking-meet-type');
     if (hidden) hidden.value = type;
 }
 
 function selectBookingDate(ds) {
+    _selectedDateDs = ds;
+    // Réinitialiser le slot si on change de date
+    if (_selectedSlotData && (_selectedSlotData.slot_date || '').split('T')[0] !== ds) {
+        _selectedSlotId = null;
+        _selectedSlotData = null;
+        const emptyEl = document.getElementById('booking-form-empty');
+        const contentEl = document.getElementById('booking-form-content');
+        if (emptyEl) emptyEl.style.display = 'flex';
+        if (contentEl) contentEl.style.display = 'none';
+    }
+    renderBookingMonth();
     const daySlots = _availableSlots.filter(s => (s.slot_date || '').split('T')[0] === ds);
     const sep = document.getElementById('booking-day-separator');
     const lbl = document.getElementById('booking-slots-date-label');
@@ -4468,11 +4495,11 @@ function selectBookingDate(ds) {
         return;
     }
 
-    container.style.gridTemplateColumns = 'repeat(3,1fr)';
+    container.style.gridTemplateColumns = 'repeat(4,1fr)';
     container.innerHTML = daySlots.map(function (s) {
         const time = (s.start_time || '').substring(0, 5);
         const dur = s.duration_min || 30;
-        return '<button onclick="selectBookingSlot(' + s.id + ')" data-slot-id="' + s.id + '" class="bk-slot-btn">'
+        return '<button onclick="selectBookingSlot(' + s.id + ')" data-slot-id="' + s.id + '" class="bk-slot">'
             + time
             + '<span style="display:block;font-size:.62rem;font-weight:400;color:inherit;opacity:.7;margin-top:1px">' + dur + ' min</span>'
             + '</button>';
@@ -4483,52 +4510,77 @@ function selectBookingSlot(slotId) {
     _selectedSlotId = slotId;
     _selectedSlotData = _availableSlots.find(s => s.id === slotId);
 
-    document.querySelectorAll('#booking-slots-day .bk-slot-btn').forEach(function (btn) {
-        const sel = parseInt(btn.dataset.slotId) === slotId;
-        btn.classList.toggle('selected', sel);
+    document.querySelectorAll('#booking-slots-day .bk-slot').forEach(function (btn) {
+        btn.classList.toggle('selected', parseInt(btn.dataset.slotId) === slotId);
     });
 
     const emptyEl = document.getElementById('booking-form-empty');
     const contentEl = document.getElementById('booking-form-content');
-    const infoEl = document.getElementById('booking-selected-info');
+    const banner = document.getElementById('bk-selected-banner');
+    const bannerText = document.getElementById('bk-selected-text');
     if (emptyEl) emptyEl.style.display = 'none';
     if (contentEl) contentEl.style.display = 'flex';
-    if (infoEl) infoEl.style.display = 'block';
+    if (banner) banner.style.display = 'block';
 
     if (_selectedSlotData) {
         const ds = (_selectedSlotData.slot_date || '').split('T')[0];
-        const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
-        const slotLbl = document.getElementById('booking-selected-slot-label');
-        const durLbl = document.getElementById('booking-selected-duration');
-        if (slotLbl) slotLbl.textContent = dateStr + ' à ' + (_selectedSlotData.start_time || '').substring(0, 5);
-        if (durLbl) durLbl.textContent = (_selectedSlotData.duration_min || 30) + ' min · Vidéo ou téléphone';
+        const dateStr = new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+        const startT = (_selectedSlotData.start_time || '').substring(0, 5);
+        const endT = (_selectedSlotData.end_time || '').substring(0, 5);
+        const dur = _selectedSlotData.duration_min || 30;
+        const formLbl = document.getElementById('bk-form-slot-label');
+        const formDur = document.getElementById('bk-form-slot-dur');
+        if (formLbl) formLbl.textContent = dateStr + ' · ' + startT + ' – ' + endT;
+        if (formDur) formDur.textContent = dur + ' min · Vidéo ou téléphone';
+        if (bannerText) bannerText.textContent = dateStr + ' · ' + startT;
     }
+
+    // Step 2 active
+    const s2 = document.getElementById('bk-step2-wrap');
+    const s3 = document.getElementById('bk-step3-wrap');
+    if (s2) { s2.style.opacity = '1'; const d = s2.querySelector('.bk-step-dot2'); if (d) d.style.background = '#10B981'; }
+    if (s3) { s3.style.opacity = '1'; const d = s3.querySelector('.bk-step-dot3'); if (d) d.style.background = '#1B4F8A'; }
 
     const name = document.getElementById('sidebar-name')?.textContent?.trim() || '';
     const company = document.getElementById('sidebar-company')?.textContent?.trim() || '';
     const avEl = document.getElementById('booking-client-avatar');
     const nameEl = document.getElementById('booking-client-name-label');
-    if (avEl) avEl.textContent = (name || 'CL').substring(0, 2).toUpperCase();
+    if (avEl) avEl.textContent = (name || 'CL').split(' ').map(w => w[0] || '').join('').substring(0, 2).toUpperCase();
     if (nameEl) nameEl.textContent = name + (company ? ' — ' + company : '');
 
-    const res = document.getElementById('booking-result');
-    const err = document.getElementById('booking-error');
-    const btn = document.getElementById('booking-confirm-btn');
-    if (res) res.style.display = 'none';
+    const err = document.getElementById('np-booking-err');
+    const suc = document.getElementById('np-booking-success');
+    const btn = document.getElementById('np-booking-confirm-btn');
     if (err) err.style.display = 'none';
-    if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmer le rendez-vous'; }
+    if (suc) suc.style.display = 'none';
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmer le rendez-vous'; }
 }
 
 function resetBookingSelection() {
     _selectedSlotId = null;
     _selectedSlotData = null;
+    _selectedDateDs = null;
     const emptyEl = document.getElementById('booking-form-empty');
     const contentEl = document.getElementById('booking-form-content');
-    const infoEl = document.getElementById('booking-selected-info');
+    const banner = document.getElementById('bk-selected-banner');
+    const sep = document.getElementById('booking-day-separator');
+    const slotsDay = document.getElementById('booking-slots-day');
     if (emptyEl) emptyEl.style.display = 'flex';
     if (contentEl) contentEl.style.display = 'none';
-    if (infoEl) infoEl.style.display = 'none';
-    document.querySelectorAll('#booking-slots-day .bk-slot-btn').forEach(b => b.classList.remove('selected'));
+    if (banner) banner.style.display = 'none';
+    // Vider les créneaux et le séparateur
+    if (sep) sep.style.display = 'none';
+    if (slotsDay) slotsDay.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:1.5rem .5rem">'
+        + '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto .5rem"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+        + '<div style="font-size:.78rem;font-weight:600;color:#CBD5E0">Sélectionnez une date bleue</div>'
+        + '</div>';
+    // Reset step indicators
+    const s2 = document.getElementById('bk-step2-wrap');
+    const s3 = document.getElementById('bk-step3-wrap');
+    if (s2) { s2.style.opacity = '.4'; const d = s2.querySelector('.bk-step-dot2'); if (d) d.style.background = '#94A3B8'; }
+    if (s3) { s3.style.opacity = '.4'; const d = s3.querySelector('.bk-step-dot3'); if (d) d.style.background = '#94A3B8'; }
+    // Re-render le calendrier pour déselectionner la date
+    renderBookingMonth();
 }
 
 async function confirmBooking() {
@@ -4852,4 +4904,176 @@ function switchMandatesSubTab(tab) {
         if (badge) badge.style.display = 'none';
         loadMyRequests();
     }
+}
+// ── Alias confirmBookingSlot → npConfirmBooking ───────────────
+function confirmBookingSlot() {
+    if (!_selectedSlotId || !_selectedSlotData) return;
+    // Map to npConfirmBooking variables
+    _npSelectedSlot = {
+        id: _selectedSlotId,
+        ds: (_selectedSlotData.slot_date || '').split('T')[0],
+        time: (_selectedSlotData.start_time || '').substring(0, 5),
+        dur: _selectedSlotData.duration_min || 30
+    };
+    const subject = document.getElementById('booking-subject')?.value?.trim() || '';
+    const meetType = window._bkMeetType || 'video';
+    const btn = document.getElementById('np-booking-confirm-btn');
+    const err = document.getElementById('np-booking-err');
+    const suc = document.getElementById('np-booking-success');
+    const sucTxt = document.getElementById('np-booking-success-text');
+    if (err) err.style.display = 'none';
+    if (btn) { btn.disabled = true; btn.textContent = 'Réservation en cours...'; }
+
+    const token = localStorage.getItem('vnk-token');
+    fetch('/api/calendar/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ slot_id: _selectedSlotId, subject, meeting_type: meetType })
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            const dateStr = new Date(_npSelectedSlot.ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+            if (sucTxt) sucTxt.textContent = dateStr + ' à ' + _npSelectedSlot.time + ' — Vous recevrez une confirmation par courriel.';
+            if (suc) suc.style.display = 'block';
+            if (btn) {
+                btn.disabled = false;
+                btn.style.display = 'flex';
+                btn.style.background = '#059669';
+                btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Réserver un autre créneau';
+                btn.onclick = function () { resetBookingSelection(); btn.style.background = '#0F172A'; btn.onmouseenter = function () { this.style.background = '#1B4F8A'; }; btn.onmouseleave = function () { this.style.background = '#0F172A'; }; };
+            }
+            _availableSlots = (_availableSlots || []).filter(s => s.id !== _selectedSlotId);
+            _selectedSlotId = null; _selectedSlotData = null; _selectedDateDs = null;
+            setTimeout(() => { loadMyAppointments(); renderBookingMonth(); }, 800);
+        } else {
+            throw new Error(data.message || 'Créneau non disponible');
+        }
+    }).catch(e => {
+        if (err) { err.textContent = e.message; err.style.display = 'block'; }
+        if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmer le rendez-vous'; }
+    });
+}
+
+// ── bkSetMeetType ─────────────────────────────────────────────
+function bkSetMeetType(type, btn) {
+    window._bkMeetType = type;
+    document.querySelectorAll('#tab-booking .bk-fmt').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+}
+
+// ── bkToggleAppts ─────────────────────────────────────────────
+function bkToggleAppts() {
+    const panel = document.getElementById('bk-appts-panel');
+    const arrow = document.getElementById('bk-accordion-arrow');
+    if (!panel) return;
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'flex';
+    if (arrow) arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+// ── Modal détail RDV client ────────────────────────────────────
+function openApptDetailModal(apptId) {
+    const all = window._allMyAppts || [];
+    const a = all.find(x => x.id === apptId);
+    if (!a) return;
+
+    const ds = (a.appointment_date || '').split('T')[0];
+    const dateStr = ds ? new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+    const timeStr = (a.start_time || '').substring(0, 5) + ' – ' + (a.end_time || '').substring(0, 5);
+    const isCancelled = a.status === 'cancelled';
+    const isPast = ds < new Date().toISOString().split('T')[0];
+    const statusColor = isCancelled ? '#EF4444' : '#10B981';
+    const statusLabel = isCancelled ? 'Annulé' : 'Confirmé';
+
+    const existing = document.getElementById('appt-detail-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'appt-detail-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)';
+
+    overlay.innerHTML = `
+    <div style="background:white;border-radius:20px;width:100%;max-width:460px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.25);margin:1rem">
+        <!-- Header gradient -->
+        <div style="background:linear-gradient(135deg,#1B4F8A,#1d4ed8);padding:1.4rem 1.5rem 1.1rem;position:relative">
+            <button onclick="document.getElementById('appt-detail-overlay').remove()" style="position:absolute;top:.85rem;right:.85rem;background:rgba(255,255,255,.15);border:none;color:white;border-radius:8px;width:28px;height:28px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s" onmouseenter="this.style.background='rgba(255,255,255,.25)'" onmouseleave="this.style.background='rgba(255,255,255,.15)'">×</button>
+            <div style="font-size:.6rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem">Détails du rendez-vous</div>
+            <div style="font-size:1.05rem;font-weight:800;color:white;text-transform:capitalize;margin-bottom:.25rem">${dateStr}</div>
+            <div style="font-size:.85rem;font-weight:600;color:rgba(255,255,255,.75)">${timeStr} · ${a.duration_min || 30} min</div>
+            <div style="margin-top:.65rem">
+                <span style="background:rgba(255,255,255,.18);color:white;font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:20px">${statusLabel}</span>
+                ${a.meeting_type === 'phone'
+            ? '<span style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);font-size:.65rem;padding:3px 9px;border-radius:20px;margin-left:.4rem">📞 Téléphone</span>'
+            : '<span style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);font-size:.65rem;padding:3px 9px;border-radius:20px;margin-left:.4rem">📹 Vidéo</span>'}
+            </div>
+        </div>
+
+        <!-- Contenu -->
+        <div style="padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:.85rem">
+
+            <!-- Avec qui -->
+            <div style="display:flex;align-items:center;gap:.75rem;padding:.7rem .85rem;background:#F8FAFC;border-radius:12px;border:1px solid #F1F5F9">
+                <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#1B4F8A,#2563EB);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <svg width="18" height="18" viewBox="0 0 40 40" fill="none"><polygon points="20,4 36,32 4,32" fill="white"/></svg>
+                </div>
+                <div>
+                    <div style="font-size:.7rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px">Avec</div>
+                    <div style="font-size:.88rem;font-weight:700;color:#0F172A">VNK Automatisation Inc.</div>
+                    <div style="font-size:.72rem;color:#64748B">Yan Verone — Spécialiste automatisation</div>
+                </div>
+            </div>
+
+            <!-- Sujet -->
+            ${a.subject ? `<div>
+                <div style="font-size:.68rem;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem">Sujet</div>
+                <div style="font-size:.85rem;color:#0F172A;font-weight:600">${a.subject}</div>
+            </div>` : ''}
+
+            <!-- Lien de réunion -->
+            <div>
+                <div style="font-size:.68rem;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem">Lien de réunion</div>
+                ${a.meeting_link
+            ? `<a href="${a.meeting_link}" target="_blank" style="display:flex;align-items:center;gap:.5rem;padding:.6rem .85rem;background:#EBF5FB;border:1.5px solid #BFDBFE;border-radius:10px;text-decoration:none;transition:all .12s" onmouseenter="this.style.background='#DBEAFE'" onmouseleave="this.style.background='#EBF5FB'">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        <span style="font-size:.8rem;font-weight:700;color:#1B4F8A;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.meeting_link}</span>
+                        <span style="font-size:.65rem;font-weight:700;background:#1B4F8A;color:white;padding:2px 8px;border-radius:6px;flex-shrink:0">Rejoindre</span>
+                    </a>
+                    ${(a.meeting_id || a.meeting_password) ? `<div style="display:flex;gap:.5rem;margin-top:.45rem">
+                        ${a.meeting_id ? `<div style="flex:1;padding:.4rem .65rem;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px">
+                            <div style="font-size:.6rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em">ID réunion</div>
+                            <div style="font-size:.78rem;font-weight:700;color:#0F172A;margin-top:1px">${a.meeting_id}</div>
+                        </div>` : ''}
+                        ${a.meeting_password ? `<div style="flex:1;padding:.4rem .65rem;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px">
+                            <div style="font-size:.6rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em">Mot de passe</div>
+                            <div style="font-size:.78rem;font-weight:700;color:#0F172A;margin-top:1px">${a.meeting_password}</div>
+                        </div>` : ''}
+                    </div>` : ''}`
+            : `<div style="padding:.6rem .85rem;background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:10px;display:flex;align-items:center;gap:.5rem">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span style="font-size:.78rem;color:#D97706;font-weight:600">Lien à venir — vous recevrez un courriel</span>
+                    </div>`}
+            </div>
+
+            <!-- Notes admin visibles par le client -->
+            ${a.notes_admin ? `<div style="padding:.65rem .85rem;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:10px">
+                <div style="font-size:.65rem;font-weight:700;color:#15803D;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem">Note de VNK</div>
+                <div style="font-size:.78rem;color:#15803D;line-height:1.55">${a.notes_admin}</div>
+            </div>` : ''}
+        </div>
+
+        <!-- Footer -->
+        <div style="padding:.85rem 1.5rem;border-top:1px solid #F1F5F9;display:flex;gap:.5rem">
+            <button onclick="document.getElementById('appt-detail-overlay').remove()" style="flex:1;padding:.52rem;border:1.5px solid #E2E8F0;border-radius:10px;background:white;font-size:.8rem;cursor:pointer;font-family:inherit;color:#64748B;transition:all .12s" onmouseenter="this.style.borderColor='#94A3B8'" onmouseleave="this.style.borderColor='#E2E8F0'">Fermer</button>
+            ${!isCancelled && !isPast && a.meeting_link
+            ? `<a href="${a.meeting_link}" target="_blank" style="flex:2;padding:.52rem;border:none;border-radius:10px;background:linear-gradient(135deg,#1B4F8A,#2563EB);color:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:.4rem;box-shadow:0 2px 8px rgba(27,79,138,.3)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.82v6.36a1 1 0 0 1-1.447.889L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg>
+                    Rejoindre la réunion
+                </a>`
+            : (!isCancelled && !isPast
+                ? `<button onclick="document.getElementById('appt-detail-overlay').remove();cancelMyAppointment(${a.id})" style="flex:1;padding:.52rem;border:1.5px solid #FECACA;border-radius:10px;background:white;font-size:.78rem;cursor:pointer;font-family:inherit;color:#DC2626;transition:all .12s" onmouseenter="this.style.background='#FEF2F2'" onmouseleave="this.style.background='white'">Annuler</button>`
+                : '')}
+        </div>
+    </div>`;
+
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
 }
