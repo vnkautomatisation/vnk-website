@@ -34,40 +34,146 @@
 </head>
 <body>
     <!-- Loader de chargement -->
-    <div id="vnk-page-loader" style="position:fixed;inset:0;z-index:99999;background:#0A1628;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;transition:opacity 0.25s ease">
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="48" height="48" rx="12" fill="#1B4F8A" />
-            <path d="M14 16L24 32L34 16" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
-            <path d="M19 16L24 24.5L29 16" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        <div style="width:160px;height:3px;background:rgba(255,255,255,0.1);border-radius:99px;overflow:hidden">
-            <div style="height:100%;background:linear-gradient(90deg,#3B82F6,#60A5FA);border-radius:99px;animation:vnkLoad 0.9s ease-in-out forwards"></div>
+    <!-- ── Page loader VNK ── -->
+    <div id="vnk-page-loader">
+        <div class="vnk-loader-inner">
+            <!-- Logo VNK animé -->
+            <div class="vnk-loader-logo">
+                <svg width="56" height="56" viewBox="0 0 48 48" fill="none">
+                    <rect width="48" height="48" rx="13" fill="#1B4F8A" />
+                    <path d="M14 16L24 32L34 16" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M19 16L24 24.5L29 16" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </div>
+            <!-- Nom -->
+            <div class="vnk-loader-name">VNK Automatisation</div>
+            <!-- Barre de progression -->
+            <div class="vnk-loader-bar-wrap">
+                <div class="vnk-loader-bar" id="vnk-loader-bar"></div>
+            </div>
+            <!-- Tagline -->
+            <div class="vnk-loader-tag">Value · Network · Knowledge</div>
         </div>
     </div>
     <style>
-        @keyframes vnkLoad {
+        #vnk-page-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: linear-gradient(160deg, #07192E 0%, #0F2D52 50%, #0A1628 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+
+        .vnk-loader-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            animation: vnkLoaderFadeIn 0.4s ease forwards;
+        }
+
+        @keyframes vnkLoaderFadeIn {
             from {
-                width: 0%
+                opacity: 0;
+                transform: translateY(10px);
             }
 
             to {
-                width: 100%
+                opacity: 1;
+                transform: translateY(0);
             }
+        }
+
+        .vnk-loader-logo {
+            animation: vnkLogoPulse 1.8s ease-in-out infinite;
+        }
+
+        @keyframes vnkLogoPulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.06);
+                opacity: 0.85;
+            }
+        }
+
+        .vnk-loader-name {
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: white;
+            letter-spacing: 0.04em;
+        }
+
+        .vnk-loader-bar-wrap {
+            width: 180px;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .vnk-loader-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #3B82F6, #60A5FA, #93C5FD);
+            border-radius: 99px;
+            transition: width 0.1s linear;
+        }
+
+        .vnk-loader-tag {
+            font-family: system-ui, sans-serif;
+            font-size: 0.65rem;
+            color: rgba(255,255,255,0.35);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
         }
     </style>
     <script>
-        var _vnkLoaderStart = Date.now();
-        window.addEventListener('load', function () {
+        (function () {
             var loader = document.getElementById('vnk-page-loader');
+            var bar = document.getElementById('vnk-loader-bar');
             if (!loader) return;
-            // Afficher au minimum 600ms pour que l'animation soit visible
-            var elapsed = Date.now() - _vnkLoaderStart;
-            var remaining = Math.max(0, 1200 - elapsed);
-            setTimeout(function () {
-                loader.style.opacity = '0';
-                setTimeout(function () { loader.style.display = 'none'; }, 260);
-            }, remaining);
-        });
+
+            // Durée minimale visible — suffisamment lente pour être élégante
+            var MIN_DURATION = 1800; // ms
+            var _start = Date.now();
+
+            // Animation progressive de la barre
+            var _progress = 0;
+            var _barTimer = setInterval(function () {
+                // Progression rapide jusqu'à 80%, puis lente en attendant le load
+                var step = _progress < 60 ? 3 : (_progress < 80 ? 1.2 : 0.3);
+                _progress = Math.min(_progress + step, 95);
+                if (bar) bar.style.width = _progress + '%';
+            }, 40);
+
+            function hideLloader() {
+                clearInterval(_barTimer);
+                if (bar) bar.style.width = '100%';
+                setTimeout(function () {
+                    loader.style.opacity = '0';
+                    setTimeout(function () {
+                        loader.style.display = 'none';
+                    }, 500);
+                }, 200);
+            }
+
+            window.addEventListener('load', function () {
+                var elapsed = Date.now() - _start;
+                var remaining = Math.max(0, MIN_DURATION - elapsed);
+                setTimeout(hideLloader, remaining);
+            });
+
+            // Sécurité — masquer après 4s max si load ne se déclenche pas
+            setTimeout(hideLloader, 4000);
+        })();
     </script>
 
 
@@ -91,10 +197,24 @@
             </ul>
             <div class="nav-actions">
                 <button class="lang-toggle" id="lang-toggle" onclick="toggleLanguage()">EN</button>
-                <button class="nav-toggle" id="nav-toggle" onclick="toggleMenu()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg></button>
+                <button class="nav-toggle" id="nav-toggle" onclick="toggleMenu()" aria-label="Menu">
+                    <!-- Icône hamburger -->
+                    <svg class="nav-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <line x1="3" y1="12" x2="21" y2="12" />
+                        <line x1="3" y1="18" x2="21" y2="18" />
+                    </svg>
+                    <!-- Icône fermer -->
+                    <svg class="nav-icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:none">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
             </div>
         </div>
     </nav>
+    <!-- Overlay mobile menu -->
+    <div class="nav-mobile-overlay" id="nav-mobile-overlay" onclick="toggleMenu()"></div>
 
     <section class="hero" id="hero">
         <div class="hero-bg-image">
