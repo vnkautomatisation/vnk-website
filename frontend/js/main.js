@@ -17,8 +17,21 @@ window.addEventListener('scroll', () => {
 function toggleMenu() {
     const navLinks = document.getElementById('nav-links');
     const navToggle = document.getElementById('nav-toggle');
-    navLinks.classList.toggle('open');
-    navToggle.textContent = navLinks.classList.contains('open') ? '✕' : '☰';
+    const overlay = document.getElementById('nav-mobile-overlay');
+    const iconOpen = navToggle?.querySelector('.nav-icon-open');
+    const iconClose = navToggle?.querySelector('.nav-icon-close');
+
+    const isOpen = navLinks.classList.toggle('open');
+
+    // Switcher les icônes
+    if (iconOpen) iconOpen.style.display = isOpen ? 'none' : 'block';
+    if (iconClose) iconClose.style.display = isOpen ? 'block' : 'none';
+
+    // Overlay
+    if (overlay) overlay.classList.toggle('active', isOpen);
+
+    // Accessibilité
+    if (navToggle) navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 }
 
 // Close menu when clicking a link
@@ -26,19 +39,23 @@ document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', () => {
         const navLinks = document.getElementById('nav-links');
         const navToggle = document.getElementById('nav-toggle');
+        const overlay = document.getElementById('nav-mobile-overlay');
+        const iconOpen = navToggle?.querySelector('.nav-icon-open');
+        const iconClose = navToggle?.querySelector('.nav-icon-close');
+
         navLinks.classList.remove('open');
-        navToggle.textContent = '☰';
+        if (iconOpen) iconOpen.style.display = 'block';
+        if (iconClose) iconClose.style.display = 'none';
+        if (overlay) overlay.classList.remove('active');
+        if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
     });
 });
 
-// Close menu when clicking outside
-document.addEventListener('click', (e) => {
-    const navLinks = document.getElementById('nav-links');
-    const navToggle = document.getElementById('nav-toggle');
-    const navbar = document.getElementById('navbar');
-    if (!navbar.contains(e.target) && navLinks.classList.contains('open')) {
-        navLinks.classList.remove('open');
-        navToggle.textContent = '☰';
+// Close menu when clicking outside (overlay handles most cases)
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const navLinks = document.getElementById('nav-links');
+        if (navLinks?.classList.contains('open')) toggleMenu();
     }
 });
 
