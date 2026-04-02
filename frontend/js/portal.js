@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function showDashboard() {
     document.getElementById('login-section').style.display = 'none';
     const dash = document.getElementById('dashboard-section');
-    dash.style.display = 'grid';
+    dash.style.display = window.innerWidth <= 900 ? 'flex' : 'grid';
 
     // Mettre à jour l'UI depuis le localStorage d'abord (rapide)
     _updateSidebarFromUser(JSON.parse(localStorage.getItem('vnk-user') || '{}'));
@@ -779,16 +779,12 @@ function showTab(tabName) {
     if (activeHeader) activeHeader.style.display = 'block';
 
     // 3. Panel actions rapides — visible seulement sur dashboard
-    // On cache aussi la colonne de grille pour éviter le vide blanc
     const actionPanel = document.getElementById('portal-action-panel');
-    const dashboardGrid = document.getElementById('dashboard-section');
     if (actionPanel) {
         if (tabName === 'dashboard') {
             actionPanel.style.display = 'flex';
-            if (dashboardGrid) dashboardGrid.style.gridTemplateColumns = '240px 1fr 320px';
         } else {
             actionPanel.style.display = 'none';
-            if (dashboardGrid) dashboardGrid.style.gridTemplateColumns = '240px 1fr';
         }
     }
 
@@ -808,10 +804,28 @@ function showTab(tabName) {
         invoices: 'Mes factures',
         contracts: 'Mes contrats',
         documents: 'Mes documents',
-        booking: 'Réserver un appel'
+        booking: 'Réserver un appel',
+        appointments: 'Mes rendez-vous'
     };
     const mobileTitle = document.getElementById('mobile-tab-title');
     if (mobileTitle) mobileTitle.textContent = titles[tabName] || '';
+
+    // 5b. Sync bottom nav — activer le bon item
+    document.querySelectorAll('.portal-bnav-item').forEach(btn => btn.classList.remove('active'));
+    const bnavMap = {
+        dashboard: 'bnav-dashboard',
+        mandates: 'bnav-mandates',
+        invoices: 'bnav-menu',
+        appointments: 'bnav-appointments',
+        profile: 'bnav-menu',
+        quotes: 'bnav-menu',
+        contracts: 'bnav-menu',
+        documents: 'bnav-menu',
+        booking: 'bnav-menu',
+        'my-requests': 'bnav-menu'
+    };
+    const bnavId = bnavMap[tabName];
+    if (bnavId) { const bnavEl = document.getElementById(bnavId); if (bnavEl) bnavEl.classList.add('active'); }
 
     // 6. Persister l'onglet
     localStorage.setItem('vnk-portal-tab', tabName);
@@ -841,6 +855,11 @@ function showTab(tabName) {
         setTimeout(initBookingTab, 50);
     }
 
+    // 8c. Appointments — charger et rendre
+    if (tabName === 'appointments') {
+        renderAppointmentsTab();
+    }
+
     // 8. Documents — afficher seulement, ne PAS marquer lu automatiquement
     // Les docs sont marqués lus uniquement quand le client clique sur prévisualiser/télécharger
     if (tabName === 'documents') {
@@ -850,6 +869,50 @@ function showTab(tabName) {
     // 8. Remonter en haut du contenu
     const content = document.querySelector('.portal-main-content');
     if (content) content.scrollTop = 0;
+
+    // 9. Adapter le padding-top dynamiquement selon le header réel
+    if (window.innerWidth <= 900) {
+        requestAnimationFrame(() => _fixScrollPadding(tabName));
+    }
+}
+
+function _fixScrollPadding(tabName) {
+    const isMobile = window.innerWidth <= 900;
+    if (!isMobile) return;
+    const bnav = 60; // bottom nav height
+
+    if (tabName === 'dashboard') {
+        // KPIs sticky dans le scroll — mesurer leur hauteur réelle
+        const scroll = document.querySelector('#tab-dashboard .portal-content-scroll');
+        const statsRow = document.querySelector('#tab-dashboard .portal-stats-row');
+        if (scroll && statsRow) {
+            const h = statsRow.offsetHeight + 8;
+            scroll.style.paddingTop = h + 'px';
+        }
+
+    } else if (tabName === 'mandates') {
+        const scroll = document.querySelector('#tab-mandates .portal-mandates-scroll');
+        const header = document.querySelector('#tab-mandates .portal-mandates-header');
+        if (scroll && header) scroll.style.paddingTop = (header.offsetHeight + 4) + 'px';
+
+    } else if (tabName === 'my-requests') {
+        const scroll = document.getElementById('my-requests-list');
+        const header = document.querySelector('#tab-my-requests .portal-mandates-header');
+        if (scroll && header) scroll.style.paddingTop = (header.offsetHeight + 4) + 'px';
+
+    } else if (['quotes', 'invoices', 'contracts', 'documents'].includes(tabName)) {
+        const scroll = document.getElementById(tabName + '-list');
+        const header = document.querySelector('#tab-' + tabName + ' .portal-main-header');
+        if (scroll && header) scroll.style.paddingTop = (header.offsetHeight + 4) + 'px';
+
+    } else if (tabName === 'profile') {
+        const tab = document.getElementById('tab-profile');
+        if (tab) { tab.style.overflowY = 'auto'; tab.style.paddingBottom = (bnav + 16) + 'px'; }
+    } else if (tabName === 'appointments') {
+        const scroll = document.getElementById('appt-scroll');
+        const header = document.getElementById('appt-header');
+        if (scroll && header) scroll.style.paddingTop = (header.offsetHeight + 4) + 'px';
+    }
 }
 
 function showBadge(id, count) {
@@ -858,9 +921,16 @@ function showBadge(id, count) {
         if (count && count > 0) { badge.style.display = 'inline-block'; badge.textContent = count; }
         else { badge.style.display = 'none'; badge.textContent = '0'; }
     }
-    // Sync dot
+    // Sync dot sidebar
     const dotId = id.replace('badge-', 'dot-');
     if (typeof showDot === 'function') showDot(dotId, count > 0);
+    // Sync bottom nav badge
+    const bnavBadgeId = id.replace('badge-', 'bnav-badge-');
+    const bnavBadge = document.getElementById(bnavBadgeId);
+    if (bnavBadge) {
+        if (count && count > 0) { bnavBadge.style.display = 'flex'; bnavBadge.textContent = count > 9 ? '9+' : count; }
+        else { bnavBadge.style.display = 'none'; }
+    }
 }
 
 function renderProfile(user) {
@@ -1245,155 +1315,190 @@ function renderMandates(mandates) {
     if (!list) return;
 
     if (!mandates || !mandates.length) {
-        list.innerHTML = '<div style="text-align:center;padding:3rem 1rem">'
-            + '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto 0.75rem"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
-            + '<div style="font-size:0.9rem;font-weight:600;color:#475569">Aucun mandat trouvé</div>'
-            + '<div style="font-size:0.78rem;color:#94A3B8;margin-top:0.3rem">Essayez de changer le filtre</div></div>';
+        list.innerHTML = '<div class="vnk-tab-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.2" stroke-linecap="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><p>Aucun mandat trouvé</p></div>';
         return;
     }
 
     const stl = { active: 'En cours', in_progress: 'En cours', pending: 'En attente', completed: 'Complété', paused: 'En pause' };
-    const stBg = { active: '#EBF5FB', in_progress: '#EBF5FB', pending: '#FFFBEB', completed: '#ECFDF5', paused: '#F1F5F9' };
+    const stBar = { active: '#1B4F8A', in_progress: '#1B4F8A', pending: '#D97706', completed: '#059669', paused: '#64748B' };
+    const stBg = { active: '#EFF6FF', in_progress: '#EFF6FF', pending: '#FFFBEB', completed: '#ECFDF5', paused: '#F1F5F9' };
     const stFg = { active: '#1B4F8A', in_progress: '#1B4F8A', pending: '#92400E', completed: '#065F46', paused: '#475569' };
     const svl = { 'plc-support': 'Support PLC', audit: 'Audit technique', documentation: 'Documentation', refactoring: 'Refactorisation PLC' };
     const STEPS = ['Démarrage', 'Diagnostic', 'Intervention', 'Tests', 'Livraison'];
     const STEP_PCTS = [0, 25, 50, 75, 100];
+    const fmtDate = d => new Date(d).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short', year: 'numeric' });
+    const isMobile = window.innerWidth <= 900;
 
-    // ════════════════════════════════════════
-    // VUE CARTES — timeline complète, 6/page
-    // ════════════════════════════════════════
+    // ════════════════════════
+    // VUE CARTES
+    // ════════════════════════
     if (_mandateView === 'cards') {
-        const cards = mandates.map(function (m) {
+        const cards = mandates.map(m => {
             const prog = m.progress || 0;
             const st = prog >= 100 ? 'completed' : (m.status || 'pending');
-            const label = stl[st] || st;
+            const isLate = m.end_date && new Date(m.end_date) < new Date() && prog < 100;
+            const barColor = isLate ? '#DC2626' : (stBar[st] || '#1B4F8A');
             const bg = stBg[st] || '#F1F5F9';
             const fg = stFg[st] || '#475569';
-            const isLate = m.end_date && new Date(m.end_date) < new Date() && prog < 100;
-            const progColor = prog >= 100 ? '#059669' : '#1B4F8A';
+            const label = stl[st] || st;
 
-            let currentStep = 0;
-            STEP_PCTS.forEach(function (p, i) { if (prog >= p) currentStep = i; });
+            // Étape courante
+            let stepIdx = 0;
+            STEP_PCTS.forEach((p, i) => { if (prog >= p) stepIdx = i; });
+            const stepLabel = STEPS[stepIdx];
+            const nextStep = prog < 100 ? STEPS[STEP_PCTS.findIndex(p => p > prog)] : null;
 
-            const stepsHtml = STEPS.map(function (stepLabel, i) {
+            // Timeline
+            const stepsHtml = STEPS.map((s, i) => {
                 const done = prog >= STEP_PCTS[i];
-                const current = i === currentStep && prog < 100;
-                const dotBg = done ? progColor : 'white';
-                const dotBorder = done ? progColor : (current ? '#1B4F8A' : '#E2E8F0');
+                const cur = i === stepIdx && prog < 100;
+                const dotBg = done ? barColor : (cur ? 'white' : 'white');
+                const dotBorder = done ? barColor : (cur ? barColor : '#E2E8F0');
                 const inner = done
-                    ? '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>'
-                    : (current ? '<div style="width:6px;height:6px;border-radius:50%;background:#1B4F8A"></div>' : '');
-                const lc = done ? '#0F172A' : (current ? '#1B4F8A' : '#94A3B8');
-                const lw = (done || current) ? '600' : '400';
-                return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;position:relative;z-index:1">'
-                    + '<div style="width:20px;height:20px;border-radius:50%;background:' + dotBg + ';border:2px solid ' + dotBorder + ';display:flex;align-items:center;justify-content:center">' + inner + '</div>'
-                    + '<span style="font-size:0.6rem;color:' + lc + ';font-weight:' + lw + ';text-align:center;line-height:1.3;white-space:nowrap">' + stepLabel + '</span>'
+                    ? '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>'
+                    : (cur ? '<div style="width:6px;height:6px;border-radius:50%;background:' + barColor + '"></div>' : '');
+                const lc = done ? '#0F172A' : (cur ? barColor : '#94A3B8');
+                return '<div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;position:relative;z-index:1">'
+                    + '<div style="width:22px;height:22px;border-radius:50%;background:' + dotBg + ';border:2px solid ' + dotBorder + ';display:flex;align-items:center;justify-content:center">' + inner + '</div>'
+                    + '<span style="font-size:0.62rem;color:' + lc + ';font-weight:' + (done || cur ? '600' : '400') + ';text-align:center;line-height:1.3;white-space:nowrap">' + s + '</span>'
                     + '</div>';
             }).join('');
 
-            const lineW = Math.min(100, Math.round(prog));
-            const fmtDate = function (d) { return new Date(d).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short', year: 'numeric' }); };
-
             return '<div class="vnk-mandate-card" data-id="' + m.id + '" onclick="_openPortalMandateDetail(' + m.id + ')" '
-                + 'style="background:white;border:1px solid ' + (isLate ? '#FECACA' : '#E8EEF6') + ';border-radius:12px;padding:1rem 1.1rem 0.9rem;cursor:pointer;transition:border-color .15s,box-shadow .15s" '
-                + 'onmouseenter="this.style.borderColor=\'' + (isLate ? '#F87171' : '#1B4F8A') + '\';this.style.boxShadow=\'0 2px 10px rgba(27,79,138,0.08)\'" '
-                + 'onmouseleave="this.style.borderColor=\'' + (isLate ? '#FECACA' : '#E8EEF6') + '\';this.style.boxShadow=\'\'">'
+                + 'style="background:white;border:1px solid ' + (isLate ? '#FECACA' : '#E2EBF5') + ';border-radius:14px;overflow:hidden;cursor:pointer;transition:all .15s;display:flex;flex-direction:column" '
+                + 'onmouseenter="this.style.borderColor=\'' + (isLate ? '#F87171' : '#1B4F8A') + '\';this.style.boxShadow=\'0 4px 16px rgba(27,79,138,0.12)\';this.style.transform=\'translateY(-2px)\'" '
+                + 'onmouseleave="this.style.borderColor=\'' + (isLate ? '#FECACA' : '#E2EBF5') + '\';this.style.boxShadow=\'none\';this.style.transform=\'none\'">'
+
+                // Bande couleur haut
+                + '<div style="height:4px;background:' + barColor + ';flex-shrink:0"></div>'
+
+                // Corps
+                + '<div style="padding:1.1rem 1.1rem 0.85rem;flex:1;display:flex;flex-direction:column;gap:0.85rem">'
 
                 // Titre + badges
-                + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;margin-bottom:0.6rem">'
+                + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem">'
                 + '<div style="min-width:0;flex:1">'
-                + '<div style="font-weight:700;font-size:0.9rem;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + m.title + '</div>'
-                + '<div style="font-size:0.7rem;color:#94A3B8;margin-top:2px">' + (svl[m.service_type] || m.service_type || '') + (m.mandate_number ? ' · ' + m.mandate_number : '') + '</div>'
+                + '<div style="font-weight:700;font-size:0.95rem;color:#0F172A;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + m.title + '</div>'
+                + '<div style="font-size:0.75rem;color:#94A3B8">' + (svl[m.service_type] || m.service_type || '') + (m.mandate_number ? ' · ' + m.mandate_number : '') + '</div>'
                 + '</div>'
-                + '<div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0">'
-                + (isLate ? '<span style="font-size:0.66rem;font-weight:700;padding:2px 8px;border-radius:20px;background:#FEF2F2;color:#DC2626">En retard</span>' : '')
-                + '<span style="font-size:0.66rem;font-weight:600;padding:2px 9px;border-radius:20px;background:' + bg + ';color:' + fg + '">' + label + '</span>'
+                + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'
+                + '<span style="font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:20px;background:' + bg + ';color:' + fg + '">' + label + '</span>'
+                + (isLate ? '<span style="font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:20px;background:#FEF2F2;color:#DC2626">En retard</span>' : '')
                 + '</div></div>'
 
-                // Barre progression
-                + '<div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.75rem">'
-                + '<div style="flex:1;height:4px;background:#F1F5F9;border-radius:2px;overflow:hidden"><div style="height:100%;width:' + prog + '%;background:' + progColor + ';border-radius:2px;transition:width .4s"></div></div>'
-                + '<span style="font-size:0.75rem;font-weight:700;color:' + progColor + ';min-width:30px;text-align:right">' + prog + '%</span>'
+                // Progression
+                + '<div>'
+                + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+                + '<span style="font-size:0.72rem;color:#64748B;font-weight:500">Progression</span>'
+                + '<span style="font-size:0.85rem;font-weight:800;color:' + barColor + '">' + prog + '%</span>'
+                + '</div>'
+                + '<div style="height:6px;background:#F1F5F9;border-radius:3px;overflow:hidden">'
+                + '<div style="height:100%;width:' + prog + '%;background:' + barColor + ';border-radius:3px;transition:width .4s"></div></div>'
                 + '</div>'
 
                 // Timeline étapes
-                + '<div style="position:relative;padding:0 10px;margin-bottom:0.75rem">'
-                + '<div style="position:absolute;top:10px;left:10px;right:10px;height:1.5px;background:#E2E8F0"></div>'
-                + '<div style="position:absolute;top:10px;left:10px;height:1.5px;background:' + progColor + ';width:' + lineW + '%;max-width:calc(100% - 20px);transition:width .4s"></div>'
+                + '<div style="position:relative;padding:0 11px">'
+                + '<div style="position:absolute;top:11px;left:11px;right:11px;height:2px;background:#E2E8F0;border-radius:1px"></div>'
+                + '<div style="position:absolute;top:11px;left:11px;height:2px;background:' + barColor + ';width:' + Math.min(100, prog) + '%;max-width:calc(100% - 22px);transition:width .4s"></div>'
                 + '<div style="display:flex;justify-content:space-between">' + stepsHtml + '</div>'
                 + '</div>'
 
-                // Dates + lien
-                + '<div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #F8FAFC;padding-top:0.6rem">'
-                + '<div style="display:flex;gap:1.25rem">'
-                + (m.start_date ? '<div><div style="font-size:0.58rem;color:#94A3B8;text-transform:uppercase;font-weight:700;letter-spacing:0.04em">Début</div><div style="font-size:0.75rem;font-weight:600;color:#334155">' + fmtDate(m.start_date) + '</div></div>' : '')
-                + (m.end_date ? '<div><div style="font-size:0.58rem;color:' + (isLate ? '#DC2626' : '#94A3B8') + ';text-transform:uppercase;font-weight:700;letter-spacing:0.04em">Fin est.</div><div style="font-size:0.75rem;font-weight:600;color:' + (isLate ? '#DC2626' : '#334155') + '">' + fmtDate(m.end_date) + '</div></div>' : '')
+                // Dates + étape
+                + '<div style="display:flex;align-items:center;justify-content:space-between;padding-top:0.65rem;border-top:1px solid #F1F5F9">'
+                + '<div style="font-size:0.72rem;color:#475569">'
+                + (nextStep ? 'Étape : <strong style="color:' + barColor + '">' + stepLabel + '</strong>' : '<span style="color:#059669;font-weight:600">✓ Terminé</span>')
                 + '</div>'
-                + '<div style="font-size:0.72rem;color:#1B4F8A;font-weight:600;display:flex;align-items:center;gap:3px">Détails<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1B4F8A" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>'
+                + '<div style="text-align:right">'
+                + (m.end_date ? '<div style="font-size:0.65rem;color:' + (isLate ? '#DC2626' : '#94A3B8') + ';font-weight:' + (isLate ? '700' : '400') + '">Fin ' + fmtDate(m.end_date) + '</div>' : '')
                 + '</div>'
-                + '</div>';
+                + '</div>'
+
+                + '</div></div>';
         }).join('');
-        list.innerHTML = '<div class="mandate-cards-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.65rem;padding:0.25rem 0">' + cards + '</div>';
+
+        const cols = isMobile ? 'repeat(auto-fill, minmax(300px, 1fr))' : 'repeat(auto-fill, minmax(340px, 1fr))';
+        list.innerHTML = '<div style="display:grid;grid-template-columns:' + cols + ';gap:1rem;padding:0.25rem 0;align-items:start">' + cards + '</div>';
         return;
     }
 
-    // ════════════════════════════════════════
-    // VUE LISTE — compacte, scalable, 15/page
-    // ════════════════════════════════════════
-    const rows = mandates.map(function (m) {
+    // ════════════════════════
+    // VUE LISTE
+    // ════════════════════════
+    const rows = mandates.map(m => {
         const prog = m.progress || 0;
         const st = prog >= 100 ? 'completed' : (m.status || 'pending');
-        const label = stl[st] || st;
+        const isLate = m.end_date && new Date(m.end_date) < new Date() && prog < 100;
+        const barColor = isLate ? '#DC2626' : (stBar[st] || '#1B4F8A');
         const bg = stBg[st] || '#F1F5F9';
         const fg = stFg[st] || '#475569';
-        const isLate = m.end_date && new Date(m.end_date) < new Date() && prog < 100;
-        const progColor = prog >= 100 ? '#059669' : '#1B4F8A';
+        const label = stl[st] || st;
+        let stepIdx = 0;
+        STEP_PCTS.forEach((p, i) => { if (prog >= p) stepIdx = i; });
+        const stepLabel = STEPS[stepIdx];
+        const nextStep = prog < 100 ? STEPS[STEP_PCTS.findIndex(p => p > prog)] : null;
 
-        // Étape courante
-        let stepLabel = 'Démarrage';
-        STEP_PCTS.forEach(function (p, i) { if (prog >= p) stepLabel = STEPS[i]; });
-        const nextStep = prog < 100 ? (STEPS[STEP_PCTS.findIndex(function (p) { return p > prog; })] || 'Livraison') : null;
+        if (isMobile) {
+            return '<div class="mandate-list-row" data-id="' + m.id + '" onclick="_openPortalMandateDetail(' + m.id + ')" '
+                + 'style="display:flex;align-items:center;gap:0;padding:0;border-bottom:1px solid #F1F5F9;cursor:pointer;overflow:hidden;min-height:64px" '
+                + 'onmouseenter="this.style.background=\'#F8FAFC\'" onmouseleave="this.style.background=\'white\'">'
+                + '<div style="width:4px;min-height:64px;background:' + barColor + ';flex-shrink:0;align-self:stretch"></div>'
+                + '<div style="flex:1;min-width:0;padding:0.75rem 1rem">'
+                + '<div style="font-weight:700;font-size:0.9rem;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px">' + m.title + '</div>'
+                + '<div style="font-size:0.72rem;color:#94A3B8;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">'
+                + '<span>' + (svl[m.service_type] || m.service_type || '—') + '</span>'
+                + '<span style="color:#E2E8F0">·</span>'
+                + '<span style="color:' + barColor + ';font-weight:700">' + prog + '%</span>'
+                + (nextStep ? '<span style="color:#E2E8F0">·</span><span>' + stepLabel + '</span>' : '')
+                + '</div></div>'
+                + '<div style="padding:0 1rem;flex-shrink:0">'
+                + '<span style="font-size:0.65rem;font-weight:700;padding:3px 10px;border-radius:20px;background:' + bg + ';color:' + fg + '">' + label + '</span>'
+                + '</div></div>';
+        }
 
-        return '<div class="vnk-mandate-card mandate-list-row" data-id="' + m.id + '" onclick="_openPortalMandateDetail(' + m.id + ')" '
-            + 'style="display:grid;grid-template-columns:2fr 220px 1.5fr auto;align-items:center;gap:2rem;padding:1rem 1.5rem;border-bottom:1px solid #F1F5F9;cursor:pointer;transition:background .1s;min-height:72px" '
+        // Desktop — ligne riche sur 5 colonnes
+        return '<div class="mandate-list-row" data-id="' + m.id + '" onclick="_openPortalMandateDetail(' + m.id + ')" '
+            + 'style="display:grid;grid-template-columns:4px 1fr 220px 180px 120px;align-items:center;border-bottom:1px solid #F1F5F9;cursor:pointer;overflow:hidden;min-height:68px" '
             + 'onmouseenter="this.style.background=\'#F8FAFC\'" onmouseleave="this.style.background=\'white\'">'
 
-            // Col 1 : titre + retard + service
-            + '<div style="min-width:0">'
-            + '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:5px">'
-            + '<div style="font-weight:700;font-size:0.95rem;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + m.title + '</div>'
-            + (isLate ? '<span style="font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:20px;background:#FEF2F2;color:#DC2626;flex-shrink:0">⚠ Retard</span>' : '')
+            // Barre couleur
+            + '<div style="background:' + barColor + ';min-height:68px;align-self:stretch"></div>'
+
+            // Titre + service
+            + '<div style="padding:1rem 1.1rem;min-width:0">'
+            + '<div style="font-weight:700;font-size:0.92rem;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px">' + m.title + '</div>'
+            + '<div style="font-size:0.73rem;color:#94A3B8;display:flex;align-items:center;gap:0.35rem">'
+            + '<span>' + (svl[m.service_type] || m.service_type || '—') + '</span>'
+            + (m.mandate_number ? '<span style="color:#E2E8F0">·</span><span>' + m.mandate_number + '</span>' : '')
+            + (isLate ? '<span style="font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:3px;background:#FEF2F2;color:#DC2626">Retard</span>' : '')
+            + '</div></div>'
+
+            // Progression
+            + '<div style="padding:0 0.75rem">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'
+            + '<span style="font-size:0.72rem;color:#94A3B8">Progression</span>'
+            + '<span style="font-size:0.78rem;font-weight:700;color:' + barColor + '">' + prog + '%</span>'
             + '</div>'
-            + '<div style="font-size:0.75rem;color:#94A3B8;font-weight:500">' + (svl[m.service_type] || m.service_type || '') + '</div>'
+            + '<div style="height:6px;background:#F1F5F9;border-radius:3px;overflow:hidden">'
+            + '<div style="height:100%;width:' + prog + '%;background:' + barColor + ';border-radius:3px"></div></div>'
             + '</div>'
 
-            // Col 2 : barre de progression + %
-            + '<div style="display:flex;align-items:center;gap:0.65rem">'
-            + '<div style="flex:1;height:6px;background:#F1F5F9;border-radius:3px;overflow:hidden"><div style="height:100%;width:' + prog + '%;background:' + progColor + ';border-radius:3px;transition:width .4s"></div></div>'
-            + '<span style="font-size:0.78rem;font-weight:700;color:' + progColor + ';flex-shrink:0;min-width:32px">' + prog + '%</span>'
+            // Étape
+            + '<div style="padding:0 0.75rem;min-width:0">'
+            + '<div style="font-size:0.75rem;font-weight:600;color:#0F172A;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + stepLabel + '</div>'
+            + '<div style="font-size:0.7rem;color:#94A3B8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+            + (nextStep ? '→ ' + nextStep : '<span style="color:#059669">Terminé ✓</span>')
+            + '</div>'
+            + (m.end_date ? '<div style="font-size:0.68rem;color:' + (isLate ? '#DC2626' : '#94A3B8') + ';margin-top:2px;font-weight:' + (isLate ? '600' : '400') + '">Fin ' + fmtDate(m.end_date) + '</div>' : '')
             + '</div>'
 
-            // Col 3 : étape courante · suivante + dates
-            + '<div style="min-width:0">'
-            + '<div style="font-size:0.75rem;color:#475569;margin-bottom:4px">'
-            + (nextStep ? 'Étape : <strong style="color:#1B4F8A">' + stepLabel + '</strong>&nbsp;&nbsp;·&nbsp;&nbsp;Suivante : ' + nextStep : '<strong style="color:#059669">✓ Terminé</strong>')
+            // Statut
+            + '<div style="padding:0 1rem;display:flex;align-items:center;justify-content:flex-end">'
+            + '<span style="font-size:0.68rem;font-weight:700;padding:4px 12px;border-radius:20px;background:' + bg + ';color:' + fg + '">' + label + '</span>'
             + '</div>'
-            + '<div style="font-size:0.72rem;color:#94A3B8">'
-            + (m.start_date ? 'Début ' + new Date(m.start_date).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short', year: 'numeric' }) : '')
-            + (m.start_date && m.end_date ? '&nbsp;&nbsp;·&nbsp;&nbsp;' : '')
-            + (m.end_date ? '<span style="color:' + (isLate ? '#DC2626' : '#94A3B8') + ';font-weight:' + (isLate ? '700' : '400') + '">Fin ' + new Date(m.end_date).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short', year: 'numeric' }) + '</span>' : '')
-            + '</div>'
-            + '</div>'
-
-            // Col 4 : badge statut
-            + '<div style="display:flex;align-items:center;justify-content:flex-end;flex-shrink:0">'
-            + '<span style="font-size:0.72rem;font-weight:700;padding:4px 14px;border-radius:20px;background:' + bg + ';color:' + fg + ';white-space:nowrap">' + label + '</span>'
-            + '</div>'
-
             + '</div>';
     }).join('');
 
-    list.innerHTML = '<div style="background:white;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden">' + rows + '</div>';
+    list.innerHTML = '<div class="vnk-list-view">' + rows + '</div>';
 }
 
 // Libellés statut et service
@@ -3626,7 +3731,7 @@ function _applySort(arr, val, numField) {
 let _npStep = 1;
 const _npStepLabels = ['', 'Étape 1 sur 4 — Type de service', 'Étape 2 sur 4 — Détails techniques', 'Étape 3 sur 4 — Choisir un créneau', 'Étape 4 sur 4 — Révision et envoi'];
 const _svcLabels = { 'plc-support': 'Support PLC', 'audit': 'Audit technique', 'documentation': 'Documentation industrielle', 'refactoring': 'Refactorisation PLC' };
-const _urgLabels = { 'normal': 'Normal — prochaines semaines', 'urgent': 'Urgent — cette semaine', 'critical': '🚨 Critique — production arrêtée' };
+const _urgLabels = { 'normal': 'Normal — prochaines semaines', 'urgent': 'Urgent — cette semaine', 'critical': 'Critique — production arrêtée' };
 const _budgetLabels = { '': 'Non défini', 'lt2k': 'Moins de 2 000 $', '2k5k': '2 000 – 5 000 $', '5k15k': '5 000 – 15 000 $', '15k50k': '15 000 – 50 000 $', 'gt50k': 'Plus de 50 000 $' };
 const _deadlineLabels = { '': 'Non défini', 'asap': 'Dès que possible', '1month': 'Dans 1 mois', '3months': 'Dans 3 mois', '6months': 'Dans 6 mois', 'flexible': 'Flexible' };
 
@@ -3889,7 +3994,7 @@ async function _npSubmit() {
     if (btnNext) { btnNext.disabled = true; btnNext.textContent = 'Envoi en cours...'; }
 
     const lines = [
-        '🚀 NOUVELLE DEMANDE DE PROJET',
+        'NOUVELLE DEMANDE DE PROJET',
         '──────────────────────────────',
         'Client      : ' + name + (company ? ' — ' + company : ''),
         'Service     : ' + (_svcLabels[service] || service),
@@ -4291,14 +4396,10 @@ let _selectedSlotData = null;
 let _selectedDateDs = null;
 
 async function loadMyAppointments() {
-    const section = document.getElementById('booking-my-appts-section');
-    const list = document.getElementById('booking-my-appts-list');
-    if (!section || !list) return;
     try {
         const token = localStorage.getItem('vnk-token');
         const resp = await fetch('/api/calendar/my-appointments', { headers: { Authorization: 'Bearer ' + token } });
         const data = await resp.json();
-        // Détecter si un lien a été ajouté pour notifier le client
         const prev = window._allMyAppts || [];
         const fresh = data.appointments || [];
         fresh.forEach(a => {
@@ -4313,18 +4414,32 @@ async function loadMyAppointments() {
         window._bkApptFilter = window._bkApptFilter || 'all';
         // Ne pas reset la page courante sauf premier chargement
         if (!window._bkApptPage) window._bkApptPage = 1;
-        // Update badge
+        // Update badge booking section
         const total = window._allMyAppts.filter(a => a.status !== 'cancelled').length;
         const badge = document.getElementById('bk-appts-count-badge');
         if (badge) badge.textContent = total;
-        // Open accordion if has appointments
+        // Update badge tab appointments
+        const bnavBadge = document.getElementById('bnav-badge-appointments');
+        const upcoming = window._allMyAppts.filter(a => {
+            const ds = (a.appointment_date || '').split('T')[0];
+            return ds >= new Date().toISOString().split('T')[0] && a.status !== 'cancelled';
+        }).length;
+        if (bnavBadge) { bnavBadge.style.display = upcoming > 0 ? 'flex' : 'none'; bnavBadge.textContent = upcoming > 9 ? '9+' : upcoming; }
+        // Open accordion if has appointments — collapsed by default on mobile
         if (total > 0) {
             const panel = document.getElementById('bk-appts-panel');
             const arrow = document.getElementById('bk-accordion-arrow');
-            if (panel) panel.style.display = 'flex';
-            if (arrow) arrow.style.transform = 'rotate(180deg)';
+            const isMobile = window.innerWidth <= 900;
+            if (!isMobile) {
+                if (panel) panel.style.display = 'flex';
+                if (arrow) arrow.style.transform = 'rotate(180deg)';
+            }
         }
         _renderMyAppts();
+        // Refresh tab appointments si ouvert
+        if (document.getElementById('tab-appointments')?.classList.contains('active')) {
+            renderAppointmentsTab();
+        }
     } catch (e) { console.warn('loadMyAppointments:', e); }
 }
 
@@ -4354,7 +4469,18 @@ function _renderMyAppts() {
 
     const all = window._allMyAppts || [];
     if (!all.length) { if (section) section.style.display = 'none'; return; }
-    if (section) section.style.display = 'flex';
+    if (section) {
+        section.style.display = 'flex';
+        // Sur mobile : garder le panel collapsé par défaut
+        if (window.innerWidth <= 900) {
+            const panel = document.getElementById('bk-appts-panel');
+            const arrow = document.getElementById('bk-accordion-arrow');
+            if (panel && panel.style.display !== 'flex') {
+                panel.style.display = 'none';
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+    }
 
     const filter = window._bkApptFilter || 'all';
     let filtered = filter === 'all' ? all.slice() : all.filter(a => a.status === filter);
@@ -4394,13 +4520,13 @@ function _renderMyAppts() {
         return;
     }
 
-    // Grille auto-fill — s'ajuste à la résolution, min 220px par carte
-    const _sectionW = document.getElementById('booking-my-appts-section')?.offsetWidth || window.innerWidth - 260;
-    const _cols = Math.max(2, Math.floor(_sectionW / 327));
+    // Grille — largeur fixe par carte, auto-fill
+    const _minCardW = window.innerWidth <= 480 ? 140 : window.innerWidth <= 900 ? 160 : 220;
     list.style.display = 'grid';
-    list.style.gridTemplateColumns = 'repeat(' + _cols + ',1fr)';
+    list.style.gridTemplateColumns = 'repeat(auto-fill, minmax(' + _minCardW + 'px, 1fr))';
     list.style.gap = '.5rem';
     list.style.padding = '.65rem .9rem';
+    list.style.alignItems = 'stretch';
 
     list.innerHTML = slice.map(function (a) {
         const st = STATUS[a.status] || STATUS.pending;
@@ -4420,7 +4546,7 @@ function _renderMyAppts() {
         const isCancelled = a.status === 'cancelled';
         const opacity = (isCancelled || isPast) ? ';opacity:.6' : '';
 
-        return '<div onclick="openApptDetailModal(' + a.id + ')" style="background:white;border:1.5px solid #E2E8F0;border-radius:8px;padding:.75rem .9rem;cursor:pointer;transition:all .12s;display:flex;flex-direction:column;gap:.35rem' + opacity + '" onmouseenter="this.style.borderColor=\'#BFDBFE\';this.style.background=\'#F8FAFC\'" onmouseleave="this.style.borderColor=\'#E2E8F0\';this.style.background=\'white\'">'
+        return '<div onclick="openApptDetailModal(' + a.id + ')" style="background:white;border:1.5px solid #E2E8F0;border-radius:8px;padding:.75rem .9rem;cursor:pointer;transition:all .12s;display:flex;flex-direction:column;gap:.35rem;min-height:110px' + opacity + '" onmouseenter="this.style.borderColor=\'#BFDBFE\';this.style.background=\'#F8FAFC\'" onmouseleave="this.style.borderColor=\'#E2E8F0\';this.style.background=\'white\'">'
             + '<div style="display:flex;align-items:center;justify-content:space-between;gap:.4rem">'
             + '<span style="font-size:.78rem;font-weight:700;color:#0F172A;text-transform:capitalize;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + dateStr + '</span>'
             + '<span style="font-size:.6rem;font-weight:700;background:' + st.bg + ';color:' + st.color + ';padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap">' + st.label + '</span>'
@@ -4446,11 +4572,12 @@ function _renderMyAppts() {
         if (pages <= 1) { pager.innerHTML = ''; return; }
         const from = (page - 1) * PER_PAGE + 1;
         const to = Math.min(page * PER_PAGE, filtered.length);
-        pager.innerHTML = '<span>' + from + '–' + to + ' sur ' + filtered.length + ' RDV</span>'
-            + '<div style="display:flex;gap:0.3rem">'
-            + (page > 1 ? '<button onclick="_bkApptPg(' + (page - 1) + ')" style="padding:3px 9px;border:1.5px solid #E2E8F0;border-radius:6px;background:white;font-size:0.75rem;cursor:pointer;font-family:inherit">←</button>' : '')
-            + '<span style="padding:3px 9px;border:1.5px solid #1B4F8A;border-radius:6px;background:#EBF5FB;color:#1B4F8A;font-size:0.75rem;font-weight:700">' + page + '/' + pages + '</span>'
-            + (page < pages ? '<button onclick="_bkApptPg(' + (page + 1) + ')" style="padding:3px 9px;border:1.5px solid #E2E8F0;border-radius:6px;background:white;font-size:0.75rem;cursor:pointer;font-family:inherit">→</button>' : '')
+        const btnStyle = 'padding:5px 10px;border:1.5px solid #E2E8F0;border-radius:6px;background:white;font-size:0.75rem;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center';
+        pager.innerHTML = '<span style="font-size:0.72rem;color:#64748B">' + from + '–' + to + ' sur ' + filtered.length + ' RDV</span>'
+            + '<div style="display:flex;gap:0.3rem;align-items:center">'
+            + (page > 1 ? '<button onclick="_bkApptPg(' + (page - 1) + ')" style="' + btnStyle + '"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>' : '')
+            + '<span style="padding:4px 10px;border:1.5px solid #1B4F8A;border-radius:6px;background:#EBF5FB;color:#1B4F8A;font-size:0.72rem;font-weight:700">' + page + '/' + pages + '</span>'
+            + (page < pages ? '<button onclick="_bkApptPg(' + (page + 1) + ')" style="' + btnStyle + '"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>' : '')
             + '</div>';
     }
 }
@@ -4583,15 +4710,11 @@ function renderBookingMonth() {
     grid.innerHTML = html;
 }
 
-function bkSetMeetType(type, btn) {
-    document.querySelectorAll('.bk-fmt').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-    const hidden = document.getElementById('booking-meet-type');
-    if (hidden) hidden.value = type;
-}
-
 function selectBookingDate(ds) {
     _selectedDateDs = ds;
+    // Fermer la sheet si elle est ouverte (nouvelle sélection de date)
+    const existingSheet = document.getElementById('bk-mobile-sheet-overlay');
+    if (existingSheet) existingSheet.remove();
     // Réinitialiser le slot si on change de date
     if (_selectedSlotData && (_selectedSlotData.slot_date || '').split('T')[0] !== ds) {
         _selectedSlotId = null;
@@ -4678,6 +4801,185 @@ function selectBookingSlot(slotId) {
     if (err) err.style.display = 'none';
     if (suc) suc.style.display = 'none';
     if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmer le rendez-vous'; }
+
+    // Sur mobile — ouvrir une sheet modale depuis le bas
+    if (window.innerWidth <= 900) {
+        _bkOpenMobileSheet();
+    }
+}
+
+function _bkOpenMobileSheet() {
+    const existing = document.getElementById('bk-mobile-sheet-overlay');
+    if (existing) existing.remove();
+
+    // Données du créneau — variable locale (pas window.)
+    const slot = _selectedSlotData;
+    const ds = slot ? (slot.slot_date || '').split('T')[0] : '';
+    const dateStr = ds ? new Date(ds + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' }) : '—';
+    const startT = slot ? (slot.start_time || '').substring(0, 5) : '';
+    const endT = slot ? (slot.end_time || '').substring(0, 5) : '';
+    const dur = slot ? (slot.duration_min || 30) : 30;
+
+    // Infos client depuis la sidebar
+    const clientName = document.getElementById('sidebar-name')?.textContent?.trim() || '';
+    const clientCompany = document.getElementById('sidebar-company')?.textContent?.trim() || '';
+    const initials = clientName.split(' ').map(w => w[0] || '').join('').substring(0, 2).toUpperCase();
+
+    // Format actuel
+    const currentFormat = (typeof _bkMeetType !== 'undefined' ? _bkMeetType : null) || window._bkMeetType || 'video';
+
+    // Overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'bk-mobile-sheet-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,28,52,0.55);z-index:800;display:flex;align-items:flex-end;animation:bkFadeIn .2s ease';
+
+    // Sheet
+    const sheet = document.createElement('div');
+    sheet.style.cssText = 'background:white;border-radius:20px 20px 0 0;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;padding-bottom:env(safe-area-inset-bottom,0);animation:bkSlideUp .28s cubic-bezier(0.34,1.05,0.64,1)';
+
+    sheet.innerHTML = ''
+        // Handle
+        + '<div style="width:36px;height:4px;background:#CBD5E0;border-radius:2px;margin:10px auto 0;flex-shrink:0"></div>'
+        // Header navy VNK
+        + '<div style="background:linear-gradient(135deg,#0F2D52 0%,#1B4F8A 100%);padding:1rem 1.25rem 1rem;flex-shrink:0;position:relative">'
+        + '<button id="bk-sheet-close-btn" style="position:absolute;top:0.75rem;right:1rem;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);cursor:pointer;width:28px;height:28px;border-radius:8px;color:white;display:flex;align-items:center;justify-content:center;line-height:0">'
+        + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+        + '</button>'
+        + '<div style="font-size:0.58rem;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.3rem">Créneau sélectionné</div>'
+        + '<div style="font-size:1.05rem;font-weight:800;color:white;line-height:1.25;text-transform:capitalize">' + dateStr + '</div>'
+        + '<div style="font-size:0.82rem;color:rgba(255,255,255,0.75);margin-top:0.2rem;display:flex;align-items:center;gap:0.4rem">'
+        + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+        + (startT && endT ? startT + ' – ' + endT + ' · ' + dur + ' min' : 'Sélectionnez un créneau')
+        + '</div>'
+        + '<button id="bk-sheet-change-btn" style="margin-top:0.7rem;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:0.72rem;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px">'
+        + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>Changer de créneau'
+        + '</button>'
+        + '</div>'
+        // Body scrollable
+        + '<div id="bk-sheet-body" style="overflow-y:auto;flex:1;padding:1.1rem 1.25rem 1.5rem;display:flex;flex-direction:column;gap:1rem">'
+        // Avatar client — gradient VNK identique au profil
+        + '<div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;background:#F8FAFC;border:1px solid #E8EFF7;border-radius:10px">'
+        + '<div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#1B4F8A,#2E75B6);color:white;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;flex-shrink:0">' + initials + '</div>'
+        + '<div>'
+        + '<div style="font-size:0.85rem;font-weight:700;color:#0F172A">' + clientName + (clientCompany ? ' — ' + clientCompany : '') + '</div>'
+        + '<div style="font-size:0.72rem;color:#10B981;font-weight:600;display:flex;align-items:center;gap:3px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Client vérifié</div>'
+        + '</div>'
+        + '</div>'
+        // Objet
+        + '<div>'
+        + '<label style="font-size:0.65rem;font-weight:700;color:#374151;display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.06em">Objet du rendez-vous</label>'
+        + '<input id="bk-sheet-subject" type="text" placeholder="Ex: Diagnostic PLC ligne 3" style="width:100%;padding:0.65rem 0.85rem;border:1.5px solid #E2E8F0;border-radius:8px;font-size:0.85rem;font-family:inherit;color:#0F172A;box-sizing:border-box;outline:none" />'
+        + '</div>'
+        // Format
+        + '<div>'
+        + '<label style="font-size:0.65rem;font-weight:700;color:#374151;display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.06em">Format</label>'
+        + '<div style="display:flex;gap:0.5rem">'
+        + '<button class="bk-fmt-sheet ' + (currentFormat === 'video' ? 'bk-fmt-active' : '') + '" data-type="video" style="flex:1;padding:0.6rem;border:1.5px solid ' + (currentFormat === 'video' ? '#1B4F8A' : '#E2E8F0') + ';border-radius:8px;background:' + (currentFormat === 'video' ? '#EFF6FF' : 'white') + ';color:' + (currentFormat === 'video' ? '#1B4F8A' : '#64748B') + ';font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:0.35rem">'
+        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Vidéo'
+        + '</button>'
+        + '<button class="bk-fmt-sheet ' + (currentFormat === 'phone' ? 'bk-fmt-active' : '') + '" data-type="phone" style="flex:1;padding:0.6rem;border:1.5px solid ' + (currentFormat === 'phone' ? '#1B4F8A' : '#E2E8F0') + ';border-radius:8px;background:' + (currentFormat === 'phone' ? '#EFF6FF' : 'white') + ';color:' + (currentFormat === 'phone' ? '#1B4F8A' : '#64748B') + ';font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:0.35rem">'
+        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Téléphone'
+        + '</button>'
+        + '</div>'
+        + '</div>'
+        // Erreur / Succès
+        + '<div id="bk-sheet-err" style="display:none;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:8px;padding:0.5rem 0.75rem;font-size:0.78rem;color:#DC2626;font-weight:600"></div>'
+        + '<div id="bk-sheet-suc" style="display:none;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:10px;padding:0.85rem 1rem">'
+        + '<div style="font-size:0.85rem;font-weight:700;color:#15803D;margin-bottom:3px">Rendez-vous confirmé</div>'
+        + '<div id="bk-sheet-suc-text" style="font-size:0.75rem;color:#16A34A;line-height:1.5"></div>'
+        + '</div>'
+        // Bouton confirmer
+        + '<button id="bk-sheet-confirm-btn" style="width:100%;padding:0.9rem;background:linear-gradient(135deg,#1B4F8A,#2563EB);color:white;border:none;border-radius:12px;font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:0.5rem">'
+        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Confirmer le rendez-vous'
+        + '</button>'
+        + '</div>';
+
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+
+    // Bouton fermer
+    sheet.querySelector('#bk-sheet-close-btn').onclick = () => {
+        overlay.remove();
+        resetBookingSelection();
+    };
+
+    // Bouton Changer — ferme la sheet, scroll au calendrier
+    sheet.querySelector('#bk-sheet-change-btn').onclick = function () {
+        overlay.remove();
+        const calCol = document.querySelector('#tab-booking .bk-cal-col');
+        if (calCol) calCol.scrollTo({ top: 0, behavior: 'smooth' });
+        document.querySelectorAll('#booking-slots-day .bk-slot').forEach(b => b.classList.remove('selected'));
+    };
+
+    // Boutons format — toggle visuel indépendant dans la sheet
+    sheet.querySelectorAll('.bk-fmt-sheet').forEach(btn => {
+        btn.onclick = function () {
+            const type = btn.dataset.type;
+            window._bkMeetType = type;
+            const hidden = document.getElementById('booking-meet-type');
+            if (hidden) hidden.value = type;
+            sheet.querySelectorAll('.bk-fmt-sheet').forEach(b => {
+                const active = b.dataset.type === type;
+                b.style.border = '1.5px solid ' + (active ? '#1B4F8A' : '#E2E8F0');
+                b.style.background = active ? '#EFF6FF' : 'white';
+                b.style.color = active ? '#1B4F8A' : '#64748B';
+            });
+        };
+    });
+
+    // Sync champ objet avec le champ du panel original
+    const subjectInput = sheet.querySelector('#bk-sheet-subject');
+    const origSubject = document.getElementById('bk-form-subject') || document.getElementById('np-booking-subject');
+    if (subjectInput && origSubject) {
+        subjectInput.value = origSubject.value || '';
+        subjectInput.addEventListener('input', () => { if (origSubject) origSubject.value = subjectInput.value; });
+    }
+
+    // Bouton Confirmer
+    const confirmBtn = sheet.querySelector('#bk-sheet-confirm-btn');
+    confirmBtn.onclick = function () {
+        // Sync sujet
+        if (subjectInput && origSubject) origSubject.value = subjectInput.value;
+        // Feedback visuel
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="animation:spin .7s linear infinite"><polyline points="23 4 23 11 16 11"/><path d="M20.49 15a9 9 0 1 1-.26-4.8"/></svg>Confirmation...';
+        confirmBookingSlot();
+        // Écouter le succès/erreur depuis les éléments originaux
+        const checkResult = setInterval(() => {
+            const sucEl = document.getElementById('np-booking-success');
+            const errEl = document.getElementById('np-booking-err');
+            const sheetSuc = sheet.querySelector('#bk-sheet-suc');
+            const sheetErr = sheet.querySelector('#bk-sheet-err');
+            const sheetSucText = sheet.querySelector('#bk-sheet-suc-text');
+            if (sucEl && sucEl.style.display !== 'none') {
+                clearInterval(checkResult);
+                if (sheetSuc) { sheetSuc.style.display = 'block'; if (sheetSucText) sheetSucText.textContent = document.getElementById('np-booking-success-text')?.textContent || ''; }
+                confirmBtn.style.display = 'none';
+                setTimeout(() => overlay.remove(), 2500);
+            } else if (errEl && errEl.style.display !== 'none') {
+                clearInterval(checkResult);
+                if (sheetErr) { sheetErr.style.display = 'block'; sheetErr.textContent = errEl.textContent; }
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Réessayer';
+            }
+        }, 300);
+    };
+
+    // Fermer si clic overlay
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) {
+            overlay.remove();
+            resetBookingSelection();
+        }
+    });
+
+    // Keyframes
+    if (!document.getElementById('bk-sheet-styles')) {
+        const s = document.createElement('style');
+        s.id = 'bk-sheet-styles';
+        s.textContent = '@keyframes bkFadeIn{from{opacity:0}to{opacity:1}}@keyframes bkSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+        document.head.appendChild(s);
+    }
 }
 
 function resetBookingSelection() {
@@ -4777,13 +5079,13 @@ async function loadMyRequests() {
         const allMsgs = [];
         (data.threads || []).forEach(t => {
             (t.messages || []).forEach(m => {
-                if (m.content && m.content.includes('🚀 NOUVELLE DEMANDE DE PROJET') && m.sender === 'client') {
+                if (m.content && m.content.includes('NOUVELLE DEMANDE DE PROJET') && m.sender === 'client') {
                     allMsgs.push({ ...m, request_status: m.request_status || 'new' });
                 }
             });
         });
         (data.messages || []).forEach(m => {
-            if (m.content && m.content.includes('🚀 NOUVELLE DEMANDE DE PROJET') && m.sender === 'client') {
+            if (m.content && m.content.includes('NOUVELLE DEMANDE DE PROJET') && m.sender === 'client') {
                 if (!allMsgs.find(x => x.id === m.id)) allMsgs.push({ ...m, request_status: m.request_status || 'new' });
             }
         });
@@ -4891,6 +5193,26 @@ function renderMyRequests(requests, force) {
             const isCrit = urgency.includes('Critique');
             const isUrg = urgency.includes('Urgent') || isCrit;
 
+            const _isMob = window.innerWidth <= 900;
+            if (_isMob) {
+                const urgColor = isCrit ? '#DC2626' : isUrg ? '#D97706' : '#94A3B8';
+                const urgBg = isCrit ? '#FEF2F2' : isUrg ? '#FFFBEB' : 'transparent';
+                return '<div class="requests-list-row" style="display:flex;align-items:center;gap:0;padding:0;border-bottom:1px solid #F1F5F9;cursor:default;transition:background .1s;min-height:54px;overflow:hidden" onmouseenter="this.style.background=\'#F8FAFC\'" onmouseleave="this.style.background=\'white\'">'
+                    // Barre couleur urgence gauche
+                    + '<div style="width:3px;min-height:54px;background:' + urgColor + ';flex-shrink:0;align-self:stretch"></div>'
+                    + '<div style="flex:1;min-width:0;padding:0.65rem 0.85rem;display:flex;align-items:center;gap:0.65rem">'
+                    + '<div style="flex:1;min-width:0">'
+                    + '<div style="font-weight:600;font-size:0.88rem;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + service + '</div>'
+                    + '<div style="font-size:0.7rem;color:#94A3B8;margin-top:2px;display:flex;align-items:center;gap:0.35rem;overflow:hidden;white-space:nowrap">'
+                    + (automate !== '—' ? '<span style="overflow:hidden;text-overflow:ellipsis;max-width:120px">' + automate + '</span><span style="color:#E2E8F0">·</span>' : '')
+                    + '<span>' + fmtDate(req.created_at) + '</span>'
+                    + (isCrit || isUrg ? '<span style="color:#E2E8F0">·</span><span style="color:' + urgColor + ';font-weight:600;font-size:0.65rem;padding:1px 5px;background:' + urgBg + ';border-radius:3px">' + (isCrit ? 'Critique' : 'Urgent') + '</span>' : '')
+                    + '</div>'
+                    + '</div>'
+                    + '<span style="font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:4px;background:' + sc.bg + ';color:' + sc.color + ';white-space:nowrap;flex-shrink:0;letter-spacing:0.02em">' + sc.label + '</span>'
+                    + '</div>'
+                    + '</div>';
+            }
             return '<div class="requests-list-row" style="display:grid;grid-template-columns:2fr 140px 1fr auto;align-items:center;gap:1rem;padding:0.75rem 1rem;border-bottom:1px solid #F1F5F9;cursor:default;transition:background .1s" onmouseenter="this.style.background=\'#F8FAFC\'" onmouseleave="this.style.background=\'white\'">'
                 // Col 1 : service + automate
                 + '<div style="min-width:0">'
@@ -4911,7 +5233,7 @@ function renderMyRequests(requests, force) {
                 + '</div>'
                 // Col 3 : urgence + temps
                 + '<div style="font-size:0.7rem;color:#94A3B8;text-align:right">'
-                + (isCrit ? '<span style="color:#DC2626;font-weight:700">🚨 Critique</span> · ' : isUrg ? '<span style="color:#D97706;font-weight:700">⚡ Urgent</span> · ' : '')
+                + (isCrit ? '<span style="color:#DC2626;font-weight:700;display:flex;align-items:center;gap:2px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Critique</span> · ' : isUrg ? '<span style="color:#D97706;font-weight:700;display:flex;align-items:center;gap:2px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Urgent</span> · ' : '')
                 + relTime(req.created_at)
                 + '</div>'
                 // Col 4 : badge statut
@@ -4963,7 +5285,7 @@ function renderMyRequests(requests, force) {
             + '<div style="font-size:0.67rem;color:#94A3B8;margin-top:1px">' + (automate !== '—' ? automate + ' · ' : '') + fmtDate(req.created_at) + '</div>'
             + '</div>'
             + '<div style="display:flex;align-items:center;gap:0.3rem;flex-shrink:0">'
-            + (isCrit ? '<span style="font-size:0.58rem;font-weight:700;color:#DC2626;background:#FEE2E2;padding:1px 5px;border-radius:5px">🚨</span>' : isUrg ? '<span style="font-size:0.58rem;font-weight:700;color:#D97706;background:#FEF3C7;padding:1px 5px;border-radius:5px">⚡</span>' : '')
+            + (isCrit ? '<span style="font-size:0.58rem;font-weight:700;color:#DC2626;background:#FEE2E2;padding:1px 5px;border-radius:5px;display:inline-flex;align-items:center;gap:2px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Critique</span>' : isUrg ? '<span style="font-size:0.58rem;font-weight:700;color:#D97706;background:#FEF3C7;padding:1px 5px;border-radius:5px;display:inline-flex;align-items:center;gap:2px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Urgent</span>' : '')
             + '<span style="font-size:0.62rem;color:#94A3B8">' + relTime(req.created_at) + '</span>'
             + '</div>'
             + '</div>'
@@ -4984,7 +5306,7 @@ function renderMyRequests(requests, force) {
             + '</div>';
     }).join('');
 
-    container.innerHTML = '<div class="requests-cards-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem;padding:0.25rem 0">' + cards + '</div>';
+    container.innerHTML = '<div class="requests-cards-grid" style="display:grid;grid-template-columns:' + (window.innerWidth <= 900 ? '1fr' : 'repeat(3,1fr)') + ';gap:0.65rem;padding:0.25rem 0">' + cards + '</div>';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5080,8 +5402,21 @@ function confirmBookingSlot() {
 // ── bkSetMeetType ─────────────────────────────────────────────
 function bkSetMeetType(type, btn) {
     window._bkMeetType = type;
-    document.querySelectorAll('#tab-booking .bk-fmt').forEach(b => b.classList.remove('active'));
+    // Retirer active de TOUS les .bk-fmt (tab + sheet)
+    document.querySelectorAll('.bk-fmt').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
+    // Sync le bouton miroir (tab ou sheet)
+    const allFmts = document.querySelectorAll('.bk-fmt');
+    allFmts.forEach(b => {
+        const isVideo = b.textContent.includes('Vidéo') || b.textContent.includes('Video');
+        const isPhone = b.textContent.includes('Téléphone') || b.textContent.includes('Phone');
+        if ((type === 'video' && isVideo) || (type === 'phone' && isPhone)) {
+            b.classList.add('active');
+        }
+    });
+    // Mettre à jour le champ caché
+    const hidden = document.getElementById('booking-meet-type');
+    if (hidden) hidden.value = type;
 }
 
 // ── bkToggleAppts ─────────────────────────────────────────────
@@ -5537,4 +5872,690 @@ async function rsConfirm() {
         if (btn) { btn.disabled = false; btn.style.background = '#DC2626'; btn.textContent = 'Erreur : ' + e.message; }
         setTimeout(() => { if (btn) { btn.disabled = false; btn.style.background = '#059669'; btn.textContent = 'Confirmer le nouveau créneau'; } }, 3000);
     }
+}
+/* ── Responsive dashboard display — corrige le display inline ── */
+function _setDashDisplay() {
+    const dash = document.getElementById('dashboard-section');
+    if (!dash || dash.style.display === 'none') return;
+    dash.style.display = window.innerWidth <= 900 ? 'flex' : 'grid';
+}
+window.addEventListener('resize', _setDashDisplay);
+
+// ══════════════════════════════════════════════════════════════
+// TAB RENDEZ-VOUS — Vue dédiée pro (style Calendly/Google Cal)
+// ══════════════════════════════════════════════════════════════
+
+let _apptView = 'list'; // 'list' | 'grid'
+let _apptFilter = 'all';
+
+function renderAppointmentsTab() {
+    const allAppts = window._allMyAppts || [];
+    _renderApptKpis(allAppts);
+    _renderApptContent(allAppts);
+}
+
+function setApptView(view, btn) {
+    _apptView = view;
+    document.querySelectorAll('.appt-view-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    document.getElementById('appt-list-view').style.display = view === 'list' ? 'flex' : 'none';
+    document.getElementById('appt-grid-view').style.display = view === 'grid' ? 'grid' : 'none';
+    const allAppts = window._allMyAppts || [];
+    _renderApptContent(allAppts);
+}
+
+function filterAppts(filter, btn) {
+    _apptFilter = filter;
+    document.querySelectorAll('.appt-filter').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const allAppts = window._allMyAppts || [];
+    _renderApptContent(allAppts);
+}
+
+function _apptFilterData(appts) {
+    const today = new Date().toISOString().split('T')[0];
+    switch (_apptFilter) {
+        case 'upcoming': return appts.filter(a => (a.appointment_date || '').split('T')[0] >= today && a.status !== 'cancelled');
+        case 'confirmed': return appts.filter(a => a.status === 'confirmed');
+        case 'cancelled': return appts.filter(a => a.status === 'cancelled');
+        case 'past': return appts.filter(a => (a.appointment_date || '').split('T')[0] < today && a.status !== 'cancelled');
+        default: return appts;
+    }
+}
+
+function _renderApptKpis(appts) {
+    const el = document.getElementById('appt-kpis');
+    if (!el) return;
+    const today = new Date().toISOString().split('T')[0];
+    const upcoming = appts.filter(a => (a.appointment_date || '').split('T')[0] >= today && a.status !== 'cancelled').length;
+    const confirmed = appts.filter(a => a.status === 'confirmed').length;
+    const past = appts.filter(a => (a.appointment_date || '').split('T')[0] < today).length;
+    el.innerHTML =
+        '<div class="appt-kpi"><span class="appt-kpi-num">' + upcoming + '</span><span class="appt-kpi-label">À venir</span></div>'
+        + '<span class="appt-kpi-sep">·</span>'
+        + '<div class="appt-kpi"><span class="appt-kpi-num">' + confirmed + '</span><span class="appt-kpi-label">Confirmés</span></div>'
+        + '<span class="appt-kpi-sep">·</span>'
+        + '<div class="appt-kpi"><span class="appt-kpi-num">' + past + '</span><span class="appt-kpi-label">Passés</span></div>';
+}
+
+function _renderApptContent(allAppts) {
+    const filtered = _apptFilterData(allAppts);
+    const listEl = document.getElementById('appt-list-view');
+    const gridEl = document.getElementById('appt-grid-view');
+    const emptyEl = document.getElementById('appt-empty');
+    if (!listEl || !gridEl || !emptyEl) return;
+
+    if (!filtered.length) {
+        listEl.style.display = 'none';
+        gridEl.style.display = 'none';
+        emptyEl.style.display = 'block';
+        return;
+    }
+    emptyEl.style.display = 'none';
+
+    const STATUS = {
+        confirmed: { label: 'Confirmé', bg: '#ECFDF5', color: '#065F46', bar: '#10B981' },
+        pending: { label: 'En attente', bg: '#FEF9EC', color: '#92400E', bar: '#F59E0B' },
+        cancelled: { label: 'Annulé', bg: '#FEF2F2', color: '#DC2626', bar: '#EF4444' },
+    };
+    const today = new Date().toISOString().split('T')[0];
+
+    if (_apptView === 'list') {
+        listEl.style.display = 'flex';
+        gridEl.style.display = 'none';
+        // Grouper par date
+        const groups = {};
+        filtered.forEach(a => {
+            const ds = (a.appointment_date || '').split('T')[0];
+            if (!groups[ds]) groups[ds] = [];
+            groups[ds].push(a);
+        });
+        const sortedDates = Object.keys(groups).sort();
+        listEl.innerHTML = sortedDates.map(ds => {
+            const d = new Date(ds + 'T12:00:00');
+            const wd = d.toLocaleDateString('fr-CA', { weekday: 'short' }).replace('.', '');
+            const num = d.getDate();
+            const mon = d.toLocaleDateString('fr-CA', { month: 'short' }).replace('.', '');
+            const isToday = ds === today;
+            const cards = groups[ds].map(a => _apptListCard(a, STATUS)).join('');
+            return '<div class="appt-day-group">'
+                + '<div class="appt-day-label">'
+                + '<span class="appt-day-wd">' + wd + '</span>'
+                + '<span class="appt-day-num' + (isToday ? ' today' : '') + '">' + num + '</span>'
+                + '<span class="appt-day-month">' + mon + '</span>'
+                + '</div>'
+                + '<div class="appt-day-cards">' + cards + '</div>'
+                + '</div>';
+        }).join('');
+    } else {
+        listEl.style.display = 'none';
+        gridEl.style.display = 'grid';
+        gridEl.innerHTML = filtered.map(a => _apptGridCard(a, STATUS, today)).join('');
+    }
+}
+
+function _apptListCard(a, STATUS) {
+    const st = STATUS[a.status] || STATUS.pending;
+    const ds = (a.appointment_date || '').split('T')[0];
+    const startT = (a.start_time || '').substring(0, 5);
+    const endT = (a.end_time || '').substring(0, 5);
+    const dur = (a.duration_min || 30) + ' min';
+    const fmt = a.meeting_type === 'phone' ? 'Téléphone' : 'Vidéo';
+    const fmtSvg = a.meeting_type === 'phone'
+        ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'
+        : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>';
+    const hasLink = !!a.meeting_link;
+    const isPast = ds < new Date().toISOString().split('T')[0];
+    const isCancelled = a.status === 'cancelled';
+
+    return '<div class="appt-list-card" onclick="openApptDetailModal(' + a.id + ')">'
+        + '<div class="appt-list-card-bar" style="background:' + st.bar + ';min-height:62px"></div>'
+        + '<div class="appt-list-card-body">'
+        + '<div class="appt-list-card-title">' + (a.subject || 'Appel de qualification') + '</div>'
+        + '<div class="appt-list-card-meta">'
+        + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+        + '<span>' + startT + ' – ' + endT + '</span>'
+        + '<span class="appt-list-card-sep">·</span>'
+        + '<span>' + dur + '</span>'
+        + '<span class="appt-list-card-sep">·</span>'
+        + fmtSvg + '<span>' + fmt + '</span>'
+        + '</div>'
+        + '</div>'
+        + '<div class="appt-list-card-right">'
+        + '<span class="appt-badge" style="background:' + st.bg + ';color:' + st.color + '">' + st.label + '</span>'
+        + (hasLink && !isCancelled && !isPast
+            ? '<a href="' + a.meeting_link + '" target="_blank" onclick="event.stopPropagation()" class="appt-join-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Rejoindre</a>'
+            : (!isCancelled && !isPast && !hasLink ? '<span style="font-size:.65rem;color:#D97706;font-weight:600">Lien à venir</span>' : ''))
+        + '</div>'
+        + '</div>';
+}
+
+function _apptGridCard(a, STATUS, today) {
+    const st = STATUS[a.status] || STATUS.pending;
+    const ds = (a.appointment_date || '').split('T')[0];
+    const d = ds ? new Date(ds + 'T12:00:00') : null;
+    const dateStr = d ? d.toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' }) : '—';
+    const startT = (a.start_time || '').substring(0, 5);
+    const endT = (a.end_time || '').substring(0, 5);
+    const dur = (a.duration_min || 30) + ' min';
+    const fmt = a.meeting_type === 'phone' ? 'Téléphone' : 'Vidéo';
+    const hasLink = !!a.meeting_link;
+    const isPast = ds < today;
+    const isCancelled = a.status === 'cancelled';
+    const opacity = (isPast || isCancelled) ? 'opacity:0.65;' : '';
+
+    return '<div class="appt-grid-card" style="' + opacity + '" onclick="openApptDetailModal(' + a.id + ')">'
+        + '<div class="appt-grid-card-header">'
+        + '<span class="appt-grid-card-date">' + dateStr + '</span>'
+        + '<span class="appt-badge" style="background:' + st.bg + ';color:' + st.color + '">' + st.label + '</span>'
+        + '</div>'
+        + '<div class="appt-grid-card-body">'
+        + '<div style="display:flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:700;color:#0F172A">'
+        + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+        + startT + ' – ' + endT
+        + '<span style="font-size:.7rem;color:#94A3B8;font-weight:400">· ' + dur + '</span>'
+        + '</div>'
+        + '<div style="font-size:.75rem;color:#64748B">' + (a.subject || 'Appel de qualification') + '</div>'
+        + '<div style="font-size:.7rem;color:#94A3B8">' + fmt + '</div>'
+        + '</div>'
+        + '<div class="appt-grid-card-footer">'
+        + (hasLink && !isCancelled && !isPast
+            ? '<a href="' + a.meeting_link + '" target="_blank" onclick="event.stopPropagation()" class="appt-join-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Rejoindre</a>'
+            : (!isCancelled && !isPast ? '<span style="font-size:.68rem;color:#D97706;font-weight:600">Lien à venir</span>' : '<span style="font-size:.68rem;color:#CBD5E0">—</span>'))
+        + '<span style="font-size:.7rem;color:#94A3B8">' + (d ? d.toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' }) : '—') + '</span>'
+        + '</div>'
+        + '</div>';
+}
+
+// Hook — synchroniser les données dès qu'elles sont chargées
+(function () {
+    const _origLoadAll = window.loadAllData;
+    if (typeof _origLoadAll === 'function') {
+        window.loadAllData = async function () {
+            await _origLoadAll();
+            if (document.getElementById('tab-appointments')?.classList.contains('active')) {
+                renderAppointmentsTab();
+            }
+        };
+    }
+})();
+
+// ══════════════════════════════════════════════════════════════════════════
+// SYSTÈME UNIFIÉ — Vue liste/grille pour tous les tabs
+// ══════════════════════════════════════════════════════════════════════════
+
+// ── État des vues ──────────────────────────────────────────────────────────
+window._tabViews = window._tabViews || {
+    quotes: 'list', invoices: 'list', contracts: 'list',
+    documents: 'grid', mandates: 'cards'
+};
+
+// ── Helpers communs ────────────────────────────────────────────────────────
+function _vnkSetView(tab, view) {
+    window._tabViews[tab] = view;
+    document.querySelectorAll('#vnk-view-' + tab + ' .vnk-view-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.view === view);
+    });
+    // Re-render
+    const fn = { quotes: filterQuotes, invoices: filterInvoices, contracts: filterContracts, documents: () => renderDocuments(window._allDocuments || []) };
+    if (fn[tab]) fn[tab]();
+}
+
+function _vnkFilterBtn(tab, val, el) {
+    document.querySelectorAll('#vnk-filters-' + tab + ' .vnk-tab-filter').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+    window._vnkFilters = window._vnkFilters || {};
+    window._vnkFilters[tab] = val;
+    const fn = { quotes: filterQuotes, invoices: filterInvoices, contracts: filterContracts, documents: () => renderDocuments(window._allDocuments || []) };
+    if (fn[tab]) fn[tab]();
+}
+
+function _fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('fr-CA', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function _statusBadge(label, color) {
+    return '<span class="vnk-status-badge" style="background:' + color + '18;color:' + color + '">' + label + '</span>';
+}
+
+// ── Injecter le header unifié dans un tab ─────────────────────────────────
+function _injectTabHeader(tabId, config) {
+    const tab = document.getElementById('tab-' + tabId);
+    if (!tab) return;
+    // Ne pas réinjecter si déjà présent
+    if (tab.querySelector('.vnk-tab-header')) return;
+
+    const { kpis = [], filters = [], showToggle = true, extraActions = '' } = config;
+
+    const kpisHtml = kpis.map(k =>
+        '<div class="vnk-tab-kpi"><span class="vnk-tab-kpi-num ' + (k.cls || '') + '">' + k.val + '</span><span class="vnk-tab-kpi-label">' + k.label + '</span></div>'
+    ).join('<span style="color:#E2E8F0;font-size:1rem">·</span>');
+
+    const toggleHtml = showToggle ? '<div class="vnk-view-toggle" id="vnk-view-' + tabId + '">' +
+        '<button class="vnk-view-btn active" data-view="list" onclick="_vnkSetView(\'' + tabId + '\',\'list\',this)" title="Vue liste">' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5" fill="currentColor"/><circle cx="3" cy="12" r="1.5" fill="currentColor"/><circle cx="3" cy="18" r="1.5" fill="currentColor"/></svg>' +
+        '</button>' +
+        '<button class="vnk-view-btn" data-view="grid" onclick="_vnkSetView(\'' + tabId + '\',\'grid\',this)" title="Vue grille">' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>' +
+        '</button></div>' : '';
+
+    const filtersHtml = filters.length ? '<div class="vnk-tab-filters" id="vnk-filters-' + tabId + '">' +
+        filters.map((f, i) =>
+            '<button class="vnk-tab-filter' + (i === 0 ? ' active' : '') + '" onclick="_vnkFilterBtn(\'' + tabId + '\',\'' + f.val + '\',this)">' + f.label + '</button>'
+        ).join('') + '</div>' : '';
+
+    const header = document.createElement('div');
+    header.className = 'vnk-tab-header';
+    header.innerHTML =
+        '<div class="vnk-tab-header-top">' +
+        '<div class="vnk-tab-kpis" id="vnk-kpis-' + tabId + '">' + kpisHtml + '</div>' +
+        '<div class="vnk-tab-actions">' + extraActions + toggleHtml + '</div>' +
+        '</div>' +
+        filtersHtml;
+
+    tab.insertBefore(header, tab.firstChild);
+
+    // Restore saved view
+    const savedView = window._tabViews[tabId];
+    if (savedView && savedView !== 'list') {
+        setTimeout(() => {
+            const btn = tab.querySelector('[data-view="' + savedView + '"]');
+            if (btn) { btn.classList.add('active'); tab.querySelector('[data-view="list"]')?.classList.remove('active'); }
+        }, 0);
+    }
+}
+
+function _updateTabKpis(tabId, kpis) {
+    const el = document.getElementById('vnk-kpis-' + tabId);
+    if (!el) return;
+    el.innerHTML = kpis.map(k =>
+        '<div class="vnk-tab-kpi"><span class="vnk-tab-kpi-num ' + (k.cls || '') + '">' + k.val + '</span><span class="vnk-tab-kpi-label">' + k.label + '</span></div>'
+    ).join('<span style="color:#E2E8F0;font-size:1rem">·</span>');
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// DEVIS — Vue liste + grille
+// ══════════════════════════════════════════════════════════════════════════
+
+function renderQuotesUnified(quotes) {
+    const list = document.getElementById('quotes-list');
+    if (!list) return;
+
+    // Injecter le header si besoin
+    const pending = (window._allQuotes || []).filter(q => q.status === 'pending').length;
+    const accepted = (window._allQuotes || []).filter(q => q.status === 'accepted').length;
+    _injectTabHeader('quotes', {
+        filters: [
+            { val: 'all', label: 'Tous' },
+            { val: 'pending', label: 'En attente' },
+            { val: 'accepted', label: 'Acceptés' },
+            { val: 'expired', label: 'Expirés' }
+        ]
+    });
+    _updateTabKpis('quotes', [
+        { val: quotes.length, label: 'Devis' },
+        { val: pending, label: 'En attente', cls: 'vnk-tab-kpi-orange' },
+        { val: accepted, label: 'Acceptés', cls: 'vnk-tab-kpi-green' }
+    ]);
+
+    if (!quotes.length) {
+        list.innerHTML = '<div class="vnk-tab-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>Aucun devis disponible.</p></div>';
+        return;
+    }
+
+    const sc = { pending: '#D97706', accepted: '#27AE60', expired: '#E74C3C', draft: '#94A3B8', cancelled: '#94A3B8' };
+    const sl = { pending: 'En attente', accepted: 'Accepté', expired: 'Expiré', draft: 'Brouillon', cancelled: 'Annulé' };
+    const view = window._tabViews['quotes'] || 'list';
+    const actives = quotes.filter(q => ['pending', 'draft'].includes(q.status));
+    const archived = quotes.filter(q => !['pending', 'draft'].includes(q.status));
+
+    if (view === 'grid') {
+        const makeCards = arr => arr.map(q => {
+            const color = sc[q.status] || '#94A3B8';
+            const isPending = q.status === 'pending';
+            return '<div class="vnk-grid-card" onclick="' + (isPending ? 'openQuoteSignModal(' + q.id + ')' : 'openQuoteViewModal(' + q.id + ',\'' + q.quote_number + '\')') + '">' +
+                '<div class="vnk-grid-card-header" style="background:' + color + '"></div>' +
+                '<div class="vnk-grid-card-body">' +
+                '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem">' +
+                '<span style="font-size:.7rem;font-weight:600;color:#94A3B8">' + q.quote_number + '</span>' +
+                _statusBadge(sl[q.status] || q.status, color) +
+                '</div>' +
+                '<div class="vnk-grid-card-title">' + (q.title || '—') + '</div>' +
+                '<div class="vnk-grid-card-sub">Émis ' + _fmtDate(q.created_at) + (q.expiry_date ? ' · Exp. ' + _fmtDate(q.expiry_date) : '') + '</div>' +
+                '</div>' +
+                '<div class="vnk-grid-card-footer">' +
+                '<span class="vnk-grid-amount">' + formatCurrency(q.amount_ttc) + '</span>' +
+                (isPending ? '<button class="appt-join-btn" onclick="event.stopPropagation();openQuoteSignModal(' + q.id + ')">Accepter</button>' : '<span style="font-size:.7rem;color:#94A3B8">Voir →</span>') +
+                '</div></div>';
+        }).join('');
+        let html = '<div class="vnk-tab-scroll"><div class="vnk-grid-view">' + makeCards(actives) + makeCards(archived) + '</div></div>';
+        list.innerHTML = html;
+    } else {
+        const makeRows = arr => arr.map(q => {
+            const color = sc[q.status] || '#94A3B8';
+            const isPending = q.status === 'pending';
+            return '<div class="vnk-list-row" style="grid-template-columns:3px 1fr 100px 110px auto;padding:0" onclick="' + (isPending ? 'openQuoteSignModal(' + q.id + ')' : 'openQuoteViewModal(' + q.id + ',\'' + q.quote_number + '\')') + '">' +
+                '<div class="vnk-list-row-bar" style="background:' + color + '"></div>' +
+                '<div style="padding:.75rem .9rem"><div class="vnk-list-primary">' + (q.title || q.quote_number) + '</div>' +
+                '<div class="vnk-list-secondary"><span>' + q.quote_number + '</span><span class="vnk-list-sep">·</span><span>' + _fmtDate(q.created_at) + '</span></div></div>' +
+                '<div style="padding:.75rem 0;display:flex;align-items:center">' + _statusBadge(sl[q.status] || q.status, color) + '</div>' +
+                '<div style="padding:.75rem .5rem;display:flex;align-items:center"><span class="vnk-list-amount">' + formatCurrency(q.amount_ttc) + '</span></div>' +
+                '<div style="padding:.75rem .9rem;display:flex;align-items:center">' +
+                (isPending ? '<button class="appt-join-btn" onclick="event.stopPropagation();openQuoteSignModal(' + q.id + ')">Accepter</button>' : '<span style="font-size:.75rem;color:#94A3B8;cursor:pointer">Voir →</span>') +
+                '</div></div>';
+        }).join('');
+        let html = '<div class="vnk-tab-scroll">';
+        if (actives.length) html += '<div class="vnk-list-view">' + makeRows(actives) + '</div>';
+        if (archived.length) {
+            html += '<div class="vnk-section-collapse"><div class="vnk-section-collapse-header" onclick="const b=this.nextElementSibling;const o=b.style.display!==\'none\';b.style.display=o?\'none\':\'block\';this.querySelector(\'svg\').style.transform=o?\'rotate(0deg)\':\'rotate(180deg)\'">' +
+                '<span>Archivés (' + archived.length + ')</span>' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;transform:rotate(180deg)"><polyline points="6 9 12 15 18 9"/></svg>' +
+                '</div><div><div class="vnk-list-view">' + makeRows(archived) + '</div></div></div>';
+        }
+        html += '</div>';
+        list.innerHTML = html;
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// FACTURES — Vue liste + grille
+// ══════════════════════════════════════════════════════════════════════════
+
+function renderInvoicesUnified(invoices) {
+    const list = document.getElementById('invoices-list');
+    if (!list) return;
+
+    const all = window._allInvoices || [];
+    const unpaid = all.filter(i => ['unpaid', 'overdue'].includes(i.status)).length;
+    const paid = all.filter(i => i.status === 'paid').length;
+    const overdue = all.filter(i => i.status === 'overdue').length;
+
+    _injectTabHeader('invoices', {
+        filters: [
+            { val: 'all', label: 'Toutes' },
+            { val: 'unpaid', label: 'Non payées' },
+            { val: 'overdue', label: 'En retard' },
+            { val: 'paid', label: 'Payées' }
+        ]
+    });
+    _updateTabKpis('invoices', [
+        { val: invoices.length, label: 'Factures' },
+        { val: unpaid, label: 'Non payées', cls: unpaid > 0 ? 'vnk-tab-kpi-orange' : '' },
+        { val: overdue, label: 'En retard', cls: overdue > 0 ? 'vnk-tab-kpi-red' : '' },
+        { val: paid, label: 'Payées', cls: 'vnk-tab-kpi-green' }
+    ]);
+
+    if (!invoices.length) {
+        list.innerHTML = '<div class="vnk-tab-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><p>Aucune facture disponible.</p></div>';
+        return;
+    }
+
+    const sc = { unpaid: '#D97706', paid: '#27AE60', overdue: '#DC2626', cancelled: '#94A3B8' };
+    const sl = { unpaid: 'Non payée', paid: 'Payée', overdue: 'En retard', cancelled: 'Annulée' };
+    const view = window._tabViews['invoices'] || 'list';
+    const actives = invoices.filter(i => i.status !== 'paid');
+    const paid_list = invoices.filter(i => i.status === 'paid');
+
+    if (view === 'grid') {
+        const makeCards = arr => arr.map(i => {
+            const color = sc[i.status] || '#94A3B8';
+            const needsPay = ['unpaid', 'overdue'].includes(i.status);
+            return '<div class="vnk-grid-card" onclick="' + (needsPay ? 'openInvoicePayModal(' + i.id + ')' : 'openInvoiceViewModal(' + i.id + ')') + '">' +
+                '<div class="vnk-grid-card-header" style="background:' + color + '"></div>' +
+                '<div class="vnk-grid-card-body">' +
+                '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem">' +
+                '<span style="font-size:.7rem;font-weight:600;color:#94A3B8">' + i.invoice_number + '</span>' +
+                _statusBadge(sl[i.status] || i.status, color) +
+                '</div>' +
+                '<div class="vnk-grid-card-title">' + (i.title || i.invoice_number) + '</div>' +
+                '<div class="vnk-grid-card-sub">Émise ' + _fmtDate(i.created_at) + (i.due_date ? ' · Échéance ' + _fmtDate(i.due_date) : '') + '</div>' +
+                '</div>' +
+                '<div class="vnk-grid-card-footer">' +
+                '<span class="vnk-grid-amount">' + formatCurrency(i.amount_ttc) + '</span>' +
+                (needsPay ? '<button class="appt-join-btn" style="background:#059669" onclick="event.stopPropagation();openInvoicePayModal(' + i.id + ')">Payer</button>' : '<span style="font-size:.7rem;color:#059669;font-weight:700">✓ Payée</span>') +
+                '</div></div>';
+        }).join('');
+        list.innerHTML = '<div class="vnk-tab-scroll"><div class="vnk-grid-view">' + makeCards(actives) + makeCards(paid_list) + '</div></div>';
+    } else {
+        const makeRows = arr => arr.map(i => {
+            const color = sc[i.status] || '#94A3B8';
+            const needsPay = ['unpaid', 'overdue'].includes(i.status);
+            return '<div class="vnk-list-row" style="grid-template-columns:3px 1fr 90px 100px 110px auto;padding:0" onclick="' + (needsPay ? 'openInvoicePayModal(' + i.id + ')' : 'openInvoiceViewModal(' + i.id + ')') + '">' +
+                '<div class="vnk-list-row-bar" style="background:' + color + '"></div>' +
+                '<div style="padding:.75rem .9rem"><div class="vnk-list-primary">' + (i.title || i.invoice_number) + '</div>' +
+                '<div class="vnk-list-secondary"><span>' + i.invoice_number + '</span><span class="vnk-list-sep">·</span><span>' + _fmtDate(i.created_at) + '</span></div></div>' +
+                '<div style="padding:.75rem 0;display:flex;align-items:center">' + _statusBadge(sl[i.status] || i.status, color) + '</div>' +
+                '<div style="padding:.75rem .5rem;display:flex;align-items:center;font-size:.75rem;color:#94A3B8">' + (i.due_date ? _fmtDate(i.due_date) : '—') + '</div>' +
+                '<div style="padding:.75rem .5rem;display:flex;align-items:center"><span class="vnk-list-amount">' + formatCurrency(i.amount_ttc) + '</span></div>' +
+                '<div style="padding:.75rem .9rem;display:flex;align-items:center">' +
+                (needsPay ? '<button class="appt-join-btn" style="background:#059669" onclick="event.stopPropagation();openInvoicePayModal(' + i.id + ')">Payer</button>' : '<span style="font-size:.75rem;color:#94A3B8">Voir →</span>') +
+                '</div></div>';
+        }).join('');
+        let html = '<div class="vnk-tab-scroll">';
+        if (actives.length) html += '<div class="vnk-list-view">' + makeRows(actives) + '</div>';
+        if (paid_list.length) {
+            html += '<div class="vnk-section-collapse"><div class="vnk-section-collapse-header" onclick="const b=this.nextElementSibling;const o=b.style.display!==\'none\';b.style.display=o?\'none\':\'block\';this.querySelector(\'svg\').style.transform=o?\'rotate(0deg)\':\'rotate(180deg)\'">' +
+                '<span>Payées (' + paid_list.length + ')</span>' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;transform:rotate(180deg)"><polyline points="6 9 12 15 18 9"/></svg>' +
+                '</div><div><div class="vnk-list-view">' + makeRows(paid_list) + '</div></div></div>';
+        }
+        html += '</div>';
+        list.innerHTML = html;
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CONTRATS — Vue liste + grille
+// ══════════════════════════════════════════════════════════════════════════
+
+function renderContractsUnified(contracts) {
+    const list = document.getElementById('contracts-list');
+    if (!list) return;
+
+    const all = window._allContracts || [];
+    const toSign = all.filter(c => ['draft', 'pending', 'pending_signature'].includes(c.status)).length;
+    const signed = all.filter(c => c.status === 'signed').length;
+
+    _injectTabHeader('contracts', {
+        filters: [
+            { val: 'all', label: 'Tous' },
+            { val: 'to_sign', label: 'À signer' },
+            { val: 'signed', label: 'Signés' }
+        ]
+    });
+    _updateTabKpis('contracts', [
+        { val: contracts.length, label: 'Contrats' },
+        { val: toSign, label: 'À signer', cls: toSign > 0 ? 'vnk-tab-kpi-orange' : '' },
+        { val: signed, label: 'Signés', cls: 'vnk-tab-kpi-green' }
+    ]);
+
+    const visible = (contracts || []).filter(c => c.status !== 'archived');
+    if (!visible.length) {
+        list.innerHTML = '<div class="vnk-tab-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>Aucun contrat disponible.</p></div>';
+        return;
+    }
+
+    const sc = { draft: '#94A3B8', pending: '#D97706', pending_signature: '#D97706', signed: '#27AE60', cancelled: '#DC2626' };
+    const sl = { draft: 'Brouillon', pending: 'En attente', pending_signature: 'À signer', signed: 'Signé', cancelled: 'Annulé' };
+    const view = window._tabViews['contracts'] || 'list';
+    const needSig = visible.filter(c => ['draft', 'pending', 'pending_signature'].includes(c.status));
+    const signedList = visible.filter(c => c.status === 'signed');
+
+    if (view === 'grid') {
+        const makeCards = arr => arr.map(c => {
+            const color = sc[c.status] || '#94A3B8';
+            const needsSign = !c.signed_at && ['pending', 'draft', 'pending_signature'].includes(c.status);
+            const clientOk = !!c.signed_at;
+            const adminOk = !!c.admin_signed_at;
+            return '<div class="vnk-grid-card" onclick="openSignatureModal(' + c.id + ')">' +
+                '<div class="vnk-grid-card-header" style="background:' + color + '"></div>' +
+                '<div class="vnk-grid-card-body">' +
+                '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem">' +
+                '<span style="font-size:.7rem;font-weight:600;color:#94A3B8">' + c.contract_number + '</span>' +
+                _statusBadge(sl[c.status] || c.status, color) +
+                '</div>' +
+                '<div class="vnk-grid-card-title">' + (c.title || c.contract_number) + '</div>' +
+                '<div class="vnk-grid-card-sub">Créé ' + _fmtDate(c.created_at) + '</div>' +
+                '<div style="display:flex;gap:.4rem;margin-top:.3rem;font-size:.68rem">' +
+                '<span style="color:' + (clientOk ? '#059669' : '#94A3B8') + '">' + (clientOk ? '✓' : '○') + ' Vous</span>' +
+                '<span style="color:' + (adminOk ? '#059669' : '#94A3B8') + '">' + (adminOk ? '✓' : '○') + ' VNK</span>' +
+                '</div></div>' +
+                '<div class="vnk-grid-card-footer">' +
+                '<span style="font-size:.72rem;color:#64748B">' + (c.amount_ttc ? formatCurrency(c.amount_ttc) : '—') + '</span>' +
+                (needsSign ? '<button class="appt-join-btn" onclick="event.stopPropagation();openSignatureModal(' + c.id + ')">Signer</button>' : '<span style="font-size:.7rem;color:#94A3B8">Voir →</span>') +
+                '</div></div>';
+        }).join('');
+        list.innerHTML = '<div class="vnk-tab-scroll"><div class="vnk-grid-view">' + makeCards(needSig) + makeCards(signedList) + '</div></div>';
+    } else {
+        const makeRows = arr => arr.map(c => {
+            const color = sc[c.status] || '#94A3B8';
+            const needsSign = !c.signed_at && ['pending', 'draft', 'pending_signature'].includes(c.status);
+            const clientOk = !!c.signed_at;
+            const adminOk = !!c.admin_signed_at;
+            return '<div class="vnk-list-row" style="grid-template-columns:3px 1fr 100px 140px auto;padding:0" onclick="openSignatureModal(' + c.id + ')">' +
+                '<div class="vnk-list-row-bar" style="background:' + color + '"></div>' +
+                '<div style="padding:.75rem .9rem"><div class="vnk-list-primary">' + (c.title || c.contract_number) + '</div>' +
+                '<div class="vnk-list-secondary"><span>' + c.contract_number + '</span><span class="vnk-list-sep">·</span><span>' + _fmtDate(c.created_at) + '</span></div></div>' +
+                '<div style="padding:.75rem 0;display:flex;align-items:center">' + _statusBadge(sl[c.status] || c.status, color) + '</div>' +
+                '<div style="padding:.75rem .5rem;display:flex;align-items:center;gap:.5rem;font-size:.72rem">' +
+                '<span style="color:' + (clientOk ? '#059669' : '#94A3B8') + '">' + (clientOk ? '✓' : '○') + ' Vous</span>' +
+                '<span style="color:' + (adminOk ? '#059669' : '#94A3B8') + '">' + (adminOk ? '✓' : '○') + ' VNK</span>' +
+                '</div>' +
+                '<div style="padding:.75rem .9rem;display:flex;align-items:center">' +
+                (needsSign ? '<button class="appt-join-btn" onclick="event.stopPropagation();openSignatureModal(' + c.id + ')">Signer</button>' : '<span style="font-size:.75rem;color:#94A3B8">Voir →</span>') +
+                '</div></div>';
+        }).join('');
+        let html = '<div class="vnk-tab-scroll">';
+        if (needSig.length) html += '<div class="vnk-list-view">' + makeRows(needSig) + '</div>';
+        if (signedList.length) {
+            html += '<div class="vnk-section-collapse"><div class="vnk-section-collapse-header" onclick="const b=this.nextElementSibling;const o=b.style.display!==\'none\';b.style.display=o?\'none\':\'block\';this.querySelector(\'svg\').style.transform=o?\'rotate(0deg)\':\'rotate(180deg)\'">' +
+                '<span>Signés (' + signedList.length + ')</span>' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;transform:rotate(180deg)"><polyline points="6 9 12 15 18 9"/></svg>' +
+                '</div><div><div class="vnk-list-view">' + makeRows(signedList) + '</div></div></div>';
+        }
+        html += '</div>';
+        list.innerHTML = html;
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// DOCUMENTS — Vue liste + grille
+// ══════════════════════════════════════════════════════════════════════════
+
+function renderDocumentsUnified(documents) {
+    const list = document.getElementById('documents-list');
+    if (!list) return;
+
+    const all = documents || [];
+    const unread = all.filter(d => !d.is_read).length;
+    const cats = [...new Set(all.map(d => d.category || 'Autres documents'))];
+
+    _injectTabHeader('documents', {
+        filters: [
+            { val: 'all', label: 'Tous' },
+            { val: 'unread', label: 'Non lus' + (unread > 0 ? ' (' + unread + ')' : '') },
+            ...cats.slice(0, 4).map(c => ({ val: c, label: c }))
+        ]
+    });
+    _updateTabKpis('documents', [
+        { val: all.length, label: 'Documents' },
+        { val: unread, label: 'Non lus', cls: unread > 0 ? 'vnk-tab-kpi-accent' : '' }
+    ]);
+
+    const filterVal = (window._vnkFilters || {})['documents'] || 'all';
+    let filtered = all;
+    if (filterVal === 'unread') filtered = all.filter(d => !d.is_read);
+    else if (filterVal !== 'all') filtered = all.filter(d => (d.category || 'Autres documents') === filterVal);
+
+    if (!filtered.length) {
+        list.innerHTML = '<div class="vnk-tab-empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg><p>Aucun document dans cette catégorie.</p></div>';
+        return;
+    }
+
+    const extIcon = (f) => {
+        const ext = (f || '').split('.').pop().toUpperCase();
+        const colors = { PDF: '#DC2626', DOCX: '#2563EB', DOC: '#2563EB', XLSX: '#059669', XLS: '#059669', PNG: '#7C3AED', JPG: '#7C3AED', JPEG: '#7C3AED' };
+        return { ext, color: colors[ext] || '#94A3B8' };
+    };
+
+    const view = window._tabViews['documents'] || 'grid';
+
+    if (view === 'grid') {
+        list.innerHTML = '<div class="vnk-tab-scroll"><div class="vnk-grid-view">' +
+            filtered.map(d => {
+                const { ext, color } = extIcon(d.file_name);
+                const isNew = !d.is_read;
+                return '<div class="vnk-grid-card" onclick="previewDocument(' + d.id + ')">' +
+                    '<div class="vnk-grid-card-header" style="background:' + color + '"></div>' +
+                    '<div class="vnk-grid-card-body">' +
+                    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem">' +
+                    '<span style="font-size:.68rem;font-weight:800;color:' + color + ';background:' + color + '18;padding:2px 7px;border-radius:4px">' + ext + '</span>' +
+                    (isNew ? '<span style="width:7px;height:7px;background:#1B4F8A;border-radius:50%;flex-shrink:0"></span>' : '') +
+                    '</div>' +
+                    '<div class="vnk-grid-card-title">' + (d.title || d.file_name) + '</div>' +
+                    '<div class="vnk-grid-card-sub">' + _fmtDate(d.created_at) + (d.category ? ' · ' + d.category : '') + '</div>' +
+                    '</div>' +
+                    '<div class="vnk-grid-card-footer">' +
+                    '<span style="font-size:.7rem;color:#94A3B8">' + (d.file_size ? Math.round(d.file_size / 1024) + ' Ko' : '') + '</span>' +
+                    '<span style="font-size:.7rem;color:#1B4F8A;font-weight:600;cursor:pointer">Télécharger →</span>' +
+                    '</div></div>';
+            }).join('') + '</div></div>';
+    } else {
+        list.innerHTML = '<div class="vnk-tab-scroll"><div class="vnk-list-view">' +
+            filtered.map(d => {
+                const { ext, color } = extIcon(d.file_name);
+                const isNew = !d.is_read;
+                return '<div class="vnk-list-row" style="grid-template-columns:3px auto 1fr auto auto;padding:0" onclick="previewDocument(' + d.id + ')">' +
+                    '<div class="vnk-list-row-bar" style="background:' + color + '"></div>' +
+                    '<div style="padding:.65rem .85rem;display:flex;align-items:center">' +
+                    '<span style="font-size:.62rem;font-weight:800;color:' + color + ';background:' + color + '18;padding:2px 7px;border-radius:4px">' + ext + '</span>' +
+                    '</div>' +
+                    '<div style="padding:.65rem 0;min-width:0">' +
+                    '<div class="vnk-list-primary" style="display:flex;align-items:center;gap:.4rem">' + (d.title || d.file_name) + (isNew ? '<span style="width:6px;height:6px;background:#1B4F8A;border-radius:50%;flex-shrink:0"></span>' : '') + '</div>' +
+                    '<div class="vnk-list-secondary"><span>' + _fmtDate(d.created_at) + '</span><span class="vnk-list-sep">·</span><span>' + (d.category || 'Document') + '</span></div>' +
+                    '</div>' +
+                    '<div style="padding:.65rem .5rem;display:flex;align-items:center;font-size:.7rem;color:#94A3B8">' + (d.file_size ? Math.round(d.file_size / 1024) + ' Ko' : '') + '</div>' +
+                    '<div style="padding:.65rem .9rem;display:flex;align-items:center"><span style="font-size:.75rem;color:#1B4F8A;font-weight:600">Télécharger →</span></div>' +
+                    '</div>';
+            }).join('') + '</div></div>';
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// HOOKS — Remplacer les appels existants
+// ══════════════════════════════════════════════════════════════════════════
+
+// Overrider renderQuotes appelé par filterQuotes
+const _origRenderQuotes = renderQuotes;
+window._renderQuotesOrig = _origRenderQuotes;
+function renderQuotes(quotes) { renderQuotesUnified(quotes); }
+
+// Overrider renderInvoices
+const _origRenderInvoices = renderInvoices;
+window._renderInvoicesOrig = _origRenderInvoices;
+function renderInvoices(invoices) {
+    // Garder la logique de pagination existante mais utiliser le rendu unifié
+    window._allInvoicesFiltered = invoices;
+    renderInvoicesUnified(invoices);
+}
+
+// Overrider renderPortalContracts
+const _origRenderContracts = renderPortalContracts;
+window._renderContractsOrig = _origRenderContracts;
+function renderPortalContracts(contracts) { renderContractsUnified(contracts); }
+
+// Overrider renderDocuments
+const _origRenderDocuments = renderDocuments;
+window._renderDocumentsOrig = _origRenderDocuments;
+function renderDocuments(documents) { renderDocumentsUnified(documents); }
+
+// filterInvoices wrapper for _vnkFilterBtn
+function filterInvoices() {
+    const fv = (window._vnkFilters || {})['invoices'] || 'all';
+    let inv = window._allInvoices || [];
+    if (fv === 'unpaid') inv = inv.filter(i => i.status === 'unpaid');
+    else if (fv === 'overdue') inv = inv.filter(i => i.status === 'overdue');
+    else if (fv === 'paid') inv = inv.filter(i => i.status === 'paid');
+    renderInvoicesUnified(inv);
 }
