@@ -1,4 +1,5 @@
 "use client";
+import { useTransition } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Bell, ExternalLink, RefreshCw, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link, usePathname } from "@/i18n/routing";
+import { Link as IntlLink } from "@/i18n/routing";
 import NextLink from "next/link";
 import { signOut } from "next-auth/react";
 
@@ -26,12 +27,21 @@ export function AdminTopbar({
 }) {
   const t = useTranslations("admin.topbar");
   const currentLocale = useLocale();
-  const pathname = usePathname();
+  const [pending, startTransition] = useTransition();
 
   const otherLocale = currentLocale === "fr" ? "en" : "fr";
   const otherLabel = otherLocale.toUpperCase();
-  const switcherHref =
-    otherLocale === "en" ? `/en${pathname || ""}` : pathname || "/";
+
+  const toggleLocale = () => {
+    startTransition(async () => {
+      await fetch("/api/locale", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale: otherLocale }),
+      });
+      window.location.reload();
+    });
+  };
 
   return (
     <header className="h-[60px] sticky top-0 z-20 bg-card border-b flex items-center justify-between px-4 lg:pl-[260px]">
@@ -63,20 +73,22 @@ export function AdminTopbar({
           asChild
           className="hidden sm:flex"
         >
-          <Link href="/" target="_blank">
+          <IntlLink href="/" target="_blank">
             <ExternalLink className="h-3.5 w-3.5" />
             <span className="hidden md:inline">{t("site")}</span>
-          </Link>
+          </IntlLink>
         </Button>
 
-        {/* Locale switcher */}
-        <NextLink
-          href={switcherHref}
+        {/* Locale switcher — cookie-based (admin sans prefix URL) */}
+        <button
+          type="button"
+          onClick={toggleLocale}
+          disabled={pending}
           aria-label={`Changer vers ${otherLabel}`}
-          className="inline-flex items-center justify-center h-9 w-12 rounded-md border border-border text-xs font-bold tracking-wider hover:bg-accent transition-colors"
+          className="inline-flex items-center justify-center h-9 w-12 rounded-md border border-border text-xs font-bold tracking-wider hover:bg-accent transition-colors disabled:opacity-50"
         >
           {otherLabel}
-        </NextLink>
+        </button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -97,14 +109,14 @@ export function AdminTopbar({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href={"/admin/profile" as "/admin"}>
+              <NextLink href="/admin/profile">
                 <User className="h-4 w-4 mr-2" />
                 Mon profil
-              </Link>
+              </NextLink>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => signOut({ callbackUrl: "/fr/admin/login" })}
+              onClick={() => signOut({ callbackUrl: "/admin/login" })}
               className="text-destructive"
             >
               Déconnexion

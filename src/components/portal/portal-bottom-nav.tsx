@@ -1,6 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { usePathname, Link } from "@/i18n/routing";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, Briefcase, Plus, Calendar, Menu } from "lucide-react";
 
@@ -65,7 +66,7 @@ export function PortalBottomNav({
         return (
           <Link
             key={item.key}
-            href={item.href as "/portail"}
+            href={item.href}
             className="flex-1"
             aria-current={active ? "page" : undefined}
           >

@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { usePathname, Link } from "@/i18n/routing";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -199,7 +200,7 @@ function SidebarContent({
                 return (
                   <li key={item.key}>
                     <Link
-                      href={item.href as "/admin"}
+                      href={item.href}
                       onClick={onNavigate}
                       className={cn(
                         "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
