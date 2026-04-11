@@ -1,41 +1,48 @@
 -- ════════════════════════════════════════════════════════════
--- VNK — Migration initiale Prisma
--- Consolide schema.sql + calendar_schema.sql + les 40 ALTER TABLE
--- scattered dans les routes Express en UNE SEULE migration versionnée.
+-- VNK — Migration initiale Prisma (IDEMPOTENTE)
+--
+-- Cette migration est 100 % idempotente : elle peut être appliquée sur
+-- une DB vierge OU sur une DB existante (Railway avec le schéma Express).
+-- Les tables/enums/indexes déjà présents sont ignorés sans erreur.
 -- ════════════════════════════════════════════════════════════
 
--- CreateEnum
-CREATE TYPE "AdminRole" AS ENUM ('super_admin', 'admin', 'accountant', 'sales', 'readonly');
-CREATE TYPE "MandateStatus" AS ENUM ('pending', 'active', 'in_progress', 'paused', 'completed', 'cancelled');
-CREATE TYPE "QuoteStatus" AS ENUM ('pending', 'accepted', 'declined', 'expired');
-CREATE TYPE "ContractStatus" AS ENUM ('draft', 'pending', 'sent', 'signed', 'cancelled');
-CREATE TYPE "InvoiceStatus" AS ENUM ('draft', 'unpaid', 'paid', 'overdue', 'cancelled', 'refunded');
-CREATE TYPE "DisputeStatus" AS ENUM ('open', 'in_progress', 'resolved', 'escalated');
-CREATE TYPE "DisputePriority" AS ENUM ('low', 'medium', 'high', 'critical');
-CREATE TYPE "ProjectRequestStatus" AS ENUM ('new', 'in_progress', 'converted', 'closed');
-CREATE TYPE "ProjectRequestUrgency" AS ENUM ('low', 'normal', 'urgent', 'critical');
-CREATE TYPE "SettingType" AS ENUM ('string', 'number', 'boolean', 'json', 'secret');
+-- ─── ENUMS (DO block pour idempotence) ─────────────────────
+DO $$ BEGIN CREATE TYPE "AdminRole" AS ENUM ('super_admin', 'admin', 'accountant', 'sales', 'readonly'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "MandateStatus" AS ENUM ('pending', 'active', 'in_progress', 'paused', 'completed', 'cancelled'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "QuoteStatus" AS ENUM ('pending', 'accepted', 'declined', 'expired'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "ContractStatus" AS ENUM ('draft', 'pending', 'sent', 'signed', 'cancelled'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "InvoiceStatus" AS ENUM ('draft', 'unpaid', 'paid', 'overdue', 'cancelled', 'refunded'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "DisputeStatus" AS ENUM ('open', 'in_progress', 'resolved', 'escalated'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "DisputePriority" AS ENUM ('low', 'medium', 'high', 'critical'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "ProjectRequestStatus" AS ENUM ('new', 'in_progress', 'converted', 'closed'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "ProjectRequestUrgency" AS ENUM ('low', 'normal', 'urgent', 'critical'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "SettingType" AS ENUM ('string', 'number', 'boolean', 'json', 'secret'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 
--- CreateTable: admins (avec rôle, 2FA, audit)
-CREATE TABLE "admins" (
+-- ═══════════════════════════════════════════════════════════
+-- TABLES EXISTANTES (schéma Express) — IF NOT EXISTS
+-- ═══════════════════════════════════════════════════════════
+
+-- ADMINS
+CREATE TABLE IF NOT EXISTS "admins" (
     "id" SERIAL NOT NULL,
     "email" VARCHAR(255) NOT NULL,
     "password_hash" TEXT NOT NULL,
     "full_name" VARCHAR(255),
-    "role" "AdminRole" NOT NULL DEFAULT 'admin',
-    "is_active" BOOLEAN NOT NULL DEFAULT true,
-    "two_factor_enabled" BOOLEAN NOT NULL DEFAULT false,
-    "two_factor_secret" TEXT,
-    "avatar_url" TEXT,
-    "last_login" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "admins_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "admins_email_key" ON "admins"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "admins_email_key" ON "admins"("email");
+-- Colonnes Next.js
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "role" "AdminRole" NOT NULL DEFAULT 'admin';
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "is_active" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "two_factor_enabled" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "two_factor_secret" TEXT;
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "avatar_url" TEXT;
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "last_login" TIMESTAMP(3);
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
--- CreateTable: admin_sessions
-CREATE TABLE "admin_sessions" (
+-- ADMIN SESSIONS (nouvelle)
+CREATE TABLE IF NOT EXISTS "admin_sessions" (
     "id" TEXT NOT NULL,
     "admin_id" INTEGER NOT NULL,
     "token" TEXT NOT NULL,
@@ -45,11 +52,11 @@ CREATE TABLE "admin_sessions" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "admin_sessions_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "admin_sessions_token_key" ON "admin_sessions"("token");
-CREATE INDEX "admin_sessions_token_idx" ON "admin_sessions"("token");
+CREATE UNIQUE INDEX IF NOT EXISTS "admin_sessions_token_key" ON "admin_sessions"("token");
+CREATE INDEX IF NOT EXISTS "admin_sessions_token_idx" ON "admin_sessions"("token");
 
--- CreateTable: clients (avec quota, 2FA, team)
-CREATE TABLE "clients" (
+-- CLIENTS
+CREATE TABLE IF NOT EXISTS "clients" (
     "id" SERIAL NOT NULL,
     "full_name" VARCHAR(255) NOT NULL,
     "email" VARCHAR(255) NOT NULL,
@@ -65,20 +72,20 @@ CREATE TABLE "clients" (
     "internal_notes" TEXT,
     "avatar_url" TEXT,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
-    "archived" BOOLEAN NOT NULL DEFAULT false,
-    "storage_quota_mb" INTEGER NOT NULL DEFAULT 1024,
-    "two_factor_enabled" BOOLEAN NOT NULL DEFAULT false,
-    "two_factor_secret" TEXT,
     "last_login" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "clients_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "clients_email_key" ON "clients"("email");
-CREATE INDEX "clients_email_idx" ON "clients"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "clients_email_key" ON "clients"("email");
+CREATE INDEX IF NOT EXISTS "clients_email_idx" ON "clients"("email");
+ALTER TABLE "clients" ADD COLUMN IF NOT EXISTS "archived" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "clients" ADD COLUMN IF NOT EXISTS "storage_quota_mb" INTEGER NOT NULL DEFAULT 1024;
+ALTER TABLE "clients" ADD COLUMN IF NOT EXISTS "two_factor_enabled" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "clients" ADD COLUMN IF NOT EXISTS "two_factor_secret" TEXT;
 
--- CreateTable: client_team_members (multi-users per client — nouveau)
-CREATE TABLE "client_team_members" (
+-- CLIENT TEAM MEMBERS (nouvelle)
+CREATE TABLE IF NOT EXISTS "client_team_members" (
     "id" SERIAL NOT NULL,
     "client_id" INTEGER NOT NULL,
     "email" VARCHAR(255) NOT NULL,
@@ -90,33 +97,33 @@ CREATE TABLE "client_team_members" (
     "last_login" TIMESTAMP(3),
     CONSTRAINT "client_team_members_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "client_team_members_client_id_email_key" ON "client_team_members"("client_id", "email");
-CREATE INDEX "client_team_members_client_id_idx" ON "client_team_members"("client_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "client_team_members_client_id_email_key" ON "client_team_members"("client_id", "email");
+CREATE INDEX IF NOT EXISTS "client_team_members_client_id_idx" ON "client_team_members"("client_id");
 
--- CreateTable: mandates (avec tracking heures)
-CREATE TABLE "mandates" (
+-- MANDATES
+CREATE TABLE IF NOT EXISTS "mandates" (
     "id" SERIAL NOT NULL,
     "client_id" INTEGER NOT NULL,
     "title" VARCHAR(255) NOT NULL,
     "description" TEXT,
     "service_type" VARCHAR(100) DEFAULT 'plc-support',
-    "status" "MandateStatus" NOT NULL DEFAULT 'pending',
+    "status" VARCHAR(50) NOT NULL DEFAULT 'pending',
     "progress" INTEGER NOT NULL DEFAULT 0,
     "start_date" DATE,
     "end_date" DATE,
     "notes" TEXT,
-    "estimated_hours" DECIMAL(6,2),
-    "actual_hours" DECIMAL(6,2),
-    "hourly_rate" DECIMAL(8,2),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "mandates_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "mandates_client_id_idx" ON "mandates"("client_id");
-CREATE INDEX "mandates_status_idx" ON "mandates"("status");
+CREATE INDEX IF NOT EXISTS "mandates_client_id_idx" ON "mandates"("client_id");
+CREATE INDEX IF NOT EXISTS "mandates_status_idx" ON "mandates"("status");
+ALTER TABLE "mandates" ADD COLUMN IF NOT EXISTS "estimated_hours" DECIMAL(6,2);
+ALTER TABLE "mandates" ADD COLUMN IF NOT EXISTS "actual_hours" DECIMAL(6,2);
+ALTER TABLE "mandates" ADD COLUMN IF NOT EXISTS "hourly_rate" DECIMAL(8,2);
 
--- CreateTable: time_entries (journal horaire par mandat — nouveau)
-CREATE TABLE "time_entries" (
+-- TIME ENTRIES (nouvelle)
+CREATE TABLE IF NOT EXISTS "time_entries" (
     "id" SERIAL NOT NULL,
     "mandate_id" INTEGER NOT NULL,
     "admin_id" INTEGER,
@@ -130,13 +137,12 @@ CREATE TABLE "time_entries" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "time_entries_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "time_entries_mandate_id_idx" ON "time_entries"("mandate_id");
+CREATE INDEX IF NOT EXISTS "time_entries_mandate_id_idx" ON "time_entries"("mandate_id");
 
--- CreateTable: quotes (avec payment plan, discount, signature canvas)
-CREATE TABLE "quotes" (
+-- QUOTES
+CREATE TABLE IF NOT EXISTS "quotes" (
     "id" SERIAL NOT NULL,
     "client_id" INTEGER NOT NULL,
-    "mandate_id" INTEGER,
     "quote_number" VARCHAR(50) NOT NULL,
     "title" VARCHAR(255) NOT NULL,
     "description" TEXT,
@@ -145,29 +151,30 @@ CREATE TABLE "quotes" (
     "tps_amount" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "tvq_amount" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "amount_ttc" DECIMAL(10,2) NOT NULL DEFAULT 0,
-    "currency" VARCHAR(10) NOT NULL DEFAULT 'CAD',
-    "status" "QuoteStatus" NOT NULL DEFAULT 'pending',
+    "status" VARCHAR(50) NOT NULL DEFAULT 'pending',
     "expiry_date" DATE,
     "accepted_at" TIMESTAMP(3),
-    "declined_at" TIMESTAMP(3),
     "signed_at" TIMESTAMP(3),
     "payment_plan" VARCHAR(30) DEFAULT 'split_50_50',
     "payment_pct1" INTEGER DEFAULT 50,
     "payment_pct2" INTEGER DEFAULT 50,
     "payment_conditions" TEXT,
     "client_signature_data" TEXT,
-    "discount_code" VARCHAR(50),
-    "discount_amount" DECIMAL(10,2) DEFAULT 0,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "quotes_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "quotes_quote_number_key" ON "quotes"("quote_number");
-CREATE INDEX "quotes_client_id_idx" ON "quotes"("client_id");
-CREATE INDEX "quotes_status_idx" ON "quotes"("status");
+CREATE UNIQUE INDEX IF NOT EXISTS "quotes_quote_number_key" ON "quotes"("quote_number");
+CREATE INDEX IF NOT EXISTS "quotes_client_id_idx" ON "quotes"("client_id");
+CREATE INDEX IF NOT EXISTS "quotes_status_idx" ON "quotes"("status");
+ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "mandate_id" INTEGER;
+ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "declined_at" TIMESTAMP(3);
+ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "currency" VARCHAR(10) NOT NULL DEFAULT 'CAD';
+ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "discount_code" VARCHAR(50);
+ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "discount_amount" DECIMAL(10,2) DEFAULT 0;
 
--- CreateTable: contracts
-CREATE TABLE "contracts" (
+-- CONTRACTS
+CREATE TABLE IF NOT EXISTS "contracts" (
     "id" SERIAL NOT NULL,
     "client_id" INTEGER NOT NULL,
     "mandate_id" INTEGER,
@@ -176,7 +183,7 @@ CREATE TABLE "contracts" (
     "title" VARCHAR(255) NOT NULL,
     "content" TEXT,
     "file_url" TEXT,
-    "status" "ContractStatus" NOT NULL DEFAULT 'pending',
+    "status" VARCHAR(50) NOT NULL DEFAULT 'pending',
     "amount_ttc" DECIMAL(10,2) DEFAULT 0,
     "hellosign_request_id" VARCHAR(255),
     "signed_at" TIMESTAMP(3),
@@ -184,18 +191,18 @@ CREATE TABLE "contracts" (
     "client_signature_ip" VARCHAR(64),
     "admin_signature_data" TEXT,
     "admin_signed_at" TIMESTAMP(3),
-    "expires_at" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "contracts_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "contracts_contract_number_key" ON "contracts"("contract_number");
-CREATE INDEX "contracts_client_id_idx" ON "contracts"("client_id");
-CREATE INDEX "contracts_status_idx" ON "contracts"("status");
-CREATE INDEX "contracts_quote_id_idx" ON "contracts"("quote_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "contracts_contract_number_key" ON "contracts"("contract_number");
+CREATE INDEX IF NOT EXISTS "contracts_client_id_idx" ON "contracts"("client_id");
+CREATE INDEX IF NOT EXISTS "contracts_status_idx" ON "contracts"("status");
+CREATE INDEX IF NOT EXISTS "contracts_quote_id_idx" ON "contracts"("quote_id");
+ALTER TABLE "contracts" ADD COLUMN IF NOT EXISTS "expires_at" TIMESTAMP(3);
 
--- CreateTable: invoices
-CREATE TABLE "invoices" (
+-- INVOICES
+CREATE TABLE IF NOT EXISTS "invoices" (
     "id" SERIAL NOT NULL,
     "client_id" INTEGER NOT NULL,
     "mandate_id" INTEGER,
@@ -208,8 +215,7 @@ CREATE TABLE "invoices" (
     "tps_amount" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "tvq_amount" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "amount_ttc" DECIMAL(10,2) NOT NULL DEFAULT 0,
-    "currency" VARCHAR(10) NOT NULL DEFAULT 'CAD',
-    "status" "InvoiceStatus" NOT NULL DEFAULT 'unpaid',
+    "status" VARCHAR(50) NOT NULL DEFAULT 'unpaid',
     "due_date" DATE,
     "paid_at" TIMESTAMP(3),
     "payment_method" VARCHAR(50),
@@ -217,19 +223,20 @@ CREATE TABLE "invoices" (
     "phase_number" INTEGER DEFAULT 1,
     "stripe_payment_intent_id" VARCHAR(255),
     "stripe_session_id" VARCHAR(255),
-    "reminders_sent" INTEGER NOT NULL DEFAULT 0,
-    "last_reminder_at" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "invoices_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "invoices_invoice_number_key" ON "invoices"("invoice_number");
-CREATE INDEX "invoices_client_id_idx" ON "invoices"("client_id");
-CREATE INDEX "invoices_status_idx" ON "invoices"("status");
-CREATE INDEX "invoices_due_date_idx" ON "invoices"("due_date");
+CREATE UNIQUE INDEX IF NOT EXISTS "invoices_invoice_number_key" ON "invoices"("invoice_number");
+CREATE INDEX IF NOT EXISTS "invoices_client_id_idx" ON "invoices"("client_id");
+CREATE INDEX IF NOT EXISTS "invoices_status_idx" ON "invoices"("status");
+CREATE INDEX IF NOT EXISTS "invoices_due_date_idx" ON "invoices"("due_date");
+ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "currency" VARCHAR(10) NOT NULL DEFAULT 'CAD';
+ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "reminders_sent" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "last_reminder_at" TIMESTAMP(3);
 
--- CreateTable: payments
-CREATE TABLE "payments" (
+-- PAYMENTS
+CREATE TABLE IF NOT EXISTS "payments" (
     "id" SERIAL NOT NULL,
     "invoice_id" INTEGER,
     "client_id" INTEGER,
@@ -243,11 +250,11 @@ CREATE TABLE "payments" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "payments_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "payments_invoice_id_idx" ON "payments"("invoice_id");
-CREATE INDEX "payments_client_id_idx" ON "payments"("client_id");
+CREATE INDEX IF NOT EXISTS "payments_invoice_id_idx" ON "payments"("invoice_id");
+CREATE INDEX IF NOT EXISTS "payments_client_id_idx" ON "payments"("client_id");
 
--- CreateTable: refunds
-CREATE TABLE "refunds" (
+-- REFUNDS
+CREATE TABLE IF NOT EXISTS "refunds" (
     "id" SERIAL NOT NULL,
     "client_id" INTEGER NOT NULL,
     "invoice_id" INTEGER,
@@ -264,11 +271,11 @@ CREATE TABLE "refunds" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "refunds_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "refunds_refund_number_key" ON "refunds"("refund_number");
-CREATE INDEX "refunds_client_id_idx" ON "refunds"("client_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "refunds_refund_number_key" ON "refunds"("refund_number");
+CREATE INDEX IF NOT EXISTS "refunds_client_id_idx" ON "refunds"("client_id");
 
--- CreateTable: disputes
-CREATE TABLE "disputes" (
+-- DISPUTES
+CREATE TABLE IF NOT EXISTS "disputes" (
     "id" SERIAL NOT NULL,
     "client_id" INTEGER NOT NULL,
     "invoice_id" INTEGER,
@@ -276,8 +283,8 @@ CREATE TABLE "disputes" (
     "stripe_dispute_id" VARCHAR(255),
     "title" VARCHAR(255) NOT NULL,
     "description" TEXT,
-    "status" "DisputeStatus" NOT NULL DEFAULT 'open',
-    "priority" "DisputePriority" NOT NULL DEFAULT 'medium',
+    "status" VARCHAR(50) NOT NULL DEFAULT 'open',
+    "priority" VARCHAR(20) NOT NULL DEFAULT 'medium',
     "resolution" TEXT,
     "opened_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "resolved_at" TIMESTAMP(3),
@@ -285,8 +292,8 @@ CREATE TABLE "disputes" (
     CONSTRAINT "disputes_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable: expenses
-CREATE TABLE "expenses" (
+-- EXPENSES
+CREATE TABLE IF NOT EXISTS "expenses" (
     "id" SERIAL NOT NULL,
     "title" VARCHAR(255) NOT NULL,
     "category" VARCHAR(100) NOT NULL DEFAULT 'autre',
@@ -300,10 +307,10 @@ CREATE TABLE "expenses" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "expenses_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "expenses_expense_date_idx" ON "expenses"("expense_date");
+CREATE INDEX IF NOT EXISTS "expenses_expense_date_idx" ON "expenses"("expense_date");
 
--- CreateTable: tax_declarations
-CREATE TABLE "tax_declarations" (
+-- TAX DECLARATIONS
+CREATE TABLE IF NOT EXISTS "tax_declarations" (
     "id" SERIAL NOT NULL,
     "period_type" VARCHAR(50) NOT NULL,
     "period_label" VARCHAR(100) NOT NULL,
@@ -320,8 +327,8 @@ CREATE TABLE "tax_declarations" (
     CONSTRAINT "tax_declarations_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable: documents
-CREATE TABLE "documents" (
+-- DOCUMENTS
+CREATE TABLE IF NOT EXISTS "documents" (
     "id" SERIAL NOT NULL,
     "client_id" INTEGER NOT NULL,
     "mandate_id" INTEGER,
@@ -339,10 +346,10 @@ CREATE TABLE "documents" (
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "documents_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "documents_client_id_idx" ON "documents"("client_id");
+CREATE INDEX IF NOT EXISTS "documents_client_id_idx" ON "documents"("client_id");
 
--- CreateTable: messages
-CREATE TABLE "messages" (
+-- MESSAGES
+CREATE TABLE IF NOT EXISTS "messages" (
     "id" SERIAL NOT NULL,
     "client_id" INTEGER NOT NULL,
     "sender" VARCHAR(20) NOT NULL,
@@ -354,28 +361,28 @@ CREATE TABLE "messages" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "messages_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "messages_client_id_idx" ON "messages"("client_id");
-CREATE INDEX "messages_client_id_is_read_idx" ON "messages"("client_id", "is_read");
+CREATE INDEX IF NOT EXISTS "messages_client_id_idx" ON "messages"("client_id");
+CREATE INDEX IF NOT EXISTS "messages_client_id_is_read_idx" ON "messages"("client_id", "is_read");
 
--- CreateTable: contact_messages
-CREATE TABLE "contact_messages" (
+-- CONTACT MESSAGES
+CREATE TABLE IF NOT EXISTS "contact_messages" (
     "id" SERIAL NOT NULL,
     "name" VARCHAR(255) NOT NULL,
     "email" VARCHAR(255) NOT NULL,
     "company" VARCHAR(255),
-    "phone" VARCHAR(50),
     "service" VARCHAR(100),
-    "plc_brand" VARCHAR(100),
     "message" TEXT NOT NULL,
     "is_read" BOOLEAN NOT NULL DEFAULT false,
-    "ip_address" VARCHAR(64),
-    "user_agent" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "contact_messages_pkey" PRIMARY KEY ("id")
 );
+ALTER TABLE "contact_messages" ADD COLUMN IF NOT EXISTS "phone" VARCHAR(50);
+ALTER TABLE "contact_messages" ADD COLUMN IF NOT EXISTS "plc_brand" VARCHAR(100);
+ALTER TABLE "contact_messages" ADD COLUMN IF NOT EXISTS "ip_address" VARCHAR(64);
+ALTER TABLE "contact_messages" ADD COLUMN IF NOT EXISTS "user_agent" TEXT;
 
--- CreateTable: mandate_logs
-CREATE TABLE "mandate_logs" (
+-- MANDATE LOGS
+CREATE TABLE IF NOT EXISTS "mandate_logs" (
     "id" SERIAL NOT NULL,
     "mandate_id" INTEGER NOT NULL,
     "action" VARCHAR(100) NOT NULL,
@@ -385,8 +392,8 @@ CREATE TABLE "mandate_logs" (
     CONSTRAINT "mandate_logs_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable: workflow_events (état du pipeline workflow)
-CREATE TABLE "workflow_events" (
+-- WORKFLOW EVENTS
+CREATE TABLE IF NOT EXISTS "workflow_events" (
     "id" SERIAL NOT NULL,
     "client_id" INTEGER NOT NULL,
     "mandate_id" INTEGER,
@@ -401,11 +408,11 @@ CREATE TABLE "workflow_events" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "workflow_events_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "workflow_events_client_id_idx" ON "workflow_events"("client_id");
-CREATE INDEX "workflow_events_event_type_idx" ON "workflow_events"("event_type");
+CREATE INDEX IF NOT EXISTS "workflow_events_client_id_idx" ON "workflow_events"("client_id");
+CREATE INDEX IF NOT EXISTS "workflow_events_event_type_idx" ON "workflow_events"("event_type");
 
--- CreateTable: ws_connections
-CREATE TABLE "ws_connections" (
+-- WS CONNECTIONS
+CREATE TABLE IF NOT EXISTS "ws_connections" (
     "id" SERIAL NOT NULL,
     "client_id" INTEGER,
     "role" VARCHAR(20) NOT NULL,
@@ -416,10 +423,10 @@ CREATE TABLE "ws_connections" (
     "user_agent" TEXT,
     CONSTRAINT "ws_connections_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "ws_connections_is_active_idx" ON "ws_connections"("is_active");
+CREATE INDEX IF NOT EXISTS "ws_connections_is_active_idx" ON "ws_connections"("is_active");
 
--- CreateTable: page_views
-CREATE TABLE "page_views" (
+-- PAGE VIEWS
+CREATE TABLE IF NOT EXISTS "page_views" (
     "id" SERIAL NOT NULL,
     "session_id" VARCHAR(64),
     "client_id" INTEGER,
@@ -431,12 +438,12 @@ CREATE TABLE "page_views" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "page_views_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "page_views_created_at_idx" ON "page_views"("created_at");
-CREATE INDEX "page_views_session_id_idx" ON "page_views"("session_id");
-CREATE INDEX "page_views_client_id_idx" ON "page_views"("client_id");
+CREATE INDEX IF NOT EXISTS "page_views_created_at_idx" ON "page_views"("created_at");
+CREATE INDEX IF NOT EXISTS "page_views_session_id_idx" ON "page_views"("session_id");
+CREATE INDEX IF NOT EXISTS "page_views_client_id_idx" ON "page_views"("client_id");
 
--- CreateTable: availability_slots
-CREATE TABLE "availability_slots" (
+-- AVAILABILITY SLOTS
+CREATE TABLE IF NOT EXISTS "availability_slots" (
     "id" SERIAL NOT NULL,
     "slot_date" DATE NOT NULL,
     "start_time" VARCHAR(10) NOT NULL,
@@ -448,10 +455,10 @@ CREATE TABLE "availability_slots" (
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "availability_slots_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "availability_slots_slot_date_status_idx" ON "availability_slots"("slot_date", "status");
+CREATE INDEX IF NOT EXISTS "availability_slots_slot_date_status_idx" ON "availability_slots"("slot_date", "status");
 
--- CreateTable: appointments
-CREATE TABLE "appointments" (
+-- APPOINTMENTS
+CREATE TABLE IF NOT EXISTS "appointments" (
     "id" SERIAL NOT NULL,
     "slot_id" INTEGER,
     "client_id" INTEGER,
@@ -480,11 +487,14 @@ CREATE TABLE "appointments" (
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "appointments_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "appointments_client_id_idx" ON "appointments"("client_id");
-CREATE INDEX "appointments_appointment_date_status_idx" ON "appointments"("appointment_date", "status");
+CREATE INDEX IF NOT EXISTS "appointments_client_id_idx" ON "appointments"("client_id");
+CREATE INDEX IF NOT EXISTS "appointments_appointment_date_status_idx" ON "appointments"("appointment_date", "status");
 
--- CreateTable: project_requests (nouveau, remplace le parsing string)
-CREATE TABLE "project_requests" (
+-- ═══════════════════════════════════════════════════════════
+-- NOUVELLES TABLES (inexistantes dans l'Express)
+-- ═══════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS "project_requests" (
     "id" SERIAL NOT NULL,
     "client_id" INTEGER NOT NULL,
     "title" VARCHAR(255) NOT NULL,
@@ -501,11 +511,11 @@ CREATE TABLE "project_requests" (
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "project_requests_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "project_requests_client_id_idx" ON "project_requests"("client_id");
-CREATE INDEX "project_requests_status_idx" ON "project_requests"("status");
+CREATE INDEX IF NOT EXISTS "project_requests_client_id_idx" ON "project_requests"("client_id");
+CREATE INDEX IF NOT EXISTS "project_requests_status_idx" ON "project_requests"("status");
 
--- CreateTable: settings (la pièce centrale)
-CREATE TABLE "settings" (
+-- SETTINGS (pièce centrale de la migration)
+CREATE TABLE IF NOT EXISTS "settings" (
     "id" SERIAL NOT NULL,
     "category" VARCHAR(50) NOT NULL,
     "key" VARCHAR(100) NOT NULL,
@@ -520,11 +530,10 @@ CREATE TABLE "settings" (
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "settings_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "settings_category_key_key" ON "settings"("category", "key");
-CREATE INDEX "settings_category_idx" ON "settings"("category");
+CREATE UNIQUE INDEX IF NOT EXISTS "settings_category_key_key" ON "settings"("category", "key");
+CREATE INDEX IF NOT EXISTS "settings_category_idx" ON "settings"("category");
 
--- CreateTable: audit_logs
-CREATE TABLE "audit_logs" (
+CREATE TABLE IF NOT EXISTS "audit_logs" (
     "id" SERIAL NOT NULL,
     "admin_id" INTEGER,
     "action" VARCHAR(100) NOT NULL,
@@ -536,12 +545,11 @@ CREATE TABLE "audit_logs" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "audit_logs_admin_id_idx" ON "audit_logs"("admin_id");
-CREATE INDEX "audit_logs_entity_type_entity_id_idx" ON "audit_logs"("entity_type", "entity_id");
-CREATE INDEX "audit_logs_created_at_idx" ON "audit_logs"("created_at");
+CREATE INDEX IF NOT EXISTS "audit_logs_admin_id_idx" ON "audit_logs"("admin_id");
+CREATE INDEX IF NOT EXISTS "audit_logs_entity_type_entity_id_idx" ON "audit_logs"("entity_type", "entity_id");
+CREATE INDEX IF NOT EXISTS "audit_logs_created_at_idx" ON "audit_logs"("created_at");
 
--- CreateTable: integrations
-CREATE TABLE "integrations" (
+CREATE TABLE IF NOT EXISTS "integrations" (
     "id" SERIAL NOT NULL,
     "provider" VARCHAR(50) NOT NULL,
     "name" VARCHAR(255) NOT NULL,
@@ -554,10 +562,9 @@ CREATE TABLE "integrations" (
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "integrations_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "integrations_provider_key" ON "integrations"("provider");
+CREATE UNIQUE INDEX IF NOT EXISTS "integrations_provider_key" ON "integrations"("provider");
 
--- CreateTable: outgoing_webhooks
-CREATE TABLE "outgoing_webhooks" (
+CREATE TABLE IF NOT EXISTS "outgoing_webhooks" (
     "id" SERIAL NOT NULL,
     "name" VARCHAR(255) NOT NULL,
     "url" TEXT NOT NULL,
@@ -571,8 +578,7 @@ CREATE TABLE "outgoing_webhooks" (
     CONSTRAINT "outgoing_webhooks_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable: incoming_webhook_logs
-CREATE TABLE "incoming_webhook_logs" (
+CREATE TABLE IF NOT EXISTS "incoming_webhook_logs" (
     "id" SERIAL NOT NULL,
     "provider" VARCHAR(50) NOT NULL,
     "event_type" VARCHAR(100) NOT NULL,
@@ -584,10 +590,9 @@ CREATE TABLE "incoming_webhook_logs" (
     "received_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "incoming_webhook_logs_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "incoming_webhook_logs_provider_received_at_idx" ON "incoming_webhook_logs"("provider", "received_at");
+CREATE INDEX IF NOT EXISTS "incoming_webhook_logs_provider_received_at_idx" ON "incoming_webhook_logs"("provider", "received_at");
 
--- CreateTable: notifications
-CREATE TABLE "notifications" (
+CREATE TABLE IF NOT EXISTS "notifications" (
     "id" SERIAL NOT NULL,
     "recipient_type" VARCHAR(20) NOT NULL,
     "recipient_id" INTEGER NOT NULL,
@@ -601,10 +606,9 @@ CREATE TABLE "notifications" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "notifications_recipient_type_recipient_id_is_read_idx" ON "notifications"("recipient_type", "recipient_id", "is_read");
+CREATE INDEX IF NOT EXISTS "notifications_recipient_type_recipient_id_is_read_idx" ON "notifications"("recipient_type", "recipient_id", "is_read");
 
--- CreateTable: email_templates
-CREATE TABLE "email_templates" (
+CREATE TABLE IF NOT EXISTS "email_templates" (
     "id" SERIAL NOT NULL,
     "key" VARCHAR(100) NOT NULL,
     "locale" VARCHAR(10) NOT NULL DEFAULT 'fr',
@@ -617,10 +621,9 @@ CREATE TABLE "email_templates" (
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "email_templates_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "email_templates_key_locale_key" ON "email_templates"("key", "locale");
+CREATE UNIQUE INDEX IF NOT EXISTS "email_templates_key_locale_key" ON "email_templates"("key", "locale");
 
--- CreateTable: pdf_templates
-CREATE TABLE "pdf_templates" (
+CREATE TABLE IF NOT EXISTS "pdf_templates" (
     "id" SERIAL NOT NULL,
     "key" VARCHAR(100) NOT NULL,
     "locale" VARCHAR(10) NOT NULL DEFAULT 'fr',
@@ -630,10 +633,9 @@ CREATE TABLE "pdf_templates" (
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "pdf_templates_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "pdf_templates_key_locale_key" ON "pdf_templates"("key", "locale");
+CREATE UNIQUE INDEX IF NOT EXISTS "pdf_templates_key_locale_key" ON "pdf_templates"("key", "locale");
 
--- CreateTable: subscription_plans + subscriptions
-CREATE TABLE "subscription_plans" (
+CREATE TABLE IF NOT EXISTS "subscription_plans" (
     "id" SERIAL NOT NULL,
     "name" VARCHAR(255) NOT NULL,
     "description" TEXT,
@@ -650,7 +652,7 @@ CREATE TABLE "subscription_plans" (
     CONSTRAINT "subscription_plans_pkey" PRIMARY KEY ("id")
 );
 
-CREATE TABLE "subscriptions" (
+CREATE TABLE IF NOT EXISTS "subscriptions" (
     "id" SERIAL NOT NULL,
     "client_id" INTEGER NOT NULL,
     "plan_id" INTEGER NOT NULL,
@@ -662,10 +664,9 @@ CREATE TABLE "subscriptions" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "subscriptions_client_id_idx" ON "subscriptions"("client_id");
+CREATE INDEX IF NOT EXISTS "subscriptions_client_id_idx" ON "subscriptions"("client_id");
 
--- CreateTable: service_catalog + discount_codes
-CREATE TABLE "service_catalog" (
+CREATE TABLE IF NOT EXISTS "service_catalog" (
     "id" SERIAL NOT NULL,
     "key" VARCHAR(100) NOT NULL,
     "name" VARCHAR(255) NOT NULL,
@@ -680,9 +681,9 @@ CREATE TABLE "service_catalog" (
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "service_catalog_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "service_catalog_key_key" ON "service_catalog"("key");
+CREATE UNIQUE INDEX IF NOT EXISTS "service_catalog_key_key" ON "service_catalog"("key");
 
-CREATE TABLE "discount_codes" (
+CREATE TABLE IF NOT EXISTS "discount_codes" (
     "id" SERIAL NOT NULL,
     "code" VARCHAR(50) NOT NULL,
     "description" TEXT,
@@ -696,10 +697,9 @@ CREATE TABLE "discount_codes" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "discount_codes_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "discount_codes_code_key" ON "discount_codes"("code");
+CREATE UNIQUE INDEX IF NOT EXISTS "discount_codes_code_key" ON "discount_codes"("code");
 
--- CreateTable: blog_posts + faq_items + testimonials
-CREATE TABLE "blog_posts" (
+CREATE TABLE IF NOT EXISTS "blog_posts" (
     "id" SERIAL NOT NULL,
     "locale" VARCHAR(10) NOT NULL DEFAULT 'fr',
     "slug" VARCHAR(255) NOT NULL,
@@ -719,10 +719,10 @@ CREATE TABLE "blog_posts" (
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "blog_posts_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "blog_posts_slug_locale_key" ON "blog_posts"("slug", "locale");
-CREATE INDEX "blog_posts_status_published_at_idx" ON "blog_posts"("status", "published_at");
+CREATE UNIQUE INDEX IF NOT EXISTS "blog_posts_slug_locale_key" ON "blog_posts"("slug", "locale");
+CREATE INDEX IF NOT EXISTS "blog_posts_status_published_at_idx" ON "blog_posts"("status", "published_at");
 
-CREATE TABLE "faq_items" (
+CREATE TABLE IF NOT EXISTS "faq_items" (
     "id" SERIAL NOT NULL,
     "locale" VARCHAR(10) NOT NULL DEFAULT 'fr',
     "question" TEXT NOT NULL,
@@ -734,9 +734,9 @@ CREATE TABLE "faq_items" (
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "faq_items_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "faq_items_locale_is_published_idx" ON "faq_items"("locale", "is_published");
+CREATE INDEX IF NOT EXISTS "faq_items_locale_is_published_idx" ON "faq_items"("locale", "is_published");
 
-CREATE TABLE "testimonials" (
+CREATE TABLE IF NOT EXISTS "testimonials" (
     "id" SERIAL NOT NULL,
     "client_name" VARCHAR(255) NOT NULL,
     "client_company" VARCHAR(255),
@@ -751,8 +751,7 @@ CREATE TABLE "testimonials" (
     CONSTRAINT "testimonials_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable: maintenance_windows + incident_reports
-CREATE TABLE "maintenance_windows" (
+CREATE TABLE IF NOT EXISTS "maintenance_windows" (
     "id" SERIAL NOT NULL,
     "title" VARCHAR(255) NOT NULL,
     "description" TEXT,
@@ -765,9 +764,9 @@ CREATE TABLE "maintenance_windows" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "maintenance_windows_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "maintenance_windows_starts_at_ends_at_idx" ON "maintenance_windows"("starts_at", "ends_at");
+CREATE INDEX IF NOT EXISTS "maintenance_windows_starts_at_ends_at_idx" ON "maintenance_windows"("starts_at", "ends_at");
 
-CREATE TABLE "incident_reports" (
+CREATE TABLE IF NOT EXISTS "incident_reports" (
     "id" SERIAL NOT NULL,
     "title" VARCHAR(255) NOT NULL,
     "description" TEXT NOT NULL,
@@ -780,44 +779,19 @@ CREATE TABLE "incident_reports" (
     CONSTRAINT "incident_reports_pkey" PRIMARY KEY ("id")
 );
 
--- ════════════════════════════════════════════════════════════
--- FOREIGN KEYS (avec ON DELETE CASCADE pour les données user-owned)
--- ════════════════════════════════════════════════════════════
+-- ═══════════════════════════════════════════════════════════
+-- FOREIGN KEYS (DO block pour idempotence)
+-- Seulement pour les NOUVELLES tables créées ici.
+-- Les FKs des tables existantes (mandates, quotes, contracts, invoices,
+-- payments, refunds, disputes, documents, messages, etc.) existent déjà
+-- via le schema.sql de l'Express et ne sont PAS recréées.
+-- ═══════════════════════════════════════════════════════════
 
-ALTER TABLE "admin_sessions" ADD CONSTRAINT "admin_sessions_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "admins"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "client_team_members" ADD CONSTRAINT "client_team_members_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "mandates" ADD CONSTRAINT "mandates_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "time_entries" ADD CONSTRAINT "time_entries_mandate_id_fkey" FOREIGN KEY ("mandate_id") REFERENCES "mandates"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "time_entries" ADD CONSTRAINT "time_entries_invoice_id_fkey" FOREIGN KEY ("invoice_id") REFERENCES "invoices"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "quotes" ADD CONSTRAINT "quotes_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "quotes" ADD CONSTRAINT "quotes_mandate_id_fkey" FOREIGN KEY ("mandate_id") REFERENCES "mandates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "contracts" ADD CONSTRAINT "contracts_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "contracts" ADD CONSTRAINT "contracts_mandate_id_fkey" FOREIGN KEY ("mandate_id") REFERENCES "mandates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "contracts" ADD CONSTRAINT "contracts_quote_id_fkey" FOREIGN KEY ("quote_id") REFERENCES "quotes"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_mandate_id_fkey" FOREIGN KEY ("mandate_id") REFERENCES "mandates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_quote_id_fkey" FOREIGN KEY ("quote_id") REFERENCES "quotes"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_contract_id_fkey" FOREIGN KEY ("contract_id") REFERENCES "contracts"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "payments" ADD CONSTRAINT "payments_invoice_id_fkey" FOREIGN KEY ("invoice_id") REFERENCES "invoices"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "payments" ADD CONSTRAINT "payments_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "refunds" ADD CONSTRAINT "refunds_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "refunds" ADD CONSTRAINT "refunds_invoice_id_fkey" FOREIGN KEY ("invoice_id") REFERENCES "invoices"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "disputes" ADD CONSTRAINT "disputes_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "disputes" ADD CONSTRAINT "disputes_invoice_id_fkey" FOREIGN KEY ("invoice_id") REFERENCES "invoices"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "disputes" ADD CONSTRAINT "disputes_mandate_id_fkey" FOREIGN KEY ("mandate_id") REFERENCES "mandates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "documents" ADD CONSTRAINT "documents_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "documents" ADD CONSTRAINT "documents_mandate_id_fkey" FOREIGN KEY ("mandate_id") REFERENCES "mandates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "messages" ADD CONSTRAINT "messages_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "mandate_logs" ADD CONSTRAINT "mandate_logs_mandate_id_fkey" FOREIGN KEY ("mandate_id") REFERENCES "mandates"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "workflow_events" ADD CONSTRAINT "workflow_events_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "workflow_events" ADD CONSTRAINT "workflow_events_mandate_id_fkey" FOREIGN KEY ("mandate_id") REFERENCES "mandates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "workflow_events" ADD CONSTRAINT "workflow_events_quote_id_fkey" FOREIGN KEY ("quote_id") REFERENCES "quotes"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "workflow_events" ADD CONSTRAINT "workflow_events_contract_id_fkey" FOREIGN KEY ("contract_id") REFERENCES "contracts"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "workflow_events" ADD CONSTRAINT "workflow_events_invoice_id_fkey" FOREIGN KEY ("invoice_id") REFERENCES "invoices"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "ws_connections" ADD CONSTRAINT "ws_connections_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "page_views" ADD CONSTRAINT "page_views_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "appointments" ADD CONSTRAINT "appointments_slot_id_fkey" FOREIGN KEY ("slot_id") REFERENCES "availability_slots"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "appointments" ADD CONSTRAINT "appointments_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "admins"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_plan_id_fkey" FOREIGN KEY ("plan_id") REFERENCES "subscription_plans"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$ BEGIN ALTER TABLE "admin_sessions" ADD CONSTRAINT "admin_sessions_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "admins"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "client_team_members" ADD CONSTRAINT "client_team_members_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "time_entries" ADD CONSTRAINT "time_entries_mandate_id_fkey" FOREIGN KEY ("mandate_id") REFERENCES "mandates"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "time_entries" ADD CONSTRAINT "time_entries_invoice_id_fkey" FOREIGN KEY ("invoice_id") REFERENCES "invoices"("id") ON DELETE SET NULL ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "project_requests" ADD CONSTRAINT "project_requests_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "admins"("id") ON DELETE SET NULL ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_plan_id_fkey" FOREIGN KEY ("plan_id") REFERENCES "subscription_plans"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
