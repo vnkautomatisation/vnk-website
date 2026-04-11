@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
-  <rect width="600" height="600" rx="130" fill="#1B4F8A"/>
-  <polygon points="300,42 516,165 516,435 300,558 84,435 84,165" fill="rgba(255,255,255,0.10)"/>
-  <polygon points="300,42 516,165 516,435 300,558 84,435 84,165" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="18"/>
-  <text x="300" y="360" text-anchor="middle" font-size="156" font-weight="800" fill="white" font-family="Arial,sans-serif" letter-spacing="8">VNK</text>
-</svg>
