@@ -1,0 +1,1011 @@
+// VNK Automatisation — Prisma schema
+// Mappe directement les 20 tables existantes (schema.sql + calendar_schema.sql)
+// + nouvelles tables pour Paramètres, audit, roles, webhooks, etc.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ════════════════════════════════════════════════════════════
+// AUTHENTIFICATION & RÔLES
+// ════════════════════════════════════════════════════════════
+
+enum AdminRole {
+  super_admin
+  admin
+  accountant
+  sales
+  readonly
+}
+
+model Admin {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  fullName      String?   @map("full_name")
+  role          AdminRole @default(admin)
+  isActive      Boolean   @default(true) @map("is_active")
+  twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
+  twoFactorSecret  String? @map("two_factor_secret")
+  avatarUrl     String?   @map("avatar_url")
+  lastLogin     DateTime? @map("last_login")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  auditLogs     AuditLog[]
+  sessions      AdminSession[]
+
+  @@map("admins")
+}
+
+model AdminSession {
+  id         String   @id @default(cuid())
+  adminId    Int      @map("admin_id")
+  token      String   @unique
+  userAgent  String?  @map("user_agent")
+  ipAddress  String?  @map("ip_address")
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  admin      Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("admin_sessions")
+}
+
+// ════════════════════════════════════════════════════════════
+// CLIENTS & ÉQUIPES
+// ════════════════════════════════════════════════════════════
+
+model Client {
+  id             Int       @id @default(autoincrement())
+  fullName       String    @map("full_name")
+  email          String    @unique
+  passwordHash   String    @map("password_hash")
+  companyName    String?   @map("company_name")
+  phone          String?
+  address        String?
+  city           String?
+  province       String?   @default("QC")
+  postalCode     String?   @map("postal_code")
+  sector         String?
+  technologies   String?
+  internalNotes  String?   @map("internal_notes")
+  avatarUrl      String?   @map("avatar_url")
+  isActive       Boolean   @default(true) @map("is_active")
+  archived       Boolean   @default(false)
+  storageQuotaMb Int       @default(1024) @map("storage_quota_mb")
+  twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
+  twoFactorSecret  String? @map("two_factor_secret")
+  lastLogin      DateTime? @map("last_login")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  mandates       Mandate[]
+  quotes         Quote[]
+  invoices       Invoice[]
+  contracts      Contract[]
+  payments       Payment[]
+  refunds        Refund[]
+  disputes       Dispute[]
+  documents      Document[]
+  messages       Message[]
+  workflowEvents WorkflowEvent[]
+  wsConnections  WsConnection[]
+  pageViews      PageView[]
+  appointments   Appointment[]
+  teamMembers    ClientTeamMember[]
+  subscriptions  Subscription[]
+
+  @@index([email])
+  @@map("clients")
+}
+
+// Nouvelle : plusieurs users par compte client
+model ClientTeamMember {
+  id           Int      @id @default(autoincrement())
+  clientId     Int      @map("client_id")
+  email        String
+  fullName     String   @map("full_name")
+  passwordHash String?  @map("password_hash")
+  role         String   @default("viewer") // owner | editor | viewer
+  invitedAt    DateTime @default(now()) @map("invited_at")
+  acceptedAt   DateTime? @map("accepted_at")
+  lastLogin    DateTime? @map("last_login")
+
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, email])
+  @@index([clientId])
+  @@map("client_team_members")
+}
+
+// ════════════════════════════════════════════════════════════
+// MANDATS, DEVIS, CONTRATS, FACTURES
+// ════════════════════════════════════════════════════════════
+
+enum MandateStatus {
+  pending
+  active
+  in_progress
+  paused
+  completed
+  cancelled
+}
+
+model Mandate {
+  id          Int          @id @default(autoincrement())
+  clientId    Int          @map("client_id")
+  title       String
+  description String?
+  serviceType String?      @default("plc-support") @map("service_type")
+  status      MandateStatus @default(pending)
+  progress    Int          @default(0)
+  startDate   DateTime?    @map("start_date") @db.Date
+  endDate     DateTime?    @map("end_date") @db.Date
+  notes       String?
+  estimatedHours  Decimal? @map("estimated_hours") @db.Decimal(6, 2)
+  actualHours     Decimal? @map("actual_hours") @db.Decimal(6, 2)
+  hourlyRate      Decimal? @map("hourly_rate") @db.Decimal(8, 2)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @default(now()) @updatedAt @map("updated_at")
+
+  client      Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  quotes      Quote[]
+  invoices    Invoice[]
+  documents   Document[]
+  logs        MandateLog[]
+  contracts   Contract[]
+  disputes    Dispute[]
+  workflowEvents WorkflowEvent[]
+  timeEntries TimeEntry[]
+
+  @@index([clientId])
+  @@index([status])
+  @@map("mandates")
+}
+
+// Nouvelle : journal horaire facturable par mandat
+model TimeEntry {
+  id         Int      @id @default(autoincrement())
+  mandateId  Int      @map("mandate_id")
+  adminId    Int?     @map("admin_id")
+  description String
+  startedAt  DateTime @map("started_at")
+  endedAt    DateTime? @map("ended_at")
+  durationMin Int?    @map("duration_min")
+  billable   Boolean  @default(true)
+  hourlyRate Decimal? @map("hourly_rate") @db.Decimal(8, 2)
+  invoiceId  Int?     @map("invoice_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  mandate    Mandate  @relation(fields: [mandateId], references: [id], onDelete: Cascade)
+  invoice    Invoice? @relation(fields: [invoiceId], references: [id])
+
+  @@index([mandateId])
+  @@map("time_entries")
+}
+
+enum QuoteStatus {
+  pending
+  accepted
+  declined
+  expired
+}
+
+model Quote {
+  id                    Int         @id @default(autoincrement())
+  clientId              Int         @map("client_id")
+  mandateId             Int?        @map("mandate_id")
+  quoteNumber           String      @unique @map("quote_number")
+  title                 String
+  description           String?
+  serviceType           String?     @map("service_type")
+  amountHt              Decimal     @default(0) @map("amount_ht") @db.Decimal(10, 2)
+  tpsAmount             Decimal     @default(0) @map("tps_amount") @db.Decimal(10, 2)
+  tvqAmount             Decimal     @default(0) @map("tvq_amount") @db.Decimal(10, 2)
+  amountTtc             Decimal     @default(0) @map("amount_ttc") @db.Decimal(10, 2)
+  currency              String      @default("CAD")
+  status                QuoteStatus @default(pending)
+  expiryDate            DateTime?   @map("expiry_date") @db.Date
+  acceptedAt            DateTime?   @map("accepted_at")
+  declinedAt            DateTime?   @map("declined_at")
+  signedAt              DateTime?   @map("signed_at")
+  paymentPlan           String?     @default("split_50_50") @map("payment_plan")
+  paymentPct1           Int?        @default(50) @map("payment_pct1")
+  paymentPct2           Int?        @default(50) @map("payment_pct2")
+  paymentConditions     String?     @map("payment_conditions")
+  clientSignatureData   String?     @map("client_signature_data")
+  discountCode          String?     @map("discount_code")
+  discountAmount        Decimal?    @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  createdAt             DateTime    @default(now()) @map("created_at")
+  updatedAt             DateTime    @default(now()) @updatedAt @map("updated_at")
+
+  client                Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  mandate               Mandate?    @relation(fields: [mandateId], references: [id])
+  contracts             Contract[]
+  invoices              Invoice[]
+  workflowEvents        WorkflowEvent[]
+
+  @@index([clientId])
+  @@index([status])
+  @@map("quotes")
+}
+
+enum ContractStatus {
+  draft
+  pending
+  sent
+  signed
+  cancelled
+}
+
+model Contract {
+  id                   Int            @id @default(autoincrement())
+  clientId             Int            @map("client_id")
+  mandateId            Int?           @map("mandate_id")
+  quoteId              Int?           @map("quote_id")
+  contractNumber       String         @unique @map("contract_number")
+  title                String
+  content              String?
+  fileUrl              String?        @map("file_url")
+  status               ContractStatus @default(pending)
+  amountTtc            Decimal?       @default(0) @map("amount_ttc") @db.Decimal(10, 2)
+  hellosignRequestId   String?        @map("hellosign_request_id")
+  signedAt             DateTime?      @map("signed_at")
+  clientSignatureData  String?        @map("client_signature_data")
+  clientSignatureIp    String?        @map("client_signature_ip")
+  adminSignatureData   String?        @map("admin_signature_data")
+  adminSignedAt        DateTime?      @map("admin_signed_at")
+  expiresAt            DateTime?      @map("expires_at")
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @default(now()) @updatedAt @map("updated_at")
+
+  client               Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  mandate              Mandate?       @relation(fields: [mandateId], references: [id])
+  quote                Quote?         @relation(fields: [quoteId], references: [id])
+  invoices             Invoice[]
+  workflowEvents       WorkflowEvent[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([quoteId])
+  @@map("contracts")
+}
+
+enum InvoiceStatus {
+  draft
+  unpaid
+  paid
+  overdue
+  cancelled
+  refunded
+}
+
+model Invoice {
+  id                       Int           @id @default(autoincrement())
+  clientId                 Int           @map("client_id")
+  mandateId                Int?          @map("mandate_id")
+  quoteId                  Int?          @map("quote_id")
+  contractId               Int?          @map("contract_id")
+  invoiceNumber            String        @unique @map("invoice_number")
+  title                    String
+  description              String?
+  amountHt                 Decimal       @default(0) @map("amount_ht") @db.Decimal(10, 2)
+  tpsAmount                Decimal       @default(0) @map("tps_amount") @db.Decimal(10, 2)
+  tvqAmount                Decimal       @default(0) @map("tvq_amount") @db.Decimal(10, 2)
+  amountTtc                Decimal       @default(0) @map("amount_ttc") @db.Decimal(10, 2)
+  currency                 String        @default("CAD")
+  status                   InvoiceStatus @default(unpaid)
+  dueDate                  DateTime?     @map("due_date") @db.Date
+  paidAt                   DateTime?     @map("paid_at")
+  paymentMethod            String?       @map("payment_method")
+  invoicePhase             String?       @map("invoice_phase")
+  phaseNumber              Int?          @default(1) @map("phase_number")
+  stripePaymentIntentId    String?       @map("stripe_payment_intent_id")
+  stripeSessionId          String?       @map("stripe_session_id")
+  remindersSent            Int           @default(0) @map("reminders_sent")
+  lastReminderAt           DateTime?     @map("last_reminder_at")
+  createdAt                DateTime      @default(now()) @map("created_at")
+  updatedAt                DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  client                   Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  mandate                  Mandate?      @relation(fields: [mandateId], references: [id])
+  quote                    Quote?        @relation(fields: [quoteId], references: [id])
+  contract                 Contract?     @relation(fields: [contractId], references: [id])
+  payments                 Payment[]
+  refunds                  Refund[]
+  disputes                 Dispute[]
+  workflowEvents           WorkflowEvent[]
+  timeEntries              TimeEntry[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("invoices")
+}
+
+model Payment {
+  id                       Int       @id @default(autoincrement())
+  invoiceId                Int?      @map("invoice_id")
+  clientId                 Int?      @map("client_id")
+  stripePaymentIntentId    String?   @map("stripe_payment_intent_id")
+  stripeChargeId           String?   @map("stripe_charge_id")
+  amount                   Decimal   @db.Decimal(10, 2)
+  currency                 String    @default("cad")
+  status                   String    @default("pending")
+  paymentMethod            String?   @map("payment_method")
+  paidAt                   DateTime? @map("paid_at")
+  createdAt                DateTime  @default(now()) @map("created_at")
+
+  invoice                  Invoice?  @relation(fields: [invoiceId], references: [id])
+  client                   Client?   @relation(fields: [clientId], references: [id])
+
+  @@index([invoiceId])
+  @@index([clientId])
+  @@map("payments")
+}
+
+model Refund {
+  id              Int      @id @default(autoincrement())
+  clientId        Int      @map("client_id")
+  invoiceId       Int?     @map("invoice_id")
+  stripeRefundId  String?  @map("stripe_refund_id")
+  refundNumber    String   @unique @map("refund_number")
+  reason          String
+  amount          Decimal  @db.Decimal(10, 2)
+  tpsAmount       Decimal  @default(0) @map("tps_amount") @db.Decimal(10, 2)
+  tvqAmount       Decimal  @default(0) @map("tvq_amount") @db.Decimal(10, 2)
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(10, 2)
+  status          String   @default("pending")
+  notes           String?
+  processedAt     DateTime? @map("processed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  client          Client   @relation(fields: [clientId], references: [id])
+  invoice         Invoice? @relation(fields: [invoiceId], references: [id])
+
+  @@index([clientId])
+  @@map("refunds")
+}
+
+enum DisputeStatus {
+  open
+  in_progress
+  resolved
+  escalated
+}
+
+enum DisputePriority {
+  low
+  medium
+  high
+  critical
+}
+
+model Dispute {
+  id               Int             @id @default(autoincrement())
+  clientId         Int             @map("client_id")
+  invoiceId        Int?            @map("invoice_id")
+  mandateId        Int?            @map("mandate_id")
+  stripeDisputeId  String?         @map("stripe_dispute_id")
+  title            String
+  description      String?
+  status           DisputeStatus   @default(open)
+  priority         DisputePriority @default(medium)
+  resolution       String?
+  openedAt         DateTime        @default(now()) @map("opened_at")
+  resolvedAt       DateTime?       @map("resolved_at")
+  createdAt        DateTime        @default(now()) @map("created_at")
+
+  client           Client          @relation(fields: [clientId], references: [id])
+  invoice          Invoice?        @relation(fields: [invoiceId], references: [id])
+  mandate          Mandate?        @relation(fields: [mandateId], references: [id])
+
+  @@map("disputes")
+}
+
+model Expense {
+  id           Int      @id @default(autoincrement())
+  title        String
+  category     String   @default("autre")
+  amount       Decimal  @db.Decimal(10, 2)
+  tpsPaid      Decimal  @default(0) @map("tps_paid") @db.Decimal(10, 2)
+  tvqPaid      Decimal  @default(0) @map("tvq_paid") @db.Decimal(10, 2)
+  vendor       String?
+  receiptUrl   String?  @map("receipt_url")
+  expenseDate  DateTime @map("expense_date") @db.Date
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([expenseDate])
+  @@map("expenses")
+}
+
+model TaxDeclaration {
+  id             Int      @id @default(autoincrement())
+  periodType     String   @map("period_type")
+  periodLabel    String   @map("period_label")
+  periodStart    DateTime @map("period_start") @db.Date
+  periodEnd      DateTime @map("period_end") @db.Date
+  totalRevenueHt Decimal  @default(0) @map("total_revenue_ht") @db.Decimal(10, 2)
+  totalTps       Decimal  @default(0) @map("total_tps") @db.Decimal(10, 2)
+  totalTvq       Decimal  @default(0) @map("total_tvq") @db.Decimal(10, 2)
+  totalTaxes     Decimal  @default(0) @map("total_taxes") @db.Decimal(10, 2)
+  status         String   @default("draft")
+  notes          String?
+  submittedAt    DateTime? @map("submitted_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("tax_declarations")
+}
+
+// ════════════════════════════════════════════════════════════
+// DOCUMENTS, MESSAGES, ACTIVITÉ
+// ════════════════════════════════════════════════════════════
+
+model Document {
+  id          Int       @id @default(autoincrement())
+  clientId    Int       @map("client_id")
+  mandateId   Int?      @map("mandate_id")
+  title       String
+  description String?
+  fileType    String?   @default("pdf") @map("file_type")
+  fileName    String?   @map("file_name")
+  fileUrl     String?   @map("file_url")
+  fileSize    Int?      @map("file_size")
+  uploadedBy  String?   @map("uploaded_by")
+  category    String?
+  status      String?   @default("disponible")
+  isRead      Boolean   @default(false) @map("is_read")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  mandate     Mandate?  @relation(fields: [mandateId], references: [id])
+
+  @@index([clientId])
+  @@map("documents")
+}
+
+model Message {
+  id              Int       @id @default(autoincrement())
+  clientId        Int       @map("client_id")
+  sender          String    // 'client' | 'vnk'
+  content         String?
+  attachmentData  Json?     @map("attachment_data")
+  isRead          Boolean   @default(false) @map("is_read")
+  channel         String    @default("chat")
+  requestStatus   String?   @map("request_status") // null | new | in_progress | converted | closed
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  client          Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([clientId, isRead])
+  @@map("messages")
+}
+
+model ContactMessage {
+  id         Int      @id @default(autoincrement())
+  name       String
+  email      String
+  company    String?
+  phone      String?
+  service    String?
+  plcBrand   String?  @map("plc_brand")
+  message    String
+  isRead     Boolean  @default(false) @map("is_read")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("contact_messages")
+}
+
+model MandateLog {
+  id          Int      @id @default(autoincrement())
+  mandateId   Int      @map("mandate_id")
+  action      String
+  description String?
+  createdBy   String   @default("admin") @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  mandate     Mandate  @relation(fields: [mandateId], references: [id], onDelete: Cascade)
+
+  @@map("mandate_logs")
+}
+
+model WorkflowEvent {
+  id           Int      @id @default(autoincrement())
+  clientId     Int      @map("client_id")
+  mandateId    Int?     @map("mandate_id")
+  quoteId      Int?     @map("quote_id")
+  contractId   Int?     @map("contract_id")
+  invoiceId    Int?     @map("invoice_id")
+  eventType    String   @map("event_type")
+  eventLabel   String?  @map("event_label")
+  triggeredBy  String   @default("admin") @map("triggered_by")
+  wsBroadcast  Boolean  @default(false) @map("ws_broadcast")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  mandate      Mandate? @relation(fields: [mandateId], references: [id])
+  quote        Quote?   @relation(fields: [quoteId], references: [id])
+  contract     Contract? @relation(fields: [contractId], references: [id])
+  invoice      Invoice? @relation(fields: [invoiceId], references: [id])
+
+  @@index([clientId])
+  @@index([eventType])
+  @@map("workflow_events")
+}
+
+model WsConnection {
+  id              Int       @id @default(autoincrement())
+  clientId        Int?      @map("client_id")
+  role            String
+  connectedAt     DateTime  @default(now()) @map("connected_at")
+  disconnectedAt  DateTime? @map("disconnected_at")
+  isActive        Boolean   @default(true) @map("is_active")
+  ipAddress       String?   @map("ip_address")
+  userAgent       String?   @map("user_agent")
+
+  client          Client?   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([isActive])
+  @@map("ws_connections")
+}
+
+model PageView {
+  id         Int       @id @default(autoincrement())
+  sessionId  String?   @map("session_id")
+  clientId   Int?      @map("client_id")
+  page       String
+  referrer   String?
+  userAgent  String?   @map("user_agent")
+  ipHash     String?   @map("ip_hash")
+  durationMs Int?      @map("duration_ms")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  client     Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([sessionId])
+  @@index([clientId])
+  @@map("page_views")
+}
+
+// ════════════════════════════════════════════════════════════
+// CALENDRIER & RENDEZ-VOUS
+// ════════════════════════════════════════════════════════════
+
+model AvailabilitySlot {
+  id          Int       @id @default(autoincrement())
+  slotDate    DateTime  @map("slot_date") @db.Date
+  startTime   String    @map("start_time") // TIME stored as string for simplicity
+  endTime     String    @map("end_time")
+  durationMin Int       @default(30) @map("duration_min")
+  status      String    @default("available") // available | booked | blocked | cancelled
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  appointments Appointment[]
+
+  @@index([slotDate, status])
+  @@map("availability_slots")
+}
+
+model Appointment {
+  id                  Int       @id @default(autoincrement())
+  slotId              Int?      @map("slot_id")
+  clientId            Int?      @map("client_id")
+  clientName          String    @map("client_name")
+  clientEmail         String    @map("client_email")
+  clientCompany       String?   @map("client_company")
+  appointmentDate     DateTime  @map("appointment_date") @db.Date
+  startTime           String    @map("start_time")
+  endTime             String    @map("end_time")
+  durationMin         Int       @default(30) @map("duration_min")
+  subject             String?
+  notesClient         String?   @map("notes_client")
+  notesAdmin          String?   @map("notes_admin")
+  meetingType         String    @default("video") @map("meeting_type") // video | phone | onsite
+  meetingLink         String?   @map("meeting_link")
+  meetingId           String?   @map("meeting_id")
+  meetingPassword     String?   @map("meeting_password")
+  status              String    @default("confirmed") // confirmed | cancelled | completed | no_show
+  cancelledBy         String?   @map("cancelled_by")
+  cancelledAt         DateTime? @map("cancelled_at")
+  cancellationReason  String?   @map("cancellation_reason")
+  reminderSent        Boolean   @default(false) @map("reminder_sent")
+  reminderSentAt      DateTime? @map("reminder_sent_at")
+  requestMessageId    Int?      @map("request_message_id")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  slot                AvailabilitySlot? @relation(fields: [slotId], references: [id], onDelete: SetNull)
+  client              Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@index([appointmentDate, status])
+  @@map("appointments")
+}
+
+// ════════════════════════════════════════════════════════════
+// NOUVELLE : PROJET REQUEST (table dédiée, plus de parsing string)
+// ════════════════════════════════════════════════════════════
+
+enum ProjectRequestStatus {
+  new
+  in_progress
+  converted
+  closed
+}
+
+enum ProjectRequestUrgency {
+  low
+  normal
+  urgent
+  critical
+}
+
+model ProjectRequest {
+  id           Int                  @id @default(autoincrement())
+  clientId     Int                  @map("client_id")
+  title        String
+  description  String
+  serviceType  String?              @map("service_type")
+  plcBrand     String?              @map("plc_brand")
+  urgency      ProjectRequestUrgency @default(normal)
+  budgetRange  String?              @map("budget_range")
+  status       ProjectRequestStatus @default(new)
+  convertedToMandateId Int?         @map("converted_to_mandate_id")
+  convertedToQuoteId   Int?         @map("converted_to_quote_id")
+  attachments  Json?
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @default(now()) @updatedAt @map("updated_at")
+
+  @@index([clientId])
+  @@index([status])
+  @@map("project_requests")
+}
+
+// ════════════════════════════════════════════════════════════
+// SETTINGS (configuration via section Paramètres)
+// ════════════════════════════════════════════════════════════
+
+enum SettingType {
+  string
+  number
+  boolean
+  json
+  secret // chiffré en DB
+}
+
+model Setting {
+  id          Int         @id @default(autoincrement())
+  category    String      // general, company, portal, billing, signature, emails, integrations, system, users, appearance, seo, logs, notifications, legal
+  key         String
+  value       String?     @db.Text
+  type        SettingType @default(string)
+  label       String      // Libellé affiché dans l'UI
+  description String?     // Aide contextuelle
+  isPublic    Boolean     @default(false) @map("is_public") // exposé au portail/public ?
+  isSecret    Boolean     @default(false) @map("is_secret") // masqué dans l'UI
+  sortOrder   Int         @default(0) @map("sort_order")
+  updatedBy   Int?        @map("updated_by") // admin.id qui a modifié
+  updatedAt   DateTime    @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([category, key])
+  @@index([category])
+  @@map("settings")
+}
+
+// ════════════════════════════════════════════════════════════
+// AUDIT LOG (traçabilité complète)
+// ════════════════════════════════════════════════════════════
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  adminId     Int?     @map("admin_id")
+  action      String   // create | update | delete | login | logout | export | settings_update
+  entityType  String   @map("entity_type") // clients | quotes | settings | ...
+  entityId    Int?     @map("entity_id")
+  changes     Json?    // avant/après
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  admin       Admin?   @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ════════════════════════════════════════════════════════════
+// INTÉGRATIONS TIERS (Stripe, Dropbox Sign, Zapier, etc.)
+// ════════════════════════════════════════════════════════════
+
+model Integration {
+  id           Int      @id @default(autoincrement())
+  provider     String   // stripe | dropbox_sign | calendly | google | microsoft | sendgrid | zapier
+  name         String
+  isEnabled    Boolean  @default(false) @map("is_enabled")
+  credentials  Json?    // clés API, tokens (chiffrés)
+  config       Json?    // config spécifique
+  lastSyncAt   DateTime? @map("last_sync_at")
+  lastError    String?  @map("last_error")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([provider])
+  @@map("integrations")
+}
+
+// Webhooks sortants (pour que les clients/partenaires reçoivent des events VNK)
+model OutgoingWebhook {
+  id          Int      @id @default(autoincrement())
+  name        String
+  url         String
+  secret      String   // pour signer le payload HMAC
+  events      String[] // ex: ['invoice.paid', 'contract.signed']
+  isEnabled   Boolean  @default(true) @map("is_enabled")
+  lastFireAt  DateTime? @map("last_fire_at")
+  lastStatus  Int?     @map("last_status")
+  failCount   Int      @default(0) @map("fail_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("outgoing_webhooks")
+}
+
+// Webhooks entrants reçus (pour debug + replay)
+model IncomingWebhookLog {
+  id          Int      @id @default(autoincrement())
+  provider    String   // stripe | calendly | dropbox_sign
+  eventType   String   @map("event_type")
+  payload     Json
+  signature   String?
+  verified    Boolean  @default(false)
+  processed   Boolean  @default(false)
+  error       String?
+  receivedAt  DateTime @default(now()) @map("received_at")
+
+  @@index([provider, receivedAt])
+  @@map("incoming_webhook_logs")
+}
+
+// ════════════════════════════════════════════════════════════
+// NOTIFICATIONS (portail + admin)
+// ════════════════════════════════════════════════════════════
+
+model Notification {
+  id         Int      @id @default(autoincrement())
+  recipientType String @map("recipient_type") // admin | client
+  recipientId   Int    @map("recipient_id")
+  type       String   // info | warning | error | success
+  title      String
+  body       String?
+  link       String?
+  icon       String?
+  isRead     Boolean  @default(false) @map("is_read")
+  readAt     DateTime? @map("read_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([recipientType, recipientId, isRead])
+  @@map("notifications")
+}
+
+// ════════════════════════════════════════════════════════════
+// TEMPLATES EMAILS + PDF (editables via Paramètres)
+// ════════════════════════════════════════════════════════════
+
+model EmailTemplate {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique // tpl_new_quote, tpl_invoice_paid, etc.
+  locale      String   @default("fr")
+  subject     String
+  bodyHtml    String   @map("body_html")
+  bodyText    String?  @map("body_text")
+  variables   Json?    // { clientName: "Nom du client", ... }
+  isEnabled   Boolean  @default(true) @map("is_enabled")
+  updatedBy   Int?     @map("updated_by")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([key, locale])
+  @@map("email_templates")
+}
+
+model PdfTemplate {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique // quote, invoice, contract, report
+  locale      String   @default("fr")
+  content     Json     // structure JSON du template
+  variables   Json?
+  isEnabled   Boolean  @default(true) @map("is_enabled")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([key, locale])
+  @@map("pdf_templates")
+}
+
+// ════════════════════════════════════════════════════════════
+// ABONNEMENTS RÉCURRENTS (SaaS support)
+// ════════════════════════════════════════════════════════════
+
+model SubscriptionPlan {
+  id              Int      @id @default(autoincrement())
+  name            String
+  description     String?
+  priceMonthly    Decimal  @map("price_monthly") @db.Decimal(10, 2)
+  priceYearly     Decimal? @map("price_yearly") @db.Decimal(10, 2)
+  currency        String   @default("CAD")
+  features        Json?    // liste de features
+  maxUsers        Int?     @map("max_users")
+  maxStorageMb    Int?     @map("max_storage_mb")
+  isActive        Boolean  @default(true) @map("is_active")
+  stripePriceId   String?  @map("stripe_price_id")
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  subscriptions   Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id               Int      @id @default(autoincrement())
+  clientId         Int      @map("client_id")
+  planId           Int      @map("plan_id")
+  status           String   @default("active") // active | cancelled | expired | trial
+  startedAt        DateTime @map("started_at")
+  currentPeriodEnd DateTime @map("current_period_end")
+  cancelledAt      DateTime? @map("cancelled_at")
+  stripeSubscriptionId String? @map("stripe_subscription_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  client           Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  plan             SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([clientId])
+  @@map("subscriptions")
+}
+
+// ════════════════════════════════════════════════════════════
+// CATALOGUE SERVICES + CODES PROMO
+// ════════════════════════════════════════════════════════════
+
+model ServiceCatalog {
+  id            Int      @id @default(autoincrement())
+  key           String   @unique // support_plc, audit, documentation, refactoring
+  name          String
+  description   String?
+  basePrice     Decimal  @map("base_price") @db.Decimal(10, 2)
+  priceUnit     String   @default("hour") @map("price_unit") // hour | fixed | day
+  currency      String   @default("CAD")
+  category      String?
+  isActive      Boolean  @default(true) @map("is_active")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("service_catalog")
+}
+
+model DiscountCode {
+  id           Int       @id @default(autoincrement())
+  code         String    @unique
+  description  String?
+  discountType String    @map("discount_type") // percent | fixed
+  value        Decimal   @db.Decimal(10, 2)
+  maxUses      Int?      @map("max_uses")
+  currentUses  Int       @default(0) @map("current_uses")
+  validFrom    DateTime? @map("valid_from")
+  validUntil   DateTime? @map("valid_until")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("discount_codes")
+}
+
+// ════════════════════════════════════════════════════════════
+// BLOG / FAQ / TÉMOIGNAGES (contenu CMS éditable)
+// ════════════════════════════════════════════════════════════
+
+model BlogPost {
+  id            Int       @id @default(autoincrement())
+  locale        String    @default("fr")
+  slug          String
+  title         String
+  excerpt       String?
+  contentHtml   String    @map("content_html")
+  coverImageUrl String?   @map("cover_image_url")
+  authorId      Int?      @map("author_id")
+  tags          String[]
+  category      String?
+  status        String    @default("draft") // draft | published | archived
+  publishedAt   DateTime? @map("published_at")
+  viewCount     Int       @default(0) @map("view_count")
+  seoTitle      String?   @map("seo_title")
+  seoDescription String?  @map("seo_description")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([slug, locale])
+  @@index([status, publishedAt])
+  @@map("blog_posts")
+}
+
+model FaqItem {
+  id         Int      @id @default(autoincrement())
+  locale     String   @default("fr")
+  question   String
+  answer     String
+  category   String?
+  sortOrder  Int      @default(0) @map("sort_order")
+  isPublished Boolean @default(true) @map("is_published")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([locale, isPublished])
+  @@map("faq_items")
+}
+
+model Testimonial {
+  id          Int      @id @default(autoincrement())
+  clientName  String   @map("client_name")
+  clientCompany String? @map("client_company")
+  clientTitle String?  @map("client_title")
+  content     String
+  rating      Int      @default(5)
+  avatarUrl   String?  @map("avatar_url")
+  isFeatured  Boolean  @default(false) @map("is_featured")
+  isApproved  Boolean  @default(false) @map("is_approved")
+  locale      String   @default("fr")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("testimonials")
+}
+
+// ════════════════════════════════════════════════════════════
+// MAINTENANCE & STATUT DU SITE
+// ════════════════════════════════════════════════════════════
+
+model MaintenanceWindow {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  startsAt    DateTime  @map("starts_at")
+  endsAt      DateTime  @map("ends_at")
+  isActive    Boolean   @default(false) @map("is_active")
+  affectsPortal Boolean @default(true) @map("affects_portal")
+  affectsAdmin  Boolean @default(false) @map("affects_admin")
+  affectsPublic Boolean @default(false) @map("affects_public")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([startsAt, endsAt])
+  @@map("maintenance_windows")
+}
+
+model IncidentReport {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String
+  severity    String    @default("minor") // minor | major | critical
+  status      String    @default("investigating") // investigating | identified | monitoring | resolved
+  startedAt   DateTime  @default(now()) @map("started_at")
+  resolvedAt  DateTime? @map("resolved_at")
+  isPublic    Boolean   @default(true) @map("is_public")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("incident_reports")
+}
