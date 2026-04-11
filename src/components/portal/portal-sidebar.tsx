@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { usePathname, Link } from "@/i18n/routing";
+import { usePathname } from "next/navigation";
 import NextLink from "next/link";
 import { cn } from "@/lib/utils";
 import {
@@ -54,11 +54,21 @@ export function PortalSidebar({
   const pathname = usePathname();
   const currentLocale = useLocale();
   const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
 
   const otherLocale = currentLocale === "fr" ? "en" : "fr";
   const otherLabel = otherLocale.toUpperCase();
-  const switcherHref =
-    otherLocale === "en" ? `/en${pathname || ""}` : pathname || "/";
+
+  const toggleLocale = () => {
+    startTransition(async () => {
+      await fetch("/api/locale", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale: otherLocale }),
+      });
+      window.location.reload();
+    });
+  };
 
   return (
     <>
@@ -72,8 +82,9 @@ export function PortalSidebar({
           t={t}
           clientName={clientName}
           clientCompany={clientCompany}
-          switcherHref={switcherHref}
           otherLabel={otherLabel}
+          toggleLocale={toggleLocale}
+          pending={pending}
         />
       </aside>
 
@@ -111,8 +122,9 @@ export function PortalSidebar({
               t={t}
               clientName={clientName}
               clientCompany={clientCompany}
-              switcherHref={switcherHref}
               otherLabel={otherLabel}
+              toggleLocale={toggleLocale}
+              pending={pending}
               onNavigate={() => setOpen(false)}
             />
           </aside>
@@ -127,16 +139,18 @@ function Content({
   t,
   clientName,
   clientCompany,
-  switcherHref,
   otherLabel,
+  toggleLocale,
+  pending,
   onNavigate,
 }: {
   pathname: string;
   t: (key: string) => string;
   clientName: string;
   clientCompany?: string;
-  switcherHref: string;
   otherLabel: string;
+  toggleLocale: () => void;
+  pending: boolean;
   onNavigate?: () => void;
 }) {
   return (
@@ -160,9 +174,9 @@ function Content({
           const Icon = tab.icon;
           const active = pathname === tab.href || pathname.startsWith(tab.href + "/");
           return (
-            <Link
+            <NextLink
               key={tab.key}
-              href={tab.href as "/portail"}
+              href={tab.href}
               onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
@@ -174,7 +188,7 @@ function Content({
             >
               <Icon className="h-4 w-4 shrink-0" />
               <span className="flex-1 truncate">{t(tab.key)}</span>
-            </Link>
+            </NextLink>
           );
         })}
       </nav>
@@ -188,20 +202,21 @@ function Content({
           <MessageCircle className="h-4 w-4" />
           {t("contact_us")}
         </button>
-        <NextLink
-          href={switcherHref}
-          onClick={onNavigate}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-accent text-muted-foreground"
+        <button
+          type="button"
+          onClick={toggleLocale}
+          disabled={pending}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-accent text-muted-foreground disabled:opacity-50"
           aria-label={`Changer vers ${otherLabel}`}
         >
           <Globe className="h-4 w-4" />
-          <span className="flex-1">Langue</span>
+          <span className="flex-1 text-left">Langue</span>
           <span className="text-xs font-bold tracking-wider px-2 py-0.5 rounded border">
             {otherLabel}
           </span>
-        </NextLink>
+        </button>
         <button
-          onClick={() => signOut({ callbackUrl: "/fr/portail/login" })}
+          onClick={() => signOut({ callbackUrl: "/portail/login" })}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-destructive/10 text-destructive"
         >
           <LogOut className="h-4 w-4" />
