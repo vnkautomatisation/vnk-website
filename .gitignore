@@ -1,30 +1,71 @@
-# Node.js
+# ─── Dependencies ─────────────────────────────────────
 node_modules/
-npm-debug.log
-.npm
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Environnement — JAMAIS sur GitHub
+# ─── Next.js ──────────────────────────────────────────
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# ─── Environnement — JAMAIS sur GitHub ───────────────
 .env
-.env.local
+.env*.local
 .env.production
+!.env.example
 
-# Visual Studio
+# ─── Logs & debug ────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ─── Testing ─────────────────────────────────────────
+coverage/
+playwright-report/
+test-results/
+
+# ─── Prisma ──────────────────────────────────────────
+prisma/dev.db
+prisma/*.sqlite
+
+# ─── Build ───────────────────────────────────────────
+dist/
+build/
+
+# ─── IDE ─────────────────────────────────────────────
 .vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
 *.user
 *.suo
+*.swp
 
-# Windows
+# ─── Windows ─────────────────────────────────────────
 Thumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
-# Logs
-logs/
-*.log
+# ─── macOS ───────────────────────────────────────────
+.DS_Store
+*.pem
 
-# Base de données
+# ─── Vercel ──────────────────────────────────────────
+.vercel
+
+# ─── Dumps DB ────────────────────────────────────────
 *.dump
+*.sql.gz
 
-# Build
-dist/
-build/
+# ─── Worktrees internes ──────────────────────────────
+.claude/worktrees/
