@@ -1,609 +1,797 @@
--- ============================================================
--- VNK Automatisation Inc. — Schéma complet base de données
--- Version 5.0 — Demandes de projet avec suivi de statut
--- Mis à jour : 2026-03-31
--- Changements v5.0 :
---   + messages.request_status (suivi statut demandes portail)
---   + index idx_messages_request_status
---   + page_views (analytics trafic site)
---   + Toutes les colonnes ALTER TABLE intégrées directement
--- ATTENTION: Supprime TOUTES les tables et repart de zéro
--- Pour migration sans perte de données → voir section MIGRATION en bas
--- ============================================================
+-- ════════════════════════════════════════════════════════════
+-- VNK — Migration initiale Prisma (IDEMPOTENTE)
+--
+-- Cette migration est 100 % idempotente : elle peut être appliquée sur
+-- une DB vierge OU sur une DB existante (Railway avec le schéma Express).
+-- Les tables/enums/indexes déjà présents sont ignorés sans erreur.
+-- ════════════════════════════════════════════════════════════
 
--- ============================================================
--- ÉTAPE 1: Supprimer toutes les tables (ordre des FK)
--- ============================================================
-DROP TABLE IF EXISTS message_attachments CASCADE;
-DROP TABLE IF EXISTS ws_connections CASCADE;
-DROP TABLE IF EXISTS workflow_events CASCADE;
-DROP TABLE IF EXISTS page_views CASCADE;
-DROP TABLE IF EXISTS messages CASCADE;
-DROP TABLE IF EXISTS documents CASCADE;
-DROP TABLE IF EXISTS mandate_logs CASCADE;
-DROP TABLE IF EXISTS payments CASCADE;
-DROP TABLE IF EXISTS refunds CASCADE;
-DROP TABLE IF EXISTS disputes CASCADE;
-DROP TABLE IF EXISTS tax_declarations CASCADE;
-DROP TABLE IF EXISTS expenses CASCADE;
-DROP TABLE IF EXISTS contracts CASCADE;
-DROP TABLE IF EXISTS invoices CASCADE;
-DROP TABLE IF EXISTS quotes CASCADE;
-DROP TABLE IF EXISTS mandates CASCADE;
-DROP TABLE IF EXISTS contact_messages CASCADE;
-DROP TABLE IF EXISTS clients CASCADE;
-DROP TABLE IF EXISTS admins CASCADE;
+-- ─── ENUMS (DO block pour idempotence) ─────────────────────
+DO $$ BEGIN CREATE TYPE "AdminRole" AS ENUM ('super_admin', 'admin', 'accountant', 'sales', 'readonly'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "MandateStatus" AS ENUM ('pending', 'active', 'in_progress', 'paused', 'completed', 'cancelled'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "QuoteStatus" AS ENUM ('pending', 'accepted', 'declined', 'expired'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "ContractStatus" AS ENUM ('draft', 'pending', 'sent', 'signed', 'cancelled'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "InvoiceStatus" AS ENUM ('draft', 'unpaid', 'paid', 'overdue', 'cancelled', 'refunded'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "DisputeStatus" AS ENUM ('open', 'in_progress', 'resolved', 'escalated'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "DisputePriority" AS ENUM ('low', 'medium', 'high', 'critical'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "ProjectRequestStatus" AS ENUM ('new', 'in_progress', 'converted', 'closed'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "ProjectRequestUrgency" AS ENUM ('low', 'normal', 'urgent', 'critical'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "SettingType" AS ENUM ('string', 'number', 'boolean', 'json', 'secret'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 
--- ============================================================
--- ÉTAPE 2: Créer toutes les tables
--- ============================================================
+-- ═══════════════════════════════════════════════════════════
+-- TABLES EXISTANTES (schéma Express) — IF NOT EXISTS
+-- ═══════════════════════════════════════════════════════════
 
 -- ADMINS
-CREATE TABLE admins (
-    id              SERIAL PRIMARY KEY,
-    email           VARCHAR(255) UNIQUE NOT NULL,
-    password_hash   TEXT NOT NULL,
-    full_name       VARCHAR(255),
-    created_at      TIMESTAMP DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS "admins" (
+    "id" SERIAL NOT NULL,
+    "email" VARCHAR(255) NOT NULL,
+    "password_hash" TEXT NOT NULL,
+    "full_name" VARCHAR(255),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "admins_pkey" PRIMARY KEY ("id")
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "admins_email_key" ON "admins"("email");
+-- Colonnes Next.js
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "role" "AdminRole" NOT NULL DEFAULT 'admin';
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "is_active" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "two_factor_enabled" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "two_factor_secret" TEXT;
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "avatar_url" TEXT;
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "last_login" TIMESTAMP(3);
+ALTER TABLE "admins" ADD COLUMN IF NOT EXISTS "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+-- ADMIN SESSIONS (nouvelle)
+CREATE TABLE IF NOT EXISTS "admin_sessions" (
+    "id" TEXT NOT NULL,
+    "admin_id" INTEGER NOT NULL,
+    "token" TEXT NOT NULL,
+    "user_agent" TEXT,
+    "ip_address" TEXT,
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "admin_sessions_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "admin_sessions_token_key" ON "admin_sessions"("token");
+CREATE INDEX IF NOT EXISTS "admin_sessions_token_idx" ON "admin_sessions"("token");
 
 -- CLIENTS
-CREATE TABLE clients (
-    id              SERIAL PRIMARY KEY,
-    full_name       VARCHAR(255) NOT NULL,
-    email           VARCHAR(255) UNIQUE NOT NULL,
-    password_hash   TEXT NOT NULL,
-    company_name    VARCHAR(255),
-    phone           VARCHAR(50),
-    address         TEXT,
-    city            VARCHAR(100),
-    province        VARCHAR(50)  DEFAULT 'QC',
-    postal_code     VARCHAR(20),
-    sector          VARCHAR(100),
-    technologies    TEXT,
-    internal_notes  TEXT,
-    avatar_url      TEXT,
-    is_active       BOOLEAN      DEFAULT true,
-    last_login      TIMESTAMP,
-    created_at      TIMESTAMP    DEFAULT NOW(),
-    updated_at      TIMESTAMP    DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS "clients" (
+    "id" SERIAL NOT NULL,
+    "full_name" VARCHAR(255) NOT NULL,
+    "email" VARCHAR(255) NOT NULL,
+    "password_hash" TEXT NOT NULL,
+    "company_name" VARCHAR(255),
+    "phone" VARCHAR(50),
+    "address" TEXT,
+    "city" VARCHAR(100),
+    "province" VARCHAR(50) DEFAULT 'QC',
+    "postal_code" VARCHAR(20),
+    "sector" VARCHAR(100),
+    "technologies" TEXT,
+    "internal_notes" TEXT,
+    "avatar_url" TEXT,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "last_login" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "clients_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "clients_email_key" ON "clients"("email");
+CREATE INDEX IF NOT EXISTS "clients_email_idx" ON "clients"("email");
+ALTER TABLE "clients" ADD COLUMN IF NOT EXISTS "archived" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "clients" ADD COLUMN IF NOT EXISTS "storage_quota_mb" INTEGER NOT NULL DEFAULT 1024;
+ALTER TABLE "clients" ADD COLUMN IF NOT EXISTS "two_factor_enabled" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "clients" ADD COLUMN IF NOT EXISTS "two_factor_secret" TEXT;
+
+-- CLIENT TEAM MEMBERS (nouvelle)
+CREATE TABLE IF NOT EXISTS "client_team_members" (
+    "id" SERIAL NOT NULL,
+    "client_id" INTEGER NOT NULL,
+    "email" VARCHAR(255) NOT NULL,
+    "full_name" VARCHAR(255) NOT NULL,
+    "password_hash" TEXT,
+    "role" VARCHAR(50) NOT NULL DEFAULT 'viewer',
+    "invited_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "accepted_at" TIMESTAMP(3),
+    "last_login" TIMESTAMP(3),
+    CONSTRAINT "client_team_members_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "client_team_members_client_id_email_key" ON "client_team_members"("client_id", "email");
+CREATE INDEX IF NOT EXISTS "client_team_members_client_id_idx" ON "client_team_members"("client_id");
+
+-- MANDATES
+CREATE TABLE IF NOT EXISTS "mandates" (
+    "id" SERIAL NOT NULL,
+    "client_id" INTEGER NOT NULL,
+    "title" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "service_type" VARCHAR(100) DEFAULT 'plc-support',
+    "status" VARCHAR(50) NOT NULL DEFAULT 'pending',
+    "progress" INTEGER NOT NULL DEFAULT 0,
+    "start_date" DATE,
+    "end_date" DATE,
+    "notes" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "mandates_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "mandates_client_id_idx" ON "mandates"("client_id");
+CREATE INDEX IF NOT EXISTS "mandates_status_idx" ON "mandates"("status");
+ALTER TABLE "mandates" ADD COLUMN IF NOT EXISTS "estimated_hours" DECIMAL(6,2);
+ALTER TABLE "mandates" ADD COLUMN IF NOT EXISTS "actual_hours" DECIMAL(6,2);
+ALTER TABLE "mandates" ADD COLUMN IF NOT EXISTS "hourly_rate" DECIMAL(8,2);
+
+-- TIME ENTRIES (nouvelle)
+CREATE TABLE IF NOT EXISTS "time_entries" (
+    "id" SERIAL NOT NULL,
+    "mandate_id" INTEGER NOT NULL,
+    "admin_id" INTEGER,
+    "description" TEXT NOT NULL,
+    "started_at" TIMESTAMP(3) NOT NULL,
+    "ended_at" TIMESTAMP(3),
+    "duration_min" INTEGER,
+    "billable" BOOLEAN NOT NULL DEFAULT true,
+    "hourly_rate" DECIMAL(8,2),
+    "invoice_id" INTEGER,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "time_entries_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "time_entries_mandate_id_idx" ON "time_entries"("mandate_id");
+
+-- QUOTES
+CREATE TABLE IF NOT EXISTS "quotes" (
+    "id" SERIAL NOT NULL,
+    "client_id" INTEGER NOT NULL,
+    "quote_number" VARCHAR(50) NOT NULL,
+    "title" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "service_type" VARCHAR(100),
+    "amount_ht" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "tps_amount" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "tvq_amount" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "amount_ttc" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "status" VARCHAR(50) NOT NULL DEFAULT 'pending',
+    "expiry_date" DATE,
+    "accepted_at" TIMESTAMP(3),
+    "signed_at" TIMESTAMP(3),
+    "payment_plan" VARCHAR(30) DEFAULT 'split_50_50',
+    "payment_pct1" INTEGER DEFAULT 50,
+    "payment_pct2" INTEGER DEFAULT 50,
+    "payment_conditions" TEXT,
+    "client_signature_data" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "quotes_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "quotes_quote_number_key" ON "quotes"("quote_number");
+CREATE INDEX IF NOT EXISTS "quotes_client_id_idx" ON "quotes"("client_id");
+CREATE INDEX IF NOT EXISTS "quotes_status_idx" ON "quotes"("status");
+ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "mandate_id" INTEGER;
+ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "declined_at" TIMESTAMP(3);
+ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "currency" VARCHAR(10) NOT NULL DEFAULT 'CAD';
+ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "discount_code" VARCHAR(50);
+ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "discount_amount" DECIMAL(10,2) DEFAULT 0;
+
+-- CONTRACTS
+CREATE TABLE IF NOT EXISTS "contracts" (
+    "id" SERIAL NOT NULL,
+    "client_id" INTEGER NOT NULL,
+    "mandate_id" INTEGER,
+    "quote_id" INTEGER,
+    "contract_number" VARCHAR(50) NOT NULL,
+    "title" VARCHAR(255) NOT NULL,
+    "content" TEXT,
+    "file_url" TEXT,
+    "status" VARCHAR(50) NOT NULL DEFAULT 'pending',
+    "amount_ttc" DECIMAL(10,2) DEFAULT 0,
+    "hellosign_request_id" VARCHAR(255),
+    "signed_at" TIMESTAMP(3),
+    "client_signature_data" TEXT,
+    "client_signature_ip" VARCHAR(64),
+    "admin_signature_data" TEXT,
+    "admin_signed_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "contracts_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "contracts_contract_number_key" ON "contracts"("contract_number");
+CREATE INDEX IF NOT EXISTS "contracts_client_id_idx" ON "contracts"("client_id");
+CREATE INDEX IF NOT EXISTS "contracts_status_idx" ON "contracts"("status");
+CREATE INDEX IF NOT EXISTS "contracts_quote_id_idx" ON "contracts"("quote_id");
+ALTER TABLE "contracts" ADD COLUMN IF NOT EXISTS "expires_at" TIMESTAMP(3);
+
+-- INVOICES
+CREATE TABLE IF NOT EXISTS "invoices" (
+    "id" SERIAL NOT NULL,
+    "client_id" INTEGER NOT NULL,
+    "mandate_id" INTEGER,
+    "quote_id" INTEGER,
+    "contract_id" INTEGER,
+    "invoice_number" VARCHAR(50) NOT NULL,
+    "title" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "amount_ht" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "tps_amount" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "tvq_amount" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "amount_ttc" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "status" VARCHAR(50) NOT NULL DEFAULT 'unpaid',
+    "due_date" DATE,
+    "paid_at" TIMESTAMP(3),
+    "payment_method" VARCHAR(50),
+    "invoice_phase" VARCHAR(20),
+    "phase_number" INTEGER DEFAULT 1,
+    "stripe_payment_intent_id" VARCHAR(255),
+    "stripe_session_id" VARCHAR(255),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "invoices_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "invoices_invoice_number_key" ON "invoices"("invoice_number");
+CREATE INDEX IF NOT EXISTS "invoices_client_id_idx" ON "invoices"("client_id");
+CREATE INDEX IF NOT EXISTS "invoices_status_idx" ON "invoices"("status");
+CREATE INDEX IF NOT EXISTS "invoices_due_date_idx" ON "invoices"("due_date");
+ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "currency" VARCHAR(10) NOT NULL DEFAULT 'CAD';
+ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "reminders_sent" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "last_reminder_at" TIMESTAMP(3);
+
+-- PAYMENTS
+CREATE TABLE IF NOT EXISTS "payments" (
+    "id" SERIAL NOT NULL,
+    "invoice_id" INTEGER,
+    "client_id" INTEGER,
+    "stripe_payment_intent_id" VARCHAR(255),
+    "stripe_charge_id" VARCHAR(255),
+    "amount" DECIMAL(10,2) NOT NULL,
+    "currency" VARCHAR(10) NOT NULL DEFAULT 'cad',
+    "status" VARCHAR(50) NOT NULL DEFAULT 'pending',
+    "payment_method" VARCHAR(100),
+    "paid_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "payments_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "payments_invoice_id_idx" ON "payments"("invoice_id");
+CREATE INDEX IF NOT EXISTS "payments_client_id_idx" ON "payments"("client_id");
+
+-- REFUNDS
+CREATE TABLE IF NOT EXISTS "refunds" (
+    "id" SERIAL NOT NULL,
+    "client_id" INTEGER NOT NULL,
+    "invoice_id" INTEGER,
+    "stripe_refund_id" VARCHAR(255),
+    "refund_number" VARCHAR(50) NOT NULL,
+    "reason" TEXT NOT NULL,
+    "amount" DECIMAL(10,2) NOT NULL,
+    "tps_amount" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "tvq_amount" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "total_amount" DECIMAL(10,2) NOT NULL,
+    "status" VARCHAR(50) NOT NULL DEFAULT 'pending',
+    "notes" TEXT,
+    "processed_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "refunds_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "refunds_refund_number_key" ON "refunds"("refund_number");
+CREATE INDEX IF NOT EXISTS "refunds_client_id_idx" ON "refunds"("client_id");
+
+-- DISPUTES
+CREATE TABLE IF NOT EXISTS "disputes" (
+    "id" SERIAL NOT NULL,
+    "client_id" INTEGER NOT NULL,
+    "invoice_id" INTEGER,
+    "mandate_id" INTEGER,
+    "stripe_dispute_id" VARCHAR(255),
+    "title" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "status" VARCHAR(50) NOT NULL DEFAULT 'open',
+    "priority" VARCHAR(20) NOT NULL DEFAULT 'medium',
+    "resolution" TEXT,
+    "opened_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "resolved_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "disputes_pkey" PRIMARY KEY ("id")
 );
 
--- MANDATS
-CREATE TABLE mandates (
-    id              SERIAL PRIMARY KEY,
-    client_id       INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    title           VARCHAR(255) NOT NULL,
-    description     TEXT,
-    service_type    VARCHAR(100) DEFAULT 'plc-support',
-    status          VARCHAR(50)  DEFAULT 'pending',   -- pending | active | in_progress | completed | cancelled | paused
-    progress        INTEGER      DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
-    start_date      DATE,
-    end_date        DATE,
-    notes           TEXT,
-    created_at      TIMESTAMP    DEFAULT NOW(),
-    updated_at      TIMESTAMP    DEFAULT NOW()
+-- EXPENSES
+CREATE TABLE IF NOT EXISTS "expenses" (
+    "id" SERIAL NOT NULL,
+    "title" VARCHAR(255) NOT NULL,
+    "category" VARCHAR(100) NOT NULL DEFAULT 'autre',
+    "amount" DECIMAL(10,2) NOT NULL,
+    "tps_paid" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "tvq_paid" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "vendor" VARCHAR(255),
+    "receipt_url" TEXT,
+    "expense_date" DATE NOT NULL,
+    "notes" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "expenses_pkey" PRIMARY KEY ("id")
 );
+CREATE INDEX IF NOT EXISTS "expenses_expense_date_idx" ON "expenses"("expense_date");
 
--- DEVIS
-CREATE TABLE quotes (
-    id                      SERIAL PRIMARY KEY,
-    client_id               INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    quote_number            VARCHAR(50) UNIQUE NOT NULL,
-    title                   VARCHAR(255) NOT NULL,
-    description             TEXT,
-    service_type            VARCHAR(100),
-    amount_ht               DECIMAL(10,2) NOT NULL DEFAULT 0,
-    tps_amount              DECIMAL(10,2) DEFAULT 0,
-    tvq_amount              DECIMAL(10,2) DEFAULT 0,
-    amount_ttc              DECIMAL(10,2) DEFAULT 0,
-    status                  VARCHAR(50)  DEFAULT 'pending',   -- pending | accepted | declined | expired
-    expiry_date             DATE,
-    accepted_at             TIMESTAMP,
-    signed_at               TIMESTAMP,
-    payment_plan            VARCHAR(30)  DEFAULT 'split_50_50',
-    payment_pct1            INT          DEFAULT 50,
-    payment_pct2            INT          DEFAULT 50,
-    payment_conditions      TEXT,
-    client_signature_data   TEXT,
-    created_at              TIMESTAMP    DEFAULT NOW(),
-    updated_at              TIMESTAMP    DEFAULT NOW()
-);
-
--- CONTRATS
--- status: draft | pending | signed | cancelled
-CREATE TABLE contracts (
-    id                      SERIAL PRIMARY KEY,
-    client_id               INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    mandate_id              INTEGER REFERENCES mandates(id),
-    quote_id                INTEGER REFERENCES quotes(id),
-    contract_number         VARCHAR(50) UNIQUE NOT NULL,
-    title                   VARCHAR(255) NOT NULL,
-    content                 TEXT,
-    file_url                TEXT,
-    status                  VARCHAR(50)  DEFAULT 'pending',   -- draft | pending | signed | cancelled
-    amount_ttc              DECIMAL(10,2) DEFAULT 0,
-    hellosign_request_id    VARCHAR(255),
-    signed_at               TIMESTAMP,
-    client_signature_data   TEXT,
-    client_signature_ip     VARCHAR(64),
-    admin_signature_data    TEXT,
-    admin_signed_at         TIMESTAMPTZ,
-    created_at              TIMESTAMP    DEFAULT NOW(),
-    updated_at              TIMESTAMP    DEFAULT NOW()
-);
-
--- FACTURES
--- status: unpaid | paid | overdue | cancelled
-CREATE TABLE invoices (
-    id                          SERIAL PRIMARY KEY,
-    client_id                   INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    mandate_id                  INTEGER REFERENCES mandates(id),
-    quote_id                    INTEGER REFERENCES quotes(id),
-    contract_id                 INTEGER REFERENCES contracts(id),
-    invoice_number              VARCHAR(50) UNIQUE NOT NULL,
-    title                       VARCHAR(255) NOT NULL,
-    description                 TEXT,
-    amount_ht                   DECIMAL(10,2) NOT NULL DEFAULT 0,
-    tps_amount                  DECIMAL(10,2) DEFAULT 0,
-    tvq_amount                  DECIMAL(10,2) DEFAULT 0,
-    amount_ttc                  DECIMAL(10,2) DEFAULT 0,
-    status                      VARCHAR(50)  DEFAULT 'unpaid',
-    due_date                    DATE,
-    paid_at                     TIMESTAMP,
-    payment_method              VARCHAR(50),
-    invoice_phase               VARCHAR(20),
-    phase_number                INT          DEFAULT 1,
-    stripe_payment_intent_id    VARCHAR(255),
-    stripe_session_id           VARCHAR(255),
-    created_at                  TIMESTAMP    DEFAULT NOW(),
-    updated_at                  TIMESTAMP    DEFAULT NOW()
-);
-
--- PAIEMENTS
-CREATE TABLE payments (
-    id                          SERIAL PRIMARY KEY,
-    invoice_id                  INTEGER REFERENCES invoices(id),
-    client_id                   INTEGER REFERENCES clients(id),
-    stripe_payment_intent_id    VARCHAR(255),
-    stripe_charge_id            VARCHAR(255),
-    amount                      DECIMAL(10,2) NOT NULL,
-    currency                    VARCHAR(10)  DEFAULT 'cad',
-    status                      VARCHAR(50)  DEFAULT 'pending',
-    payment_method              VARCHAR(100),
-    paid_at                     TIMESTAMP,
-    created_at                  TIMESTAMP    DEFAULT NOW()
-);
-
--- REMBOURSEMENTS
-CREATE TABLE refunds (
-    id               SERIAL PRIMARY KEY,
-    client_id        INTEGER NOT NULL REFERENCES clients(id),
-    invoice_id       INTEGER REFERENCES invoices(id),
-    stripe_refund_id VARCHAR(255),
-    refund_number    VARCHAR(50) UNIQUE NOT NULL,
-    reason           TEXT NOT NULL,
-    amount           DECIMAL(10,2) NOT NULL,
-    tps_amount       DECIMAL(10,2) DEFAULT 0,
-    tvq_amount       DECIMAL(10,2) DEFAULT 0,
-    total_amount     DECIMAL(10,2) NOT NULL,
-    status           VARCHAR(50)  DEFAULT 'pending',
-    notes            TEXT,
-    processed_at     TIMESTAMP,
-    created_at       TIMESTAMP    DEFAULT NOW()
-);
-
--- LITIGES
-CREATE TABLE disputes (
-    id                SERIAL PRIMARY KEY,
-    client_id         INTEGER NOT NULL REFERENCES clients(id),
-    invoice_id        INTEGER REFERENCES invoices(id),
-    mandate_id        INTEGER REFERENCES mandates(id),
-    stripe_dispute_id VARCHAR(255),
-    title             VARCHAR(255) NOT NULL,
-    description       TEXT,
-    status            VARCHAR(50)  DEFAULT 'open',
-    priority          VARCHAR(20)  DEFAULT 'medium',
-    resolution        TEXT,
-    opened_at         TIMESTAMP    DEFAULT NOW(),
-    resolved_at       TIMESTAMP,
-    created_at        TIMESTAMP    DEFAULT NOW()
-);
-
--- DÉPENSES
-CREATE TABLE expenses (
-    id           SERIAL PRIMARY KEY,
-    title        VARCHAR(255) NOT NULL,
-    category     VARCHAR(100) DEFAULT 'autre',
-    amount       DECIMAL(10,2) NOT NULL,
-    tps_paid     DECIMAL(10,2) DEFAULT 0,
-    tvq_paid     DECIMAL(10,2) DEFAULT 0,
-    vendor       VARCHAR(255),
-    receipt_url  TEXT,
-    expense_date DATE NOT NULL,
-    notes        TEXT,
-    created_at   TIMESTAMP    DEFAULT NOW()
-);
-
--- DÉCLARATIONS FISCALES
-CREATE TABLE tax_declarations (
-    id               SERIAL PRIMARY KEY,
-    period_type      VARCHAR(50)  NOT NULL,
-    period_label     VARCHAR(100) NOT NULL,
-    period_start     DATE         NOT NULL,
-    period_end       DATE         NOT NULL,
-    total_revenue_ht DECIMAL(10,2) DEFAULT 0,
-    total_tps        DECIMAL(10,2) DEFAULT 0,
-    total_tvq        DECIMAL(10,2) DEFAULT 0,
-    total_taxes      DECIMAL(10,2) DEFAULT 0,
-    status           VARCHAR(50)  DEFAULT 'draft',
-    notes            TEXT,
-    submitted_at     TIMESTAMP,
-    created_at       TIMESTAMP    DEFAULT NOW()
+-- TAX DECLARATIONS
+CREATE TABLE IF NOT EXISTS "tax_declarations" (
+    "id" SERIAL NOT NULL,
+    "period_type" VARCHAR(50) NOT NULL,
+    "period_label" VARCHAR(100) NOT NULL,
+    "period_start" DATE NOT NULL,
+    "period_end" DATE NOT NULL,
+    "total_revenue_ht" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "total_tps" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "total_tvq" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "total_taxes" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "status" VARCHAR(50) NOT NULL DEFAULT 'draft',
+    "notes" TEXT,
+    "submitted_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "tax_declarations_pkey" PRIMARY KEY ("id")
 );
 
 -- DOCUMENTS
-CREATE TABLE documents (
-    id          SERIAL PRIMARY KEY,
-    client_id   INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    mandate_id  INTEGER REFERENCES mandates(id),
-    title       VARCHAR(255) NOT NULL,
-    description TEXT,
-    file_type   VARCHAR(50)  DEFAULT 'pdf',
-    file_name   VARCHAR(255),
-    file_url    TEXT,
-    file_size   INTEGER,
-    uploaded_by VARCHAR(100),
-    category    VARCHAR(100),
-    status      VARCHAR(50)  DEFAULT 'disponible',
-    is_read     BOOLEAN      DEFAULT false,
-    created_at  TIMESTAMP    DEFAULT NOW(),
-    updated_at  TIMESTAMP    DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS "documents" (
+    "id" SERIAL NOT NULL,
+    "client_id" INTEGER NOT NULL,
+    "mandate_id" INTEGER,
+    "title" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "file_type" VARCHAR(50) DEFAULT 'pdf',
+    "file_name" VARCHAR(255),
+    "file_url" TEXT,
+    "file_size" INTEGER,
+    "uploaded_by" VARCHAR(100),
+    "category" VARCHAR(100),
+    "status" VARCHAR(50) DEFAULT 'disponible',
+    "is_read" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "documents_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "documents_client_id_idx" ON "documents"("client_id");
+
+-- MESSAGES
+CREATE TABLE IF NOT EXISTS "messages" (
+    "id" SERIAL NOT NULL,
+    "client_id" INTEGER NOT NULL,
+    "sender" VARCHAR(20) NOT NULL,
+    "content" TEXT,
+    "attachment_data" JSONB,
+    "is_read" BOOLEAN NOT NULL DEFAULT false,
+    "channel" VARCHAR(30) NOT NULL DEFAULT 'chat',
+    "request_status" VARCHAR(20),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "messages_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "messages_client_id_idx" ON "messages"("client_id");
+CREATE INDEX IF NOT EXISTS "messages_client_id_is_read_idx" ON "messages"("client_id", "is_read");
+
+-- CONTACT MESSAGES
+CREATE TABLE IF NOT EXISTS "contact_messages" (
+    "id" SERIAL NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
+    "email" VARCHAR(255) NOT NULL,
+    "company" VARCHAR(255),
+    "service" VARCHAR(100),
+    "message" TEXT NOT NULL,
+    "is_read" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "contact_messages_pkey" PRIMARY KEY ("id")
+);
+ALTER TABLE "contact_messages" ADD COLUMN IF NOT EXISTS "phone" VARCHAR(50);
+ALTER TABLE "contact_messages" ADD COLUMN IF NOT EXISTS "plc_brand" VARCHAR(100);
+ALTER TABLE "contact_messages" ADD COLUMN IF NOT EXISTS "ip_address" VARCHAR(64);
+ALTER TABLE "contact_messages" ADD COLUMN IF NOT EXISTS "user_agent" TEXT;
+
+-- MANDATE LOGS
+CREATE TABLE IF NOT EXISTS "mandate_logs" (
+    "id" SERIAL NOT NULL,
+    "mandate_id" INTEGER NOT NULL,
+    "action" VARCHAR(100) NOT NULL,
+    "description" TEXT,
+    "created_by" VARCHAR(50) NOT NULL DEFAULT 'admin',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "mandate_logs_pkey" PRIMARY KEY ("id")
 );
 
--- MESSAGES (chat portail + emails + demandes de projet)
--- sender        : 'client' | 'vnk'
--- channel       : 'chat' | 'email' | 'both' | 'email_received'
--- request_status: statut de la demande de projet (si le message est une demande)
---   new         → demande reçue, pas encore traitée
---   in_progress → admin travaille sur la demande
---   converted   → un mandat ou devis a été créé depuis cette demande
---   closed      → demande rejetée ou annulée
---   NULL        → message ordinaire (pas une demande de projet)
-CREATE TABLE messages (
-    id              SERIAL PRIMARY KEY,
-    client_id       INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    sender          VARCHAR(20) NOT NULL CHECK (sender IN ('client', 'vnk')),
-    content         TEXT,
-    attachment_data JSONB        DEFAULT NULL,
-    is_read         BOOLEAN      DEFAULT false,
-    channel         VARCHAR(30)  DEFAULT 'chat',
-    request_status  VARCHAR(20)  DEFAULT NULL,   -- NULL | new | in_progress | converted | closed
-    created_at      TIMESTAMP    DEFAULT NOW()
+-- WORKFLOW EVENTS
+CREATE TABLE IF NOT EXISTS "workflow_events" (
+    "id" SERIAL NOT NULL,
+    "client_id" INTEGER NOT NULL,
+    "mandate_id" INTEGER,
+    "quote_id" INTEGER,
+    "contract_id" INTEGER,
+    "invoice_id" INTEGER,
+    "event_type" VARCHAR(100) NOT NULL,
+    "event_label" VARCHAR(255),
+    "triggered_by" VARCHAR(50) NOT NULL DEFAULT 'admin',
+    "ws_broadcast" BOOLEAN NOT NULL DEFAULT false,
+    "metadata" JSONB,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "workflow_events_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "workflow_events_client_id_idx" ON "workflow_events"("client_id");
+CREATE INDEX IF NOT EXISTS "workflow_events_event_type_idx" ON "workflow_events"("event_type");
+
+-- WS CONNECTIONS
+CREATE TABLE IF NOT EXISTS "ws_connections" (
+    "id" SERIAL NOT NULL,
+    "client_id" INTEGER,
+    "role" VARCHAR(20) NOT NULL,
+    "connected_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "disconnected_at" TIMESTAMP(3),
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "ip_address" VARCHAR(64),
+    "user_agent" TEXT,
+    CONSTRAINT "ws_connections_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "ws_connections_is_active_idx" ON "ws_connections"("is_active");
+
+-- PAGE VIEWS
+CREATE TABLE IF NOT EXISTS "page_views" (
+    "id" SERIAL NOT NULL,
+    "session_id" VARCHAR(64),
+    "client_id" INTEGER,
+    "page" VARCHAR(255) NOT NULL,
+    "referrer" VARCHAR(512),
+    "user_agent" VARCHAR(512),
+    "ip_hash" VARCHAR(64),
+    "duration_ms" INTEGER,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "page_views_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "page_views_created_at_idx" ON "page_views"("created_at");
+CREATE INDEX IF NOT EXISTS "page_views_session_id_idx" ON "page_views"("session_id");
+CREATE INDEX IF NOT EXISTS "page_views_client_id_idx" ON "page_views"("client_id");
+
+-- AVAILABILITY SLOTS
+CREATE TABLE IF NOT EXISTS "availability_slots" (
+    "id" SERIAL NOT NULL,
+    "slot_date" DATE NOT NULL,
+    "start_time" VARCHAR(10) NOT NULL,
+    "end_time" VARCHAR(10) NOT NULL,
+    "duration_min" INTEGER NOT NULL DEFAULT 30,
+    "status" VARCHAR(20) NOT NULL DEFAULT 'available',
+    "notes" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "availability_slots_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "availability_slots_slot_date_status_idx" ON "availability_slots"("slot_date", "status");
+
+-- APPOINTMENTS
+CREATE TABLE IF NOT EXISTS "appointments" (
+    "id" SERIAL NOT NULL,
+    "slot_id" INTEGER,
+    "client_id" INTEGER,
+    "client_name" VARCHAR(255) NOT NULL,
+    "client_email" VARCHAR(255) NOT NULL,
+    "client_company" VARCHAR(255),
+    "appointment_date" DATE NOT NULL,
+    "start_time" VARCHAR(10) NOT NULL,
+    "end_time" VARCHAR(10) NOT NULL,
+    "duration_min" INTEGER NOT NULL DEFAULT 30,
+    "subject" TEXT,
+    "notes_client" TEXT,
+    "notes_admin" TEXT,
+    "meeting_type" VARCHAR(20) NOT NULL DEFAULT 'video',
+    "meeting_link" TEXT,
+    "meeting_id" VARCHAR(255),
+    "meeting_password" VARCHAR(255),
+    "status" VARCHAR(20) NOT NULL DEFAULT 'confirmed',
+    "cancelled_by" VARCHAR(20),
+    "cancelled_at" TIMESTAMP(3),
+    "cancellation_reason" TEXT,
+    "reminder_sent" BOOLEAN NOT NULL DEFAULT false,
+    "reminder_sent_at" TIMESTAMP(3),
+    "request_message_id" INTEGER,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "appointments_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "appointments_client_id_idx" ON "appointments"("client_id");
+CREATE INDEX IF NOT EXISTS "appointments_appointment_date_status_idx" ON "appointments"("appointment_date", "status");
+
+-- ═══════════════════════════════════════════════════════════
+-- NOUVELLES TABLES (inexistantes dans l'Express)
+-- ═══════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS "project_requests" (
+    "id" SERIAL NOT NULL,
+    "client_id" INTEGER NOT NULL,
+    "title" VARCHAR(255) NOT NULL,
+    "description" TEXT NOT NULL,
+    "service_type" VARCHAR(100),
+    "plc_brand" VARCHAR(100),
+    "urgency" "ProjectRequestUrgency" NOT NULL DEFAULT 'normal',
+    "budget_range" VARCHAR(100),
+    "status" "ProjectRequestStatus" NOT NULL DEFAULT 'new',
+    "converted_to_mandate_id" INTEGER,
+    "converted_to_quote_id" INTEGER,
+    "attachments" JSONB,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "project_requests_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "project_requests_client_id_idx" ON "project_requests"("client_id");
+CREATE INDEX IF NOT EXISTS "project_requests_status_idx" ON "project_requests"("status");
+
+-- SETTINGS (pièce centrale de la migration)
+CREATE TABLE IF NOT EXISTS "settings" (
+    "id" SERIAL NOT NULL,
+    "category" VARCHAR(50) NOT NULL,
+    "key" VARCHAR(100) NOT NULL,
+    "value" TEXT,
+    "type" "SettingType" NOT NULL DEFAULT 'string',
+    "label" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "is_public" BOOLEAN NOT NULL DEFAULT false,
+    "is_secret" BOOLEAN NOT NULL DEFAULT false,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "updated_by" INTEGER,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "settings_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "settings_category_key_key" ON "settings"("category", "key");
+CREATE INDEX IF NOT EXISTS "settings_category_idx" ON "settings"("category");
+
+CREATE TABLE IF NOT EXISTS "audit_logs" (
+    "id" SERIAL NOT NULL,
+    "admin_id" INTEGER,
+    "action" VARCHAR(100) NOT NULL,
+    "entity_type" VARCHAR(100) NOT NULL,
+    "entity_id" INTEGER,
+    "changes" JSONB,
+    "ip_address" VARCHAR(64),
+    "user_agent" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "audit_logs_admin_id_idx" ON "audit_logs"("admin_id");
+CREATE INDEX IF NOT EXISTS "audit_logs_entity_type_entity_id_idx" ON "audit_logs"("entity_type", "entity_id");
+CREATE INDEX IF NOT EXISTS "audit_logs_created_at_idx" ON "audit_logs"("created_at");
+
+CREATE TABLE IF NOT EXISTS "integrations" (
+    "id" SERIAL NOT NULL,
+    "provider" VARCHAR(50) NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
+    "is_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "credentials" JSONB,
+    "config" JSONB,
+    "last_sync_at" TIMESTAMP(3),
+    "last_error" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "integrations_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "integrations_provider_key" ON "integrations"("provider");
+
+CREATE TABLE IF NOT EXISTS "outgoing_webhooks" (
+    "id" SERIAL NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
+    "url" TEXT NOT NULL,
+    "secret" TEXT NOT NULL,
+    "events" TEXT[],
+    "is_enabled" BOOLEAN NOT NULL DEFAULT true,
+    "last_fire_at" TIMESTAMP(3),
+    "last_status" INTEGER,
+    "fail_count" INTEGER NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "outgoing_webhooks_pkey" PRIMARY KEY ("id")
 );
 
--- MESSAGES CONTACT (formulaire public du site)
-CREATE TABLE contact_messages (
-    id         SERIAL PRIMARY KEY,
-    name       VARCHAR(255) NOT NULL,
-    email      VARCHAR(255) NOT NULL,
-    company    VARCHAR(255),
-    service    VARCHAR(100),
-    message    TEXT NOT NULL,
-    is_read    BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS "incoming_webhook_logs" (
+    "id" SERIAL NOT NULL,
+    "provider" VARCHAR(50) NOT NULL,
+    "event_type" VARCHAR(100) NOT NULL,
+    "payload" JSONB NOT NULL,
+    "signature" TEXT,
+    "verified" BOOLEAN NOT NULL DEFAULT false,
+    "processed" BOOLEAN NOT NULL DEFAULT false,
+    "error" TEXT,
+    "received_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "incoming_webhook_logs_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "incoming_webhook_logs_provider_received_at_idx" ON "incoming_webhook_logs"("provider", "received_at");
+
+CREATE TABLE IF NOT EXISTS "notifications" (
+    "id" SERIAL NOT NULL,
+    "recipient_type" VARCHAR(20) NOT NULL,
+    "recipient_id" INTEGER NOT NULL,
+    "type" VARCHAR(20) NOT NULL,
+    "title" VARCHAR(255) NOT NULL,
+    "body" TEXT,
+    "link" TEXT,
+    "icon" VARCHAR(50),
+    "is_read" BOOLEAN NOT NULL DEFAULT false,
+    "read_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "notifications_recipient_type_recipient_id_is_read_idx" ON "notifications"("recipient_type", "recipient_id", "is_read");
+
+CREATE TABLE IF NOT EXISTS "email_templates" (
+    "id" SERIAL NOT NULL,
+    "key" VARCHAR(100) NOT NULL,
+    "locale" VARCHAR(10) NOT NULL DEFAULT 'fr',
+    "subject" VARCHAR(255) NOT NULL,
+    "body_html" TEXT NOT NULL,
+    "body_text" TEXT,
+    "variables" JSONB,
+    "is_enabled" BOOLEAN NOT NULL DEFAULT true,
+    "updated_by" INTEGER,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "email_templates_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "email_templates_key_locale_key" ON "email_templates"("key", "locale");
+
+CREATE TABLE IF NOT EXISTS "pdf_templates" (
+    "id" SERIAL NOT NULL,
+    "key" VARCHAR(100) NOT NULL,
+    "locale" VARCHAR(10) NOT NULL DEFAULT 'fr',
+    "content" JSONB NOT NULL,
+    "variables" JSONB,
+    "is_enabled" BOOLEAN NOT NULL DEFAULT true,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "pdf_templates_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "pdf_templates_key_locale_key" ON "pdf_templates"("key", "locale");
+
+CREATE TABLE IF NOT EXISTS "subscription_plans" (
+    "id" SERIAL NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "price_monthly" DECIMAL(10,2) NOT NULL,
+    "price_yearly" DECIMAL(10,2),
+    "currency" VARCHAR(10) NOT NULL DEFAULT 'CAD',
+    "features" JSONB,
+    "max_users" INTEGER,
+    "max_storage_mb" INTEGER,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "stripe_price_id" VARCHAR(255),
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "subscription_plans_pkey" PRIMARY KEY ("id")
 );
 
--- LOGS MANDATS
-CREATE TABLE mandate_logs (
-    id         SERIAL PRIMARY KEY,
-    mandate_id INTEGER REFERENCES mandates(id) ON DELETE CASCADE,
-    action     VARCHAR(100),
-    description TEXT,
-    created_by VARCHAR(50) DEFAULT 'admin',
-    created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS "subscriptions" (
+    "id" SERIAL NOT NULL,
+    "client_id" INTEGER NOT NULL,
+    "plan_id" INTEGER NOT NULL,
+    "status" VARCHAR(50) NOT NULL DEFAULT 'active',
+    "started_at" TIMESTAMP(3) NOT NULL,
+    "current_period_end" TIMESTAMP(3) NOT NULL,
+    "cancelled_at" TIMESTAMP(3),
+    "stripe_subscription_id" VARCHAR(255),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "subscriptions_client_id_idx" ON "subscriptions"("client_id");
+
+CREATE TABLE IF NOT EXISTS "service_catalog" (
+    "id" SERIAL NOT NULL,
+    "key" VARCHAR(100) NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "base_price" DECIMAL(10,2) NOT NULL,
+    "price_unit" VARCHAR(20) NOT NULL DEFAULT 'hour',
+    "currency" VARCHAR(10) NOT NULL DEFAULT 'CAD',
+    "category" VARCHAR(100),
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "service_catalog_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "service_catalog_key_key" ON "service_catalog"("key");
+
+CREATE TABLE IF NOT EXISTS "discount_codes" (
+    "id" SERIAL NOT NULL,
+    "code" VARCHAR(50) NOT NULL,
+    "description" TEXT,
+    "discount_type" VARCHAR(20) NOT NULL,
+    "value" DECIMAL(10,2) NOT NULL,
+    "max_uses" INTEGER,
+    "current_uses" INTEGER NOT NULL DEFAULT 0,
+    "valid_from" TIMESTAMP(3),
+    "valid_until" TIMESTAMP(3),
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "discount_codes_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "discount_codes_code_key" ON "discount_codes"("code");
+
+CREATE TABLE IF NOT EXISTS "blog_posts" (
+    "id" SERIAL NOT NULL,
+    "locale" VARCHAR(10) NOT NULL DEFAULT 'fr',
+    "slug" VARCHAR(255) NOT NULL,
+    "title" VARCHAR(255) NOT NULL,
+    "excerpt" TEXT,
+    "content_html" TEXT NOT NULL,
+    "cover_image_url" TEXT,
+    "author_id" INTEGER,
+    "tags" TEXT[],
+    "category" VARCHAR(100),
+    "status" VARCHAR(20) NOT NULL DEFAULT 'draft',
+    "published_at" TIMESTAMP(3),
+    "view_count" INTEGER NOT NULL DEFAULT 0,
+    "seo_title" VARCHAR(255),
+    "seo_description" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "blog_posts_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "blog_posts_slug_locale_key" ON "blog_posts"("slug", "locale");
+CREATE INDEX IF NOT EXISTS "blog_posts_status_published_at_idx" ON "blog_posts"("status", "published_at");
+
+CREATE TABLE IF NOT EXISTS "faq_items" (
+    "id" SERIAL NOT NULL,
+    "locale" VARCHAR(10) NOT NULL DEFAULT 'fr',
+    "question" TEXT NOT NULL,
+    "answer" TEXT NOT NULL,
+    "category" VARCHAR(100),
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "is_published" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "faq_items_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "faq_items_locale_is_published_idx" ON "faq_items"("locale", "is_published");
+
+CREATE TABLE IF NOT EXISTS "testimonials" (
+    "id" SERIAL NOT NULL,
+    "client_name" VARCHAR(255) NOT NULL,
+    "client_company" VARCHAR(255),
+    "client_title" VARCHAR(255),
+    "content" TEXT NOT NULL,
+    "rating" INTEGER NOT NULL DEFAULT 5,
+    "avatar_url" TEXT,
+    "is_featured" BOOLEAN NOT NULL DEFAULT false,
+    "is_approved" BOOLEAN NOT NULL DEFAULT false,
+    "locale" VARCHAR(10) NOT NULL DEFAULT 'fr',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "testimonials_pkey" PRIMARY KEY ("id")
 );
 
--- ÉVÉNEMENTS WORKFLOW
-CREATE TABLE workflow_events (
-    id           SERIAL PRIMARY KEY,
-    client_id    INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    mandate_id   INTEGER REFERENCES mandates(id),
-    quote_id     INTEGER REFERENCES quotes(id),
-    contract_id  INTEGER REFERENCES contracts(id),
-    invoice_id   INTEGER REFERENCES invoices(id),
-    event_type   VARCHAR(100) NOT NULL,
-    event_label  VARCHAR(255),
-    triggered_by VARCHAR(50)  DEFAULT 'admin',
-    ws_broadcast BOOLEAN      DEFAULT false,
-    metadata     JSONB        DEFAULT NULL,
-    created_at   TIMESTAMP    DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS "maintenance_windows" (
+    "id" SERIAL NOT NULL,
+    "title" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "starts_at" TIMESTAMP(3) NOT NULL,
+    "ends_at" TIMESTAMP(3) NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT false,
+    "affects_portal" BOOLEAN NOT NULL DEFAULT true,
+    "affects_admin" BOOLEAN NOT NULL DEFAULT false,
+    "affects_public" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "maintenance_windows_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "maintenance_windows_starts_at_ends_at_idx" ON "maintenance_windows"("starts_at", "ends_at");
+
+CREATE TABLE IF NOT EXISTS "incident_reports" (
+    "id" SERIAL NOT NULL,
+    "title" VARCHAR(255) NOT NULL,
+    "description" TEXT NOT NULL,
+    "severity" VARCHAR(20) NOT NULL DEFAULT 'minor',
+    "status" VARCHAR(50) NOT NULL DEFAULT 'investigating',
+    "started_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "resolved_at" TIMESTAMP(3),
+    "is_public" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "incident_reports_pkey" PRIMARY KEY ("id")
 );
 
--- CONNEXIONS WEBSOCKET (monitoring)
-CREATE TABLE ws_connections (
-    id              SERIAL PRIMARY KEY,
-    client_id       INTEGER REFERENCES clients(id) ON DELETE CASCADE,
-    role            VARCHAR(20) NOT NULL,
-    connected_at    TIMESTAMP    DEFAULT NOW(),
-    disconnected_at TIMESTAMP,
-    is_active       BOOLEAN      DEFAULT true,
-    ip_address      VARCHAR(64),
-    user_agent      TEXT
-);
+-- ═══════════════════════════════════════════════════════════
+-- FOREIGN KEYS (DO block pour idempotence)
+-- Seulement pour les NOUVELLES tables créées ici.
+-- Les FKs des tables existantes (mandates, quotes, contracts, invoices,
+-- payments, refunds, disputes, documents, messages, etc.) existent déjà
+-- via le schema.sql de l'Express et ne sont PAS recréées.
+-- ═══════════════════════════════════════════════════════════
 
--- ANALYTICS — Trafic site et présence portail
-CREATE TABLE page_views (
-    id          SERIAL PRIMARY KEY,
-    session_id  VARCHAR(64),
-    client_id   INTEGER REFERENCES clients(id) ON DELETE SET NULL,
-    page        VARCHAR(255)    NOT NULL,
-    referrer    VARCHAR(512),
-    user_agent  VARCHAR(512),
-    ip_hash     VARCHAR(64),
-    duration_ms INTEGER,
-    created_at  TIMESTAMP       DEFAULT NOW()
-);
-
--- ============================================================
--- ÉTAPE 3: Index pour les performances
--- ============================================================
-CREATE INDEX idx_clients_email            ON clients(email);
-CREATE INDEX idx_mandates_client          ON mandates(client_id);
-CREATE INDEX idx_mandates_status          ON mandates(status);
-CREATE INDEX idx_quotes_client            ON quotes(client_id);
-CREATE INDEX idx_quotes_status            ON quotes(status);
-CREATE INDEX idx_invoices_client          ON invoices(client_id);
-CREATE INDEX idx_invoices_status          ON invoices(status);
-CREATE INDEX idx_invoices_due_date        ON invoices(due_date);
-CREATE INDEX idx_invoices_quote           ON invoices(quote_id);
-CREATE INDEX idx_invoices_contract        ON invoices(contract_id);
-CREATE INDEX idx_contracts_client         ON contracts(client_id);
-CREATE INDEX idx_contracts_status         ON contracts(status);
-CREATE INDEX idx_contracts_quote          ON contracts(quote_id);
-CREATE INDEX idx_messages_client          ON messages(client_id);
-CREATE INDEX idx_messages_unread          ON messages(client_id, is_read);
-CREATE INDEX idx_messages_request_status  ON messages(request_status) WHERE request_status IS NOT NULL;
-CREATE INDEX idx_documents_client         ON documents(client_id);
-CREATE INDEX idx_documents_unread         ON documents(client_id, is_read) WHERE is_read = false;
-CREATE INDEX idx_payments_invoice         ON payments(invoice_id);
-CREATE INDEX idx_payments_client          ON payments(client_id);
-CREATE INDEX idx_expenses_date            ON expenses(expense_date);
-CREATE INDEX idx_workflow_client          ON workflow_events(client_id);
-CREATE INDEX idx_workflow_type            ON workflow_events(event_type);
-CREATE INDEX idx_workflow_ws              ON workflow_events(ws_broadcast) WHERE ws_broadcast = true;
-CREATE INDEX idx_ws_active                ON ws_connections(is_active) WHERE is_active = true;
-CREATE INDEX idx_ws_client                ON ws_connections(client_id);
-CREATE INDEX idx_ws_connected             ON ws_connections(connected_at DESC);
-CREATE INDEX idx_pv_created               ON page_views(created_at);
-CREATE INDEX idx_pv_session               ON page_views(session_id);
-CREATE INDEX idx_pv_client                ON page_views(client_id);
-CREATE INDEX idx_pv_page                  ON page_views(page);
-
--- ============================================================
--- ÉTAPE 4: Compte admin VNK
--- (mot de passe: AdminVNK2026! — à changer après déploiement)
--- ============================================================
-INSERT INTO admins (email, password_hash, full_name)
-VALUES (
-    'vnkautomatisation@gmail.com',
-    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TqrqMGwsyMkBUFJsqVVvSxzBPvYK',
-    'Yan Verone Kengne'
-);
-
--- ============================================================
--- ÉTAPE 5: Données de test
--- (commenter ce bloc si non voulu)
--- ============================================================
-
--- Client test
-INSERT INTO clients (full_name, email, password_hash, company_name, phone, address, city, province, postal_code, sector, technologies, is_active)
-VALUES (
-    'Jean Tremblay',
-    'jean@industries-xyz.com',
-    '$2b$12$/WJ4oJadK.ae0ese2ilc6eU06XMgY8nuQwXv1NlJeV.85kZNKx/Py',
-    'Industries XYZ Inc.',
-    '418-000-0000',
-    '123 rue Industrielle',
-    'Lévis', 'QC', 'G6V 3P8',
-    'Fabrication industrielle',
-    'Siemens S7-1500,Allen-Bradley',
-    true
-);
-
--- Mandat test
-INSERT INTO mandates (client_id, title, description, service_type, status, progress, start_date, notes)
-VALUES (
-    (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com'),
-    'Support PLC Siemens S7-1500 — Ligne 3',
-    'Diagnostic et correction programme défaillant sur ligne de production',
-    'plc-support', 'active', 65, '2026-03-01',
-    'Intervention en cours — 65% complété'
-);
-
--- Devis test
-INSERT INTO quotes (client_id, quote_number, title, description, amount_ht, tps_amount, tvq_amount, amount_ttc, status, expiry_date, accepted_at)
-VALUES (
-    (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com'),
-    'D-2026-001',
-    'Support PLC Siemens S7-1500 - Diagnostic',
-    'Support technique diagnostic et correction PLC',
-    3500.00, 175.00, 349.13, 4024.13,
-    'accepted', '2026-04-30', NOW()
-);
-
--- Contrat test
-INSERT INTO contracts (client_id, mandate_id, quote_id, contract_number, title, content, status, amount_ttc, signed_at, admin_signed_at)
-VALUES (
-    (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com'),
-    (SELECT id FROM mandates WHERE client_id = (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com') LIMIT 1),
-    (SELECT id FROM quotes WHERE quote_number = 'D-2026-001'),
-    'CT-2026-001',
-    'Contrat de service — Support PLC Siemens S7-1500 - Diagnostic',
-    'Services d''automatisation industrielle conformément au devis D-2026-001.',
-    'signed', 4024.13, NOW(), NOW()
-);
-
--- Facture test
-INSERT INTO invoices (client_id, mandate_id, quote_id, contract_id, invoice_number, title, description, amount_ht, tps_amount, tvq_amount, amount_ttc, status, due_date)
-VALUES (
-    (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com'),
-    (SELECT id FROM mandates WHERE client_id = (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com') LIMIT 1),
-    (SELECT id FROM quotes WHERE quote_number = 'D-2026-001'),
-    (SELECT id FROM contracts WHERE contract_number = 'CT-2026-001'),
-    'F-2026-001',
-    'Support PLC - Acompte 50%',
-    'Conformément au contrat CT-2026-001 et au devis D-2026-001',
-    1750.00, 87.50, 174.56, 2012.06,
-    'unpaid', '2026-04-15'
-);
-
--- Document test (non lu → badge portail)
-INSERT INTO documents (client_id, title, description, file_type, file_name, category, status, is_read)
-VALUES (
-    (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com'),
-    'Rapport diagnostic PLC Ligne 3',
-    'Rapport complet du diagnostic effectué sur la ligne 3',
-    'pdf', 'rapport-diagnostic-ligne3.pdf',
-    'Rapports', 'disponible', false
-);
-
--- Messages test
-INSERT INTO messages (client_id, sender, content, is_read)
-VALUES (
-    (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com'),
-    'client',
-    'Bonjour, avez-vous une mise à jour sur l''avancement du diagnostic ?',
-    false
-);
-
-INSERT INTO messages (client_id, sender, content, is_read)
-VALUES (
-    (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com'),
-    'vnk',
-    'Bonjour Jean,' || chr(10) || chr(10) || 'Votre mandat « Support PLC Siemens S7-1500 — Ligne 3 » est maintenant actif à 65%.' || chr(10) || chr(10) || 'Équipe VNK Automatisation Inc.',
-    false
-);
-
--- Dépense test
-INSERT INTO expenses (title, category, amount, tps_paid, tvq_paid, vendor, expense_date)
-VALUES ('Abonnement TIA Portal', 'logiciel', 299.99, 15.00, 29.92, 'Siemens Canada', '2026-03-01');
-
--- Événements workflow test
-INSERT INTO workflow_events (client_id, mandate_id, event_type, event_label, triggered_by, metadata)
-VALUES (
-    (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com'),
-    (SELECT id FROM mandates WHERE client_id = (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com') LIMIT 1),
-    'mandate_created', 'Mandat ouvert — Support PLC Siemens S7-1500 — Ligne 3', 'admin',
-    '{"service_type": "plc-support"}'
-);
-
-INSERT INTO workflow_events (client_id, quote_id, event_type, event_label, triggered_by, metadata)
-VALUES (
-    (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com'),
-    (SELECT id FROM quotes WHERE quote_number = 'D-2026-001'),
-    'quote_sent', 'Devis D-2026-001 envoyé — 4 024,13 $ TTC', 'admin',
-    '{"amount_ttc": 4024.13, "quote_number": "D-2026-001"}'
-);
-
-INSERT INTO workflow_events (client_id, quote_id, contract_id, event_type, event_label, triggered_by, metadata)
-VALUES (
-    (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com'),
-    (SELECT id FROM quotes WHERE quote_number = 'D-2026-001'),
-    (SELECT id FROM contracts WHERE contract_number = 'CT-2026-001'),
-    'quote_accepted', 'Devis D-2026-001 accepté — Contrat CT-2026-001 généré', 'client',
-    '{"contract_number": "CT-2026-001"}'
-);
-
-INSERT INTO workflow_events (client_id, contract_id, event_type, event_label, triggered_by, metadata)
-VALUES (
-    (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com'),
-    (SELECT id FROM contracts WHERE contract_number = 'CT-2026-001'),
-    'contract_signed_both', 'Contrat CT-2026-001 signé par les deux parties', 'system',
-    '{"contract_number": "CT-2026-001"}'
-);
-
-INSERT INTO workflow_events (client_id, contract_id, invoice_id, event_type, event_label, triggered_by, metadata)
-VALUES (
-    (SELECT id FROM clients WHERE email = 'jean@industries-xyz.com'),
-    (SELECT id FROM contracts WHERE contract_number = 'CT-2026-001'),
-    (SELECT id FROM invoices WHERE invoice_number = 'F-2026-001'),
-    'invoice_generated', 'Facture F-2026-001 générée automatiquement — 2 012,06 $ TTC', 'system',
-    '{"invoice_number": "F-2026-001", "amount_ttc": 2012.06}'
-);
-
--- ============================================================
--- VÉRIFICATION FINALE
--- ============================================================
-SELECT table_name,
-       (SELECT COUNT(*) FROM information_schema.columns c
-        WHERE c.table_name = t.table_name AND c.table_schema = 'public') AS colonnes
-FROM information_schema.tables t
-WHERE table_schema = 'public'
-ORDER BY table_name;
-
--- Résultat attendu : 18 tables
--- admins, clients, contact_messages, contracts, disputes, documents,
--- expenses, invoices, mandate_logs, mandates, messages,
--- page_views, payments, quotes, refunds, tax_declarations,
--- workflow_events, ws_connections
-
--- ============================================================
--- MIGRATION v4.0 → v5.0 (SANS réinitialiser la base)
--- À exécuter sur une base existante (Railway actif)
--- NE PAS exécuter si vous faites un DROP + CREATE complet
--- ============================================================
-
--- 1. Colonne request_status dans messages (NOUVEAU v5.0)
-ALTER TABLE messages ADD COLUMN IF NOT EXISTS request_status VARCHAR(20) DEFAULT NULL;
-CREATE INDEX IF NOT EXISTS idx_messages_request_status ON messages(request_status) WHERE request_status IS NOT NULL;
-
--- Initialiser les demandes de projet existantes à 'new'
-UPDATE messages
-SET request_status = 'new'
-WHERE content LIKE '%NOUVELLE DEMANDE DE PROJET%'
-  AND request_status IS NULL;
-
--- 2. Table page_views si manquante (ajoutée en cours de dev)
-CREATE TABLE IF NOT EXISTS page_views (
-    id          SERIAL PRIMARY KEY,
-    session_id  VARCHAR(64),
-    client_id   INTEGER REFERENCES clients(id) ON DELETE SET NULL,
-    page        VARCHAR(255) NOT NULL,
-    referrer    VARCHAR(512),
-    user_agent  VARCHAR(512),
-    ip_hash     VARCHAR(64),
-    duration_ms INTEGER,
-    created_at  TIMESTAMP DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_pv_created ON page_views(created_at);
-CREATE INDEX IF NOT EXISTS idx_pv_session ON page_views(session_id);
-CREATE INDEX IF NOT EXISTS idx_pv_client  ON page_views(client_id);
-CREATE INDEX IF NOT EXISTS idx_pv_page    ON page_views(page);
-
--- 3. Autres colonnes v4.x déjà appliquées (idempotentes)
-ALTER TABLE messages  ADD COLUMN IF NOT EXISTS channel          VARCHAR(30)  DEFAULT 'chat';
-ALTER TABLE invoices  ADD COLUMN IF NOT EXISTS payment_method   VARCHAR(50);
-ALTER TABLE invoices  ADD COLUMN IF NOT EXISTS invoice_phase    VARCHAR(20);
-ALTER TABLE invoices  ADD COLUMN IF NOT EXISTS phase_number     INT          DEFAULT 1;
-ALTER TABLE invoices  ADD COLUMN IF NOT EXISTS contract_id      INTEGER REFERENCES contracts(id);
-ALTER TABLE quotes    ADD COLUMN IF NOT EXISTS payment_plan     VARCHAR(30)  DEFAULT 'split_50_50';
-ALTER TABLE quotes    ADD COLUMN IF NOT EXISTS payment_pct1     INT          DEFAULT 50;
-ALTER TABLE quotes    ADD COLUMN IF NOT EXISTS payment_pct2     INT          DEFAULT 50;
-ALTER TABLE quotes    ADD COLUMN IF NOT EXISTS payment_conditions TEXT;
-ALTER TABLE quotes    ADD COLUMN IF NOT EXISTS client_signature_data TEXT;
-ALTER TABLE quotes    ADD COLUMN IF NOT EXISTS signed_at        TIMESTAMP;
-ALTER TABLE documents ADD COLUMN IF NOT EXISTS category         VARCHAR(100);
-ALTER TABLE documents ADD COLUMN IF NOT EXISTS status           VARCHAR(50)  DEFAULT 'Disponible';
-ALTER TABLE documents ADD COLUMN IF NOT EXISTS is_read          BOOLEAN      DEFAULT FALSE;
-ALTER TABLE contracts ADD COLUMN IF NOT EXISTS amount_ttc       DECIMAL(10,2) DEFAULT 0;
-ALTER TABLE contracts ADD COLUMN IF NOT EXISTS quote_id         INTEGER REFERENCES quotes(id);
-ALTER TABLE payments  ADD COLUMN IF NOT EXISTS payment_method   VARCHAR(100);
-CREATE INDEX IF NOT EXISTS idx_invoices_contract ON invoices(contract_id);
-CREATE INDEX IF NOT EXISTS idx_documents_unread  ON documents(client_id, is_read) WHERE is_read = false;
-
--- 4. Vérification
-SELECT column_name, data_type, column_default
-FROM information_schema.columns
-WHERE table_schema = 'public' AND table_name = 'messages'
-ORDER BY ordinal_position;
+DO $$ BEGIN ALTER TABLE "admin_sessions" ADD CONSTRAINT "admin_sessions_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "admins"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "client_team_members" ADD CONSTRAINT "client_team_members_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "time_entries" ADD CONSTRAINT "time_entries_mandate_id_fkey" FOREIGN KEY ("mandate_id") REFERENCES "mandates"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "time_entries" ADD CONSTRAINT "time_entries_invoice_id_fkey" FOREIGN KEY ("invoice_id") REFERENCES "invoices"("id") ON DELETE SET NULL ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "project_requests" ADD CONSTRAINT "project_requests_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "admins"("id") ON DELETE SET NULL ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_plan_id_fkey" FOREIGN KEY ("plan_id") REFERENCES "subscription_plans"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN null; END $$;
