@@ -1,0 +1,565 @@
+{
+  "meta": {
+    "site_name": "VNK Automatisation Inc.",
+    "tagline": "Value. Network. Knowledge."
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "An error occurred",
+    "save": "Save",
+    "saved": "Saved",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "refresh": "Refresh",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "yes": "Yes",
+    "no": "No",
+    "add": "Add",
+    "remove": "Remove",
+    "view": "View",
+    "download": "Download",
+    "upload": "Upload",
+    "export": "Export",
+    "import": "Import",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "send": "Send",
+    "sending": "Sending…",
+    "send_test": "Send test",
+    "required": "Required",
+    "optional": "Optional",
+    "all": "All",
+    "none": "None",
+    "active": "Active",
+    "inactive": "Inactive",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "from": "From",
+    "to": "To",
+    "date": "Date",
+    "amount": "Amount",
+    "status": "Status",
+    "actions": "Actions",
+    "back_to_top": "Back to top",
+    "per_page": "per page",
+    "page_of": "Page {current} of {total}",
+    "results_count": "{count, plural, =0 {No results} =1 {1 result} other {# results}}",
+    "no_results": "No results",
+    "no_data": "No data",
+    "try_again": "Try again"
+  },
+  "nav": {
+    "home": "Home",
+    "services": "Services",
+    "about": "About",
+    "contact": "Contact",
+    "portal": "Client portal",
+    "admin": "Admin",
+    "login": "Sign in",
+    "logout": "Sign out",
+    "signup": "Sign up",
+    "menu": "Menu",
+    "language": "Language",
+    "lang_fr": "Français",
+    "lang_en": "English"
+  },
+  "home": {
+    "hero": {
+      "kicker": "Industrial automation services",
+      "title": "PLC, SCADA & HMI solutions for industry",
+      "subtitle": "Remote technical support, audits, documentation and modernization of automated systems for industrial companies in Quebec.",
+      "cta_primary": "Book a consultation",
+      "cta_secondary": "See services"
+    },
+    "stats": {
+      "services_count": "Specialized services",
+      "brands_count": "Automation brands",
+      "market": "Industrial market",
+      "response_time": "Max response time",
+      "documented": "Documented intervention"
+    },
+    "services_section": {
+      "kicker": "Our services",
+      "title": "Our services",
+      "subtitle": "Technical solutions tailored to your industrial needs",
+      "view_all": "See all services and pricing",
+      "learn_more": "Learn more"
+    },
+    "why_vnk": {
+      "kicker": "Why VNK?",
+      "title": "Why VNK?",
+      "description": "VNK Automatisation Inc. is an industrial services company specialized exclusively in automation — PLC, SCADA, HMI. No generalists, no compromise on technical quality."
+    },
+    "testimonials": {
+      "title": "What our clients say"
+    },
+    "cta": {
+      "title": "Ready to modernize your automation?",
+      "subtitle": "Contact us for a free consultation",
+      "button": "Contact us"
+    }
+  },
+  "services": {
+    "page_title": "Services",
+    "hero_title": "Technical solutions for your industry",
+    "support_plc": {
+      "title": "Remote PLC support",
+      "description": "Fast diagnosis and resolution of automation failures — without waiting for an on-site visit.",
+      "price": "120-150 CAD/h"
+    },
+    "audit": {
+      "title": "Technical audit",
+      "description": "Complete evaluation of your system — risks, performance and concrete action plan.",
+      "price": "1,500-4,000 CAD"
+    },
+    "documentation": {
+      "title": "Industrial documentation",
+      "description": "Operator, maintenance and troubleshooting procedures — written for your team.",
+      "price": "800-5,000 CAD"
+    },
+    "refactoring": {
+      "title": "PLC refactoring",
+      "description": "Modernization of legacy code — improved reliability, eliminated technical debt.",
+      "price": "3,000-50,000 CAD"
+    }
+  },
+  "about": {
+    "page_title": "About",
+    "hero_title": "VNK Automatisation Inc.",
+    "subtitle": "Industrial automation specialist since 2026",
+    "founder_label": "Yan Verone Kengne",
+    "founder_title": "Founder & technical expert",
+    "expertise_title": "Expertise",
+    "commitment_title": "Our commitments"
+  },
+  "contact": {
+    "page_title": "Contact",
+    "hero_title": "Contact us",
+    "hero_subtitle": "Book a free consultation",
+    "form": {
+      "name": "Full name",
+      "company": "Company",
+      "email": "Email",
+      "phone": "Phone",
+      "service": "Requested service",
+      "plc_brand": "PLC brand",
+      "message": "Message",
+      "submit": "Send request",
+      "sending": "Sending…",
+      "success": "Message sent! We'll respond shortly.",
+      "error": "Error sending. Please try again."
+    },
+    "info": {
+      "email_label": "Email",
+      "phone_label": "Phone",
+      "location_label": "Service area",
+      "response_time_label": "Response time"
+    }
+  },
+  "auth": {
+    "admin_login_title": "Administrator dashboard",
+    "portal_login_title": "Client portal",
+    "portal_login_subtitle": "Access your mandates, quotes and invoices",
+    "email": "Email",
+    "password": "Password",
+    "remember_me": "Remember me",
+    "forgot_password": "Forgot password?",
+    "sign_in": "Sign in",
+    "sign_in_admin": "Access dashboard",
+    "sign_in_with_google": "Continue with Google",
+    "sign_in_with_microsoft": "Continue with Microsoft",
+    "no_account": "No account yet?",
+    "create_account": "Contact us to start a mandate",
+    "or_connect": "or client sign-in",
+    "or_admin_connect": "or admin sign-in",
+    "access_restricted": "Restricted access · VNK Automatisation Inc.",
+    "session_expired": "Session expired. Please sign in again."
+  },
+  "admin": {
+    "sidebar": {
+      "accueil": "Home",
+      "dashboard": "Dashboard",
+      "workflow": "Pipeline workflow",
+      "clients_group": "Clients",
+      "clients": "Clients",
+      "operations_group": "Operations",
+      "mandates": "Mandates",
+      "requests": "Requests",
+      "calendar": "Calendar",
+      "quotes": "Quotes",
+      "invoices": "Invoices",
+      "communication_group": "Communication",
+      "messages": "Messages",
+      "documents": "Documents",
+      "legal_group": "Legal",
+      "contracts": "Contracts",
+      "disputes": "Disputes",
+      "finance_group": "Finance",
+      "transactions": "Transactions",
+      "refunds": "Refunds",
+      "finance_summary": "Financial summary",
+      "expenses": "Expenses",
+      "tax_declarations": "Tax declarations",
+      "system_group": "System",
+      "profile": "My profile",
+      "settings": "Settings"
+    },
+    "topbar": {
+      "site": "Site",
+      "refresh": "Refresh",
+      "notifications": "Notifications",
+      "overdue_invoices": "{count, plural, =0 {No overdue invoices} =1 {1 overdue invoice} other {# overdue invoices}}"
+    },
+    "dashboard": {
+      "greeting_morning": "Good morning",
+      "greeting_afternoon": "Good afternoon",
+      "greeting_evening": "Good evening",
+      "active_clients": "Active clients",
+      "active_mandates": "Active mandates",
+      "receivable": "Receivable",
+      "overdue": "{count} overdue",
+      "month_revenue": "Monthly revenue",
+      "revenue_6_months": "Revenue — last 6 months",
+      "paid_invoices": "Paid invoices",
+      "site_traffic": "Site traffic",
+      "portal_presence": "Portal presence",
+      "online": "Online",
+      "offline": "Offline",
+      "anonymous_visitor": "Anonymous visitor",
+      "public_site": "Public site",
+      "recent_activity": "Recent activity",
+      "events_count": "{count} events"
+    },
+    "clients": {
+      "page_title": "Clients",
+      "page_subtitle": "Manage your clients and their information",
+      "new_client": "New client",
+      "search_placeholder": "Name, company, email, city…",
+      "filter_all": "All",
+      "filter_active": "Active",
+      "filter_inactive": "Inactive",
+      "filter_archived": "Archived",
+      "health_all": "Health: All",
+      "sector_all": "Sector: All",
+      "sort_name_asc": "Name A → Z",
+      "sort_name_desc": "Name Z → A",
+      "sort_recent": "Most recent",
+      "sort_login": "Last login",
+      "sort_revenue": "Total revenue",
+      "health": {
+        "good": "Good",
+        "warning": "Warning",
+        "critical": "Critical"
+      },
+      "columns": {
+        "client": "Client",
+        "company": "Company",
+        "sector": "Sector",
+        "city": "City",
+        "status": "Status",
+        "health": "Health",
+        "mandates": "Mandates",
+        "total_revenue": "Total revenue",
+        "last_login": "Last login"
+      },
+      "kpi": {
+        "active": "Active clients",
+        "inactive": "Inactive",
+        "total_revenue": "Total revenue",
+        "critical_alerts": "Critical alerts"
+      },
+      "view_cards": "Card view",
+      "view_table": "Table view",
+      "never_connected": "Never connected",
+      "archive": "Archive",
+      "unarchive": "Unarchive",
+      "delete_permanent": "Delete permanently"
+    },
+    "mandates": {
+      "page_title": "Mandates",
+      "page_subtitle": "Create, track and update progress",
+      "new": "New mandate",
+      "status": {
+        "pending": "Pending",
+        "active": "Active",
+        "in_progress": "In progress",
+        "paused": "Paused",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "kpi": {
+        "in_progress": "In progress",
+        "completed": "Completed",
+        "overdue": "Overdue",
+        "avg_progress": "Avg. progress"
+      }
+    },
+    "quotes": {
+      "page_title": "Quotes",
+      "page_subtitle": "GST and QST calculated automatically",
+      "new": "New quote",
+      "search_placeholder": "Search a quote…",
+      "status": {
+        "pending": "Pending",
+        "accepted": "Accepted",
+        "declined": "Declined",
+        "expired": "Expired"
+      },
+      "columns": {
+        "number": "Number",
+        "client": "Client",
+        "title": "Title",
+        "ht": "Before tax",
+        "ttc": "With tax",
+        "status": "Status",
+        "expiry": "Expiry"
+      }
+    },
+    "invoices": {
+      "page_title": "Invoices",
+      "page_subtitle": "Create invoices and confirm payments",
+      "new": "New invoice",
+      "search_placeholder": "Search an invoice…",
+      "status": {
+        "draft": "Draft",
+        "unpaid": "Unpaid",
+        "paid": "Paid",
+        "overdue": "Overdue",
+        "cancelled": "Cancelled",
+        "refunded": "Refunded"
+      },
+      "mark_paid": "Mark as paid",
+      "send_reminder": "Send reminder"
+    },
+    "contracts": {
+      "page_title": "Contracts",
+      "page_subtitle": "Manage client contracts and their signatures",
+      "new": "New contract",
+      "client_signature": "Client signature",
+      "admin_signature": "Admin signature",
+      "sign_now": "Sign now",
+      "signed": "Signed",
+      "pending_signature": "Pending"
+    },
+    "disputes": {
+      "page_title": "Stripe disputes",
+      "page_subtitle": "Bank disputes initiated by clients via their bank",
+      "priority": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "critical": "Critical"
+      },
+      "status": {
+        "open": "Open",
+        "in_progress": "In progress",
+        "resolved": "Resolved",
+        "escalated": "Escalated"
+      }
+    },
+    "refunds": {
+      "page_title": "Refunds",
+      "page_subtitle": "Stripe refunds initiated from the client profile",
+      "status": {
+        "pending": "Pending",
+        "processed": "Processed",
+        "failed": "Failed"
+      }
+    },
+    "transactions": {
+      "page_title": "Transactions",
+      "page_subtitle": "Complete Stripe payment history",
+      "total_received": "Total received (Stripe)",
+      "total_refunded": "Total refunded",
+      "transactions_count": "Transactions",
+      "status": {
+        "completed": "Completed",
+        "pending": "Pending",
+        "failed": "Failed"
+      }
+    },
+    "expenses": {
+      "page_title": "Business expenses",
+      "page_subtitle": "Track your expenses for tax declarations",
+      "new": "New expense",
+      "total": "Total expenses",
+      "tps_reclaimable": "GST paid (reclaimable)",
+      "tvq_reclaimable": "QST paid (reclaimable)"
+    },
+    "tax_decl": {
+      "page_title": "Tax declarations",
+      "page_subtitle": "Quarterly GST/QST and annual tax return",
+      "new": "New declaration",
+      "annual_summary": "Annual summary",
+      "gross_revenue": "Gross revenue (before tax)",
+      "tps_collected": "GST collected",
+      "tvq_collected": "QST collected",
+      "total_taxes": "Total taxes to remit",
+      "quarterly_summary": "Automatic quarterly summary"
+    }
+  },
+  "settings": {
+    "page_title": "Settings",
+    "page_subtitle": "Configure your site without touching the code",
+    "save_all": "Save changes",
+    "saved_success": "Settings saved",
+    "saved_error": "Error while saving",
+    "unsaved_changes": "Unsaved changes",
+    "discard": "Discard changes",
+    "reset_category": "Reset this section",
+    "reset_all": "Reset all",
+    "reset_confirm": "Are you sure? This action cannot be undone.",
+    "test_connection": "Test connection",
+    "connection_ok": "Connection successful",
+    "connection_error": "Connection failed",
+    "copy_value": "Copy value",
+    "last_updated_by": "Last updated by",
+    "last_updated_at": "on",
+    "categories": {
+      "general": "General",
+      "general_desc": "Company basics, language, timezone",
+      "company": "Company",
+      "company_desc": "Tax numbers, legal address, contact info",
+      "portal": "Client portal",
+      "portal_desc": "Tabs, categories, displayed statuses",
+      "billing": "Billing",
+      "billing_desc": "Payment plans, numbering, auto reminders",
+      "signature": "Signature",
+      "signature_desc": "Provider, signing order, legal text",
+      "emails": "Emails",
+      "emails_desc": "SMTP, templates, signatures",
+      "integrations": "Integrations",
+      "integrations_desc": "Stripe, Dropbox Sign, Calendly, Google, Microsoft",
+      "system": "System",
+      "system_desc": "Logs, backups, technical limits",
+      "users": "Users",
+      "users_desc": "Roles, 2FA, password policies",
+      "appearance": "Appearance",
+      "appearance_desc": "Colors, fonts, logos, custom CSS",
+      "seo": "SEO",
+      "seo_desc": "Meta tags, JSON-LD, Open Graph, sitemap",
+      "notifications": "Notifications",
+      "notifications_desc": "Channels, triggers, quiet hours",
+      "legal": "Legal & GDPR",
+      "legal_desc": "Privacy policy, cookies, retention",
+      "blog": "Blog & CMS",
+      "blog_desc": "Blog, FAQ, testimonials, categories",
+      "analytics": "Analytics",
+      "analytics_desc": "Tracking, dashboards, KPI periods"
+    }
+  },
+  "portal": {
+    "sidebar": {
+      "dashboard": "Dashboard",
+      "profile": "My profile",
+      "mandates": "My mandates",
+      "my_requests": "My requests",
+      "quotes": "My quotes",
+      "invoices": "My invoices",
+      "contracts": "My contracts",
+      "documents": "My documents",
+      "booking": "Book a call",
+      "appointments": "My appointments",
+      "notifications": "Notifications",
+      "contact_us": "Contact us",
+      "logout": "Sign out"
+    },
+    "dashboard": {
+      "greeting": "Hi, {name}",
+      "active_mandates": "Active mandates",
+      "pending_quotes": "Pending quotes",
+      "pending_invoices": "Invoices to pay",
+      "unread_documents": "Unread documents",
+      "recent_activity": "Recent activity"
+    },
+    "mandates": {
+      "page_title": "My mandates",
+      "page_subtitle": "Track your ongoing projects",
+      "empty": "No active mandate",
+      "empty_subtitle": "Your projects will appear here",
+      "new_project": "Start a project",
+      "view_details": "View details",
+      "progress": "Progress"
+    },
+    "quotes": {
+      "page_title": "My quotes",
+      "accept": "Accept",
+      "decline": "Decline",
+      "sign_to_accept": "Sign to accept"
+    },
+    "invoices": {
+      "page_title": "My invoices",
+      "pay_now": "Pay now",
+      "view_pdf": "View PDF",
+      "download_pdf": "Download PDF"
+    },
+    "contracts": {
+      "page_title": "My contracts",
+      "sign": "Sign",
+      "view": "View",
+      "download": "Download"
+    },
+    "documents": {
+      "page_title": "My documents",
+      "page_subtitle": "Reports, deliverables and documentation deposited by VNK",
+      "empty": "No documents available yet.",
+      "empty_subtitle": "Reports and deliverables will appear here once your mandate starts.",
+      "all_categories": "All categories",
+      "all_read_status": "All",
+      "unread": "Unread",
+      "read": "Read",
+      "mark_read": "Mark as read"
+    },
+    "booking": {
+      "page_title": "Book a call",
+      "page_subtitle": "Choose an available slot",
+      "select_date": "Select a date",
+      "select_time": "Select a time",
+      "meeting_type": "Meeting type",
+      "video": "Video",
+      "phone": "Phone",
+      "onsite": "On site",
+      "confirm": "Confirm booking"
+    },
+    "appointments": {
+      "page_title": "My appointments",
+      "upcoming": "Upcoming",
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "past": "Past",
+      "reschedule": "Reschedule",
+      "cancel_appt": "Cancel appointment",
+      "join_meeting": "Join meeting"
+    },
+    "my_requests": {
+      "page_title": "My requests",
+      "page_subtitle": "Track your project requests",
+      "new_request": "New request",
+      "status": {
+        "new": "New",
+        "in_progress": "In progress",
+        "converted": "Converted",
+        "closed": "Closed"
+      }
+    }
+  },
+  "errors": {
+    "not_found": "Page not found",
+    "server_error": "Server error",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "validation": "Invalid data",
+    "network": "Network error",
+    "generic": "An unexpected error occurred"
+  }
+}

@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════
+ * VNK DESIGN TOKENS
+ * Palette navy bleu profond — identique à main.css existant
+ * ═══════════════════════════════════════════════════════════════ */
+
+@layer base {
+  :root {
+    /* ── shadcn HSL variables ── */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* VNK Navy as primary */
+    --primary: 213 69% 19%;              /* #0F2D52 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 213 18% 30%;            /* #404c5a */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 213 27% 95%;                /* #EBF5FB */
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 213 27% 95%;
+    --accent-foreground: 213 69% 19%;
+
+    --destructive: 0 72% 51%;            /* #DC2626 */
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 160 84% 30%;              /* #059669 */
+    --success-foreground: 0 0% 100%;
+
+    --warning: 32 95% 44%;               /* #D97706 */
+    --warning-foreground: 0 0% 100%;
+
+    --border: 213 19% 89%;               /* #E2EBF5 */
+    --input: 213 19% 89%;
+    --ring: 213 69% 30%;
+
+    --radius: 0.625rem;
+
+    /* VNK spacing */
+    --sidebar-w: 240px;
+    --sidebar-w-tablet: 72px;
+    --topbar-h: 60px;
+    --bottomnav-h: 64px;
+
+    /* Charts */
+    --chart-1: 213 69% 40%;
+    --chart-2: 200 70% 50%;
+    --chart-3: 160 60% 45%;
+    --chart-4: 32 80% 55%;
+    --chart-5: 280 65% 60%;
+  }
+
+  .dark {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 6%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 213 69% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217 33% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 18%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 18%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 18%;
+    --input: 217 33% 18%;
+    --ring: 213 69% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Focus visible propre (accessibilité) */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * VNK UTILITIES RÉUTILISABLES
+ * ═══════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+  .vnk-gradient {
+    background: linear-gradient(135deg, #0F2D52 0%, #1B4F8A 100%);
+  }
+  .vnk-gradient-subtle {
+    background: linear-gradient(135deg, #F8FAFC 0%, #EBF5FB 100%);
+  }
+  .vnk-card-hover {
+    @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  /* Safe areas iOS (notch) */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}
