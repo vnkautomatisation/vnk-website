@@ -1,5 +1,5 @@
 "use client";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Bell, ExternalLink, RefreshCw, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -11,7 +11,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link } from "@/i18n/routing";
+import { Link, usePathname } from "@/i18n/routing";
+import NextLink from "next/link";
 import { signOut } from "next-auth/react";
 
 export function AdminTopbar({
@@ -24,6 +25,13 @@ export function AdminTopbar({
   overdueCount?: number;
 }) {
   const t = useTranslations("admin.topbar");
+  const currentLocale = useLocale();
+  const pathname = usePathname();
+
+  const otherLocale = currentLocale === "fr" ? "en" : "fr";
+  const otherLabel = otherLocale.toUpperCase();
+  const switcherHref =
+    otherLocale === "en" ? `/en${pathname || ""}` : pathname || "/";
 
   return (
     <header className="h-[60px] sticky top-0 z-20 bg-card border-b flex items-center justify-between px-4 lg:pl-[260px]">
@@ -60,6 +68,15 @@ export function AdminTopbar({
             <span className="hidden md:inline">{t("site")}</span>
           </Link>
         </Button>
+
+        {/* Locale switcher */}
+        <NextLink
+          href={switcherHref}
+          aria-label={`Changer vers ${otherLabel}`}
+          className="inline-flex items-center justify-center h-9 w-12 rounded-md border border-border text-xs font-bold tracking-wider hover:bg-accent transition-colors"
+        >
+          {otherLabel}
+        </NextLink>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

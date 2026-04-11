@@ -1,103 +1,99 @@
-// PDF generation using @react-pdf/renderer
-// Génère des PDFs pour devis, factures, contrats directement depuis React
-// (remplace PDFKit)
+// PDF generation — wrapper TypeScript autour de l'ancien pdf-templates.js
+// L'ancien fichier PDFKit (1246 lignes) a été préservé dans src/lib/services/
+// pdf-templates.js. Il génère les PDFs devis/factures/contrats avec le layout
+// identique à l'ancien site (logo hexagonal VNK, couleurs, footer légal).
 import "server-only";
 
-// Note: this is a stub. Real implementation would use @react-pdf/renderer
-// import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
+// Le require est dynamique car pdfkit est CommonJS
+// @ts-expect-error — pas de types pour le fichier JS
+import * as PdfTemplates from "./pdf-templates.js";
+
+type Client = {
+  fullName: string;
+  companyName?: string | null;
+  email: string;
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  postalCode?: string | null;
+};
 
 type QuotePdfData = {
   quoteNumber: string;
   title: string;
   description?: string;
-  client: { fullName: string; companyName?: string; email: string; address?: string };
+  client: Client;
   amountHt: number;
   tpsAmount: number;
   tvqAmount: number;
   amountTtc: number;
   expiryDate?: Date;
   paymentConditions?: string;
+  paymentPlan?: string;
+  paymentPct1?: number;
+  paymentPct2?: number;
 };
 
 type InvoicePdfData = {
   invoiceNumber: string;
   title: string;
-  client: { fullName: string; companyName?: string; email: string };
+  description?: string;
+  client: Client;
   amountHt: number;
   tpsAmount: number;
   tvqAmount: number;
   amountTtc: number;
   dueDate?: Date;
+  paidAt?: Date | null;
+  status?: string;
+  invoicePhase?: string | null;
+  phaseNumber?: number | null;
 };
 
 type ContractPdfData = {
   contractNumber: string;
   title: string;
   content?: string;
-  client: { fullName: string; companyName?: string };
+  client: Client;
   amountTtc?: number;
+  clientSignatureData?: string | null;
+  adminSignatureData?: string | null;
+  signedAt?: Date | null;
 };
 
-// TODO: replace with real @react-pdf/renderer implementation
-// For now, return a plain HTML→PDF stub
-export async function generateQuotePdf(data: QuotePdfData): Promise<Buffer> {
-  const html = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8" />
-<title>${data.quoteNumber}</title>
-<style>
-  body { font-family: Inter, sans-serif; padding: 40px; color: #0F2D52; }
-  .header { border-bottom: 3px solid #0F2D52; padding-bottom: 20px; }
-  .logo { font-size: 24px; font-weight: bold; }
-  h1 { margin-top: 30px; }
-  .meta { display: flex; justify-content: space-between; margin-top: 20px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-  table th { background: #EBF5FB; padding: 10px; text-align: left; }
-  table td { padding: 10px; border-bottom: 1px solid #E2EBF5; }
-  .totals { text-align: right; margin-top: 20px; }
-  .total-row { display: flex; justify-content: space-between; max-width: 300px; margin-left: auto; padding: 5px 0; }
-  .grand-total { font-size: 1.2em; font-weight: bold; border-top: 2px solid #0F2D52; padding-top: 10px; }
-</style>
-</head>
-<body>
-  <div class="header">
-    <div class="logo">VNK Automatisation Inc.</div>
-    <div>Value · Network · Knowledge</div>
-  </div>
-  <h1>Devis ${data.quoteNumber}</h1>
-  <div class="meta">
-    <div>
-      <strong>Client :</strong><br>
-      ${data.client.fullName}<br>
-      ${data.client.companyName ?? ""}<br>
-      ${data.client.email}
-    </div>
-    <div>
-      ${data.expiryDate ? `<strong>Valide jusqu'au :</strong> ${data.expiryDate.toLocaleDateString("fr-CA")}` : ""}
-    </div>
-  </div>
-  <h2>${data.title}</h2>
-  ${data.description ? `<p>${data.description}</p>` : ""}
-  <div class="totals">
-    <div class="total-row"><span>Sous-total HT</span><span>${data.amountHt.toFixed(2)} $</span></div>
-    <div class="total-row"><span>TPS (5%)</span><span>${data.tpsAmount.toFixed(2)} $</span></div>
-    <div class="total-row"><span>TVQ (9,975%)</span><span>${data.tvqAmount.toFixed(2)} $</span></div>
-    <div class="total-row grand-total"><span>TOTAL TTC</span><span>${data.amountTtc.toFixed(2)} $</span></div>
-  </div>
-  ${data.paymentConditions ? `<p><small>${data.paymentConditions}</small></p>` : ""}
-</body>
-</html>`;
+// Wrapper qui convertit Buffer PDFKit → Uint8Array compatible Response
+function toBuffer(fn: () => unknown): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const result = fn();
+      // L'ancien pdf-templates.js retourne soit un Buffer soit un stream
+      if (result instanceof Buffer) {
+        resolve(result);
+      } else if (result && typeof (result as { on?: unknown }).on === "function") {
+        // Stream
+        const chunks: Buffer[] = [];
+        const stream = result as NodeJS.ReadableStream;
+        stream.on("data", (c) => chunks.push(c));
+        stream.on("end", () => resolve(Buffer.concat(chunks)));
+        stream.on("error", reject);
+      } else {
+        reject(new Error("PDF function returned unexpected type"));
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
 
-  // TODO: convert HTML to PDF via puppeteer or @react-pdf/renderer
-  return Buffer.from(html);
+export async function generateQuotePdf(data: QuotePdfData): Promise<Buffer> {
+  return toBuffer(() => PdfTemplates.generateQuotePDF(data));
 }
 
 export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
-  // TODO: same as above with invoice layout
-  return Buffer.from(`Invoice ${data.invoiceNumber}`);
+  return toBuffer(() => PdfTemplates.generateInvoicePDF(data));
 }
 
 export async function generateContractPdf(data: ContractPdfData): Promise<Buffer> {
-  return Buffer.from(`Contract ${data.contractNumber}`);
+  return toBuffer(() => PdfTemplates.generateContractPDF(data));
 }
