@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { usePathname, Link } from "@/i18n/routing";
+import NextLink from "next/link";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -19,6 +20,7 @@ import {
   LogOut,
   Menu,
   X,
+  Globe,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -50,7 +52,13 @@ export function PortalSidebar({
 }) {
   const t = useTranslations("portal.sidebar");
   const pathname = usePathname();
+  const currentLocale = useLocale();
   const [open, setOpen] = useState(false);
+
+  const otherLocale = currentLocale === "fr" ? "en" : "fr";
+  const otherLabel = otherLocale.toUpperCase();
+  const switcherHref =
+    otherLocale === "en" ? `/en${pathname || ""}` : pathname || "/";
 
   return (
     <>
@@ -64,6 +72,8 @@ export function PortalSidebar({
           t={t}
           clientName={clientName}
           clientCompany={clientCompany}
+          switcherHref={switcherHref}
+          otherLabel={otherLabel}
         />
       </aside>
 
@@ -101,6 +111,8 @@ export function PortalSidebar({
               t={t}
               clientName={clientName}
               clientCompany={clientCompany}
+              switcherHref={switcherHref}
+              otherLabel={otherLabel}
               onNavigate={() => setOpen(false)}
             />
           </aside>
@@ -115,12 +127,16 @@ function Content({
   t,
   clientName,
   clientCompany,
+  switcherHref,
+  otherLabel,
   onNavigate,
 }: {
   pathname: string;
   t: (key: string) => string;
   clientName: string;
   clientCompany?: string;
+  switcherHref: string;
+  otherLabel: string;
   onNavigate?: () => void;
 }) {
   return (
@@ -172,6 +188,18 @@ function Content({
           <MessageCircle className="h-4 w-4" />
           {t("contact_us")}
         </button>
+        <NextLink
+          href={switcherHref}
+          onClick={onNavigate}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-accent text-muted-foreground"
+          aria-label={`Changer vers ${otherLabel}`}
+        >
+          <Globe className="h-4 w-4" />
+          <span className="flex-1">Langue</span>
+          <span className="text-xs font-bold tracking-wider px-2 py-0.5 rounded border">
+            {otherLabel}
+          </span>
+        </NextLink>
         <button
           onClick={() => signOut({ callbackUrl: "/fr/portail/login" })}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-destructive/10 text-destructive"

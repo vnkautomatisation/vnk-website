@@ -17,6 +17,17 @@ import {
   CheckCircle2,
   Star,
   Building2,
+  MessageCircle,
+  Search,
+  Hammer,
+  Rocket,
+  Phone,
+  Mail,
+  MapPin,
+  Headphones,
+  Lock,
+  Sparkles,
+  BadgeCheck,
 } from "lucide-react";
 import Image from "next/image";
 import type { Metadata } from "next";
@@ -114,6 +125,82 @@ const WHY = [
     icon: TrendingUp,
     title: "Pérenne",
     desc: "Refactorisation de code legacy pour éliminer la dette technique sur le long terme.",
+  },
+];
+
+// ─── Processus de travail (4 étapes) ─────────────────
+const PROCESS = [
+  {
+    num: "01",
+    icon: MessageCircle,
+    title: "Contact initial",
+    desc: "Appel ou courriel pour comprendre vos besoins et contraintes techniques.",
+  },
+  {
+    num: "02",
+    icon: Search,
+    title: "Diagnostic & devis",
+    desc: "Analyse à distance ou sur site, puis devis détaillé avec échéancier.",
+  },
+  {
+    num: "03",
+    icon: Hammer,
+    title: "Intervention",
+    desc: "Exécution selon le planning convenu, avec suivi en temps réel sur votre portail.",
+  },
+  {
+    num: "04",
+    icon: Rocket,
+    title: "Livraison & support",
+    desc: "Rapport écrit, documentation et support post-intervention garanti.",
+  },
+];
+
+// ─── Garanties / engagements ─────────────────────────
+const GUARANTEES = [
+  {
+    icon: Shield,
+    title: "Confidentialité garantie",
+    desc: "NDA signé avant toute intervention. Votre code et vos données restent chez vous.",
+  },
+  {
+    icon: BadgeCheck,
+    title: "Travail documenté",
+    desc: "Chaque intervention est livrée avec un rapport écrit détaillé et réutilisable.",
+  },
+  {
+    icon: Headphones,
+    title: "Support 24h",
+    desc: "Temps de réponse maximum garanti de 24 heures ouvrables sur toute demande.",
+  },
+  {
+    icon: Lock,
+    title: "Sans engagement",
+    desc: "Pas de contrat de rétention obligatoire. Payez uniquement ce que vous utilisez.",
+  },
+];
+
+// ─── FAQ ──────────────────────────────────────────────
+const FAQ = [
+  {
+    q: "Intervenez-vous en urgence ?",
+    a: "Oui, nous priorisons les interventions urgentes (ligne de production arrêtée). Temps de réponse maximum : 24h ouvrables, souvent beaucoup moins.",
+  },
+  {
+    q: "Travaillez-vous à distance ou sur site ?",
+    a: "Les deux. Nous privilégions le support à distance (VPN, TeamViewer, AnyDesk) pour la rapidité, mais intervenons sur site au Québec lorsque nécessaire.",
+  },
+  {
+    q: "Quelles marques d'automates supportez-vous ?",
+    a: "Siemens (Step 7, TIA Portal, WinCC), Rockwell/Allen-Bradley (RSLogix, Studio 5000, FactoryTalk), B&R (Automation Studio), Schneider (Modicon, EcoStruxure). Autres marques sur demande.",
+  },
+  {
+    q: "Comment se déroule un audit technique ?",
+    a: "Nous analysons votre code, votre architecture et vos procédures. Livrable : un rapport détaillé avec les risques identifiés, les améliorations possibles et un plan d'action chiffré.",
+  },
+  {
+    q: "Acceptez-vous les paiements Stripe ?",
+    a: "Oui, nous acceptons les paiements par carte via Stripe (sécurisé), virement bancaire, et chèque pour les clients établis.",
   },
 ];
 
@@ -470,6 +557,139 @@ export default async function HomePage({
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════
+          PROCESSUS DE TRAVAIL — 4 étapes
+          ═══════════════════════════════════════════════════ */}
+      <section className="py-24 bg-muted/30">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+          <div className="text-center mb-16">
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">
+              Notre processus
+            </span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3">
+              Du premier appel à la livraison
+            </h2>
+            <p className="text-muted-foreground mt-4 text-lg max-w-2xl mx-auto">
+              Un processus clair en 4 étapes pour que vous sachiez exactement où
+              en est votre projet à chaque instant.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative">
+            {/* Ligne de connexion desktop */}
+            <div className="hidden lg:block absolute top-12 left-[12%] right-[12%] h-0.5 bg-gradient-to-r from-primary/10 via-primary/40 to-primary/10" />
+
+            {PROCESS.map((step) => {
+              const Icon = step.icon;
+              return (
+                <div
+                  key={step.num}
+                  className="relative bg-card rounded-xl border p-6 vnk-card-hover"
+                >
+                  <div className="h-16 w-16 rounded-full vnk-gradient flex items-center justify-center mx-auto mb-4 shadow-lg relative z-10">
+                    <Icon className="h-7 w-7 text-white" />
+                  </div>
+                  <div className="absolute top-4 right-4 text-4xl font-bold text-primary/10">
+                    {step.num}
+                  </div>
+                  <h3 className="font-bold text-lg text-center">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground text-center mt-2 leading-relaxed">
+                    {step.desc}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════
+          GARANTIES / ENGAGEMENTS
+          ═══════════════════════════════════════════════════ */}
+      <section className="py-24 bg-background">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+          <div className="text-center mb-16">
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">
+              Nos engagements
+            </span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3">
+              Des garanties claires
+            </h2>
+            <p className="text-muted-foreground mt-4 text-lg max-w-2xl mx-auto">
+              Nous nous engageons sur la transparence, la qualité et la rapidité.
+              Voici nos promesses concrètes.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {GUARANTEES.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.title}
+                  className="p-6 rounded-xl border bg-card vnk-card-hover"
+                >
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <Icon className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="font-bold text-base">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                    {item.desc}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════
+          FAQ
+          ═══════════════════════════════════════════════════ */}
+      <section className="py-24 bg-muted/30">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
+          <div className="text-center mb-16">
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">
+              Questions fréquentes
+            </span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3">
+              Des réponses claires
+            </h2>
+          </div>
+
+          <div className="space-y-4">
+            {FAQ.map((item, i) => (
+              <details
+                key={i}
+                className="group rounded-xl border bg-card overflow-hidden"
+              >
+                <summary className="flex items-center justify-between px-6 py-5 cursor-pointer font-semibold text-foreground hover:bg-muted/50 list-none">
+                  <span className="text-base">{item.q}</span>
+                  <span className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg group-open:rotate-45 transition-transform">
+                    +
+                  </span>
+                </summary>
+                <div className="px-6 pb-5 pt-2 text-sm text-muted-foreground leading-relaxed border-t">
+                  {item.a}
+                </div>
+              </details>
+            ))}
+          </div>
+
+          <div className="text-center mt-12">
+            <p className="text-muted-foreground mb-4">
+              Une autre question ?
+            </p>
+            <Button asChild size="lg">
+              <Link href="/contact">
+                Contactez-nous
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
           </div>
         </div>
       </section>
