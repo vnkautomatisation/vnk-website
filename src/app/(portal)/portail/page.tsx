@@ -64,41 +64,41 @@ export default async function PortalDashboard() {
       label: t("active_mandates"),
       value: activeMandates,
       icon: Briefcase,
-      gradient: "from-purple-600 to-indigo-700",
-      lightBg: "bg-purple-50",
-      lightText: "text-purple-700",
+      bg: "bg-emerald-50/60",
+      labelColor: "text-emerald-600",
+      iconBg: "bg-emerald-100",
+      iconColor: "text-emerald-600",
       href: "/portail/mandats",
-      sub: `${totalMandates} au total`,
     },
     {
       label: t("pending_quotes"),
       value: pendingQuotes,
       icon: FileText,
-      gradient: "from-amber-500 to-orange-600",
-      lightBg: "bg-amber-50",
-      lightText: "text-amber-700",
+      bg: "bg-amber-50/60",
+      labelColor: "text-amber-600",
+      iconBg: "bg-amber-100",
+      iconColor: "text-amber-600",
       href: "/portail/devis",
-      sub: "a accepter",
     },
     {
       label: t("pending_invoices"),
       value: pendingInvoices,
       icon: Receipt,
-      gradient: "from-red-500 to-rose-600",
-      lightBg: "bg-red-50",
-      lightText: "text-red-700",
+      bg: "bg-red-50/60",
+      labelColor: "text-red-600",
+      iconBg: "bg-red-100",
+      iconColor: "text-red-600",
       href: "/portail/factures",
-      sub: overdueInvoices > 0 ? `${overdueInvoices} en retard` : "a jour",
     },
     {
       label: t("unread_documents"),
       value: unreadDocs,
       icon: FolderOpen,
-      gradient: "from-blue-500 to-cyan-600",
-      lightBg: "bg-blue-50",
-      lightText: "text-blue-700",
+      bg: "bg-[#0F2D52]/5",
+      labelColor: "text-[#0F2D52]",
+      iconBg: "bg-[#0F2D52]/10",
+      iconColor: "text-[#0F2D52]",
       href: "/portail/documents",
-      sub: "non lu(s)",
     },
   ];
 
@@ -172,47 +172,24 @@ export default async function PortalDashboard() {
       </div>
 
       {/* ── KPI Cards ────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((k, i) => {
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {kpis.map((k) => {
           const Icon = k.icon;
           return (
-            <Link
-              key={k.label}
-              href={k.href}
-              className="animate-fade-in-up"
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <Card className="vnk-kpi-card h-full border-0 shadow-md hover:shadow-xl">
-                <CardContent className="p-5 relative">
-                  {/* Gradient icon circle */}
-                  <div
-                    className={`h-12 w-12 rounded-xl bg-gradient-to-br ${k.gradient} flex items-center justify-center shadow-lg mb-4`}
-                  >
-                    <Icon className="h-5 w-5 text-white" />
+            <Link key={k.label} href={k.href}>
+              <div className={`rounded-xl border ${k.bg} p-4 hover:shadow-md transition-shadow cursor-pointer`}>
+                <div className="flex items-center gap-3">
+                  <div className={`h-9 w-9 rounded-lg ${k.iconBg} flex items-center justify-center`}>
+                    <Icon className={`h-4 w-4 ${k.iconColor}`} />
                   </div>
-
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                    {k.label}
-                  </p>
-                  <div className="flex items-baseline gap-2 mt-1">
-                    <p className="text-3xl font-bold tracking-tight animate-count-up">
-                      {k.value}
+                  <div>
+                    <p className={`text-[11px] uppercase tracking-wider font-semibold ${k.labelColor}`}>
+                      {k.label}
                     </p>
-                    {k.value > 0 && (
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${k.lightBg} ${k.lightText}`}
-                      >
-                        {k.sub}
-                      </span>
-                    )}
+                    <p className="text-2xl font-bold">{k.value}</p>
                   </div>
-
-                  {/* Bottom accent bar */}
-                  <div
-                    className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${k.gradient} rounded-b-xl opacity-60`}
-                  />
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </Link>
           );
         })}

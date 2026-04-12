@@ -208,7 +208,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
+        <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
           <FileText className="h-5 w-5 text-white" />
         </div>
         <div>
@@ -219,47 +219,47 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="vnk-kpi-card vnk-stat-blue bg-card p-4">
+        <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
-              <Hash className="h-4 w-4 text-white" />
+            <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+              <Hash className="h-4 w-4 text-[#0F2D52]" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total devis</p>
-              <p className="text-xl font-bold tracking-tight">{quotes.length}</p>
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total devis</p>
+              <p className="text-2xl font-bold">{quotes.length}</p>
             </div>
           </div>
         </div>
-        <div className="vnk-kpi-card vnk-stat-slate bg-card p-4">
+        <div className="rounded-xl border bg-amber-50/60 p-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center shadow-sm">
-              <DollarSign className="h-4 w-4 text-white" />
+            <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
+              <Clock className="h-4 w-4 text-amber-600" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Montant total TTC</p>
-              <p className="text-xl font-bold tracking-tight">{formatCurrency(quotes.reduce((s, q) => s + q.amountTtc, 0))}</p>
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-600">En attente</p>
+              <p className="text-2xl font-bold">{quotes.filter((q) => q.status === "pending").length}</p>
             </div>
           </div>
         </div>
-        <div className="vnk-kpi-card vnk-stat-amber bg-card p-4">
+        <div className="rounded-xl border bg-emerald-50/60 p-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm">
-              <Clock className="h-4 w-4 text-white" />
+            <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-emerald-600" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">En attente</p>
-              <p className="text-xl font-bold tracking-tight">{quotes.filter((q) => q.status === "pending").length}</p>
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Acceptes</p>
+              <p className="text-2xl font-bold">{quotes.filter((q) => q.status === "accepted").length}</p>
             </div>
           </div>
         </div>
-        <div className="vnk-kpi-card vnk-stat-emerald bg-card p-4">
+        <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
-              <CheckCircle className="h-4 w-4 text-white" />
+            <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-[#0F2D52]" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Acceptes</p>
-              <p className="text-xl font-bold tracking-tight">{quotes.filter((q) => q.status === "accepted").length}</p>
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Montant total</p>
+              <p className="text-2xl font-bold">{formatCurrency(quotes.reduce((s, q) => s + q.amountTtc, 0))}</p>
             </div>
           </div>
         </div>
