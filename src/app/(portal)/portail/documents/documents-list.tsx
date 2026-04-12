@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FolderOpen, Download, Eye, FileText } from "lucide-react";
+import { FolderOpen, Download, Eye, FileText, EyeOff, FileBarChart, FileSignature } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { Button } from "@/components/ui/button";
@@ -148,8 +148,8 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
   ];
 
   const renderCard = (doc: Doc) => (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow group">
-      <div className="h-1 bg-[#0F2D52]/20" />
+    <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
+      <div className="h-1.5 bg-[#0F2D52]/20" />
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-3 min-w-0">
@@ -214,14 +214,61 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
-          <FolderOpen className="h-5 w-5 text-[#0F2D52]" />
+        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-lg">
+          <FolderOpen className="h-5 w-5 text-white" />
         </div>
         <div>
           <h1 className="text-2xl font-bold">Mes documents</h1>
           <p className="text-sm text-muted-foreground">
             Consultez et telechargez vos documents
           </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="vnk-kpi-card vnk-stat-blue bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
+              <FolderOpen className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total documents</p>
+              <p className="text-xl font-bold tracking-tight">{documents.length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="vnk-kpi-card vnk-stat-sky bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center shadow-sm">
+              <EyeOff className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Non lus</p>
+              <p className="text-xl font-bold tracking-tight">{documents.filter((d) => !d.isRead).length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="vnk-kpi-card vnk-stat-purple bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-sm">
+              <FileBarChart className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Rapports</p>
+              <p className="text-xl font-bold tracking-tight">{documents.filter((d) => d.category === "Rapports").length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="vnk-kpi-card vnk-stat-emerald bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
+              <FileSignature className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Contrats</p>
+              <p className="text-xl font-bold tracking-tight">{documents.filter((d) => d.category === "Contrats").length}</p>
+            </div>
+          </div>
         </div>
       </div>
 

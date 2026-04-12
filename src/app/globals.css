@@ -118,8 +118,49 @@
   .vnk-gradient-subtle {
     background: linear-gradient(135deg, #F8FAFC 0%, #EBF5FB 100%);
   }
+  .vnk-gradient-warm {
+    background: linear-gradient(135deg, #0F2D52 0%, #1a4a7a 50%, #2563eb 100%);
+  }
   .vnk-card-hover {
     @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+  }
+  /* Glass morphism */
+  .vnk-glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .vnk-glass-dark {
+    background: rgba(15, 45, 82, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  /* KPI card styles */
+  .vnk-kpi-card {
+    @apply relative overflow-hidden rounded-xl border shadow-sm transition-all duration-300;
+    @apply hover:shadow-md hover:-translate-y-0.5;
+  }
+  .vnk-kpi-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    opacity: 0.06;
+    transform: translate(30%, -30%);
+  }
+  /* Stat card accent variants */
+  .vnk-stat-purple::before { background: #7c3aed; }
+  .vnk-stat-amber::before { background: #d97706; }
+  .vnk-stat-red::before { background: #dc2626; }
+  .vnk-stat-blue::before { background: #2563eb; }
+  .vnk-stat-emerald::before { background: #059669; }
+  .vnk-stat-sky::before { background: #0284c7; }
+  /* Page section divider */
+  .vnk-section-line {
+    @apply h-px bg-gradient-to-r from-transparent via-border to-transparent;
   }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -135,4 +176,23 @@
   .pt-safe {
     padding-top: env(safe-area-inset-top);
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * ANIMATIONS
+ * ═══════════════════════════════════════════════════════════════ */
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes count-up {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out forwards;
+}
+.animate-count-up {
+  animation: count-up 0.3s ease-out forwards;
 }
