@@ -153,17 +153,23 @@ function MandateTimeline({ progress, status, compact }: { progress: number; stat
   );
 }
 
-// ── Progress bar helpers ────────────────────────────────
-function progressColor(pct: number): string {
-  if (pct >= 75) return "bg-emerald-600";
-  if (pct >= 50) return "bg-amber-500";
-  return "bg-red-500";
+// ── Progress bar helpers — couleur par STATUT comme ancien portail ──
+function statusBarColor(status: string, late: boolean): string {
+  if (late) return "bg-red-500";
+  if (status === "completed") return "bg-emerald-600";
+  if (status === "active" || status === "in_progress") return "vnk-progress-fill";
+  if (status === "pending") return "bg-amber-500";
+  if (status === "paused") return "bg-slate-400";
+  return "vnk-progress-fill";
 }
 
-function progressTextColor(pct: number): string {
-  if (pct >= 75) return "text-emerald-700";
-  if (pct >= 50) return "text-amber-700";
-  return "text-red-700";
+function statusBorderColor(status: string, late: boolean): string {
+  if (late) return "#dc2626";
+  if (status === "completed") return "#059669";
+  if (status === "active" || status === "in_progress") return "#1B4F8A";
+  if (status === "pending") return "#d97706";
+  if (status === "paused") return "#64748b";
+  return "#1B4F8A";
 }
 
 const filterOptions: FilterOption[] = [
@@ -226,13 +232,13 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
       header: "Progression",
       accessor: (r) => (
         <div className="flex items-center gap-2 min-w-[120px]">
-          <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
+          <div className="h-2.5 flex-1 rounded-full bg-muted overflow-hidden">
             <div
-              className={`h-full rounded-full ${progressColor(r.progress)} transition-all`}
+              className={`h-full rounded-full ${statusBarColor(r.status, isLate(r))}`}
               style={{ width: `${r.progress}%` }}
             />
           </div>
-          <span className={`text-xs font-bold tabular-nums ${progressTextColor(r.progress)}`}>
+          <span className={`text-xs font-bold tabular-nums text-[#0F2D52]`}>
             {r.progress}%
           </span>
         </div>
@@ -276,17 +282,13 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
     const stepLabel = getStepLabel(m.progress, m.status);
 
     return (
-      <Card className={cn(
-        "overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer",
-        selected?.id === m.id && "ring-2 ring-[#0F2D52]"
-      )}>
-        {/* Status top bar — 4px like old portal */}
-        <div className={cn("h-1", {
-          "bg-[#1B4F8A]": m.status === "active" || m.status === "in_progress",
-          "bg-amber-500": m.status === "pending",
-          "bg-emerald-600": m.status === "completed",
-          "bg-slate-400": m.status === "paused",
-        })} />
+      <Card
+        className={cn(
+          "overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer border-l-[3px]",
+          selected?.id === m.id && "ring-2 ring-[#0F2D52]"
+        )}
+        style={{ borderLeftColor: statusBorderColor(m.status, late) }}
+      >
         <CardContent className="p-4 space-y-3">
           {/* Title + status + late flag */}
           <div className="flex items-start justify-between gap-2">
@@ -310,10 +312,10 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-muted-foreground">Progression</span>
-              <span className={`text-xs font-bold tabular-nums ${progressTextColor(m.progress)}`}>{m.progress}%</span>
+              <span className={`text-xs font-bold tabular-nums text-[#0F2D52]`}>{m.progress}%</span>
             </div>
-            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-              <div className={`h-full rounded-full ${progressColor(m.progress)}`} style={{ width: `${m.progress}%` }} />
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div className={`h-full rounded-full ${statusBarColor(m.status, isLate(m))}`} style={{ width: `${m.progress}%` }} />
             </div>
           </div>
 
@@ -428,13 +430,13 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
               <div className="px-5 py-4 border-b">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Progression</span>
-                  <span className={`text-lg font-bold ${progressTextColor(selected.progress)}`}>
+                  <span className={`text-lg font-bold text-[#0F2D52]`}>
                     {selected.progress}%
                   </span>
                 </div>
                 <div className="h-3 rounded-full bg-muted overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${progressColor(selected.progress)} transition-all`}
+                    className={`h-full rounded-full ${statusBarColor(selected.status, isLate(selected))} transition-all`}
                     style={{ width: `${selected.progress}%` }}
                   />
                 </div>
@@ -522,10 +524,10 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-sm font-medium">Progression</span>
-                  <span className={`text-xl font-bold ${progressTextColor(selected.progress)}`}>{selected.progress}%</span>
+                  <span className={`text-xl font-bold text-[#0F2D52]`}>{selected.progress}%</span>
                 </div>
                 <div className="h-3 rounded-full bg-muted overflow-hidden">
-                  <div className={`h-full rounded-full ${progressColor(selected.progress)}`} style={{ width: `${selected.progress}%` }} />
+                  <div className={`h-full rounded-full ${statusBarColor(selected.status, isLate(selected))}`} style={{ width: `${selected.progress}%` }} />
                 </div>
               </div>
 
