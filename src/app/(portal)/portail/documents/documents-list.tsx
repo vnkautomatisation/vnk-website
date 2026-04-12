@@ -39,6 +39,15 @@ const CATEGORY_COLORS: Record<string, string> = {
   Autre: "bg-gray-100 text-gray-600 border-gray-200",
 };
 
+function getFileTypeBadge(title: string, url: string | null) {
+  const ext = (url || title).split('.').pop()?.toLowerCase() ?? '';
+  if (['pdf'].includes(ext)) return { label: 'PDF', bg: 'bg-red-100 text-red-700' };
+  if (['doc', 'docx'].includes(ext)) return { label: 'DOC', bg: 'bg-blue-100 text-blue-700' };
+  if (['xls', 'xlsx'].includes(ext)) return { label: 'XLS', bg: 'bg-emerald-100 text-emerald-700' };
+  if (['png', 'jpg', 'jpeg'].includes(ext)) return { label: 'IMG', bg: 'bg-purple-100 text-purple-700' };
+  return { label: 'DOC', bg: 'bg-gray-100 text-gray-600' };
+}
+
 export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
   const [readFilter, setReadFilter] = useState<"all" | "unread" | "read">("all");
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
@@ -147,47 +156,65 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
     },
   ];
 
-  const renderCard = (doc: Doc) => (
-    <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
-      <div className="h-1.5 bg-[#0F2D52]/20" />
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center shrink-0 group-hover:bg-[#0F2D52]/20 transition-colors">
-              <FileText className="h-5 w-5 text-[#0F2D52]" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                {!doc.isRead && (
-                  <span className="h-2 w-2 rounded-full bg-sky-500 shrink-0 animate-pulse" />
-                )}
-                <p className={`text-sm truncate ${!doc.isRead ? "font-semibold" : "font-medium"}`}>
-                  {doc.title}
-                </p>
+  const renderCard = (doc: Doc) => {
+    const badge = getFileTypeBadge(doc.title, doc.fileUrl);
+    return (
+      <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
+        <div className="h-1.5 bg-[#0F2D52]/20" />
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="relative shrink-0">
+                <div className="h-10 w-10 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center group-hover:bg-[#0F2D52]/20 transition-colors">
+                  <FileText className="h-5 w-5 text-[#0F2D52]" />
+                </div>
+                <span className={`absolute -bottom-1 -right-1 text-[9px] font-bold px-1.5 py-0.5 rounded ${badge.bg} leading-none`}>
+                  {badge.label}
+                </span>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {formatDate(new Date(doc.createdAt))}
-              </p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  {!doc.isRead && (
+                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-500" />
+                    </span>
+                  )}
+                  <p className={`text-sm truncate ${!doc.isRead ? "font-semibold" : "font-medium"}`}>
+                    {doc.title}
+                  </p>
+                </div>
+                {doc.mandateTitle && (
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    Mandat : {doc.mandateTitle}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-muted-foreground">
+                    {formatDate(new Date(doc.createdAt))}
+                  </span>
+                  {doc.category && (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${CATEGORY_COLORS[doc.category] ?? CATEGORY_COLORS.Autre}`}>
+                      {doc.category}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-          {doc.category && (
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${CATEGORY_COLORS[doc.category] ?? CATEGORY_COLORS.Autre}`}>
-              {doc.category}
-            </span>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" className="flex-1" onClick={(e) => handlePreview(doc, e)}>
-            <Eye className="h-3.5 w-3.5 mr-1" />
-            Voir
-          </Button>
-          <Button size="sm" variant="ghost" onClick={(e) => handleDownload(doc, e)}>
-            <Download className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="flex-1" onClick={(e) => handlePreview(doc, e)}>
+              <Eye className="h-3.5 w-3.5 mr-1" />
+              Voir
+            </Button>
+            <Button size="sm" variant="ghost" onClick={(e) => handleDownload(doc, e)}>
+              <Download className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   const readFilterActions = (
     <div className="flex border rounded-md overflow-hidden">
