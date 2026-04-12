@@ -9,10 +9,17 @@ export default async function PortalMandatesPage() {
     orderBy: { createdAt: "desc" },
   });
   const mandates = rawMandates.map((m) => ({
-    ...m,
+    id: m.id,
+    title: m.title,
+    description: m.description,
+    status: m.status,
+    progress: m.progress,
     estimatedHours: m.estimatedHours != null ? Number(m.estimatedHours) : null,
     actualHours: m.actualHours != null ? Number(m.actualHours) : null,
     hourlyRate: m.hourlyRate != null ? Number(m.hourlyRate) : null,
+    startDate: m.startDate?.toISOString() ?? null,
+    endDate: m.endDate?.toISOString() ?? null,
+    createdAt: m.createdAt.toISOString(),
   }));
   return <PortalMandatesList mandates={mandates} />;
 }

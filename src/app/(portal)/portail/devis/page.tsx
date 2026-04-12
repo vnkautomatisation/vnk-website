@@ -9,12 +9,17 @@ export default async function PortalQuotesPage() {
     orderBy: { createdAt: "desc" },
   });
   const quotes = rawQuotes.map((q) => ({
-    ...q,
+    id: q.id,
+    quoteNumber: q.quoteNumber,
+    title: q.title,
+    status: q.status,
     amountHt: Number(q.amountHt),
     tpsAmount: Number(q.tpsAmount),
     tvqAmount: Number(q.tvqAmount),
     amountTtc: Number(q.amountTtc),
     discountAmount: q.discountAmount != null ? Number(q.discountAmount) : null,
+    expiryDate: q.expiryDate?.toISOString() ?? null,
+    createdAt: q.createdAt.toISOString(),
   }));
   return <PortalQuotesList quotes={quotes} />;
 }
