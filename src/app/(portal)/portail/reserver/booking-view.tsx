@@ -3,8 +3,8 @@ import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Video, Phone, MapPin, CalendarCheck, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Slot = {
   id: number;
@@ -13,6 +13,12 @@ type Slot = {
   endTime: string;
   durationMin: number;
 };
+
+const MEETING_TYPES = [
+  { key: "video" as const, label: "Video", icon: Video },
+  { key: "phone" as const, label: "Telephone", icon: Phone },
+  { key: "onsite" as const, label: "Sur place", icon: MapPin },
+];
 
 export function BookingView({ slots }: { slots: Slot[] }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -34,6 +40,33 @@ export function BookingView({ slots }: { slots: Slot[] }) {
 
   const dates = Array.from(slotsByDate.keys()).sort();
 
+  // Calendar grid: show current week/month of available dates
+  const calendarWeeks = useMemo(() => {
+    if (dates.length === 0) return [];
+    const first = new Date(dates[0]);
+    const last = new Date(dates[dates.length - 1]);
+    // Start from Monday of first week
+    const start = new Date(first);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    // End at Sunday of last week
+    const end = new Date(last);
+    end.setDate(end.getDate() + (7 - end.getDay()) % 7);
+
+    const weeks: Date[][] = [];
+    let current = new Date(start);
+    while (current <= end) {
+      const week: Date[] = [];
+      for (let i = 0; i < 7; i++) {
+        week.push(new Date(current));
+        current.setDate(current.getDate() + 1);
+      }
+      weeks.push(week);
+    }
+    return weeks;
+  }, [dates]);
+
+  const availableSet = new Set(dates);
+
   const handleBook = async () => {
     if (!selectedSlot) return;
     setSending(true);
@@ -48,129 +81,212 @@ export function BookingView({ slots }: { slots: Slot[] }) {
         }),
       });
       if (!res.ok) throw new Error("Erreur");
-      toast.success("Rendez-vous confirmé !");
+      toast.success("Rendez-vous confirme !");
       setSelectedSlot(null);
       setSelectedDate(null);
     } catch {
-      toast.error("Erreur lors de la réservation");
+      toast.error("Erreur lors de la reservation");
     } finally {
       setSending(false);
     }
   };
 
+  const dayNames = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+  const today = new Date().toISOString().slice(0, 10);
+
   return (
-    <div className="grid lg:grid-cols-[1fr_360px] gap-6">
-      <Card>
+    <div className="grid lg:grid-cols-[1fr_380px] gap-6">
+      {/* Left: Calendar */}
+      <Card className="border-0 shadow-sm ring-1 ring-border/50">
         <CardContent className="p-6">
-          <h2 className="font-semibold mb-4">Dates disponibles</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {dates.map((date) => {
-              const count = slotsByDate.get(date)!.length;
-              return (
-                <button
-                  key={date}
-                  onClick={() => setSelectedDate(date)}
-                  className={cn(
-                    "p-3 rounded-lg border text-left transition-colors",
-                    selectedDate === date
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "hover:bg-accent"
-                  )}
-                >
-                  <div className="text-xs uppercase opacity-70">
-                    {new Date(date).toLocaleDateString("fr-CA", { weekday: "short" })}
-                  </div>
-                  <div className="text-lg font-bold">
-                    {new Date(date).toLocaleDateString("fr-CA", { day: "numeric", month: "short" })}
-                  </div>
-                  <div className="text-[10px] opacity-70 mt-1">
-                    {count} créneau{count > 1 ? "x" : ""}
-                  </div>
-                </button>
-              );
-            })}
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="font-semibold text-lg">Choisissez une date</h2>
+            <span className="text-xs text-muted-foreground">
+              {dates.length} jour{dates.length !== 1 ? "s" : ""} disponible{dates.length !== 1 ? "s" : ""}
+            </span>
           </div>
 
-          {selectedDate && (
-            <div className="mt-6">
-              <h3 className="font-semibold mb-3">Heures disponibles</h3>
-              <div className="grid grid-cols-3 gap-2">
-                {slotsByDate.get(selectedDate)!.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setSelectedSlot(s)}
-                    className={cn(
-                      "p-2 rounded border text-sm",
-                      selectedSlot?.id === s.id
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "hover:bg-accent"
-                    )}
-                  >
-                    {s.startTime}
-                  </button>
+          {dates.length === 0 ? (
+            <div className="text-center py-12">
+              <CalendarCheck className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">Aucun creneau disponible</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Revenez plus tard ou contactez-nous</p>
+            </div>
+          ) : (
+            <>
+              {/* Calendar grid */}
+              <div className="border rounded-xl overflow-hidden">
+                {/* Day headers */}
+                <div className="grid grid-cols-7 bg-muted/50 border-b">
+                  {dayNames.map((d) => (
+                    <div key={d} className="text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground py-2">
+                      {d}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Weeks */}
+                {calendarWeeks.map((week, wi) => (
+                  <div key={wi} className="grid grid-cols-7 border-b last:border-b-0">
+                    {week.map((day) => {
+                      const key = day.toISOString().slice(0, 10);
+                      const isAvailable = availableSet.has(key);
+                      const isSelected = selectedDate === key;
+                      const isToday = key === today;
+                      const slotCount = slotsByDate.get(key)?.length ?? 0;
+                      const isPast = key < today;
+
+                      return (
+                        <button
+                          key={key}
+                          disabled={!isAvailable}
+                          onClick={() => { setSelectedDate(key); setSelectedSlot(null); }}
+                          className={cn(
+                            "relative p-2 sm:p-3 text-center transition-all min-h-[60px] flex flex-col items-center justify-center gap-0.5",
+                            isSelected
+                              ? "bg-[#0F2D52] text-white"
+                              : isAvailable
+                                ? "hover:bg-[#0F2D52]/5 cursor-pointer"
+                                : isPast
+                                  ? "text-muted-foreground/30"
+                                  : "text-muted-foreground/40",
+                          )}
+                        >
+                          <span className={cn(
+                            "text-sm font-semibold",
+                            isToday && !isSelected && "underline underline-offset-2"
+                          )}>
+                            {day.getDate()}
+                          </span>
+                          {isAvailable && (
+                            <span className={cn(
+                              "text-[9px] font-medium",
+                              isSelected ? "text-white/70" : "text-emerald-600"
+                            )}>
+                              {slotCount} creneau{slotCount > 1 ? "x" : ""}
+                            </span>
+                          )}
+                          {isToday && (
+                            <span className={cn(
+                              "absolute top-1 right-1 h-1.5 w-1.5 rounded-full",
+                              isSelected ? "bg-white" : "bg-[#0F2D52]"
+                            )} />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 ))}
               </div>
-            </div>
+
+              {/* Time slots for selected date */}
+              {selectedDate && (
+                <div className="mt-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="h-4 w-4 text-[#0F2D52]" />
+                    <h3 className="font-semibold text-sm">
+                      Heures disponibles — {new Date(selectedDate).toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long" })}
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {slotsByDate.get(selectedDate)!.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => setSelectedSlot(s)}
+                        className={cn(
+                          "p-2.5 rounded-lg border text-sm font-medium transition-all",
+                          selectedSlot?.id === s.id
+                            ? "bg-[#0F2D52] text-white border-[#0F2D52] shadow-sm"
+                            : "hover:bg-[#0F2D52]/5 hover:border-[#0F2D52]/30"
+                        )}
+                      >
+                        {s.startTime}
+                        <span className={cn("block text-[10px] mt-0.5", selectedSlot?.id === s.id ? "text-white/60" : "text-muted-foreground")}>
+                          {s.durationMin} min
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Panneau droite : détails */}
-      <Card className={selectedSlot ? "" : "opacity-50"}>
-        <CardContent className="p-6 space-y-4">
-          <h2 className="font-semibold">Détails du rendez-vous</h2>
+      {/* Right: Booking details */}
+      <Card className={cn("border-0 shadow-sm ring-1 ring-border/50 h-fit sticky top-20", !selectedSlot && "opacity-60")}>
+        <CardContent className="p-6 space-y-5">
+          <h2 className="font-semibold text-lg">Details du rendez-vous</h2>
 
-          {selectedSlot && (
-            <div className="p-3 rounded bg-primary/10 text-sm">
-              <div className="font-medium">
-                {new Date(selectedSlot.slotDate).toLocaleDateString("fr-CA", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                })}
+          {/* Selected slot summary */}
+          {selectedSlot ? (
+            <div className="rounded-xl bg-[#0F2D52]/5 p-4 border border-[#0F2D52]/10">
+              <div className="flex items-center gap-2 mb-1">
+                <CalendarCheck className="h-4 w-4 text-[#0F2D52]" />
+                <span className="font-semibold text-sm">
+                  {new Date(selectedSlot.slotDate).toLocaleDateString("fr-CA", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  })}
+                </span>
               </div>
-              <div className="text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground ml-6">
+                <Clock className="h-3.5 w-3.5" />
                 {selectedSlot.startTime} - {selectedSlot.endTime} ({selectedSlot.durationMin} min)
               </div>
             </div>
+          ) : (
+            <div className="rounded-xl bg-muted/30 p-4 border border-dashed text-center">
+              <p className="text-sm text-muted-foreground">Selectionnez une date et un creneau</p>
+            </div>
           )}
 
+          {/* Meeting type */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Type de réunion</label>
+            <label className="text-sm font-semibold">Type de reunion</label>
             <div className="grid grid-cols-3 gap-2">
-              {(["video", "phone", "onsite"] as const).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setMeetingType(type)}
-                  className={cn(
-                    "p-2 rounded border text-xs capitalize",
-                    meetingType === type
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "hover:bg-accent"
-                  )}
-                >
-                  {type === "video" ? "Vidéo" : type === "phone" ? "Téléphone" : "Sur place"}
-                </button>
-              ))}
+              {MEETING_TYPES.map((type) => {
+                const Icon = type.icon;
+                return (
+                  <button
+                    key={type.key}
+                    onClick={() => setMeetingType(type.key)}
+                    className={cn(
+                      "p-3 rounded-xl border text-center transition-all",
+                      meetingType === type.key
+                        ? "bg-[#0F2D52] text-white border-[#0F2D52] shadow-sm"
+                        : "hover:bg-[#0F2D52]/5 hover:border-[#0F2D52]/30"
+                    )}
+                  >
+                    <Icon className={cn("h-5 w-5 mx-auto mb-1", meetingType === type.key ? "text-white" : "text-[#0F2D52]")} />
+                    <span className="text-xs font-medium">{type.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
+          {/* Subject */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Sujet</label>
+            <label className="text-sm font-semibold">Sujet</label>
             <input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Ex. Discussion projet PLC"
-              className="w-full h-11 px-3 rounded-md border"
+              className="w-full h-11 px-3 rounded-lg border bg-background text-sm focus:ring-2 focus:ring-[#0F2D52]/30 focus:border-[#0F2D52] outline-none transition-all"
             />
           </div>
 
+          {/* Book button */}
           <Button
-            className="w-full"
+            className="w-full h-11 bg-[#0F2D52] hover:bg-[#1a3a66] shadow-sm"
             disabled={!selectedSlot || sending}
             onClick={handleBook}
           >
-            {sending ? "Réservation…" : "Confirmer le rendez-vous"}
+            <CalendarCheck className="h-4 w-4 mr-2" />
+            {sending ? "Reservation..." : "Confirmer le rendez-vous"}
           </Button>
         </CardContent>
       </Card>
