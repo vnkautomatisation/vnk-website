@@ -200,7 +200,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
             <div className="vnk-kpi-card vnk-stat-blue bg-card p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
-                  <ClipboardList className="h-4.5 w-4.5 text-white" />
+                  <ClipboardList className="h-4 w-4 text-white" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total contrats</p>
@@ -211,7 +211,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
             <div className="vnk-kpi-card vnk-stat-amber bg-card p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm">
-                  <PenLine className="h-4.5 w-4.5 text-white" />
+                  <PenLine className="h-4 w-4 text-white" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">A signer</p>
@@ -222,7 +222,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
             <div className="vnk-kpi-card vnk-stat-emerald bg-card p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
-                  <CheckCircle className="h-4.5 w-4.5 text-white" />
+                  <CheckCircle className="h-4 w-4 text-white" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Signes</p>
@@ -233,7 +233,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
             <div className="vnk-kpi-card vnk-stat-slate bg-card p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center shadow-sm">
-                  <DollarSign className="h-4.5 w-4.5 text-white" />
+                  <DollarSign className="h-4 w-4 text-white" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Montant total</p>

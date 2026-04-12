@@ -212,7 +212,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
             <div className="vnk-kpi-card vnk-stat-blue bg-card p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
-                  <FileText className="h-4.5 w-4.5 text-white" />
+                  <FileText className="h-4 w-4 text-white" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total factures</p>
@@ -223,7 +223,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
             <div className="vnk-kpi-card vnk-stat-amber bg-card p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm">
-                  <Clock className="h-4.5 w-4.5 text-white" />
+                  <Clock className="h-4 w-4 text-white" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">A payer</p>
@@ -235,7 +235,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
             <div className="vnk-kpi-card vnk-stat-red bg-card p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-sm">
-                  <AlertTriangle className="h-4.5 w-4.5 text-white" />
+                  <AlertTriangle className="h-4 w-4 text-white" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">En retard</p>
@@ -246,7 +246,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
             <div className="vnk-kpi-card vnk-stat-emerald bg-card p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
-                  <CheckCircle className="h-4.5 w-4.5 text-white" />
+                  <CheckCircle className="h-4 w-4 text-white" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Payees</p>

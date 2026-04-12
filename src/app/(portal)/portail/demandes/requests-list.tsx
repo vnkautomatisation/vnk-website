@@ -1,6 +1,6 @@
 "use client";
 
-import { Inbox } from "lucide-react";
+import { Inbox, Hash, Sparkles, Loader, CheckCircle } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -139,15 +139,69 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
     );
   };
 
+  const totalCount = requests.length;
+  const newCount = requests.filter((r) => r.status === "new").length;
+  const inProgressCount = requests.filter((r) => r.status === "in_progress").length;
+  const convertedCount = requests.filter((r) => r.status === "converted").length;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <Inbox className="h-6 w-6 text-[#0F2D52]" />
+        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+          <Inbox className="h-5 w-5 text-white" />
+        </div>
         <div>
           <h1 className="text-2xl font-bold">Mes demandes</h1>
           <p className="text-sm text-muted-foreground">
             Suivez vos demandes de projet
           </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="vnk-kpi-card vnk-stat-blue bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
+              <Hash className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total demandes</p>
+              <p className="text-xl font-bold tracking-tight">{totalCount}</p>
+            </div>
+          </div>
+        </div>
+        <div className="vnk-kpi-card vnk-stat-sky bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center shadow-sm">
+              <Sparkles className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Nouvelles</p>
+              <p className="text-xl font-bold tracking-tight">{newCount}</p>
+            </div>
+          </div>
+        </div>
+        <div className="vnk-kpi-card vnk-stat-amber bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm">
+              <Loader className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">En cours</p>
+              <p className="text-xl font-bold tracking-tight">{inProgressCount}</p>
+            </div>
+          </div>
+        </div>
+        <div className="vnk-kpi-card vnk-stat-emerald bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
+              <CheckCircle className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Converties</p>
+              <p className="text-xl font-bold tracking-tight">{convertedCount}</p>
+            </div>
+          </div>
         </div>
       </div>
 
