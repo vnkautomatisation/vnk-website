@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { FileSignature, PenLine, Eye, ClipboardList, CheckCircle, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
+import { SignatureDialog } from "@/components/signature/signature-dialog";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,15 +48,18 @@ function SignatureCheck({ signed, label }: { signed: boolean; label: string }) {
 }
 
 export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
+  const router = useRouter();
   const [pdfContract, setPdfContract] = useState<Contract | null>(null);
+  const [signingContract, setSigningContract] = useState<Contract | null>(null);
 
   const openPdf = (c: Contract, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setPdfContract(c);
   };
 
-  const handleSign = () => {
-    toast.info("Signature en cours de developpement");
+  const startSign = (c: Contract) => {
+    setPdfContract(null);
+    setSigningContract(c);
   };
 
   const columns: Column<Contract>[] = [
@@ -278,13 +283,24 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
               <Button
                 className="bg-[#0F2D52] hover:bg-[#1a3a66]"
                 size="sm"
-                onClick={handleSign}
+                onClick={() => startSign(pdfContract)}
               >
                 <PenLine className="h-4 w-4 mr-1" />
                 Signer ce contrat
               </Button>
             ) : undefined
           }
+        />
+      )}
+
+      {/* Signature dialog — opens when user clicks "Signer ce contrat" */}
+      {signingContract && (
+        <SignatureDialog
+          contractId={signingContract.id}
+          contractNumber={signingContract.contractNumber}
+          contractTitle={signingContract.title}
+          open={!!signingContract}
+          onOpenChange={(open) => { if (!open) setSigningContract(null); }}
         />
       )}
     </div>
