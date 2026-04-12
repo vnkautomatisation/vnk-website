@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useState } from "react";
 import { Receipt, CreditCard, Eye, FileText, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
+import { PaymentModal } from "./payment-modal";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,9 +39,8 @@ const filterOptions: FilterOption[] = [
 ];
 
 export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
-  const router = useRouter();
   const [pdfInvoice, setPdfInvoice] = useState<Invoice | null>(null);
-  const [paying, startPayTransition] = useTransition();
+  const [payInvoice, setPayInvoice] = useState<Invoice | null>(null);
 
   const openPdf = (inv: Invoice, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -50,28 +48,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
   };
 
   const handlePay = (inv: Invoice) => {
-    startPayTransition(async () => {
-      try {
-        const res = await fetch("/api/payments/create-intent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ invoiceId: inv.id }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.url) {
-            window.location.href = data.url;
-          } else {
-            toast.success("Paiement en cours de traitement");
-            router.refresh();
-          }
-        } else {
-          toast.error("Erreur lors de la creation du paiement");
-        }
-      } catch {
-        toast.error("Erreur de connexion");
-      }
-    });
+    setPayInvoice(inv);
   };
 
   const columns: Column<Invoice>[] = [
@@ -314,16 +291,25 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
               <Button
                 className="bg-[#0F2D52] hover:bg-[#1a3a66]"
                 size="sm"
-                onClick={() => handlePay(pdfInvoice)}
-                disabled={paying}
+                onClick={() => {
+                  setPdfInvoice(null);
+                  setPayInvoice(pdfInvoice);
+                }}
               >
                 <CreditCard className="h-4 w-4 mr-1" />
-                {paying ? "Redirection..." : "Payer maintenant"}
+                Payer maintenant
               </Button>
             ) : undefined
           }
         />
       )}
+
+      {/* Payment recap modal before Stripe redirect */}
+      <PaymentModal
+        invoice={payInvoice}
+        open={!!payInvoice}
+        onClose={() => setPayInvoice(null)}
+      />
     </div>
   );
 }
