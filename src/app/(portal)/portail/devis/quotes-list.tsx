@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, Eye, CheckCircle, PenLine } from "lucide-react";
+import { FileText, Eye, CheckCircle, PenLine, Clock, Hash, DollarSign } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { SignatureCanvas } from "@/components/signature/signature-canvas";
@@ -162,8 +162,8 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
   ];
 
   const renderCard = (q: Q) => (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
-      <div className={`h-1 ${STATUS_BAR_COLORS[q.status] ?? "bg-gray-300"}`} />
+    <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+      <div className={`h-1.5 ${STATUS_BAR_COLORS[q.status] ?? "bg-gray-300"}`} />
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between">
           <div className="min-w-0">
@@ -208,12 +208,60 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
-          <FileText className="h-5 w-5 text-[#0F2D52]" />
+        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
+          <FileText className="h-5 w-5 text-white" />
         </div>
         <div>
           <h1 className="text-2xl font-bold">Mes devis</h1>
           <p className="text-sm text-muted-foreground">Consultez et acceptez vos devis</p>
+        </div>
+      </div>
+
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="vnk-kpi-card vnk-stat-blue bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
+              <Hash className="h-4.5 w-4.5 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total devis</p>
+              <p className="text-xl font-bold tracking-tight">{quotes.length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="vnk-kpi-card vnk-stat-slate bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center shadow-sm">
+              <DollarSign className="h-4.5 w-4.5 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Montant total TTC</p>
+              <p className="text-xl font-bold tracking-tight">{formatCurrency(quotes.reduce((s, q) => s + q.amountTtc, 0))}</p>
+            </div>
+          </div>
+        </div>
+        <div className="vnk-kpi-card vnk-stat-amber bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm">
+              <Clock className="h-4.5 w-4.5 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">En attente</p>
+              <p className="text-xl font-bold tracking-tight">{quotes.filter((q) => q.status === "pending").length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="vnk-kpi-card vnk-stat-emerald bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
+              <CheckCircle className="h-4.5 w-4.5 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Acceptes</p>
+              <p className="text-xl font-bold tracking-tight">{quotes.filter((q) => q.status === "accepted").length}</p>
+            </div>
+          </div>
         </div>
       </div>
 
