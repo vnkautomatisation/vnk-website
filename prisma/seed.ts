@@ -227,7 +227,31 @@ async function main() {
     console.log("• Admin VNK déjà présent, non modifié");
   }
 
-  // 2) Settings par défaut (upsert pour idempotence)
+  // 2) Client de test (Jean)
+  const clientEmail = "jean@exemple.com";
+  const existingClient = await prisma.client.findUnique({ where: { email: clientEmail } });
+  if (!existingClient) {
+    const clientHash = await bcrypt.hash("Client2026!", 12);
+    await prisma.client.create({
+      data: {
+        email: clientEmail,
+        passwordHash: clientHash,
+        fullName: "Jean Tremblay",
+        companyName: "Industries XYZ",
+        phone: "418-555-1234",
+        city: "Québec",
+        province: "QC",
+        sector: "Fabrication industrielle",
+        technologies: "Siemens S7-1500,TIA Portal,WinCC",
+        isActive: true,
+      },
+    });
+    console.log("✓ Client test créé (" + clientEmail + ")");
+  } else {
+    console.log("• Client test déjà présent, non modifié");
+  }
+
+  // 3) Settings par défaut (upsert pour idempotence)
   let created = 0;
   let skipped = 0;
   for (const s of SETTINGS) {
@@ -255,7 +279,7 @@ async function main() {
   }
   console.log(`✓ Settings : ${created} créés, ${skipped} déjà présents`);
 
-  // 3) Service catalog de base
+  // 4) Service catalog de base
   const catalog = [
     { key: "support_plc_hourly", name: "Support PLC à distance", description: "Diagnostic et résolution de pannes", basePrice: 125, priceUnit: "hour", category: "Support", sortOrder: 10 },
     { key: "audit_standard", name: "Audit technique", description: "Évaluation complète du système", basePrice: 2500, priceUnit: "fixed", category: "Audit", sortOrder: 20 },
