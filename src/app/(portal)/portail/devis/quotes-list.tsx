@@ -3,12 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, Eye, Download, CheckCircle } from "lucide-react";
+import { FileText, Eye, CheckCircle } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
+import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 type Q = {
@@ -32,21 +32,35 @@ const FILTER_OPTIONS: FilterOption[] = [
   { value: "declined", label: "Refuse" },
 ];
 
+const STATUS_BAR_COLORS: Record<string, string> = {
+  pending: "bg-amber-500",
+  accepted: "bg-emerald-600",
+  expired: "bg-gray-400",
+  declined: "bg-red-500",
+};
+
 export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
   const router = useRouter();
+  const [pdfQuote, setPdfQuote] = useState<Q | null>(null);
   const [accepting, setAccepting] = useState<number | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
-  const handleAccept = (quoteId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const openPdf = (q: Q, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setPdfQuote(q);
+  };
+
+  const handleAccept = () => {
+    if (!pdfQuote) return;
     if (!confirm("Voulez-vous accepter ce devis ? Un contrat sera automatiquement genere.")) return;
 
-    setAccepting(quoteId);
+    setAccepting(pdfQuote.id);
     startTransition(async () => {
       try {
-        const res = await fetch(`/api/quotes/${quoteId}/accept`, { method: "POST" });
+        const res = await fetch(`/api/quotes/${pdfQuote.id}/accept`, { method: "POST" });
         if (res.ok) {
           toast.success("Devis accepte — contrat genere automatiquement");
+          setPdfQuote(null);
           router.refresh();
         } else {
           const data = await res.json().catch(() => ({}));
@@ -60,45 +74,34 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
     });
   };
 
-  const handleDownload = async (quoteId: number, quoteNumber: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      const res = await fetch(`/api/quotes/${quoteId}/pdf`);
-      if (!res.ok) { toast.error("PDF non disponible"); return; }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `devis-${quoteNumber}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error("Erreur de telechargement");
-    }
-  };
-
   const columns: Column<Q>[] = [
     {
-      key: "number",
-      header: "Numero",
+      key: "icon",
+      header: "",
+      className: "w-10",
+      accessor: () => (
+        <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+          <FileText className="h-4 w-4 text-[#0F2D52]" />
+        </div>
+      ),
+    },
+    {
+      key: "info",
+      header: "Devis",
       accessor: (r) => (
-        <span className="font-mono text-xs font-medium">{r.quoteNumber}</span>
+        <div>
+          <span className="font-mono text-xs text-muted-foreground">{r.quoteNumber}</span>
+          <p className="font-medium text-sm">{r.title}</p>
+        </div>
       ),
       sortable: true,
       sortBy: (r) => r.quoteNumber,
     },
     {
-      key: "title",
-      header: "Titre",
-      accessor: (r) => <span className="font-medium">{r.title}</span>,
-    },
-    {
       key: "amount",
       header: "Montant TTC",
       accessor: (r) => (
-        <span className="font-semibold text-[#0F2D52]">
-          {formatCurrency(r.amountTtc)}
-        </span>
+        <span className="font-bold text-[#0F2D52]">{formatCurrency(r.amountTtc)}</span>
       ),
       sortable: true,
       sortBy: (r) => r.amountTtc,
@@ -113,7 +116,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
       header: "Expire le",
       accessor: (r) => (
         <span className="text-muted-foreground text-sm">
-          {r.expiryDate ? formatDate(new Date(r.expiryDate)) : "—"}
+          {r.expiryDate ? formatDate(new Date(r.expiryDate)) : "\u2014"}
         </span>
       ),
       hiddenOnMobile: true,
@@ -123,33 +126,24 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
     {
       key: "actions",
       header: "",
-      className: "w-[180px]",
+      className: "w-[120px]",
       accessor: (r) => (
-        <div className="flex gap-1.5 justify-end" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
           {r.status === "pending" ? (
             <Button
               size="sm"
-              onClick={(e) => handleAccept(r.id, e)}
-              disabled={accepting === r.id}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-[#0F2D52] hover:bg-[#1a3a66]"
+              onClick={(e) => openPdf(r, e)}
             >
               <CheckCircle className="h-3.5 w-3.5 mr-1" />
-              {accepting === r.id ? "..." : "Accepter"}
+              Accepter
             </Button>
           ) : (
-            <Button size="sm" variant="outline" onClick={(e) => handleDownload(r.id, r.quoteNumber, e)}>
+            <Button size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(r, e)}>
               <Eye className="h-3.5 w-3.5 mr-1" />
               Voir
             </Button>
           )}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={(e) => handleDownload(r.id, r.quoteNumber, e)}
-            title="Telecharger PDF"
-          >
-            <Download className="h-3.5 w-3.5" />
-          </Button>
         </div>
       ),
     },
@@ -157,19 +151,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
 
   const renderCard = (q: Q) => (
     <Card className="overflow-hidden hover:shadow-md transition-shadow">
-      <div
-        className="h-1"
-        style={{
-          background:
-            q.status === "pending"
-              ? "#D97706"
-              : q.status === "accepted"
-              ? "#059669"
-              : q.status === "expired"
-              ? "#94A3B8"
-              : "#DC2626",
-        }}
-      />
+      <div className={`h-1 ${STATUS_BAR_COLORS[q.status] ?? "bg-gray-300"}`} />
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between">
           <div className="min-w-0">
@@ -178,47 +160,26 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
           </div>
           <StatusBadge status={q.status} />
         </div>
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-2xl font-bold text-[#0F2D52]">
-              {formatCurrency(q.amountTtc)}
-            </p>
-            {q.expiryDate && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Expire le {formatDate(new Date(q.expiryDate))}
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-2 pt-1">
+        <p className="text-2xl font-bold text-[#0F2D52]">{formatCurrency(q.amountTtc)}</p>
+        {q.expiryDate && (
+          <p className="text-xs text-muted-foreground">
+            Expire le {formatDate(new Date(q.expiryDate))}
+          </p>
+        )}
+        <div className="pt-1">
           {q.status === "pending" ? (
-            <>
-              <Button
-                size="sm"
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                onClick={(e) => handleAccept(q.id, e)}
-                disabled={accepting === q.id}
-              >
-                <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                Accepter
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => handleDownload(q.id, q.quoteNumber, e)}
-              >
-                <Download className="h-3.5 w-3.5" />
-              </Button>
-            </>
-          ) : (
             <Button
               size="sm"
-              variant="outline"
-              className="flex-1"
-              onClick={(e) => handleDownload(q.id, q.quoteNumber, e)}
+              className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]"
+              onClick={(e) => openPdf(q, e)}
             >
+              <CheckCircle className="h-3.5 w-3.5 mr-1" />
+              Accepter
+            </Button>
+          ) : (
+            <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(q, e)}>
               <Eye className="h-3.5 w-3.5 mr-1" />
-              Voir PDF
+              Voir
             </Button>
           )}
         </div>
@@ -234,9 +195,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
         </div>
         <div>
           <h1 className="text-2xl font-bold">Mes devis</h1>
-          <p className="text-sm text-muted-foreground">
-            Consultez et acceptez vos devis en attente
-          </p>
+          <p className="text-sm text-muted-foreground">Consultez et acceptez vos devis</p>
         </div>
       </div>
 
@@ -252,6 +211,32 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
         filterFn={(r) => r.status}
         emptyMessage="Aucun devis"
       />
+
+      {/* PDF preview — Accepter button in footer if pending */}
+      {pdfQuote && (
+        <PdfViewerModal
+          open={!!pdfQuote}
+          onClose={() => setPdfQuote(null)}
+          pdfUrl={`/api/quotes/${pdfQuote.id}/pdf`}
+          title={pdfQuote.title}
+          documentNumber={pdfQuote.quoteNumber}
+          date={pdfQuote.expiryDate ? `Expire le ${formatDate(new Date(pdfQuote.expiryDate))}` : undefined}
+          downloadName={`devis-${pdfQuote.quoteNumber}`}
+          actions={
+            pdfQuote.status === "pending" ? (
+              <Button
+                className="bg-[#0F2D52] hover:bg-[#1a3a66]"
+                size="sm"
+                onClick={handleAccept}
+                disabled={accepting === pdfQuote.id}
+              >
+                <CheckCircle className="h-4 w-4 mr-1" />
+                {accepting === pdfQuote.id ? "Acceptation..." : "Accepter ce devis"}
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
     </div>
   );
 }
