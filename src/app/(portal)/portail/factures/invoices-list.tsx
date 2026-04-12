@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Receipt, CreditCard, Eye, FileText } from "lucide-react";
+import { Receipt, CreditCard, Eye, FileText, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -150,8 +150,8 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
   ];
 
   const renderCard = (inv: Invoice) => (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
-      <div className={`h-1 ${STATUS_BAR_COLORS[inv.status] ?? "bg-gray-300"}`} />
+    <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+      <div className={`h-1.5 ${STATUS_BAR_COLORS[inv.status] ?? "bg-gray-300"}`} />
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -190,14 +190,73 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
-          <Receipt className="h-5 w-5 text-[#0F2D52]" />
+        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-lg">
+          <Receipt className="h-5 w-5 text-white" />
         </div>
         <div>
           <h1 className="text-2xl font-bold">Mes factures</h1>
           <p className="text-sm text-muted-foreground">Suivi de vos factures et paiements</p>
         </div>
       </div>
+
+      {/* KPI strip */}
+      {(() => {
+        const totalCount = invoices.length;
+        const unpaidInvoices = invoices.filter((i) => i.status === "unpaid" || i.status === "overdue");
+        const aPayerCount = unpaidInvoices.length;
+        const aPayerSum = unpaidInvoices.reduce((sum, i) => sum + i.amountTtc, 0);
+        const enRetardCount = invoices.filter((i) => i.status === "overdue").length;
+        const payeesCount = invoices.filter((i) => i.status === "paid").length;
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="vnk-kpi-card vnk-stat-blue bg-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
+                  <FileText className="h-4.5 w-4.5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total factures</p>
+                  <p className="text-xl font-bold tracking-tight">{totalCount}</p>
+                </div>
+              </div>
+            </div>
+            <div className="vnk-kpi-card vnk-stat-amber bg-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm">
+                  <Clock className="h-4.5 w-4.5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">A payer</p>
+                  <p className="text-xl font-bold tracking-tight">{aPayerCount}</p>
+                  <p className="text-xs text-muted-foreground">{formatCurrency(aPayerSum)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="vnk-kpi-card vnk-stat-red bg-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-sm">
+                  <AlertTriangle className="h-4.5 w-4.5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">En retard</p>
+                  <p className="text-xl font-bold tracking-tight">{enRetardCount}</p>
+                </div>
+              </div>
+            </div>
+            <div className="vnk-kpi-card vnk-stat-emerald bg-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
+                  <CheckCircle className="h-4.5 w-4.5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Payees</p>
+                  <p className="text-xl font-bold tracking-tight">{payeesCount}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <DataTable
         data={invoices}
