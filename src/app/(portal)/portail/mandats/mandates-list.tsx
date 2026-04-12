@@ -90,11 +90,11 @@ function MandateTimeline({ progress, status, compact }: { progress: number; stat
                   "flex items-center justify-center rounded-full transition-all",
                   compact ? "h-7 w-7" : "h-9 w-9",
                   done
-                    ? "bg-emerald-500 text-white shadow-sm"
+                    ? "bg-[#0F2D52] text-white shadow-sm"
                     : current
                       ? paused
                         ? "bg-amber-500 text-white shadow-sm ring-2 ring-amber-200"
-                        : "bg-[#0F2D52] text-white shadow-md ring-2 ring-blue-200 animate-pulse"
+                        : "bg-[#0F2D52] text-white shadow-md ring-2 ring-[#0F2D52]/30 animate-pulse"
                       : "bg-muted text-muted-foreground"
                 )}
               >
@@ -111,7 +111,7 @@ function MandateTimeline({ progress, status, compact }: { progress: number; stat
                   className={cn(
                     "text-[10px] mt-1.5 text-center leading-tight font-medium",
                     done
-                      ? "text-emerald-700"
+                      ? "text-[#0F2D52]"
                       : current
                         ? paused
                           ? "text-amber-700"
@@ -130,7 +130,7 @@ function MandateTimeline({ progress, status, compact }: { progress: number; stat
                 className={cn(
                   "flex-1 mx-1",
                   compact ? "h-0.5" : "h-0.5 -mt-4",
-                  done ? "bg-emerald-400" : current ? "bg-gradient-to-r from-[#0F2D52]/60 to-muted" : "bg-muted"
+                  done ? "bg-[#0F2D52]/40" : current ? "bg-gradient-to-r from-[#0F2D52]/40 to-muted" : "bg-muted"
                 )}
               />
             )}
@@ -264,7 +264,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
     <div className="space-y-5">
       {/* ── Page header ───────────────────────────── */}
       <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center shadow-lg">
+        <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
           <Briefcase className="h-5 w-5 text-white" />
         </div>
         <div>
@@ -273,51 +273,23 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
         </div>
       </div>
 
-      {/* ── KPI Strip ─────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="vnk-kpi-card vnk-stat-blue bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
-              <Hash className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total</p>
-              <p className="text-xl font-bold tracking-tight">{kpis.total}</p>
-            </div>
-          </div>
+      {/* ── KPI Strip — style ancien portail ─────── */}
+      <div className="grid grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="rounded-xl border bg-emerald-50/60 p-4">
+          <p className="text-2xl font-bold">{kpis.active}</p>
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">En cours</p>
         </div>
-        <div className="vnk-kpi-card vnk-stat-purple bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-sm">
-              <Activity className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Actifs</p>
-              <p className="text-xl font-bold tracking-tight">{kpis.active}</p>
-            </div>
-          </div>
+        <div className="rounded-xl border bg-emerald-50/60 p-4">
+          <p className="text-2xl font-bold">{kpis.completed}</p>
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Completes</p>
         </div>
-        <div className="vnk-kpi-card vnk-stat-emerald bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
-              <CheckCircle className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Completes</p>
-              <p className="text-xl font-bold tracking-tight">{kpis.completed}</p>
-            </div>
-          </div>
+        <div className="rounded-xl border bg-red-50/60 p-4">
+          <p className="text-2xl font-bold">{kpis.total - kpis.active - kpis.completed}</p>
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-red-600">En retard</p>
         </div>
-        <div className="vnk-kpi-card vnk-stat-amber bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm">
-              <Target className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Progression moy.</p>
-              <p className="text-xl font-bold tracking-tight">{kpis.avgProgress}%</p>
-            </div>
-          </div>
+        <div className="hidden lg:block rounded-xl border bg-[#0F2D52]/5 p-4">
+          <p className="text-2xl font-bold">{kpis.avgProgress}%</p>
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Progression moy.</p>
         </div>
       </div>
 

@@ -190,7 +190,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-lg">
+        <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
           <Receipt className="h-5 w-5 text-white" />
         </div>
         <div>
@@ -209,48 +209,48 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
         const payeesCount = invoices.filter((i) => i.status === "paid").length;
         return (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="vnk-kpi-card vnk-stat-blue bg-card p-4">
+            <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
-                  <FileText className="h-4 w-4 text-white" />
+                <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+                  <FileText className="h-4 w-4 text-[#0F2D52]" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total factures</p>
-                  <p className="text-xl font-bold tracking-tight">{totalCount}</p>
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total factures</p>
+                  <p className="text-2xl font-bold">{totalCount}</p>
                 </div>
               </div>
             </div>
-            <div className="vnk-kpi-card vnk-stat-amber bg-card p-4">
+            <div className="rounded-xl border bg-amber-50/60 p-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm">
-                  <Clock className="h-4 w-4 text-white" />
+                <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
+                  <Clock className="h-4 w-4 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">A payer</p>
-                  <p className="text-xl font-bold tracking-tight">{aPayerCount}</p>
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-600">A payer</p>
+                  <p className="text-2xl font-bold">{aPayerCount}</p>
                   <p className="text-xs text-muted-foreground">{formatCurrency(aPayerSum)}</p>
                 </div>
               </div>
             </div>
-            <div className="vnk-kpi-card vnk-stat-red bg-card p-4">
+            <div className="rounded-xl border bg-red-50/60 p-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-sm">
-                  <AlertTriangle className="h-4 w-4 text-white" />
+                <div className="h-9 w-9 rounded-lg bg-red-100 flex items-center justify-center">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">En retard</p>
-                  <p className="text-xl font-bold tracking-tight">{enRetardCount}</p>
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-red-600">En retard</p>
+                  <p className="text-2xl font-bold">{enRetardCount}</p>
                 </div>
               </div>
             </div>
-            <div className="vnk-kpi-card vnk-stat-emerald bg-card p-4">
+            <div className="rounded-xl border bg-emerald-50/60 p-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
-                  <CheckCircle className="h-4 w-4 text-white" />
+                <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <CheckCircle className="h-4 w-4 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Payees</p>
-                  <p className="text-xl font-bold tracking-tight">{payeesCount}</p>
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Payees</p>
+                  <p className="text-2xl font-bold">{payeesCount}</p>
                 </div>
               </div>
             </div>
