@@ -11,6 +11,7 @@ type Props = {
   title: string;
   documentNumber?: string;
   date?: string;
+  /** Action buttons rendered in the footer (e.g. Accepter, Signer, Payer) */
   actions?: React.ReactNode;
   downloadName?: string;
 };
@@ -84,12 +85,10 @@ export function PdfViewerModal({
 
   return (
     <div className="fixed inset-0 z-[9999]" role="dialog" aria-modal="true">
-      {/* Full-screen dark backdrop */}
       <div className="absolute inset-0 bg-[#0a1628]" onClick={onClose} />
 
-      {/* Full-screen layout */}
       <div className="relative z-10 flex flex-col h-full">
-        {/* Header bar */}
+        {/* Header — titre + info */}
         <div className="flex items-center justify-between px-4 sm:px-6 h-14 bg-[#0F2D52] text-white shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
@@ -105,38 +104,16 @@ export function PdfViewerModal({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDownload}
-              disabled={!blobUrl}
-              className="text-white/70 hover:text-white hover:bg-white/10 h-8"
-            >
-              <Download className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Telecharger</span>
-            </Button>
-
-            {actions && (
-              <>
-                <div className="h-5 w-px bg-white/20" />
-                {actions}
-              </>
-            )}
-
-            <div className="h-5 w-px bg-white/20" />
-
-            <button
-              onClick={onClose}
-              className="h-8 w-8 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
-              aria-label="Fermer"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="h-8 w-8 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors shrink-0"
+            aria-label="Fermer"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* PDF body — takes all remaining space */}
+        {/* PDF body */}
         <div className="flex-1 bg-[#525659] relative">
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
@@ -160,6 +137,26 @@ export function PdfViewerModal({
               title={title}
             />
           )}
+        </div>
+
+        {/* Footer — actions bien visibles */}
+        <div className="flex items-center justify-between px-4 sm:px-6 h-16 bg-white border-t border-gray-200 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownload}
+            disabled={!blobUrl}
+          >
+            <Download className="h-4 w-4 mr-1.5" />
+            Telecharger
+          </Button>
+
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={onClose}>
+              Fermer
+            </Button>
+            {actions}
+          </div>
         </div>
       </div>
     </div>

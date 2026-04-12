@@ -3,9 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, Eye, CheckCircle } from "lucide-react";
+import { FileText, Eye, CheckCircle, PenLine } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
+import { SignatureCanvas } from "@/components/signature/signature-canvas";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,25 +43,40 @@ const STATUS_BAR_COLORS: Record<string, string> = {
 export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
   const router = useRouter();
   const [pdfQuote, setPdfQuote] = useState<Q | null>(null);
-  const [accepting, setAccepting] = useState<number | null>(null);
+  const [showSignature, setShowSignature] = useState(false);
+  const [accepting, setAccepting] = useState(false);
   const [, startTransition] = useTransition();
 
   const openPdf = (q: Q, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setPdfQuote(q);
+    setShowSignature(false);
   };
 
-  const handleAccept = () => {
-    if (!pdfQuote) return;
-    if (!confirm("Voulez-vous accepter ce devis ? Un contrat sera automatiquement genere.")) return;
+  const closePdf = () => {
+    setPdfQuote(null);
+    setShowSignature(false);
+  };
 
-    setAccepting(pdfQuote.id);
+  // Step 1: user clicks "Accepter ce devis" in footer → show signature canvas
+  const startAccept = () => {
+    setShowSignature(true);
+  };
+
+  // Step 2: user draws signature and clicks save → submit acceptance
+  const handleSignAndAccept = async (signatureDataUrl: string) => {
+    if (!pdfQuote) return;
+    setAccepting(true);
     startTransition(async () => {
       try {
-        const res = await fetch(`/api/quotes/${pdfQuote.id}/accept`, { method: "POST" });
+        const res = await fetch(`/api/quotes/${pdfQuote.id}/accept`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ signatureData: signatureDataUrl }),
+        });
         if (res.ok) {
-          toast.success("Devis accepte — contrat genere automatiquement");
-          setPdfQuote(null);
+          toast.success("Devis accepte et signe — contrat genere automatiquement");
+          closePdf();
           router.refresh();
         } else {
           const data = await res.json().catch(() => ({}));
@@ -69,7 +85,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
       } catch {
         toast.error("Erreur de connexion");
       } finally {
-        setAccepting(null);
+        setAccepting(false);
       }
     });
   };
@@ -130,11 +146,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
       accessor: (r) => (
         <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
           {r.status === "pending" ? (
-            <Button
-              size="sm"
-              className="bg-[#0F2D52] hover:bg-[#1a3a66]"
-              onClick={(e) => openPdf(r, e)}
-            >
+            <Button size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(r, e)}>
               <CheckCircle className="h-3.5 w-3.5 mr-1" />
               Accepter
             </Button>
@@ -168,11 +180,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
         )}
         <div className="pt-1">
           {q.status === "pending" ? (
-            <Button
-              size="sm"
-              className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]"
-              onClick={(e) => openPdf(q, e)}
-            >
+            <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(q, e)}>
               <CheckCircle className="h-3.5 w-3.5 mr-1" />
               Accepter
             </Button>
@@ -186,6 +194,16 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
       </CardContent>
     </Card>
   );
+
+  // Build footer actions for PDF modal
+  const pdfActions = pdfQuote?.status === "pending" ? (
+    showSignature ? null : (
+      <Button className="bg-[#0F2D52] hover:bg-[#1a3a66]" size="sm" onClick={startAccept}>
+        <PenLine className="h-4 w-4 mr-1.5" />
+        Accepter ce devis
+      </Button>
+    )
+  ) : undefined;
 
   return (
     <div className="space-y-4">
@@ -212,30 +230,52 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
         emptyMessage="Aucun devis"
       />
 
-      {/* PDF preview — Accepter button in footer if pending */}
+      {/* PDF preview modal */}
       {pdfQuote && (
         <PdfViewerModal
           open={!!pdfQuote}
-          onClose={() => setPdfQuote(null)}
+          onClose={closePdf}
           pdfUrl={`/api/quotes/${pdfQuote.id}/pdf`}
           title={pdfQuote.title}
           documentNumber={pdfQuote.quoteNumber}
           date={pdfQuote.expiryDate ? `Expire le ${formatDate(new Date(pdfQuote.expiryDate))}` : undefined}
           downloadName={`devis-${pdfQuote.quoteNumber}`}
-          actions={
-            pdfQuote.status === "pending" ? (
-              <Button
-                className="bg-[#0F2D52] hover:bg-[#1a3a66]"
-                size="sm"
-                onClick={handleAccept}
-                disabled={accepting === pdfQuote.id}
-              >
-                <CheckCircle className="h-4 w-4 mr-1" />
-                {accepting === pdfQuote.id ? "Acceptation..." : "Accepter ce devis"}
-              </Button>
-            ) : undefined
-          }
+          actions={pdfActions}
         />
+      )}
+
+      {/* Signature overlay — appears on top of the PDF modal */}
+      {pdfQuote && showSignature && (
+        <div className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowSignature(false)} />
+          <div className="relative z-10 w-full max-w-lg mx-4 mb-4 sm:mb-0 bg-white rounded-xl shadow-2xl overflow-hidden">
+            <div className="bg-[#0F2D52] text-white px-5 py-3">
+              <h3 className="font-semibold">Signez pour accepter le devis</h3>
+              <p className="text-xs text-white/60">{pdfQuote.quoteNumber} — {formatCurrency(pdfQuote.amountTtc)}</p>
+            </div>
+            <div className="p-5">
+              <p className="text-xs text-muted-foreground mb-3">
+                En signant, vous acceptez le devis et un contrat sera automatiquement genere.
+              </p>
+              <SignatureCanvas
+                onSave={handleSignAndAccept}
+                width={460}
+                height={180}
+                disabled={accepting}
+              />
+              {accepting && (
+                <p className="text-xs text-muted-foreground text-center mt-2 animate-pulse">
+                  Acceptation en cours...
+                </p>
+              )}
+            </div>
+            <div className="px-5 py-3 border-t flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowSignature(false)} disabled={accepting}>
+                Annuler
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
