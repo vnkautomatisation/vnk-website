@@ -7,7 +7,7 @@ import { Workflow } from "lucide-react";
 export default async function WorkflowPage() {
   // Charger tous les clients actifs avec leurs mandats / devis / contrats / factures
   // Le state machine dans lib/workflow.ts détermine l'étape
-  const clients = await prisma.client.findMany({
+  const rawClients = await prisma.client.findMany({
     where: { isActive: true, archived: false },
     include: {
       mandates: { select: { id: true, status: true, title: true, progress: true } },
@@ -24,6 +24,11 @@ export default async function WorkflowPage() {
       },
     },
   });
+  const clients = rawClients.map((c) => ({
+    ...c,
+    quotes: c.quotes.map((q) => ({ ...q, amountTtc: Number(q.amountTtc) })),
+    invoices: c.invoices.map((i) => ({ ...i, amountTtc: Number(i.amountTtc) })),
+  }));
 
   return (
     <div className="space-y-4">

@@ -5,7 +5,15 @@ export default async function TaxPage() {
   // Calcul du résumé annuel depuis les factures payées
   const yearStart = new Date(new Date().getFullYear(), 0, 1);
   const [declarations, yearAggregate] = await Promise.all([
-    prisma.taxDeclaration.findMany({ orderBy: { periodStart: "desc" } }),
+    prisma.taxDeclaration.findMany({ orderBy: { periodStart: "desc" } }).then((rows) =>
+      rows.map((d) => ({
+        ...d,
+        totalRevenueHt: Number(d.totalRevenueHt),
+        totalTps: Number(d.totalTps),
+        totalTvq: Number(d.totalTvq),
+        totalTaxes: Number(d.totalTaxes),
+      }))
+    ),
     prisma.invoice.aggregate({
       _sum: { amountHt: true, tpsAmount: true, tvqAmount: true, amountTtc: true },
       where: { status: "paid", paidAt: { gte: yearStart } },
