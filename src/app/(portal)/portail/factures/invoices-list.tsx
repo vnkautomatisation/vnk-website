@@ -92,6 +92,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
         <div>
           <span className="font-mono text-xs text-muted-foreground">{r.invoiceNumber}</span>
           <p className="font-medium text-sm">{r.title}</p>
+          <p className="text-[11px] text-muted-foreground">Emise le {formatDate(new Date(r.createdAt))}</p>
         </div>
       ),
       sortable: true,
@@ -149,43 +150,69 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
     },
   ];
 
-  const renderCard = (inv: Invoice) => (
-    <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <div className={`h-1.5 ${STATUS_BAR_COLORS[inv.status] ?? "bg-gray-300"}`} />
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground font-mono">{inv.invoiceNumber}</p>
-            <p className="font-semibold truncate">{inv.title}</p>
+  const renderCard = (inv: Invoice) => {
+    const isOverdue = inv.status === "overdue";
+    const isPaid = inv.status === "paid";
+    return (
+      <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow border-l-[3px]" style={{ borderLeftColor: isOverdue ? "#dc2626" : isPaid ? "#059669" : inv.status === "unpaid" ? "#f59e0b" : "#d1d5db" }}>
+        <CardContent className="p-4 space-y-3">
+          {/* Header: number + title + badge */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground font-mono">{inv.invoiceNumber}</p>
+              <p className="font-semibold truncate">{inv.title}</p>
+            </div>
+            <StatusBadge status={inv.status} />
           </div>
-          <StatusBadge status={inv.status} />
-        </div>
-        <p className="text-2xl font-bold text-[#0F2D52]">{formatCurrency(inv.amountTtc)}</p>
-        {inv.dueDate && (
-          <p className="text-xs text-muted-foreground">
-            Echeance : {formatDate(new Date(inv.dueDate))}
+
+          {/* Amount prominent */}
+          <p className="text-2xl font-bold text-[#0F2D52]">{formatCurrency(inv.amountTtc)}</p>
+
+          {/* Tax breakdown */}
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            {formatCurrency(inv.amountHt)} HT + TPS {formatCurrency(inv.tpsAmount)} + TVQ {formatCurrency(inv.tvqAmount)}
           </p>
-        )}
-        <div className="pt-1">
-          {(inv.status === "unpaid" || inv.status === "overdue") ? (
-            <Button
-              size="sm"
-              className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]"
-              onClick={(e) => openPdf(inv, e)}
-            >
-              <CreditCard className="h-3.5 w-3.5 mr-1" />
-              Payer
-            </Button>
-          ) : inv.status === "paid" ? (
-            <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(inv, e)}>
-              <Eye className="h-3.5 w-3.5 mr-1" />
-              Voir
-            </Button>
-          ) : null}
-        </div>
-      </CardContent>
-    </Card>
-  );
+
+          {/* Dates */}
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              Emise le {formatDate(new Date(inv.createdAt))}
+            </p>
+            {inv.dueDate && (
+              <p className={`text-xs flex items-center gap-1 ${isOverdue ? "text-red-600 font-medium" : "text-muted-foreground"}`}>
+                {isOverdue && <AlertTriangle className="h-3 w-3 shrink-0" />}
+                Echeance : {formatDate(new Date(inv.dueDate))}
+              </p>
+            )}
+            {isPaid && inv.paidAt && (
+              <p className="text-xs text-emerald-600 font-medium">
+                Payee le {formatDate(new Date(inv.paidAt))}
+              </p>
+            )}
+          </div>
+
+          {/* Action */}
+          <div className="pt-1">
+            {(inv.status === "unpaid" || isOverdue) ? (
+              <Button
+                size="sm"
+                className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]"
+                onClick={(e) => openPdf(inv, e)}
+              >
+                <CreditCard className="h-3.5 w-3.5 mr-1" />
+                Payer
+              </Button>
+            ) : isPaid ? (
+              <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(inv, e)}>
+                <Eye className="h-3.5 w-3.5 mr-1" />
+                Voir
+              </Button>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-4">
