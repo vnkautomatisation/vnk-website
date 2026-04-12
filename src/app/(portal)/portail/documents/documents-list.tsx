@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { FolderOpen, Download } from "lucide-react";
+import { FolderOpen, Download, Eye, FileText } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
+import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
 
-// ── Types ────────────────────────────────────────────────
 type Doc = {
   id: number;
   title: string;
@@ -19,7 +19,6 @@ type Doc = {
   mandateTitle: string | null;
 };
 
-// ── Category filter options ──────────────────────────────
 const categoryFilterOptions: FilterOption[] = [
   { value: "Rapports", label: "Rapports" },
   { value: "Devis", label: "Devis" },
@@ -30,28 +29,40 @@ const categoryFilterOptions: FilterOption[] = [
   { value: "Autre", label: "Autre" },
 ];
 
-// ── Category badge variant mapping ───────────────────────
-const CATEGORY_VARIANT: Record<string, "default" | "secondary" | "info" | "success" | "warning" | "outline"> = {
-  Rapports: "info",
-  Devis: "warning",
-  Factures: "success",
-  Contrats: "default",
-  Manuels: "secondary",
-  Photos: "secondary",
-  Autre: "outline",
+const CATEGORY_COLORS: Record<string, string> = {
+  Rapports: "bg-blue-100 text-blue-700 border-blue-200",
+  Devis: "bg-amber-100 text-amber-700 border-amber-200",
+  Factures: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  Contrats: "bg-purple-100 text-purple-700 border-purple-200",
+  Manuels: "bg-gray-100 text-gray-700 border-gray-200",
+  Photos: "bg-pink-100 text-pink-700 border-pink-200",
+  Autre: "bg-gray-100 text-gray-600 border-gray-200",
 };
 
-// ── Component ────────────────────────────────────────────
 export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
   const [readFilter, setReadFilter] = useState<"all" | "unread" | "read">("all");
+  const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
 
-  const handleDownload = (doc: Doc) => {
-    if (doc.fileUrl) {
-      window.open(doc.fileUrl, "_blank");
+  const handlePreview = (doc: Doc, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setPreviewDoc(doc);
+    // Mark as read
+    if (!doc.isRead) {
+      fetch(`/api/documents/${doc.id}/read`, { method: "PATCH" }).catch(() => {});
     }
   };
 
-  // Apply read filter on top of DataTable's built-in category filter
+  const handleDownload = (doc: Doc, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (doc.fileUrl) {
+      const a = document.createElement("a");
+      a.href = doc.fileUrl;
+      a.download = doc.title;
+      a.target = "_blank";
+      a.click();
+    }
+  };
+
   const filteredDocs =
     readFilter === "all"
       ? documents
@@ -59,17 +70,35 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
         ? documents.filter((d) => !d.isRead)
         : documents.filter((d) => d.isRead);
 
-  // ── Columns ──────────────────────────────────────────
   const columns: Column<Doc>[] = [
     {
-      key: "title",
-      header: "Titre",
+      key: "icon",
+      header: "",
+      className: "w-10",
       accessor: (r) => (
-        <div className="flex items-center gap-2">
-          {!r.isRead && (
-            <span className="h-2 w-2 rounded-full bg-sky-500 shrink-0" />
+        <button
+          onClick={(e) => handlePreview(r, e)}
+          className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center hover:bg-[#0F2D52]/20 transition-colors"
+          title="Previsualiser"
+        >
+          <FileText className="h-4 w-4 text-[#0F2D52]" />
+        </button>
+      ),
+    },
+    {
+      key: "title",
+      header: "Document",
+      accessor: (r) => (
+        <div>
+          <div className="flex items-center gap-2">
+            {!r.isRead && (
+              <span className="h-2 w-2 rounded-full bg-sky-500 shrink-0 animate-pulse" />
+            )}
+            <span className={!r.isRead ? "font-semibold" : "font-medium"}>{r.title}</span>
+          </div>
+          {r.mandateTitle && (
+            <p className="text-xs text-muted-foreground mt-0.5">Mandat : {r.mandateTitle}</p>
           )}
-          <span className={!r.isRead ? "font-semibold" : ""}>{r.title}</span>
         </div>
       ),
       sortable: true,
@@ -79,91 +108,87 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
       key: "category",
       header: "Categorie",
       accessor: (r) => {
-        if (!r.category) return "--";
-        const variant = CATEGORY_VARIANT[r.category] ?? "outline";
-        return <Badge variant={variant}>{r.category}</Badge>;
+        if (!r.category) return <span className="text-muted-foreground">—</span>;
+        const cls = CATEGORY_COLORS[r.category] ?? CATEGORY_COLORS.Autre;
+        return (
+          <span className={`inline-flex text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${cls}`}>
+            {r.category}
+          </span>
+        );
       },
     },
     {
       key: "date",
       header: "Date",
-      accessor: (r) => formatDate(r.createdAt),
-      sortable: true,
-      sortBy: (r) => new Date(r.createdAt),
-      hiddenOnMobile: true,
-    },
-    {
-      key: "read",
-      header: "Lu",
       accessor: (r) => (
-        !r.isRead ? (
-          <span className="h-2.5 w-2.5 rounded-full bg-sky-500 inline-block" />
-        ) : (
-          <span className="text-xs text-muted-foreground">Lu</span>
-        )
+        <span className="text-muted-foreground text-sm">
+          {formatDate(new Date(r.createdAt))}
+        </span>
       ),
+      sortable: true,
+      sortBy: (r) => new Date(r.createdAt).getTime(),
       hiddenOnMobile: true,
     },
     {
       key: "actions",
-      header: "Actions",
+      header: "",
+      className: "w-[160px]",
       accessor: (r) => (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDownload(r);
-          }}
-        >
-          <Download className="h-3 w-3 mr-1" />
-          Telecharger
-        </Button>
+        <div className="flex gap-1.5 justify-end" onClick={(e) => e.stopPropagation()}>
+          <Button size="sm" variant="outline" onClick={(e) => handlePreview(r, e)}>
+            <Eye className="h-3.5 w-3.5 mr-1" />
+            Voir
+          </Button>
+          <Button size="sm" variant="ghost" onClick={(e) => handleDownload(r, e)} title="Telecharger">
+            <Download className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       ),
     },
   ];
 
-  // ── Card renderer ────────────────────────────────────
   const renderCard = (doc: Doc) => (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden hover:shadow-md transition-shadow group">
+      <div className="h-1 bg-[#0F2D52]/20" />
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            {!doc.isRead && (
-              <span className="h-2.5 w-2.5 rounded-full bg-sky-500 shrink-0" />
-            )}
-            <p className={`text-sm truncate ${!doc.isRead ? "font-semibold" : ""}`}>
-              {doc.title}
-            </p>
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="h-10 w-10 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center shrink-0 group-hover:bg-[#0F2D52]/20 transition-colors">
+              <FileText className="h-5 w-5 text-[#0F2D52]" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                {!doc.isRead && (
+                  <span className="h-2 w-2 rounded-full bg-sky-500 shrink-0 animate-pulse" />
+                )}
+                <p className={`text-sm truncate ${!doc.isRead ? "font-semibold" : "font-medium"}`}>
+                  {doc.title}
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {formatDate(new Date(doc.createdAt))}
+              </p>
+            </div>
           </div>
           {doc.category && (
-            <Badge
-              variant={CATEGORY_VARIANT[doc.category] ?? "outline"}
-              className="shrink-0"
-            >
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${CATEGORY_COLORS[doc.category] ?? CATEGORY_COLORS.Autre}`}>
               {doc.category}
-            </Badge>
+            </span>
           )}
         </div>
-
-        <p className="text-xs text-muted-foreground">
-          {formatDate(doc.createdAt)}
-        </p>
-
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-full"
-          onClick={() => handleDownload(doc)}
-        >
-          <Download className="h-4 w-4 mr-1" />
-          Telecharger
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="flex-1" onClick={(e) => handlePreview(doc, e)}>
+            <Eye className="h-3.5 w-3.5 mr-1" />
+            Voir
+          </Button>
+          <Button size="sm" variant="ghost" onClick={(e) => handleDownload(doc, e)}>
+            <Download className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
 
-  // ── Read status toggle (extra filter) ────────────────
   const readFilterActions = (
     <div className="flex border rounded-md overflow-hidden">
       {(["all", "unread", "read"] as const).map((val) => {
@@ -173,7 +198,7 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
             key={val}
             type="button"
             onClick={() => setReadFilter(val)}
-            className={`h-9 px-3 text-xs transition-colors ${
+            className={`h-9 px-3 text-xs font-medium transition-colors ${
               readFilter === val
                 ? "bg-[#0F2D52] text-white"
                 : "hover:bg-muted text-muted-foreground"
@@ -189,7 +214,9 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <FolderOpen className="h-6 w-6 text-[#0F2D52]" />
+        <div className="h-10 w-10 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+          <FolderOpen className="h-5 w-5 text-[#0F2D52]" />
+        </div>
         <div>
           <h1 className="text-2xl font-bold">Mes documents</h1>
           <p className="text-sm text-muted-foreground">
@@ -203,6 +230,7 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
         columns={columns}
         getRowId={(r) => r.id}
         renderCard={renderCard}
+        onRowClick={(doc) => handlePreview(doc)}
         storageKey="portal-documents"
         searchPlaceholder="Rechercher un document..."
         searchFn={(r) => `${r.title} ${r.category ?? ""}`}
@@ -210,12 +238,20 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
         filterFn={(r) => r.category ?? "Autre"}
         filterLabel="Toutes les categories"
         headerActions={readFilterActions}
-        exportFilename="documents"
         emptyMessage="Aucun document"
-        emptyIcon={
-          <FolderOpen className="h-12 w-12 text-muted-foreground/40 mb-4" />
-        }
       />
+
+      {/* PDF preview modal */}
+      {previewDoc && (
+        <PdfViewerModal
+          open={!!previewDoc}
+          onClose={() => setPreviewDoc(null)}
+          pdfUrl={previewDoc.fileUrl ?? `/api/documents/${previewDoc.id}`}
+          title={previewDoc.title}
+          date={formatDate(new Date(previewDoc.createdAt))}
+          downloadName={previewDoc.title}
+        />
+      )}
     </div>
   );
 }
