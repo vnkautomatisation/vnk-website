@@ -9,11 +9,17 @@ export default async function PortalInvoicesPage() {
     orderBy: { createdAt: "desc" },
   });
   const invoices = rawInvoices.map((i) => ({
-    ...i,
+    id: i.id,
+    invoiceNumber: i.invoiceNumber,
+    title: i.title,
+    status: i.status,
     amountHt: Number(i.amountHt),
     tpsAmount: Number(i.tpsAmount),
     tvqAmount: Number(i.tvqAmount),
     amountTtc: Number(i.amountTtc),
+    dueDate: i.dueDate?.toISOString() ?? null,
+    createdAt: i.createdAt.toISOString(),
+    paidAt: i.paidAt?.toISOString() ?? null,
   }));
   return <PortalInvoicesList invoices={invoices} />;
 }

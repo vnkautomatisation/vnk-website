@@ -8,9 +8,16 @@ export default async function PortalContractsPage() {
     where: { clientId: session!.user.clientId! },
     orderBy: { createdAt: "desc" },
   });
-  const contracts = rawContracts.map(c => ({
-    ...c,
+  const contracts = rawContracts.map((c) => ({
+    id: c.id,
+    contractNumber: c.contractNumber,
+    title: c.title,
+    status: c.status,
     amountTtc: Number(c.amountTtc),
+    fileUrl: c.fileUrl,
+    adminSignedAt: c.adminSignedAt?.toISOString() ?? null,
+    clientSignatureData: !!c.clientSignatureData,
+    createdAt: c.createdAt.toISOString(),
   }));
   return <PortalContractsList contracts={contracts} />;
 }
