@@ -147,7 +147,7 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+        <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
           <Inbox className="h-5 w-5 text-white" />
         </div>
         <div>
@@ -159,47 +159,47 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="vnk-kpi-card vnk-stat-blue bg-card p-4">
+        <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
-              <Hash className="h-4 w-4 text-white" />
+            <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+              <Hash className="h-4 w-4 text-[#0F2D52]" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total demandes</p>
-              <p className="text-xl font-bold tracking-tight">{totalCount}</p>
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total demandes</p>
+              <p className="text-2xl font-bold">{totalCount}</p>
             </div>
           </div>
         </div>
-        <div className="vnk-kpi-card vnk-stat-sky bg-card p-4">
+        <div className="rounded-xl border bg-sky-50/60 p-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center shadow-sm">
-              <Sparkles className="h-4 w-4 text-white" />
+            <div className="h-9 w-9 rounded-lg bg-sky-100 flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-[#0F2D52]" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Nouvelles</p>
-              <p className="text-xl font-bold tracking-tight">{newCount}</p>
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-[#0F2D52]">Nouvelles</p>
+              <p className="text-2xl font-bold">{newCount}</p>
             </div>
           </div>
         </div>
-        <div className="vnk-kpi-card vnk-stat-amber bg-card p-4">
+        <div className="rounded-xl border bg-amber-50/60 p-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm">
-              <Loader className="h-4 w-4 text-white" />
+            <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
+              <Loader className="h-4 w-4 text-amber-600" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">En cours</p>
-              <p className="text-xl font-bold tracking-tight">{inProgressCount}</p>
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-600">En cours</p>
+              <p className="text-2xl font-bold">{inProgressCount}</p>
             </div>
           </div>
         </div>
-        <div className="vnk-kpi-card vnk-stat-emerald bg-card p-4">
+        <div className="rounded-xl border bg-emerald-50/60 p-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
-              <CheckCircle className="h-4 w-4 text-white" />
+            <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-emerald-600" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Converties</p>
-              <p className="text-xl font-bold tracking-tight">{convertedCount}</p>
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Converties</p>
+              <p className="text-2xl font-bold">{convertedCount}</p>
             </div>
           </div>
         </div>

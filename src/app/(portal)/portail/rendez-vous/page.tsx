@@ -40,7 +40,7 @@ export default async function PortalAppointmentsPage() {
       {/* ── Page header ───────────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg">
+          <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
             <Calendar className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -58,49 +58,21 @@ export default async function PortalAppointmentsPage() {
 
       {/* ── KPI Strip ─────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="vnk-kpi-card vnk-stat-blue bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
-              <Hash className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total</p>
-              <p className="text-xl font-bold tracking-tight">{total}</p>
-            </div>
-          </div>
+        <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
+          <p className="text-2xl font-bold">{total}</p>
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total</p>
         </div>
-        <div className="vnk-kpi-card vnk-stat-emerald bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
-              <CalendarClock className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">A venir</p>
-              <p className="text-xl font-bold tracking-tight">{upcomingCount}</p>
-            </div>
-          </div>
+        <div className="rounded-xl border bg-emerald-50/60 p-4">
+          <p className="text-2xl font-bold">{upcomingCount}</p>
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">A venir</p>
         </div>
-        <div className="vnk-kpi-card vnk-stat-amber bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm">
-              <Clock className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Passes</p>
-              <p className="text-xl font-bold tracking-tight">{pastCount}</p>
-            </div>
-          </div>
+        <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
+          <p className="text-2xl font-bold">{pastCount}</p>
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Passes</p>
         </div>
-        <div className="vnk-kpi-card vnk-stat-sky bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center shadow-sm">
-              <Video className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Video</p>
-              <p className="text-xl font-bold tracking-tight">{videoCount}</p>
-            </div>
-          </div>
+        <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
+          <p className="text-2xl font-bold">{videoCount}</p>
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Video</p>
         </div>
       </div>
 
