@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileSignature, PenLine, Eye, Check, X as XIcon, ClipboardList, CheckCircle, DollarSign } from "lucide-react";
+import { FileSignature, PenLine, Eye, ClipboardList, CheckCircle, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
@@ -38,16 +38,10 @@ const filterOptions: FilterOption[] = [
 
 function SignatureCheck({ signed, label }: { signed: boolean; label: string }) {
   return (
-    <div className="flex items-center gap-1.5 text-xs">
-      {signed ? (
-        <Check className="h-3 w-3 text-emerald-600" />
-      ) : (
-        <XIcon className="h-3 w-3 text-muted-foreground/50" />
-      )}
-      <span className={signed ? "text-emerald-700 font-medium" : "text-muted-foreground"}>
-        {label}
-      </span>
-    </div>
+    <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${signed ? "text-emerald-700" : "text-muted-foreground/60"}`}>
+      <span>{signed ? "\u2713" : "\u25CB"}</span>
+      <span>{label}</span>
+    </span>
   );
 }
 
@@ -81,6 +75,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
         <div>
           <span className="font-mono text-xs text-muted-foreground">{r.contractNumber}</span>
           <p className="font-medium text-sm">{r.title}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{formatDate(new Date(r.createdAt))}</p>
         </div>
       ),
       sortable: true,
@@ -104,9 +99,10 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
       key: "signatures",
       header: "Signatures",
       accessor: (r) => (
-        <div className="flex flex-col gap-0.5">
+        <div className="flex items-center gap-2">
           <SignatureCheck signed={!!r.adminSignedAt} label="VNK" />
-          <SignatureCheck signed={r.clientSignatureData} label="Client" />
+          <span className="text-muted-foreground/40 select-none">|</span>
+          <SignatureCheck signed={r.clientSignatureData} label="Vous" />
         </div>
       ),
       hiddenOnMobile: true,
@@ -144,27 +140,36 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
   const renderCard = (c: Contract) => (
     <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <div className={`h-1.5 ${STATUS_BAR_COLORS[c.status] ?? "bg-gray-300"}`} />
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground font-mono">{c.contractNumber}</p>
-            <p className="font-semibold truncate">{c.title}</p>
+      <CardContent className="p-0">
+        {/* Header: contract number + date + badge */}
+        <div className="px-4 pt-4 pb-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground font-mono">{c.contractNumber}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{formatDate(new Date(c.createdAt))}</p>
+            </div>
+            <StatusBadge status={c.status} />
           </div>
-          <StatusBadge status={c.status} />
+          <p className="font-semibold truncate mt-2">{c.title}</p>
         </div>
-        <p className="text-xl font-bold text-[#0F2D52]">{formatCurrency(c.amountTtc)}</p>
-        <div className="flex gap-4">
+
+        {/* Signatures */}
+        <div className="mx-4 mb-3 rounded-lg bg-muted/40 px-3 py-2.5 flex items-center justify-center gap-3">
           <SignatureCheck signed={!!c.adminSignedAt} label="VNK" />
-          <SignatureCheck signed={c.clientSignatureData} label="Client" />
+          <span className="text-muted-foreground/40 select-none">|</span>
+          <SignatureCheck signed={c.clientSignatureData} label="Vous" />
         </div>
-        <div className="pt-1">
+
+        {/* Footer: amount + action */}
+        <div className="border-t px-4 py-3 flex items-center justify-between gap-2">
+          <p className="text-lg font-bold text-[#0F2D52]">{formatCurrency(c.amountTtc)}</p>
           {c.status === "pending" && !c.clientSignatureData ? (
-            <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(c, e)}>
+            <Button size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(c, e)}>
               <PenLine className="h-3.5 w-3.5 mr-1" />
               Signer
             </Button>
           ) : (
-            <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(c, e)}>
+            <Button size="sm" variant="outline" onClick={(e) => openPdf(c, e)}>
               <Eye className="h-3.5 w-3.5 mr-1" />
               Voir
             </Button>
