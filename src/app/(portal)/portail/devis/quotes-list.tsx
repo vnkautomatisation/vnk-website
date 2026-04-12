@@ -361,6 +361,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
                 width={460}
                 height={180}
                 disabled={accepting}
+                legalText="les conditions du devis"
               />
               {accepting && (
                 <p className="text-xs text-muted-foreground text-center mt-2 animate-pulse">

@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
 import { Video, Phone, MapPin, CalendarCheck, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Slot = {
@@ -200,7 +200,7 @@ export function BookingView({ slots }: { slots: Slot[] }) {
                             : "hover:bg-[#0F2D52]/5 hover:border-[#0F2D52]/30"
                         )}
                       >
-                        {s.startTime}
+                        {formatTime(s.startTime)}
                         <span className={cn("block text-[10px] mt-0.5", selectedSlot?.id === s.id ? "text-white/60" : "text-muted-foreground")}>
                           {s.durationMin} min
                         </span>
@@ -234,7 +234,7 @@ export function BookingView({ slots }: { slots: Slot[] }) {
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground ml-6">
                 <Clock className="h-3.5 w-3.5" />
-                {selectedSlot.startTime} - {selectedSlot.endTime} ({selectedSlot.durationMin} min)
+                {formatTime(selectedSlot.startTime)} - {formatTime(selectedSlot.endTime)} ({selectedSlot.durationMin} min)
               </div>
             </div>
           ) : (

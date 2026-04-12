@@ -158,6 +158,11 @@
   .vnk-stat-blue::before { background: #2563eb; }
   .vnk-stat-emerald::before { background: #059669; }
   .vnk-stat-sky::before { background: #0284c7; }
+  /* Progress bar gradient fill */
+  .vnk-progress-fill {
+    background: linear-gradient(90deg, #0F2D52, #1B4F8A);
+    transition: width 0.5s ease;
+  }
   /* Page section divider */
   .vnk-section-line {
     @apply h-px bg-gradient-to-r from-transparent via-border to-transparent;
