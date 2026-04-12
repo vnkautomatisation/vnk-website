@@ -1,4 +1,4 @@
-// Portail · Tableau de bord client
+// Portail · Tableau de bord client — Design SaaS pro
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -13,114 +13,204 @@ import {
   ArrowRight,
   Clock,
   Inbox,
+  TrendingUp,
+  CalendarCheck,
+  FileSignature,
 } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
 
 export default async function PortalDashboard() {
   const session = await auth();
   const clientId = session!.user.clientId!;
   const t = await getTranslations({ namespace: "portal.dashboard" });
 
-  const [activeMandates, pendingQuotes, pendingInvoices, unreadDocs, recentEvents, client] =
-    await Promise.all([
-      prisma.mandate.count({
-        where: { clientId, status: { in: ["active", "in_progress"] } },
-      }),
-      prisma.quote.count({ where: { clientId, status: "pending" } }),
-      prisma.invoice.count({
-        where: { clientId, status: { in: ["unpaid", "overdue"] } },
-      }),
-      prisma.document.count({ where: { clientId, isRead: false } }),
-      prisma.workflowEvent.findMany({
-        where: { clientId },
-        orderBy: { createdAt: "desc" },
-        take: 15,
-      }),
-      prisma.client.findUnique({ where: { id: clientId } }),
-    ]);
+  const [
+    activeMandates,
+    pendingQuotes,
+    pendingInvoices,
+    unreadDocs,
+    recentEvents,
+    client,
+    totalMandates,
+    totalContracts,
+    overdueInvoices,
+    nextAppointment,
+  ] = await Promise.all([
+    prisma.mandate.count({
+      where: { clientId, status: { in: ["active", "in_progress"] } },
+    }),
+    prisma.quote.count({ where: { clientId, status: "pending" } }),
+    prisma.invoice.count({
+      where: { clientId, status: { in: ["unpaid", "overdue"] } },
+    }),
+    prisma.document.count({ where: { clientId, isRead: false } }),
+    prisma.workflowEvent.findMany({
+      where: { clientId },
+      orderBy: { createdAt: "desc" },
+      take: 15,
+    }),
+    prisma.client.findUnique({ where: { id: clientId } }),
+    prisma.mandate.count({ where: { clientId } }),
+    prisma.contract.count({ where: { clientId, status: "signed" } }),
+    prisma.invoice.count({ where: { clientId, status: "overdue" } }),
+    prisma.appointment.findFirst({
+      where: { clientId, appointmentDate: { gte: new Date() } },
+      orderBy: { appointmentDate: "asc" },
+    }),
+  ]);
 
   const kpis = [
     {
       label: t("active_mandates"),
       value: activeMandates,
       icon: Briefcase,
-      color: "text-purple-600",
-      bg: "bg-purple-50",
+      gradient: "from-purple-600 to-indigo-700",
+      lightBg: "bg-purple-50",
+      lightText: "text-purple-700",
       href: "/portail/mandats",
+      sub: `${totalMandates} au total`,
     },
     {
       label: t("pending_quotes"),
       value: pendingQuotes,
       icon: FileText,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
+      gradient: "from-amber-500 to-orange-600",
+      lightBg: "bg-amber-50",
+      lightText: "text-amber-700",
       href: "/portail/devis",
+      sub: "a accepter",
     },
     {
       label: t("pending_invoices"),
       value: pendingInvoices,
       icon: Receipt,
-      color: "text-red-600",
-      bg: "bg-red-50",
+      gradient: "from-red-500 to-rose-600",
+      lightBg: "bg-red-50",
+      lightText: "text-red-700",
       href: "/portail/factures",
+      sub: overdueInvoices > 0 ? `${overdueInvoices} en retard` : "a jour",
     },
     {
       label: t("unread_documents"),
       value: unreadDocs,
       icon: FolderOpen,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
+      gradient: "from-blue-500 to-cyan-600",
+      lightBg: "bg-blue-50",
+      lightText: "text-blue-700",
       href: "/portail/documents",
+      sub: "non lu(s)",
     },
   ];
 
   const quickActions = [
     { label: "Mes devis", href: "/portail/devis", icon: FileText },
     { label: "Mes factures", href: "/portail/factures", icon: Receipt },
+    { label: "Mes contrats", href: "/portail/contrats", icon: FileSignature },
     { label: "Nouvelle demande", href: "/portail/demandes", icon: Inbox },
   ];
 
   // Event type colors for timeline
   const eventColor = (type: string) => {
     if (type.includes("quote")) return "bg-amber-500";
-    if (type.includes("invoice") || type.includes("payment")) return "bg-emerald-500";
+    if (type.includes("invoice") || type.includes("payment"))
+      return "bg-emerald-500";
     if (type.includes("contract")) return "bg-blue-500";
     if (type.includes("mandate")) return "bg-purple-500";
     return "bg-gray-400";
   };
 
+  const eventIcon = (type: string) => {
+    if (type.includes("quote")) return FileText;
+    if (type.includes("invoice") || type.includes("payment")) return Receipt;
+    if (type.includes("contract")) return FileSignature;
+    if (type.includes("mandate")) return Briefcase;
+    return Clock;
+  };
+
+  const firstName = client?.fullName.split(" ")[0] ?? "";
+
   return (
     <div className="space-y-8">
-      {/* Greeting */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-          {t("greeting", { name: client?.fullName.split(" ")[0] ?? "" })}
-        </h1>
-        <p className="text-muted-foreground mt-1">{client?.companyName}</p>
+      {/* ── Welcome Banner ───────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl vnk-gradient p-6 sm:p-8 text-white">
+        {/* Decorative circles */}
+        <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-white/5" />
+        <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/5" />
+        <div className="absolute top-1/2 right-1/4 h-20 w-20 rounded-full bg-white/5" />
+
+        <div className="relative z-10">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            {t("greeting", { name: firstName })}
+          </h1>
+          <p className="text-white/70 mt-1 text-sm sm:text-base">
+            {client?.companyName}
+          </p>
+
+          {/* Quick stats row inside banner */}
+          <div className="mt-5 flex flex-wrap gap-4 text-sm">
+            <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
+              <Briefcase className="h-3.5 w-3.5" />
+              <span className="font-semibold">{activeMandates}</span>
+              <span className="text-white/70">mandats actifs</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
+              <FileSignature className="h-3.5 w-3.5" />
+              <span className="font-semibold">{totalContracts}</span>
+              <span className="text-white/70">contrats signes</span>
+            </div>
+            {nextAppointment && (
+              <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
+                <CalendarCheck className="h-3.5 w-3.5" />
+                <span className="text-white/70">Prochain RDV :</span>
+                <span className="font-semibold">
+                  {formatDate(nextAppointment.appointmentDate)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* KPI cards */}
+      {/* ── KPI Cards ────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((k) => {
+        {kpis.map((k, i) => {
           const Icon = k.icon;
           return (
-            <Link key={k.label} href={k.href}>
-              <Card className="hover:shadow-md hover:border-[#0F2D52]/20 transition-all cursor-pointer h-full">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div className={`h-11 w-11 rounded-lg ${k.bg} flex items-center justify-center`}>
-                      <Icon className={`h-5 w-5 ${k.color}`} />
-                    </div>
+            <Link
+              key={k.label}
+              href={k.href}
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${i * 80}ms` }}
+            >
+              <Card className="vnk-kpi-card h-full border-0 shadow-md hover:shadow-xl">
+                <CardContent className="p-5 relative">
+                  {/* Gradient icon circle */}
+                  <div
+                    className={`h-12 w-12 rounded-xl bg-gradient-to-br ${k.gradient} flex items-center justify-center shadow-lg mb-4`}
+                  >
+                    <Icon className="h-5 w-5 text-white" />
+                  </div>
+
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                    {k.label}
+                  </p>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <p className="text-3xl font-bold tracking-tight animate-count-up">
+                      {k.value}
+                    </p>
                     {k.value > 0 && (
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${k.bg} ${k.color}`}>
-                        {k.value}
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${k.lightBg} ${k.lightText}`}
+                      >
+                        {k.sub}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs uppercase text-muted-foreground tracking-wider mt-4">
-                    {k.label}
-                  </p>
-                  <p className="text-2xl font-bold mt-1">{k.value}</p>
+
+                  {/* Bottom accent bar */}
+                  <div
+                    className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${k.gradient} rounded-b-xl opacity-60`}
+                  />
                 </CardContent>
               </Card>
             </Link>
@@ -128,53 +218,91 @@ export default async function PortalDashboard() {
         })}
       </div>
 
-      {/* Quick actions */}
-      <div className="flex flex-wrap gap-2">
-        {quickActions.map((a) => {
-          const Icon = a.icon;
-          return (
-            <Button key={a.href} variant="outline" size="sm" asChild>
-              <Link href={a.href}>
-                <Icon className="h-4 w-4 mr-1.5" />
-                {a.label}
-                <ArrowRight className="h-3 w-3 ml-1" />
-              </Link>
-            </Button>
-          );
-        })}
+      {/* ── Quick Actions ────────────────────────────── */}
+      <div>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          Actions rapides
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {quickActions.map((a) => {
+            const Icon = a.icon;
+            return (
+              <Button
+                key={a.href}
+                variant="outline"
+                size="sm"
+                asChild
+                className="shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
+              >
+                <Link href={a.href}>
+                  <Icon className="h-4 w-4 mr-1.5" />
+                  {a.label}
+                  <ArrowRight className="h-3 w-3 ml-1.5 opacity-50" />
+                </Link>
+              </Button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Activity timeline */}
-      <Card>
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="font-semibold text-lg">{t("recent_activity")}</h2>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+      {/* ── Activity Timeline ────────────────────────── */}
+      <Card className="shadow-sm border-0 ring-1 ring-border/50">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg vnk-gradient flex items-center justify-center">
+                <TrendingUp className="h-4 w-4 text-white" />
+              </div>
+              <h2 className="font-semibold text-lg">{t("recent_activity")}</h2>
+            </div>
+            <span className="text-xs text-muted-foreground px-2.5 py-1 bg-muted rounded-full">
+              {recentEvents.length} evenements
+            </span>
           </div>
 
           {recentEvents.length === 0 ? (
-            <div className="text-center py-12">
-              <Inbox className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Aucune activite recente</p>
+            <div className="text-center py-16">
+              <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                <Inbox className="h-8 w-8 text-muted-foreground/40" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">
+                Aucune activite recente
+              </p>
+              <p className="text-xs text-muted-foreground/60 mt-1">
+                Vos prochaines actions apparaitront ici
+              </p>
             </div>
           ) : (
             <div className="relative">
               {/* Timeline line */}
-              <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-border" />
+              <div className="absolute left-[19px] top-2 bottom-2 w-px bg-gradient-to-b from-border via-border to-transparent" />
 
-              <ul className="space-y-4">
-                {recentEvents.map((ev) => (
-                  <li key={ev.id} className="flex items-start gap-4 relative">
-                    {/* Dot */}
-                    <div className={`h-4 w-4 rounded-full ${eventColor(ev.eventType)} shrink-0 mt-0.5 ring-2 ring-background z-10`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{ev.eventLabel}</p>
-                      <time className="text-xs text-muted-foreground">
-                        {formatDate(ev.createdAt)}
-                      </time>
-                    </div>
-                  </li>
-                ))}
+              <ul className="space-y-1">
+                {recentEvents.map((ev, i) => {
+                  const EvIcon = eventIcon(ev.eventType);
+                  return (
+                    <li
+                      key={ev.id}
+                      className="flex items-start gap-4 relative py-2.5 px-2 -mx-2 rounded-lg hover:bg-muted/30 transition-colors group"
+                    >
+                      {/* Icon dot */}
+                      <div
+                        className={`h-10 w-10 rounded-lg ${eventColor(ev.eventType)} flex items-center justify-center shrink-0 z-10 shadow-sm`}
+                      >
+                        <EvIcon className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0 py-0.5">
+                        <p className="text-sm font-medium leading-snug">
+                          {ev.eventLabel}
+                        </p>
+                        <time className="text-xs text-muted-foreground mt-0.5 block">
+                          {formatDate(ev.createdAt)}
+                        </time>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground/0 group-hover:text-muted-foreground/40 transition-colors shrink-0 mt-1.5" />
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
