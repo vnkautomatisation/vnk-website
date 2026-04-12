@@ -3,13 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Receipt, CreditCard, Download, Eye, X, FileText } from "lucide-react";
+import { Receipt, CreditCard, Eye, FileText } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 type Invoice = {
@@ -42,19 +41,12 @@ const filterOptions: FilterOption[] = [
 
 export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
   const router = useRouter();
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [pdfOpen, setPdfOpen] = useState(false);
+  const [pdfInvoice, setPdfInvoice] = useState<Invoice | null>(null);
   const [paying, startPayTransition] = useTransition();
-
-  const openDetail = (inv: Invoice, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setSelectedInvoice(inv);
-  };
 
   const openPdf = (inv: Invoice, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setSelectedInvoice(inv);
-    setPdfOpen(true);
+    setPdfInvoice(inv);
   };
 
   const handlePay = (inv: Invoice) => {
@@ -87,7 +79,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
       key: "icon",
       header: "",
       className: "w-10",
-      accessor: (r) => (
+      accessor: () => (
         <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
           <FileText className="h-4 w-4 text-[#0F2D52]" />
         </div>
@@ -119,7 +111,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
       header: "Echeance",
       accessor: (r) => (
         <span className="text-sm text-muted-foreground">
-          {r.dueDate ? formatDate(new Date(r.dueDate)) : "—"}
+          {r.dueDate ? formatDate(new Date(r.dueDate)) : "\u2014"}
         </span>
       ),
       sortable: true,
@@ -134,27 +126,24 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
     {
       key: "actions",
       header: "",
-      className: "w-[180px]",
+      className: "w-[120px]",
       accessor: (r) => (
-        <div className="flex gap-1.5 justify-end" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
           {(r.status === "unpaid" || r.status === "overdue") ? (
             <Button
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={(e) => { e.stopPropagation(); openDetail(r); }}
+              className="bg-[#0F2D52] hover:bg-[#1a3a66]"
+              onClick={(e) => openPdf(r, e)}
             >
               <CreditCard className="h-3.5 w-3.5 mr-1" />
               Payer
             </Button>
-          ) : (
-            <Button size="sm" variant="outline" onClick={(e) => openPdf(r, e)}>
+          ) : r.status === "paid" ? (
+            <Button size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(r, e)}>
               <Eye className="h-3.5 w-3.5 mr-1" />
               Voir
             </Button>
-          )}
-          <Button size="sm" variant="ghost" onClick={(e) => openPdf(r, e)} title="Voir PDF">
-            <Download className="h-3.5 w-3.5" />
-          </Button>
+          ) : null}
         </div>
       ),
     },
@@ -162,7 +151,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
 
   const renderCard = (inv: Invoice) => (
     <Card className="overflow-hidden hover:shadow-md transition-shadow">
-      <div className={`h-1.5 ${STATUS_BAR_COLORS[inv.status] ?? "bg-gray-300"}`} />
+      <div className={`h-1 ${STATUS_BAR_COLORS[inv.status] ?? "bg-gray-300"}`} />
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -177,27 +166,22 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
             Echeance : {formatDate(new Date(inv.dueDate))}
           </p>
         )}
-        <div className="flex gap-2">
+        <div className="pt-1">
           {(inv.status === "unpaid" || inv.status === "overdue") ? (
-            <>
-              <Button
-                size="sm"
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                onClick={(e) => { e.stopPropagation(); openDetail(inv); }}
-              >
-                <CreditCard className="h-3.5 w-3.5 mr-1" />
-                Payer
-              </Button>
-              <Button size="sm" variant="outline" onClick={(e) => openPdf(inv, e)}>
-                <Download className="h-3.5 w-3.5" />
-              </Button>
-            </>
-          ) : (
-            <Button size="sm" variant="outline" className="flex-1" onClick={(e) => openPdf(inv, e)}>
-              <Eye className="h-3.5 w-3.5 mr-1" />
-              Voir PDF
+            <Button
+              size="sm"
+              className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]"
+              onClick={(e) => openPdf(inv, e)}
+            >
+              <CreditCard className="h-3.5 w-3.5 mr-1" />
+              Payer
             </Button>
-          )}
+          ) : inv.status === "paid" ? (
+            <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(inv, e)}>
+              <Eye className="h-3.5 w-3.5 mr-1" />
+              Voir
+            </Button>
+          ) : null}
         </div>
       </CardContent>
     </Card>
@@ -220,7 +204,6 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
         columns={columns}
         getRowId={(r) => r.id}
         renderCard={renderCard}
-        onRowClick={(inv) => openDetail(inv)}
         storageKey="portal-invoices"
         searchPlaceholder="Rechercher une facture..."
         searchFn={(r) => `${r.invoiceNumber} ${r.title}`}
@@ -230,104 +213,26 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
         emptyMessage="Aucune facture"
       />
 
-      {/* Invoice detail modal (before payment) */}
-      {selectedInvoice && !pdfOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedInvoice(null)} />
-          <div className="relative z-10 w-full max-w-md mx-4 rounded-xl overflow-hidden bg-background shadow-2xl">
-            {/* Header */}
-            <div className="bg-[#0F2D52] text-white p-5">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-mono opacity-70">{selectedInvoice.invoiceNumber}</span>
-                <button onClick={() => setSelectedInvoice(null)} className="h-8 w-8 rounded hover:bg-white/10 flex items-center justify-center">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <h2 className="font-bold text-lg">{selectedInvoice.title}</h2>
-              <div className="mt-3 flex items-end justify-between">
-                <div className="text-3xl font-bold">{formatCurrency(selectedInvoice.amountTtc)}</div>
-                <StatusBadge status={selectedInvoice.status} />
-              </div>
-            </div>
-
-            {/* Breakdown */}
-            <div className="p-5 space-y-3">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Montant HT</span>
-                  <span className="font-medium">{formatCurrency(selectedInvoice.amountHt)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">TPS (5%)</span>
-                  <span>{formatCurrency(selectedInvoice.tpsAmount)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">TVQ (9.975%)</span>
-                  <span>{formatCurrency(selectedInvoice.tvqAmount)}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-bold">
-                  <span>Total TTC</span>
-                  <span className="text-[#0F2D52]">{formatCurrency(selectedInvoice.amountTtc)}</span>
-                </div>
-              </div>
-
-              {selectedInvoice.dueDate && (
-                <p className="text-xs text-muted-foreground">
-                  Echeance : {formatDate(new Date(selectedInvoice.dueDate))}
-                </p>
-              )}
-
-              {selectedInvoice.paidAt && (
-                <p className="text-xs text-emerald-600 font-medium">
-                  Payee le {formatDate(new Date(selectedInvoice.paidAt))}
-                </p>
-              )}
-
-              <div className="flex gap-2 pt-2">
-                {(selectedInvoice.status === "unpaid" || selectedInvoice.status === "overdue") && (
-                  <Button
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                    onClick={() => handlePay(selectedInvoice)}
-                    disabled={paying}
-                  >
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    {paying ? "Redirection..." : "Payer maintenant"}
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  onClick={() => { setPdfOpen(true); }}
-                >
-                  <Eye className="h-4 w-4 mr-1" />
-                  Voir PDF
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PDF preview modal */}
-      {selectedInvoice && pdfOpen && (
+      {/* PDF preview — with Pay button if unpaid */}
+      {pdfInvoice && (
         <PdfViewerModal
-          open={pdfOpen}
-          onClose={() => { setPdfOpen(false); setSelectedInvoice(null); }}
-          pdfUrl={`/api/invoices/${selectedInvoice.id}/pdf`}
-          title={selectedInvoice.title}
-          documentNumber={selectedInvoice.invoiceNumber}
-          date={selectedInvoice.dueDate ? formatDate(new Date(selectedInvoice.dueDate)) : undefined}
-          downloadName={`facture-${selectedInvoice.invoiceNumber}`}
+          open={!!pdfInvoice}
+          onClose={() => setPdfInvoice(null)}
+          pdfUrl={`/api/invoices/${pdfInvoice.id}/pdf`}
+          title={pdfInvoice.title}
+          documentNumber={pdfInvoice.invoiceNumber}
+          date={pdfInvoice.dueDate ? formatDate(new Date(pdfInvoice.dueDate)) : undefined}
+          downloadName={`facture-${pdfInvoice.invoiceNumber}`}
           actions={
-            (selectedInvoice.status === "unpaid" || selectedInvoice.status === "overdue") ? (
+            (pdfInvoice.status === "unpaid" || pdfInvoice.status === "overdue") ? (
               <Button
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-[#0F2D52] hover:bg-[#1a3a66]"
                 size="sm"
-                onClick={() => handlePay(selectedInvoice)}
+                onClick={() => handlePay(pdfInvoice)}
                 disabled={paying}
               >
                 <CreditCard className="h-4 w-4 mr-1" />
-                Payer
+                {paying ? "Redirection..." : "Payer maintenant"}
               </Button>
             ) : undefined
           }
