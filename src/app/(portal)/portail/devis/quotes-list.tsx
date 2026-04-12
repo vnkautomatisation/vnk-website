@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, Eye, CheckCircle, PenLine, Clock, Hash, DollarSign } from "lucide-react";
+import { FileText, Eye, CheckCircle, PenLine, Clock, Hash, DollarSign, AlertTriangle, Calendar } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { SignatureCanvas } from "@/components/signature/signature-canvas";
@@ -123,6 +123,18 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
       sortBy: (r) => r.amountTtc,
     },
     {
+      key: "date",
+      header: "Date",
+      accessor: (r) => (
+        <span className="text-muted-foreground text-sm">
+          {formatDate(new Date(r.createdAt))}
+        </span>
+      ),
+      hiddenOnMobile: true,
+      sortable: true,
+      sortBy: (r) => new Date(r.createdAt).getTime(),
+    },
+    {
       key: "status",
       header: "Statut",
       accessor: (r) => <StatusBadge status={r.status} />,
@@ -161,39 +173,78 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
     },
   ];
 
-  const renderCard = (q: Q) => (
-    <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <div className={`h-1.5 ${STATUS_BAR_COLORS[q.status] ?? "bg-gray-300"}`} />
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start justify-between">
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground font-mono">{q.quoteNumber}</p>
-            <p className="font-semibold truncate">{q.title}</p>
+  const renderCard = (q: Q) => {
+    const expiryClose =
+      q.status === "pending" &&
+      q.expiryDate &&
+      (new Date(q.expiryDate).getTime() - Date.now()) / 86_400_000 <= 7 &&
+      new Date(q.expiryDate).getTime() > Date.now();
+
+    return (
+      <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+        <div className={`h-1 ${STATUS_BAR_COLORS[q.status] ?? "bg-gray-300"}`} />
+        <CardContent className="p-4 space-y-3">
+          {/* Header: quote number + date + status badge */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground font-mono">{q.quoteNumber}</p>
+              <p className="font-semibold truncate mt-0.5">{q.title}</p>
+              <div className="flex items-center gap-1 mt-1 text-[11px] text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                <span>{formatDate(new Date(q.createdAt))}</span>
+              </div>
+            </div>
+            <StatusBadge status={q.status} />
           </div>
-          <StatusBadge status={q.status} />
-        </div>
-        <p className="text-2xl font-bold text-[#0F2D52]">{formatCurrency(q.amountTtc)}</p>
-        {q.expiryDate && (
-          <p className="text-xs text-muted-foreground">
-            Expire le {formatDate(new Date(q.expiryDate))}
-          </p>
-        )}
-        <div className="pt-1">
-          {q.status === "pending" ? (
-            <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(q, e)}>
-              <CheckCircle className="h-3.5 w-3.5 mr-1" />
-              Accepter
-            </Button>
-          ) : (
-            <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(q, e)}>
-              <Eye className="h-3.5 w-3.5 mr-1" />
-              Voir
-            </Button>
+
+          {/* Amount TTC prominent */}
+          <p className="text-2xl font-bold text-[#0F2D52]">{formatCurrency(q.amountTtc)}</p>
+
+          {/* Tax breakdown */}
+          <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground border-t pt-2">
+            <div>
+              <span className="block text-[10px] uppercase tracking-wide font-medium">HT</span>
+              <span className="font-semibold text-foreground">{formatCurrency(q.amountHt)}</span>
+            </div>
+            <div>
+              <span className="block text-[10px] uppercase tracking-wide font-medium">TPS</span>
+              <span className="font-semibold text-foreground">{formatCurrency(q.tpsAmount)}</span>
+            </div>
+            <div>
+              <span className="block text-[10px] uppercase tracking-wide font-medium">TVQ</span>
+              <span className="font-semibold text-foreground">{formatCurrency(q.tvqAmount)}</span>
+            </div>
+          </div>
+
+          {/* Expiry + warning */}
+          {q.expiryDate && (
+            <div className={`flex items-center gap-1.5 text-xs ${expiryClose ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
+              {expiryClose && <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
+              <span>
+                {expiryClose ? "Expire bientot : " : "Expire le "}
+                {formatDate(new Date(q.expiryDate))}
+              </span>
+            </div>
           )}
-        </div>
-      </CardContent>
-    </Card>
-  );
+
+          {/* Action button */}
+          <div className="pt-1">
+            {q.status === "pending" ? (
+              <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(q, e)}>
+                <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                Accepter
+              </Button>
+            ) : (
+              <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(q, e)}>
+                <Eye className="h-3.5 w-3.5 mr-1" />
+                Voir
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   // Build footer actions for PDF modal
   const pdfActions = pdfQuote?.status === "pending" ? (
