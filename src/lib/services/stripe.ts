@@ -38,6 +38,46 @@ export async function createPaymentIntent(params: {
   });
 }
 
+export async function createCheckoutSession(params: {
+  amount: number;
+  currency?: string;
+  clientEmail: string;
+  invoiceId: number;
+  invoiceNumber: string;
+  description?: string;
+  successUrl: string;
+  cancelUrl: string;
+}) {
+  const stripe = (await getStripe()) as any;
+  if (!stripe) throw new Error("Stripe non configure");
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    payment_method_types: ["card"],
+    customer_email: params.clientEmail,
+    line_items: [
+      {
+        price_data: {
+          currency: (params.currency ?? "cad").toLowerCase(),
+          product_data: {
+            name: `Facture ${params.invoiceNumber}`,
+            description: params.description,
+          },
+          unit_amount: Math.round(params.amount * 100),
+        },
+        quantity: 1,
+      },
+    ],
+    metadata: {
+      invoice_id: String(params.invoiceId),
+    },
+    success_url: params.successUrl,
+    cancel_url: params.cancelUrl,
+  });
+
+  return session;
+}
+
 export async function refundPayment(params: {
   paymentIntentId: string;
   amount?: number;
