@@ -472,7 +472,9 @@
       "appointments": "My appointments",
       "notifications": "Notifications",
       "contact_us": "Contact us",
-      "logout": "Sign out"
+      "logout": "Sign out",
+      "more": "More",
+      "new": "New request"
     },
     "dashboard": {
       "greeting": "Hi, {name}",

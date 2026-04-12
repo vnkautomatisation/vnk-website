@@ -472,7 +472,9 @@
       "appointments": "Mes rendez-vous",
       "notifications": "Notifications",
       "contact_us": "Nous contacter",
-      "logout": "Déconnexion"
+      "logout": "Déconnexion",
+      "more": "Plus",
+      "new": "Nouvelle demande"
     },
     "dashboard": {
       "greeting": "Bonjour, {name}",
