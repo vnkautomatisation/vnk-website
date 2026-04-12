@@ -14,7 +14,7 @@ import {
   Hash,
 } from "lucide-react";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatTime } from "@/lib/utils";
 import Link from "next/link";
 
 export default async function PortalAppointmentsPage() {
@@ -121,7 +121,7 @@ export default async function PortalAppointmentsPage() {
                         <div>
                           <p className="font-semibold">{a.subject ?? "Rendez-vous"}</p>
                           <p className="text-sm text-muted-foreground mt-0.5">
-                            {formatDate(a.appointmentDate)} · {a.startTime} - {a.endTime}
+                            {formatDate(a.appointmentDate)} · {formatTime(a.startTime)} - {formatTime(a.endTime)}
                           </p>
                         </div>
                       </div>
