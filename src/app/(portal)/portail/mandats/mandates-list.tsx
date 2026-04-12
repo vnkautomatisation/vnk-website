@@ -19,6 +19,8 @@ import {
   Hash,
   Activity,
   Target,
+  AlertTriangle,
+  ArrowRight,
 } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -54,7 +56,6 @@ function getActiveStep(progress: number, status: string): number {
   if (status === "completed") return 5;
   if (status === "pending") return 0;
   if (status === "paused") {
-    // Show last active step
     if (progress >= 86) return 4;
     if (progress >= 61) return 3;
     if (progress >= 31) return 2;
@@ -66,6 +67,17 @@ function getActiveStep(progress: number, status: string): number {
   if (progress >= 31) return 2;
   if (progress >= 11) return 1;
   return 0;
+}
+
+function getStepLabel(progress: number, status: string): string {
+  if (status === "completed") return "Termine";
+  const step = getActiveStep(progress, status);
+  return STEPS[step]?.label ?? "Demarrage";
+}
+
+function isLate(m: { endDate: string | null; progress: number; status: string }): boolean {
+  if (!m.endDate || m.status === "completed") return false;
+  return new Date(m.endDate) < new Date() && m.progress < 100;
 }
 
 function MandateTimeline({ progress, status, compact }: { progress: number; status: string; compact?: boolean }) {
@@ -180,15 +192,27 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
       header: "",
       className: "w-10",
       accessor: () => (
-        <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-purple-500/10 to-indigo-500/10 flex items-center justify-center">
-          <Briefcase className="h-4 w-4 text-purple-600" />
+        <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+          <Briefcase className="h-4 w-4 text-[#0F2D52]" />
         </div>
       ),
     },
     {
       key: "title",
       header: "Projet",
-      accessor: (r) => <span className="font-medium">{r.title}</span>,
+      accessor: (r) => (
+        <div>
+          <span className="font-medium">{r.title}</span>
+          {isLate(r) && (
+            <span className="ml-2 inline-flex items-center gap-0.5 text-[10px] font-semibold text-red-600">
+              <AlertTriangle className="h-3 w-3" /> Retard
+            </span>
+          )}
+          {r.description && (
+            <p className="text-xs text-muted-foreground truncate max-w-[200px]">{r.description}</p>
+          )}
+        </div>
+      ),
       sortable: true,
       sortBy: (r) => r.title,
     },
@@ -218,6 +242,21 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
       hiddenOnMobile: true,
     },
     {
+      key: "step",
+      header: "Etape",
+      accessor: (r) => {
+        const label = getStepLabel(r.progress, r.status);
+        return r.status === "completed" ? (
+          <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+            <CheckCircle className="h-3 w-3" /> Termine
+          </span>
+        ) : (
+          <span className="text-xs font-semibold text-[#0F2D52]">{label}</span>
+        );
+      },
+      hiddenOnMobile: true,
+    },
+    {
       key: "hours",
       header: "Heures",
       accessor: (r) => {
@@ -232,33 +271,77 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
     },
   ];
 
-  const renderCard = (m: Mandate) => (
-    <Card className={cn(
-      "overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer",
-      selected?.id === m.id && "ring-2 ring-[#0F2D52]"
-    )}>
-      {/* Progress top bar */}
-      <div className="h-1.5 bg-muted overflow-hidden">
-        <div className={`h-full ${progressColor(m.progress)} transition-all`} style={{ width: `${m.progress}%` }} />
-      </div>
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <p className="font-semibold text-sm">{m.title}</p>
-          <StatusBadge status={m.status} />
-        </div>
+  const renderCard = (m: Mandate) => {
+    const late = isLate(m);
+    const stepLabel = getStepLabel(m.progress, m.status);
 
-        {/* Mini timeline in card */}
-        <MandateTimeline progress={m.progress} status={m.status} compact />
-
-        <div className="flex items-center gap-2">
-          <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
-            <div className={`h-full rounded-full ${progressColor(m.progress)}`} style={{ width: `${m.progress}%` }} />
+    return (
+      <Card className={cn(
+        "overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer",
+        selected?.id === m.id && "ring-2 ring-[#0F2D52]"
+      )}>
+        {/* Status top bar — 4px like old portal */}
+        <div className={cn("h-1", {
+          "bg-[#1B4F8A]": m.status === "active" || m.status === "in_progress",
+          "bg-amber-500": m.status === "pending",
+          "bg-emerald-600": m.status === "completed",
+          "bg-slate-400": m.status === "paused",
+        })} />
+        <CardContent className="p-4 space-y-3">
+          {/* Title + status + late flag */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-semibold text-sm leading-tight">{m.title}</p>
+              {m.description && (
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">{m.description}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {late && (
+                <span className="text-[10px] font-semibold text-red-600 flex items-center gap-0.5">
+                  <AlertTriangle className="h-3 w-3" />
+                </span>
+              )}
+              <StatusBadge status={m.status} />
+            </div>
           </div>
-          <span className={`text-xs font-bold tabular-nums ${progressTextColor(m.progress)}`}>{m.progress}%</span>
-        </div>
-      </CardContent>
-    </Card>
-  );
+
+          {/* Progress bar */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground">Progression</span>
+              <span className={`text-xs font-bold tabular-nums ${progressTextColor(m.progress)}`}>{m.progress}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div className={`h-full rounded-full ${progressColor(m.progress)}`} style={{ width: `${m.progress}%` }} />
+            </div>
+          </div>
+
+          {/* Mini timeline */}
+          <MandateTimeline progress={m.progress} status={m.status} compact />
+
+          {/* Etape label — like old portal */}
+          <div className="pt-2 border-t flex items-center justify-between">
+            {m.status === "completed" ? (
+              <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+                <CheckCircle className="h-3 w-3" /> Termine
+              </span>
+            ) : (
+              <span className="text-xs">
+                <span className="text-muted-foreground">Etape : </span>
+                <span className="font-semibold text-[#0F2D52]">{stepLabel}</span>
+              </span>
+            )}
+            {m.endDate && (
+              <span className={cn("text-[10px]", late ? "text-red-600 font-semibold" : "text-muted-foreground")}>
+                Fin {formatDate(new Date(m.endDate))}
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-5">
