@@ -153,22 +153,22 @@ function MandateTimeline({ progress, status, compact }: { progress: number; stat
   );
 }
 
-// ── Progress bar helpers — couleur par STATUT comme ancien portail ──
+// ── Progress bar helpers — couleur par STATUT, tons doux ──
 function statusBarColor(status: string, late: boolean): string {
-  if (late) return "bg-red-500";
-  if (status === "completed") return "bg-emerald-600";
+  if (late) return "bg-red-400";
+  if (status === "completed") return "bg-emerald-500";
   if (status === "active" || status === "in_progress") return "vnk-progress-fill";
-  if (status === "pending") return "bg-amber-500";
-  if (status === "paused") return "bg-slate-400";
+  if (status === "pending") return "bg-amber-400";
+  if (status === "paused") return "bg-slate-300";
   return "vnk-progress-fill";
 }
 
 function statusBorderColor(status: string, late: boolean): string {
-  if (late) return "#dc2626";
-  if (status === "completed") return "#059669";
+  if (late) return "#f87171";
+  if (status === "completed") return "#34d399";
   if (status === "active" || status === "in_progress") return "#1B4F8A";
-  if (status === "pending") return "#d97706";
-  if (status === "paused") return "#64748b";
+  if (status === "pending") return "#fbbf24";
+  if (status === "paused") return "#94a3b8";
   return "#1B4F8A";
 }
 
