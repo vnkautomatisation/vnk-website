@@ -7,7 +7,6 @@ import { useState, useEffect, useTransition } from "react";
 import { useLocale } from "next-intl";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { signOut } from "next-auth/react";
 import {
   Menu,
@@ -94,13 +93,8 @@ export function PortalTopbar({
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-[64px] flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group shrink-0">
-            <div className="h-9 w-9 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center group-hover:bg-white/20 transition-colors overflow-hidden">
-              <Image
-                src="/images/vnk-icon-transparent-white.svg"
-                alt="VNK"
-                width={24}
-                height={24}
-              />
+            <div className="h-10 w-10 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
+              <span className="text-white font-bold text-sm">VNK</span>
             </div>
             <div className="hidden sm:block">
               <div className="text-sm font-bold leading-tight text-white">
