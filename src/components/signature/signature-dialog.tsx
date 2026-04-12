@@ -74,7 +74,11 @@ export function SignatureDialog({
         </DialogHeader>
 
         <div className="mt-4">
-          <SignatureCanvas onSave={handleSave} disabled={sending} />
+          <SignatureCanvas
+            onSave={handleSave}
+            disabled={sending}
+            legalText="les conditions du contrat"
+          />
         </div>
       </DialogContent>
     </Dialog>

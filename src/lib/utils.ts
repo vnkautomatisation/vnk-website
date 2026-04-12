@@ -54,6 +54,12 @@ export function formatDateTime(
   });
 }
 
+// Formatage heure sans secondes ("14:30:00" → "14:30")
+export function formatTime(time: string | null | undefined): string {
+  if (!time) return "—";
+  return time.replace(/:00$/, "");
+}
+
 // Initiales depuis nom complet
 export function initials(fullName: string | null | undefined): string {
   if (!fullName) return "?";
