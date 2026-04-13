@@ -33,6 +33,10 @@ type QuotePdfData = {
   paymentPlan?: string;
   paymentPct1?: number;
   paymentPct2?: number;
+  status?: string;
+  clientSignatureData?: string | null;
+  signedAt?: Date | null;
+  acceptedAt?: Date | null;
 };
 
 type InvoicePdfData = {
@@ -119,6 +123,10 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<Buffer> {
     payment_plan: data.paymentPlan,
     payment_pct_1: data.paymentPct1,
     payment_pct_2: data.paymentPct2,
+    status: data.status,
+    client_signature_data: data.clientSignatureData,
+    signed_at: data.signedAt,
+    accepted_at: data.acceptedAt,
   };
 
   return capturePdf((fakeRes) =>

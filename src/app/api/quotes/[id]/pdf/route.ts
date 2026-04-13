@@ -43,6 +43,10 @@ export async function GET(
     amountTtc: Number(quote.amountTtc),
     expiryDate: quote.expiryDate ?? undefined,
     paymentConditions: quote.paymentConditions ?? undefined,
+    status: quote.status,
+    clientSignatureData: quote.clientSignatureData,
+    signedAt: quote.signedAt,
+    acceptedAt: quote.acceptedAt,
   });
 
   return new Response(new Uint8Array(pdf), {
