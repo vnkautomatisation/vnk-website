@@ -28,7 +28,7 @@ model Admin {
   email         String    @unique
   passwordHash  String    @map("password_hash")
   fullName      String?   @map("full_name")
-  role          AdminRole @default(admin)
+  role          String    @default("admin")
   isActive      Boolean   @default(true) @map("is_active")
   twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
   twoFactorSecret  String? @map("two_factor_secret")
@@ -144,7 +144,7 @@ model Mandate {
   title       String
   description String?
   serviceType String?      @default("plc-support") @map("service_type")
-  status      MandateStatus @default(pending)
+  status      String        @default("pending")
   progress    Int          @default(0)
   startDate   DateTime?    @map("start_date") @db.Date
   endDate     DateTime?    @map("end_date") @db.Date
@@ -211,7 +211,7 @@ model Quote {
   tvqAmount             Decimal     @default(0) @map("tvq_amount") @db.Decimal(10, 2)
   amountTtc             Decimal     @default(0) @map("amount_ttc") @db.Decimal(10, 2)
   currency              String      @default("CAD")
-  status                QuoteStatus @default(pending)
+  status                String      @default("pending")
   expiryDate            DateTime?   @map("expiry_date") @db.Date
   acceptedAt            DateTime?   @map("accepted_at")
   declinedAt            DateTime?   @map("declined_at")
@@ -254,7 +254,7 @@ model Contract {
   title                String
   content              String?
   fileUrl              String?        @map("file_url")
-  status               ContractStatus @default(pending)
+  status               String         @default("pending")
   amountTtc            Decimal?       @default(0) @map("amount_ttc") @db.Decimal(10, 2)
   hellosignRequestId   String?        @map("hellosign_request_id")
   signedAt             DateTime?      @map("signed_at")
@@ -301,7 +301,7 @@ model Invoice {
   tvqAmount                Decimal       @default(0) @map("tvq_amount") @db.Decimal(10, 2)
   amountTtc                Decimal       @default(0) @map("amount_ttc") @db.Decimal(10, 2)
   currency                 String        @default("CAD")
-  status                   InvoiceStatus @default(unpaid)
+  status                   String        @default("unpaid")
   dueDate                  DateTime?     @map("due_date") @db.Date
   paidAt                   DateTime?     @map("paid_at")
   paymentMethod            String?       @map("payment_method")
@@ -396,8 +396,8 @@ model Dispute {
   stripeDisputeId  String?         @map("stripe_dispute_id")
   title            String
   description      String?
-  status           DisputeStatus   @default(open)
-  priority         DisputePriority @default(medium)
+  status           String          @default("open")
+  priority         String          @default("medium")
   resolution       String?
   openedAt         DateTime        @default(now()) @map("opened_at")
   resolvedAt       DateTime?       @map("resolved_at")
@@ -663,9 +663,9 @@ model ProjectRequest {
   description  String
   serviceType  String?              @map("service_type")
   plcBrand     String?              @map("plc_brand")
-  urgency      ProjectRequestUrgency @default(normal)
+  urgency      String               @default("normal")
   budgetRange  String?              @map("budget_range")
-  status       ProjectRequestStatus @default(new)
+  status       String               @default("new")
   convertedToMandateId Int?         @map("converted_to_mandate_id")
   convertedToQuoteId   Int?         @map("converted_to_quote_id")
   attachments  Json?
@@ -694,7 +694,7 @@ model Setting {
   category    String      // general, company, portal, billing, signature, emails, integrations, system, users, appearance, seo, logs, notifications, legal
   key         String
   value       String?     @db.Text
-  type        SettingType @default(string)
+  type        String     @default("string")
   label       String      // Libellé affiché dans l'UI
   description String?     // Aide contextuelle
   isPublic    Boolean     @default(false) @map("is_public") // exposé au portail/public ?
