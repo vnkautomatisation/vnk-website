@@ -8,9 +8,9 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [{ protocol: "https", hostname: "**" }],
   },
+  serverExternalPackages: ["pdfkit", "fontkit", "restructure", "iconv-lite"],
   experimental: {
     serverActions: { bodySizeLimit: "10mb" },
-    // Optimize page loads
     optimizePackageImports: ["lucide-react", "sonner"],
   },
   // Reduce cold starts
