@@ -78,21 +78,29 @@ export function PortalBottomNav({ badges }: { badges?: PortalBadges }) {
           }
 
           if (isMore) {
+            // Active si une page du menu "Plus" est ouverte
+            const moreActive = MORE_ITEMS.some((m) => isActive(m.href));
             return (
               <button
                 key={item.key}
                 type="button"
                 onClick={() => setMoreOpen(true)}
-                className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground w-14"
+                className={cn(
+                  "flex flex-col items-center justify-center gap-0.5 w-14 relative",
+                  moreActive ? "text-[#0F2D52]" : "text-muted-foreground"
+                )}
                 aria-label="Plus"
               >
+                {moreActive && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#0F2D52]" />
+                )}
                 <div className="relative">
-                  <Icon className="h-5 w-5" />
-                  {hasMoreNotif && (
+                  <Icon className={cn("h-5 w-5", moreActive && "mt-0.5")} />
+                  {hasMoreNotif && !moreActive && (
                     <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500" />
                   )}
                 </div>
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <span className={cn("text-[10px]", moreActive ? "font-semibold" : "font-medium")}>{item.label}</span>
               </button>
             );
           }
@@ -103,12 +111,15 @@ export function PortalBottomNav({ badges }: { badges?: PortalBadges }) {
               href={item.href}
               prefetch
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 w-14",
+                "flex flex-col items-center justify-center gap-0.5 w-14 relative",
                 active ? "text-[#0F2D52]" : "text-muted-foreground"
               )}
               aria-current={active ? "page" : undefined}
             >
-              <Icon className="h-5 w-5" />
+              {active && (
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#0F2D52]" />
+              )}
+              <Icon className={cn("h-5 w-5", active && "mt-0.5")} />
               <span className={cn("text-[10px]", active ? "font-semibold" : "font-medium")}>{item.label}</span>
             </Link>
           );
