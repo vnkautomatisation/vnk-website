@@ -398,8 +398,8 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
 
         {/* ── Detail panel — aligne avec les en-tetes du tableau ────── */}
         {selected && (
-          <div className="hidden lg:block w-[370px] shrink-0 pt-[76px]">
-            <Card className="sticky top-[76px] overflow-hidden border-0 shadow-lg ring-1 ring-border/50">
+          <div className="hidden lg:block w-[370px] shrink-0 pt-[100px]">
+            <Card className="sticky top-[100px] overflow-hidden border-0 shadow-lg ring-1 ring-border/50">
               {/* Header */}
               <div className="bg-gradient-to-br from-[#0F2D52] to-[#1a4a7a] text-white px-5 py-4">
                 <div className="flex items-start justify-between gap-2">
