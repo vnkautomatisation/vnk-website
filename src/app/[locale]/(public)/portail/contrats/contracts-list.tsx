@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { FileSignature, PenLine, Eye, ClipboardList, CheckCircle, DollarSign } from "lucide-react";
 import { toast } from "sonner";
@@ -51,6 +51,16 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
   const router = useRouter();
   const [pdfContract, setPdfContract] = useState<Contract | null>(null);
   const [signingContract, setSigningContract] = useState<Contract | null>(null);
+
+  const contractKpis = useMemo(() => {
+    const total = contracts.length;
+    const aSigner = contracts.filter((c) => c.status === "pending" && !c.clientSignatureData).length;
+    const signes = contracts.filter((c) => c.status === "signed").length;
+    const montantTotal = contracts
+      .filter((c) => c.status === "signed")
+      .reduce((sum, c) => sum + c.amountTtc, 0);
+    return { total, aSigner, signes, montantTotal };
+  }, [contracts]);
 
   const openPdf = (c: Contract, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -186,76 +196,66 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
-          <FileSignature className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">Mes contrats</h1>
-          <p className="text-sm text-muted-foreground">Signez et consultez vos contrats</p>
-        </div>
-      </div>
-
-      {/* KPI strip */}
-      {(() => {
-        const total = contracts.length;
-        const aSigner = contracts.filter((c) => c.status === "pending" && !c.clientSignatureData).length;
-        const signes = contracts.filter((c) => c.status === "signed").length;
-        const montantTotal = contracts
-          .filter((c) => c.status === "signed")
-          .reduce((sum, c) => sum + c.amountTtc, 0);
-
-        return (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
-                  <ClipboardList className="h-4 w-4 text-[#0F2D52]" />
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total contrats</p>
-                  <p className="text-2xl font-bold">{total}</p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border bg-amber-50/60 p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
-                  <PenLine className="h-4 w-4 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-600">A signer</p>
-                  <p className="text-2xl font-bold">{aSigner}</p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border bg-emerald-50/60 p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
-                  <CheckCircle className="h-4 w-4 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Signes</p>
-                  <p className="text-2xl font-bold">{signes}</p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
-                  <DollarSign className="h-4 w-4 text-[#0F2D52]" />
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Montant total</p>
-                  <p className="text-2xl font-bold">{formatCurrency(montantTotal)}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
       <DataTable
+        stickyHeader={
+          <>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
+                <FileSignature className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">Mes contrats</h1>
+                <p className="text-sm text-muted-foreground">Signez et consultez vos contrats</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+              <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+                    <ClipboardList className="h-4 w-4 text-[#0F2D52]" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total contrats</p>
+                    <p className="text-2xl font-bold">{contractKpis.total}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border bg-amber-50/60 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <PenLine className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-600">A signer</p>
+                    <p className="text-2xl font-bold">{contractKpis.aSigner}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border bg-emerald-50/60 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <CheckCircle className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Signes</p>
+                    <p className="text-2xl font-bold">{contractKpis.signes}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+                    <DollarSign className="h-4 w-4 text-[#0F2D52]" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Montant total</p>
+                    <p className="text-2xl font-bold">{formatCurrency(contractKpis.montantTotal)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        }
         data={contracts}
         columns={columns}
         getRowId={(r) => r.id}

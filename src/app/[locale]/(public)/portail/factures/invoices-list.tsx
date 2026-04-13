@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Receipt, CreditCard, Eye, FileText, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
@@ -41,6 +41,16 @@ const filterOptions: FilterOption[] = [
 export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
   const [pdfInvoice, setPdfInvoice] = useState<Invoice | null>(null);
   const [payInvoice, setPayInvoice] = useState<Invoice | null>(null);
+
+  const invoiceKpis = useMemo(() => {
+    const totalCount = invoices.length;
+    const unpaidInvoices = invoices.filter((i) => i.status === "unpaid" || i.status === "overdue");
+    const aPayerCount = unpaidInvoices.length;
+    const aPayerSum = unpaidInvoices.reduce((sum, i) => sum + i.amountTtc, 0);
+    const enRetardCount = invoices.filter((i) => i.status === "overdue").length;
+    const payeesCount = invoices.filter((i) => i.status === "paid").length;
+    return { totalCount, aPayerCount, aPayerSum, enRetardCount, payeesCount };
+  }, [invoices]);
 
   const openPdf = (inv: Invoice, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -193,76 +203,67 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
-          <Receipt className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">Mes factures</h1>
-          <p className="text-sm text-muted-foreground">Suivi de vos factures et paiements</p>
-        </div>
-      </div>
-
-      {/* KPI strip */}
-      {(() => {
-        const totalCount = invoices.length;
-        const unpaidInvoices = invoices.filter((i) => i.status === "unpaid" || i.status === "overdue");
-        const aPayerCount = unpaidInvoices.length;
-        const aPayerSum = unpaidInvoices.reduce((sum, i) => sum + i.amountTtc, 0);
-        const enRetardCount = invoices.filter((i) => i.status === "overdue").length;
-        const payeesCount = invoices.filter((i) => i.status === "paid").length;
-        return (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
-                  <FileText className="h-4 w-4 text-[#0F2D52]" />
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total factures</p>
-                  <p className="text-2xl font-bold">{totalCount}</p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border bg-amber-50/60 p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
-                  <Clock className="h-4 w-4 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-600">A payer</p>
-                  <p className="text-2xl font-bold">{aPayerCount}</p>
-                  <p className="text-xs text-muted-foreground">{formatCurrency(aPayerSum)}</p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border bg-red-50/60 p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-red-100 flex items-center justify-center">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-red-600">En retard</p>
-                  <p className="text-2xl font-bold">{enRetardCount}</p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border bg-emerald-50/60 p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
-                  <CheckCircle className="h-4 w-4 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Payees</p>
-                  <p className="text-2xl font-bold">{payeesCount}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
       <DataTable
+        stickyHeader={
+          <>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
+                <Receipt className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">Mes factures</h1>
+                <p className="text-sm text-muted-foreground">Suivi de vos factures et paiements</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+              <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+                    <FileText className="h-4 w-4 text-[#0F2D52]" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total factures</p>
+                    <p className="text-2xl font-bold">{invoiceKpis.totalCount}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border bg-amber-50/60 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <Clock className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-600">A payer</p>
+                    <p className="text-2xl font-bold">{invoiceKpis.aPayerCount}</p>
+                    <p className="text-xs text-muted-foreground">{formatCurrency(invoiceKpis.aPayerSum)}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border bg-red-50/60 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-red-100 flex items-center justify-center">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-red-600">En retard</p>
+                    <p className="text-2xl font-bold">{invoiceKpis.enRetardCount}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border bg-emerald-50/60 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <CheckCircle className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Payees</p>
+                    <p className="text-2xl font-bold">{invoiceKpis.payeesCount}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        }
         data={invoices}
         columns={columns}
         getRowId={(r) => r.id}
