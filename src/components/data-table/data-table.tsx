@@ -336,17 +336,17 @@ export function DataTable<T>({
         <>
           {/* Desktop table */}
           <div className="hidden md:block">
-            <Card className="overflow-hidden">
+            <Card className="overflow-clip rounded-lg">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted/50 border-b">
+                  <thead className="bg-muted/50 border-b sticky top-0 z-[5]">
                     <tr>
                       {columns.map((col) => (
                         <th
                           key={col.key}
                           className={cn(
                             "text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground",
-                            col.hiddenOnMobile && "hidden lg:table-cell",
+                            col.hiddenOnMobile && "hidden md:table-cell",
                             col.sortable && "cursor-pointer select-none hover:text-foreground",
                             col.className
                           )}
@@ -382,7 +382,7 @@ export function DataTable<T>({
                             key={col.key}
                             className={cn(
                               "px-4 py-3",
-                              col.hiddenOnMobile && "hidden lg:table-cell",
+                              col.hiddenOnMobile && "hidden md:table-cell",
                               col.className
                             )}
                           >
