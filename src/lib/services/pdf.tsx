@@ -1,6 +1,6 @@
 // PDF generation — wrapper Next.js autour de l'ancien pdf-templates.js (Express)
-// Les fonctions dans pdf-templates.js attendent (res, entity, client) format Express.
-// On passe un PassThrough stream comme "res" — PDFKit fait doc.pipe(res).
+// Les fonctions dans pdf-templates.js font doc.pipe(res) puis doc.end().
+// On passe un PassThrough comme "res" et on attend "finish" pour collecter le buffer.
 import "server-only";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -62,27 +62,6 @@ type ContractPdfData = {
   signedAt?: Date | null;
 };
 
-// Cree un faux "res" Express : un PassThrough stream avec setHeader noop.
-// PDFKit fait doc.pipe(res) et res recoit le PDF binaire.
-function createFakeRes(): { fakeRes: PassThrough & { setHeader: () => void }; getBuffer: () => Promise<Buffer> } {
-  const stream = new PassThrough();
-  const chunks: Buffer[] = [];
-  stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-
-  // Ajoute setHeader noop — les templates Express appellent res.setHeader()
-  const fakeRes = Object.assign(stream, {
-    setHeader: () => {},
-  });
-
-  const getBuffer = () =>
-    new Promise<Buffer>((resolve, reject) => {
-      stream.on("end", () => resolve(Buffer.concat(chunks)));
-      stream.on("error", reject);
-    });
-
-  return { fakeRes, getBuffer };
-}
-
 function toSnakeClient(c: Client) {
   return {
     full_name: c.fullName,
@@ -96,9 +75,37 @@ function toSnakeClient(c: Client) {
   };
 }
 
-export async function generateQuotePdf(data: QuotePdfData): Promise<Buffer> {
-  const { fakeRes, getBuffer } = createFakeRes();
+// Cree un PassThrough stream avec setHeader noop.
+// Collecte le PDF et resolve quand le stream est termine (finish event).
+function capturePdf(
+  fn: (fakeRes: PassThrough & { setHeader: () => void }) => void | Promise<void>
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const stream = new PassThrough();
+    const chunks: Buffer[] = [];
 
+    stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+    stream.on("end", () => resolve(Buffer.concat(chunks)));
+    stream.on("error", reject);
+
+    // Ajoute setHeader noop — les templates appellent res.setHeader()
+    const fakeRes = Object.assign(stream, { setHeader: () => {} });
+
+    // Lance la generation — le template fait doc.pipe(fakeRes) puis doc.end()
+    // doc.end() flush le stream, ce qui declenche "end" sur notre PassThrough
+    try {
+      const result = fn(fakeRes);
+      // Si la fonction est async, catch les erreurs
+      if (result && typeof result.catch === "function") {
+        result.catch(reject);
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+export async function generateQuotePdf(data: QuotePdfData): Promise<Buffer> {
   const quote = {
     quote_number: data.quoteNumber,
     title: data.title,
@@ -114,13 +121,12 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<Buffer> {
     payment_pct_2: data.paymentPct2,
   };
 
-  await PdfTemplates.generateQuotePDF(fakeRes, quote, toSnakeClient(data.client), []);
-  return getBuffer();
+  return capturePdf((fakeRes) =>
+    PdfTemplates.generateQuotePDF(fakeRes, quote, toSnakeClient(data.client), [])
+  );
 }
 
 export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
-  const { fakeRes, getBuffer } = createFakeRes();
-
   const invoice = {
     invoice_number: data.invoiceNumber,
     title: data.title,
@@ -136,13 +142,12 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     phase_number: data.phaseNumber,
   };
 
-  await PdfTemplates.generateInvoicePDF(fakeRes, invoice, toSnakeClient(data.client));
-  return getBuffer();
+  return capturePdf((fakeRes) =>
+    PdfTemplates.generateInvoicePDF(fakeRes, invoice, toSnakeClient(data.client))
+  );
 }
 
 export async function generateContractPdf(data: ContractPdfData): Promise<Buffer> {
-  const { fakeRes, getBuffer } = createFakeRes();
-
   const contract = {
     contract_number: data.contractNumber,
     title: data.title,
@@ -153,6 +158,7 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
     signed_at: data.signedAt,
   };
 
-  await PdfTemplates.generateContractPDF(fakeRes, contract, toSnakeClient(data.client), null);
-  return getBuffer();
+  return capturePdf((fakeRes) =>
+    PdfTemplates.generateContractPDF(fakeRes, contract, toSnakeClient(data.client), null)
+  );
 }
