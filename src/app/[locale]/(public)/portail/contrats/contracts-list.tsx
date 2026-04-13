@@ -21,6 +21,7 @@ type Contract = {
   fileUrl: string | null;
   adminSignedAt: string | null;
   clientSignatureData: boolean;
+  signedAt: string | null;
   createdAt: string;
 };
 
@@ -152,7 +153,16 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
     {
       key: "status",
       header: "Statut",
-      accessor: (r) => <StatusBadge status={r.status} />,
+      accessor: (r) => (
+        <div>
+          <StatusBadge status={r.status} />
+          {r.signedAt && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Signe le {formatDate(r.signedAt)}
+            </p>
+          )}
+        </div>
+      ),
     },
     {
       key: "signatures",

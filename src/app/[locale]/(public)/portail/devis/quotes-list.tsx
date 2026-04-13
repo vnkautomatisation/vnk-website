@@ -23,6 +23,7 @@ type Q = {
   amountTtc: number;
   discountAmount: number | null;
   expiryDate: string | null;
+  acceptedAt: string | null;
   createdAt: string;
 };
 
@@ -140,7 +141,16 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
     {
       key: "status",
       header: "Statut",
-      accessor: (r) => <StatusBadge status={r.status} />,
+      accessor: (r) => (
+        <div>
+          <StatusBadge status={r.status} />
+          {r.acceptedAt && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Accepte le {formatDate(r.acceptedAt)}
+            </p>
+          )}
+        </div>
+      ),
     },
     {
       key: "expiry",
