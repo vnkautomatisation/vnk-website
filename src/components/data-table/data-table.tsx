@@ -345,7 +345,7 @@ export function DataTable<T>({
                           key={col.key}
                           className={cn(
                             "text-left px-2 sm:px-4 py-2 sm:py-3 font-semibold text-[0.6rem] sm:text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap",
-                            col.hiddenOnMobile && "hidden md:table-cell",
+                            col.hiddenOnMobile && "hidden sm:table-cell",
                             col.sortable && "cursor-pointer select-none hover:text-foreground",
                             col.className
                           )}
@@ -381,7 +381,7 @@ export function DataTable<T>({
                             key={col.key}
                             className={cn(
                               "px-2 sm:px-4 py-1.5 sm:py-3",
-                              col.hiddenOnMobile && "hidden md:table-cell",
+                              col.hiddenOnMobile && "hidden sm:table-cell",
                               col.className
                             )}
                           >

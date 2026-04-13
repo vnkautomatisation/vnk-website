@@ -121,7 +121,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
     {
       key: "icon",
       header: "",
-      className: "w-10",
+      className: "w-10", hiddenOnMobile: true,
       accessor: () => (
         <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
           <FileSignature className="h-4 w-4 text-[#0F2D52]" />
