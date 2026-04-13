@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createCheckoutSession } from "@/lib/services/stripe";
 import { headers } from "next/headers";
+import { getBaseUrl } from "@/lib/utils";
 
 const schema = z.object({
   invoiceId: z.number().int().positive(),
@@ -42,9 +43,7 @@ export async function POST(req: Request) {
 
   try {
     const headersList = await headers();
-    const host = headersList.get("host") ?? "localhost:3000";
-    const protocol = headersList.get("x-forwarded-proto") ?? "http";
-    const baseUrl = `${protocol}://${host}`;
+    const baseUrl = getBaseUrl(headersList);
 
     const checkoutSession = await createCheckoutSession({
       amount: Number(invoice.amountTtc),
