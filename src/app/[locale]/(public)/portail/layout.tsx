@@ -1,4 +1,4 @@
-// Portail client layout — sidebar + bottom nav (PublicNav fournie par le parent)
+// Portail client layout — sidebar + contenu scrollable (nav publique fournie par parent)
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
@@ -29,17 +29,22 @@ export default async function PortalLayout({
   const client = await getClient(session!.user.clientId!);
 
   return (
-    <div className="h-[calc(100vh-70px)] overflow-hidden">
-      <div className="flex h-full">
+    <>
+      {/* Force le parent (main du layout public) a ne pas scroller */}
+      <style>{`
+        body, html { overflow: hidden !important; height: 100vh !important; }
+      `}</style>
+
+      <div className="fixed inset-0 top-[70px] flex">
         <PortalSidebar
           clientName={client?.fullName ?? ""}
           clientCompany={client?.companyName ?? undefined}
         />
-        <main className="flex-1 overflow-y-auto lg:pl-[240px] pb-[64px] lg:pb-0 no-scrollbar">
+        <main className="flex-1 lg:pl-[240px] overflow-y-auto no-scrollbar pb-[64px] lg:pb-0">
           <div className="p-4 sm:p-6 lg:p-8">{children}</div>
         </main>
       </div>
       <PortalBottomNav />
-    </div>
+    </>
   );
 }
