@@ -25,7 +25,7 @@ const getBadgeCounts = cache(async (clientId: number) => {
         where: { clientId, status: "pending" },
       }),
       prisma.contract.count({
-        where: { clientId, status: "pending", clientSignatureData: null },
+        where: { clientId, status: "pending" },
       }),
       prisma.document.count({
         where: { clientId, isRead: false },
