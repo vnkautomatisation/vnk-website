@@ -1,4 +1,6 @@
 // Admin layout : sidebar + topbar + main content
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { auth } from "@/lib/auth";
