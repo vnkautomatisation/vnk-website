@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PortalSidebar } from "@/components/portal/portal-sidebar";
 import { PortalBottomNav } from "@/components/portal/portal-bottom-nav";
+import { ChatWidget } from "@/components/chat/chat-widget";
 
 const getClient = cache(async (clientId: number) =>
   prisma.client.findUnique({
@@ -71,6 +72,7 @@ export default async function PortalLayout({
         </main>
       </div>
       <PortalBottomNav badges={badges} />
+      <ChatWidget clientId={clientId} />
     </>
   );
 }
