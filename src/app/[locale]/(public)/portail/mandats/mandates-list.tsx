@@ -346,42 +346,42 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+      {/* ── Header : titre + KPIs ─────────── */}
+      <div>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
+            <Briefcase className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Mandats</h1>
+            <p className="text-sm text-muted-foreground">Suivi de vos projets en cours</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="rounded-xl border bg-emerald-50/60 p-4">
+            <p className="text-2xl font-bold">{kpis.active}</p>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">En cours</p>
+          </div>
+          <div className="rounded-xl border bg-emerald-50/60 p-4">
+            <p className="text-2xl font-bold">{kpis.completed}</p>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Completes</p>
+          </div>
+          <div className="rounded-xl border bg-red-50/60 p-4">
+            <p className="text-2xl font-bold">{kpis.total - kpis.active - kpis.completed}</p>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-red-600">En retard</p>
+          </div>
+          <div className="hidden lg:block rounded-xl border bg-[#0F2D52]/5 p-4">
+            <p className="text-2xl font-bold">{kpis.avgProgress}%</p>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Progression moy.</p>
+          </div>
+        </div>
+      </div>
+
       {/* ── Layout : table + detail panel ─────────── */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 items-start">
         <div className={cn("flex-1 min-w-0 transition-all", selected && "lg:max-w-[calc(100%-380px)]")}>
           <DataTable
-            stickyHeader={
-              <>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
-                    <Briefcase className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold">Mandats</h1>
-                    <p className="text-sm text-muted-foreground">Suivi de vos projets en cours</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 lg:grid-cols-4 gap-3 mb-3">
-                  <div className="rounded-xl border bg-emerald-50/60 p-4">
-                    <p className="text-2xl font-bold">{kpis.active}</p>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">En cours</p>
-                  </div>
-                  <div className="rounded-xl border bg-emerald-50/60 p-4">
-                    <p className="text-2xl font-bold">{kpis.completed}</p>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Completes</p>
-                  </div>
-                  <div className="rounded-xl border bg-red-50/60 p-4">
-                    <p className="text-2xl font-bold">{kpis.total - kpis.active - kpis.completed}</p>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-red-600">En retard</p>
-                  </div>
-                  <div className="hidden lg:block rounded-xl border bg-[#0F2D52]/5 p-4">
-                    <p className="text-2xl font-bold">{kpis.avgProgress}%</p>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Progression moy.</p>
-                  </div>
-                </div>
-              </>
-            }
             data={mandates}
             columns={columns}
             getRowId={(r) => r.id}
@@ -396,10 +396,10 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
           />
         </div>
 
-        {/* ── Detail panel — inline right side ────── */}
+        {/* ── Detail panel — aligne avec les en-tetes du tableau ────── */}
         {selected && (
-          <div className="hidden lg:block w-[370px] shrink-0">
-            <Card className="sticky top-0 overflow-hidden border-0 shadow-lg ring-1 ring-border/50">
+          <div className="hidden lg:block w-[370px] shrink-0 pt-[76px]">
+            <Card className="sticky top-[76px] overflow-hidden border-0 shadow-lg ring-1 ring-border/50">
               {/* Header */}
               <div className="bg-gradient-to-br from-[#0F2D52] to-[#1a4a7a] text-white px-5 py-4">
                 <div className="flex items-start justify-between gap-2">
