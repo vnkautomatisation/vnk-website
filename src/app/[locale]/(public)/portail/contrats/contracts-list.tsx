@@ -364,7 +364,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
 
       {/* Signature overlay — SUR le PDF modal */}
       {pdfContract && showSignature && (
-        <div className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 bottom-14 lg:bottom-0 z-[10000] flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSignature(false)} />
           <div className="relative z-10 w-full max-w-xl mx-4 mb-4 sm:mb-0 bg-white rounded-2xl shadow-2xl overflow-hidden">
             <div className="bg-[#0F2D52] px-6 py-5 text-white relative">

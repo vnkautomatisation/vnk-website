@@ -117,7 +117,7 @@ export function PortalBottomNav({ badges }: { badges?: PortalBadges }) {
 
       {/* "Plus" bottom sheet */}
       {moreOpen && (
-        <div className="lg:hidden fixed inset-0 z-50">
+        <div className="lg:hidden fixed inset-0 bottom-14 z-50">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setMoreOpen(false)}

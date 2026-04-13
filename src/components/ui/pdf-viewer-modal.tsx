@@ -87,7 +87,7 @@ export function PdfViewerModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999]" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 bottom-14 lg:bottom-0 z-[9999]" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-[#0a1628]" onClick={onClose} />
 
       <div className="relative z-10 flex flex-col h-full">
