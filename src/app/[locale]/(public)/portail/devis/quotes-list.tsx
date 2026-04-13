@@ -294,7 +294,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
                 <FileText className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Mes devis</h1>
+                <h1 className="text-2xl font-bold">Devis</h1>
                 <p className="text-sm text-muted-foreground">Consultez et acceptez vos devis</p>
               </div>
             </div>

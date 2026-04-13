@@ -161,7 +161,7 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
                   <Inbox className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold">Mes demandes</h1>
+                  <h1 className="text-2xl font-bold">Demandes</h1>
                   <p className="text-sm text-muted-foreground">
                     Suivez vos demandes de projet
                   </p>

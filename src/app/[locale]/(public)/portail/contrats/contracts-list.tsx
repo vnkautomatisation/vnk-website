@@ -261,7 +261,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
                 <FileSignature className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Mes contrats</h1>
+                <h1 className="text-2xl font-bold">Contrats</h1>
                 <p className="text-sm text-muted-foreground">Signez et consultez vos contrats</p>
               </div>
             </div>

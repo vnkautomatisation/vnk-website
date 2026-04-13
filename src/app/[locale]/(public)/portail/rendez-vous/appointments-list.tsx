@@ -236,7 +236,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                   <Calendar className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold">Mes rendez-vous</h1>
+                  <h1 className="text-2xl font-bold">Rendez-vous</h1>
                   <p className="text-sm text-muted-foreground">Planifiez et gerez vos rendez-vous</p>
                 </div>
               </div>
