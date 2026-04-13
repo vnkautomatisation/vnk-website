@@ -23,9 +23,14 @@ export default function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // ── /portail/login : pas de prefixe locale, pas d'auth ──
+  if (pathname === "/portail/login" || pathname.startsWith("/portail/login?")) {
+    return NextResponse.next();
+  }
+
   // ── /portail/* : auth check PUIS passer au intl middleware ──
   if (pathname.startsWith("/portail") || pathname.match(/^\/(fr|en)\/portail/)) {
-    if (!pathname.includes("/portail/login") && !sessionCookie) {
+    if (!sessionCookie) {
       const url = request.nextUrl.clone();
       url.pathname = "/portail/login";
       url.searchParams.set("redirect", pathname);
