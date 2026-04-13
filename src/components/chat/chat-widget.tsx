@@ -56,8 +56,13 @@ export function ChatWidget({
     fetch("/api/messages/mark-read", { method: "POST" }).catch(() => {});
   }, [open, messages]);
 
+  const prevCountRef = useRef(0);
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    // Auto-scroll seulement si nouveaux messages (pas a chaque poll)
+    if (messages.length > prevCountRef.current && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+    prevCountRef.current = messages.length;
   }, [messages]);
 
   useEffect(() => {
