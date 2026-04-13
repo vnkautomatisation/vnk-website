@@ -124,17 +124,21 @@ export function ChatWidget({
 
   return (
     <>
-      {/* ── Bouton flottant ── */}
+      {/* ── Bouton flottant avec avatar client ── */}
       {!open && (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-[70px] right-3 lg:bottom-6 lg:right-6 z-40 h-12 w-12 lg:h-14 lg:w-14 rounded-full bg-[#0F2D52] text-white shadow-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+          className="fixed bottom-[70px] right-3 lg:bottom-6 lg:right-6 z-40 group"
           aria-label="Ouvrir le chat"
         >
-          <MessageCircle className="h-5 w-5 lg:h-6 lg:w-6" />
+          <div className="relative h-13 w-13 lg:h-14 lg:w-14 rounded-full bg-[#0F2D52] text-white shadow-xl flex items-center justify-center group-hover:scale-110 group-active:scale-95 transition-all ring-2 ring-white/30">
+            <span className="text-sm lg:text-base font-bold">{initials}</span>
+            {/* Indicateur en ligne */}
+            <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white" />
+          </div>
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow-md">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
@@ -158,14 +162,18 @@ export function ChatWidget({
             )}
           >
             {/* Header */}
-            <div className="shrink-0 h-14 px-4 flex items-center justify-between bg-[#0F2D52] text-white">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center shrink-0">
-                  <MessageCircle className="h-4 w-4" />
+            <div className="shrink-0 h-[56px] px-4 flex items-center justify-between bg-gradient-to-r from-[#0F2D52] to-[#1a4a7a] text-white">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="relative h-9 w-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold">{initials}</span>
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400 border-2 border-[#0F2D52]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold leading-tight">VNK Support</p>
-                  <p className="text-[10px] text-white/60">En ligne</p>
+                  <p className="text-[13px] font-semibold leading-tight">Support VNK</p>
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    <p className="text-[10px] text-white/70">En ligne</p>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center">
@@ -181,12 +189,12 @@ export function ChatWidget({
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 bg-[#f0f2f5] dark:bg-muted/30" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}>
               {messages.length === 0 ? (
-                <div className="text-center py-16">
-                  <div className="h-16 w-16 rounded-2xl bg-[#0F2D52]/10 flex items-center justify-center mx-auto mb-4">
-                    <MessageCircle className="h-7 w-7 text-[#0F2D52]/40" />
+                <div className="text-center py-12">
+                  <div className="h-14 w-14 rounded-full bg-[#0F2D52] flex items-center justify-center mx-auto mb-3 shadow-lg">
+                    <MessageCircle className="h-6 w-6 text-white" />
                   </div>
-                  <p className="text-sm font-medium text-muted-foreground">Besoin d'aide ?</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">Envoyez un message a notre equipe.</p>
+                  <p className="text-[13px] font-semibold">Besoin d'aide ?</p>
+                  <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed max-w-[220px] mx-auto">Notre equipe est disponible pour vous assister.</p>
                 </div>
               ) : (
                 groupedMessages.map((group) => (
@@ -212,10 +220,10 @@ export function ChatWidget({
                               </div>
                             )}
                             <div className={cn(
-                              "max-w-[75%] px-3 py-1.5 text-sm shadow-sm",
+                              "max-w-[78%] px-3 py-2 text-[13px] shadow-sm",
                               isClient
-                                ? "bg-[#d9fdd3] dark:bg-emerald-900/40 rounded-2xl rounded-tr-md text-foreground"
-                                : "bg-white dark:bg-card rounded-2xl rounded-tl-md"
+                                ? "bg-[#d9fdd3] dark:bg-emerald-900/40 rounded-xl rounded-tr-sm text-foreground"
+                                : "bg-white dark:bg-card rounded-xl rounded-tl-sm"
                             )}>
                               {isFile ? (
                                 <a
@@ -272,27 +280,27 @@ export function ChatWidget({
             )}
 
             {/* Input bar */}
-            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="shrink-0 px-2 py-2 border-t bg-card flex items-end gap-1.5">
+            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="shrink-0 px-3 py-2.5 border-t bg-white dark:bg-card flex items-end gap-2">
               <input type="file" ref={fileRef} className="hidden" accept="image/*,.pdf,.doc,.docx" onChange={handleFile} />
-              <button type="button" onClick={() => fileRef.current?.click()} className="h-9 w-9 rounded-full hover:bg-muted flex items-center justify-center shrink-0 text-muted-foreground" aria-label="Fichier">
-                <Paperclip className="h-4 w-4" />
+              <button type="button" onClick={() => fileRef.current?.click()} className="h-8 w-8 rounded-full hover:bg-muted flex items-center justify-center shrink-0 text-muted-foreground mb-0.5" aria-label="Fichier">
+                <Paperclip className="h-[18px] w-[18px]" />
               </button>
-              <div className="flex-1 flex items-end bg-muted/50 rounded-2xl border px-3 py-1.5 gap-1">
-                <button type="button" onClick={() => setShowEmojis((s) => !s)} className="h-7 w-7 rounded-full hover:bg-muted flex items-center justify-center shrink-0 text-muted-foreground mb-0.5" aria-label="Emoji">
-                  <Smile className="h-4 w-4" />
+              <div className="flex-1 flex items-end bg-[#f0f2f5] dark:bg-muted rounded-2xl px-3 py-2 gap-1.5 min-h-[40px]">
+                <button type="button" onClick={() => setShowEmojis((s) => !s)} className="h-6 w-6 rounded-full hover:bg-black/5 flex items-center justify-center shrink-0 text-muted-foreground" aria-label="Emoji">
+                  <Smile className="h-[18px] w-[18px]" />
                 </button>
                 <textarea
                   ref={inputRef}
                   value={input}
                   onChange={handleInputChange}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                  placeholder="Message..."
+                  placeholder="Ecrivez un message..."
                   disabled={sending}
                   rows={1}
-                  className="flex-1 bg-transparent resize-none text-sm focus:outline-none min-h-[28px] max-h-[100px] py-0.5"
+                  className="flex-1 bg-transparent resize-none text-[13px] focus:outline-none min-h-[24px] max-h-[100px] leading-relaxed"
                 />
               </div>
-              <button type="submit" disabled={!input.trim() || sending} className="h-9 w-9 rounded-full bg-[#0F2D52] text-white flex items-center justify-center shrink-0 disabled:opacity-40 hover:bg-[#1a3a66] transition-colors" aria-label="Envoyer">
+              <button type="submit" disabled={!input.trim() || sending} className="h-9 w-9 rounded-full bg-[#0F2D52] text-white flex items-center justify-center shrink-0 disabled:opacity-30 hover:bg-[#1a3a66] transition-all active:scale-95 mb-0.5" aria-label="Envoyer">
                 <Send className="h-4 w-4" />
               </button>
             </form>
