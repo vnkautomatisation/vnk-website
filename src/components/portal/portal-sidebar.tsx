@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import NextLink from "next/link";
@@ -15,8 +14,6 @@ import {
   FolderOpen,
   CalendarPlus,
   Calendar,
-  Menu,
-  X,
 } from "lucide-react";
 
 export type PortalBadges = {
@@ -56,55 +53,15 @@ export function PortalSidebar({
 }) {
   const t = useTranslations("portal.sidebar");
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
 
   return (
-    <>
-      {/* Desktop sidebar */}
-      <aside
-        className="hidden lg:flex fixed top-[70px] left-0 bottom-0 z-20 w-[240px] flex-col border-r bg-card"
-        aria-label="Navigation portail"
-      >
-        <SidebarContent pathname={pathname} t={t} badges={badges} />
-      </aside>
-
-      {/* Mobile trigger */}
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="lg:hidden fixed top-[78px] left-3 z-20 flex h-10 w-10 items-center justify-center rounded-lg bg-card border shadow-sm"
-        aria-label="Menu portail"
-      >
-        <Menu className="h-4 w-4" />
-      </button>
-
-      {/* Mobile drawer */}
-      {open && (
-        <>
-          <div
-            className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-          />
-          <aside className="lg:hidden fixed top-0 left-0 bottom-0 z-50 w-[280px] flex flex-col bg-card border-r">
-            <div className="h-[64px] px-5 flex items-center justify-between border-b">
-              <span className="font-semibold text-sm">Portail client</span>
-              <button
-                onClick={() => setOpen(false)}
-                className="h-9 w-9 rounded-md hover:bg-accent flex items-center justify-center"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <SidebarContent
-              pathname={pathname}
-              t={t}
-              badges={badges}
-              onNavigate={() => setOpen(false)}
-            />
-          </aside>
-        </>
-      )}
-    </>
+    /* Desktop sidebar only — mobile uses PortalBottomNav */
+    <aside
+      className="hidden lg:flex fixed top-[70px] left-0 bottom-0 z-20 w-[240px] flex-col border-r bg-card"
+      aria-label="Navigation portail"
+    >
+      <SidebarContent pathname={pathname} t={t} badges={badges} />
+    </aside>
   );
 }
 
