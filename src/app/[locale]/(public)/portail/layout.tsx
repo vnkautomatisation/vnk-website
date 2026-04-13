@@ -72,7 +72,7 @@ export default async function PortalLayout({
         </main>
       </div>
       <PortalBottomNav badges={badges} />
-      <ChatWidget clientId={clientId} />
+      <ChatWidget clientId={clientId} clientName={client?.fullName ?? ""} />
     </>
   );
 }
