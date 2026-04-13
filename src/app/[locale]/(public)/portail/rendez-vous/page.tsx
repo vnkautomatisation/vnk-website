@@ -19,6 +19,8 @@ export default async function PortalAppointmentsPage() {
     endTime: a.endTime,
     meetingType: a.meetingType,
     meetingLink: a.meetingLink,
+    meetingId: a.meetingId ?? null,
+    meetingPassword: a.meetingPassword ?? null,
     status: a.status,
     isUpcoming: a.appointmentDate >= now,
     notesClient: a.notesClient ?? null,
