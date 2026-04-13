@@ -10,6 +10,8 @@ const STATUS_MAP: Record<string, { label: string; variant: StatusVariant }> = {
   in_progress: { label: "En cours", variant: "info" },
   paused: { label: "En pause", variant: "secondary" },
   completed: { label: "Complété", variant: "success" },
+  confirmed: { label: "Confirmé", variant: "success" },
+  no_show: { label: "Absent", variant: "destructive" },
   cancelled: { label: "Annulé", variant: "destructive" },
   // Quote
   accepted: { label: "Accepté", variant: "success" },
