@@ -218,19 +218,12 @@ export function DataTable<T>({
   // ══════════════════════════════════════════════════════
 
   return (
-    <div className="space-y-4">
-      {/* ── Sticky header zone (page title + KPIs + toolbar) ── */}
-      {stickyHeader && (
-        <div className="sticky top-[70px] z-10 bg-muted/30 backdrop-blur-sm -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-2">
-          {stickyHeader}
-        </div>
-      )}
-
-      {/* ── Toolbar (sticky below header) ────────────── */}
-      <div className={cn(
-        "sticky z-10 bg-muted/30 backdrop-blur-sm pb-3 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between",
-        stickyHeader ? "top-[70px]" : "top-[70px] -mx-1 px-1"
-      )}>
+    <div>
+      {/* ── Sticky zone : header + KPIs + toolbar ── */}
+      <div className="sticky top-[70px] z-10 bg-muted/30 backdrop-blur-sm -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-3">
+        {stickyHeader}
+        {/* Toolbar */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mt-3">
         <div className="flex flex-1 gap-2 items-center w-full sm:w-auto">
           {/* Search */}
           <div className="relative flex-1 max-w-sm">
@@ -305,6 +298,7 @@ export function DataTable<T>({
           )}
 
           {headerActions}
+        </div>
         </div>
       </div>
 
