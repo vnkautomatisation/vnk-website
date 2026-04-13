@@ -5,8 +5,9 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, AddressElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { CreditCard, Lock, X, ShieldCheck } from "lucide-react";
+import { CreditCard, Lock, X, ShieldCheck, ChevronRight, ChevronLeft, MapPin, CheckCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type Invoice = {
   id: number;
@@ -18,7 +19,12 @@ type Invoice = {
   amountTtc: number;
 };
 
-// ── Inner form ──────────────────────────────────────────
+const STEPS = [
+  { label: "Adresse", icon: MapPin },
+  { label: "Paiement", icon: CreditCard },
+  { label: "Confirmer", icon: CheckCircle },
+];
+
 function PaymentForm({
   invoice,
   clientInfo,
@@ -33,9 +39,9 @@ function PaymentForm({
   const stripe = useStripe();
   const elements = useElements();
   const [paying, setPaying] = useState(false);
+  const [step, setStep] = useState(0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!stripe || !elements) return;
     setPaying(true);
 
@@ -63,40 +69,124 @@ function PaymentForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row">
-      {/* LEFT — Adresse + Mode de paiement */}
-      <div className="flex-1 p-6 space-y-5 border-r-0 lg:border-r overflow-y-auto max-h-[75vh] no-scrollbar">
-        {/* Adresse de facturation — Stripe AddressElement gere pays/province/code postal */}
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Adresse de facturation</p>
-          <AddressElement
-            options={{
-              mode: "billing",
-              defaultValues: {
-                name: clientInfo.fullName,
-                address: {
-                  line1: clientInfo.address ?? "",
-                  city: clientInfo.city ?? "",
-                  state: clientInfo.province ?? "",
-                  postal_code: clientInfo.postalCode ?? "",
-                  country: "CA",
-                },
-              },
-              fields: { phone: "always" },
-              display: { name: "full" },
-            }}
-          />
+    <div className="flex flex-col lg:flex-row">
+      {/* LEFT — Stepper + contenu etape */}
+      <div className="flex-1 border-r-0 lg:border-r">
+        {/* Stepper dots */}
+        <div className="px-6 pt-5 pb-3">
+          <div className="flex items-center justify-center gap-0">
+            {STEPS.map((s, i) => {
+              const Icon = s.icon;
+              const done = i < step;
+              const active = i === step;
+              return (
+                <div key={i} className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => i < step && setStep(i)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                      done ? "bg-emerald-50 text-emerald-700 cursor-pointer" :
+                      active ? "bg-[#0F2D52] text-white" :
+                      "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {done ? <CheckCircle className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+                    <span className="hidden sm:inline">{s.label}</span>
+                    <span className="sm:hidden">{i + 1}</span>
+                  </button>
+                  {i < STEPS.length - 1 && (
+                    <div className={cn("w-8 h-0.5 mx-1", done ? "bg-emerald-400" : "bg-muted")} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Mode de paiement */}
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Mode de paiement</p>
-          <PaymentElement options={{ layout: "tabs" }} />
+        {/* Contenu etape */}
+        <div className="px-6 pb-5 min-h-[300px]">
+          {/* Etape 1 — Adresse */}
+          <div className={step === 0 ? "block" : "hidden"}>
+            <AddressElement
+              options={{
+                mode: "billing",
+                defaultValues: {
+                  name: clientInfo.fullName,
+                  address: {
+                    line1: clientInfo.address ?? "",
+                    city: clientInfo.city ?? "",
+                    state: clientInfo.province ?? "",
+                    postal_code: clientInfo.postalCode ?? "",
+                    country: "CA",
+                  },
+                },
+                fields: { phone: "always" },
+                display: { name: "full" },
+              }}
+            />
+          </div>
+
+          {/* Etape 2 — Mode de paiement */}
+          <div className={step === 1 ? "block" : "hidden"}>
+            <PaymentElement options={{ layout: "tabs" }} />
+          </div>
+
+          {/* Etape 3 — Verification */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="rounded-lg border p-4 space-y-2 text-sm">
+                <p className="font-semibold text-[#0F2D52]">Verification avant paiement</p>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Facture</span>
+                  <span className="font-medium">{invoice.invoiceNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Description</span>
+                  <span className="font-medium">{invoice.title}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-bold">Montant</span>
+                  <span className="font-bold text-[#0F2D52]">{formatCurrency(invoice.amountTtc)}</span>
+                </div>
+              </div>
+              <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-emerald-700">
+                  Vos informations sont pretes. Cliquez sur "Payer" pour finaliser le paiement.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation etapes */}
+        <div className="px-6 py-4 border-t flex justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => step === 0 ? onCancel() : setStep(step - 1)}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            {step === 0 ? "Annuler" : "Precedent"}
+          </Button>
+          {step < 2 ? (
+            <Button
+              type="button"
+              size="sm"
+              className="bg-[#0F2D52] hover:bg-[#1a3a66]"
+              onClick={() => setStep(step + 1)}
+            >
+              Suivant
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          ) : null}
         </div>
       </div>
 
-      {/* RIGHT — Recap + bouton payer */}
-      <div className="w-full lg:w-[300px] shrink-0 p-6 flex flex-col justify-between bg-muted/20">
+      {/* RIGHT — Resume fixe */}
+      <div className="w-full lg:w-[280px] shrink-0 p-6 flex flex-col justify-between bg-muted/20">
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Resume</p>
           <div className="space-y-2 text-sm">
@@ -113,30 +203,32 @@ function PaymentForm({
               <span>{formatCurrency(invoice.tvqAmount)}</span>
             </div>
             <div className="border-t pt-3 mt-3 flex justify-between">
-              <span className="font-bold">Total TTC</span>
+              <span className="font-bold">Total</span>
               <span className="text-2xl font-bold text-[#0F2D52]">{formatCurrency(invoice.amountTtc)}</span>
             </div>
           </div>
 
-          <div className="mt-6 rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 p-3 flex items-start gap-2">
+          <div className="mt-5 rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 p-3 flex items-start gap-2">
             <ShieldCheck className="h-4 w-4 text-[#0F2D52] shrink-0 mt-0.5" />
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Paiement securise via Stripe. Vos donnees bancaires ne transitent jamais par nos serveurs.
+              Securise via Stripe. Vos donnees bancaires ne transitent jamais par nos serveurs.
             </p>
           </div>
         </div>
 
-        <div className="mt-6 space-y-2">
-          <Button type="submit" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66] h-11" disabled={!stripe || paying}>
+        <div className="mt-5">
+          <Button
+            type="button"
+            className="w-full bg-[#0F2D52] hover:bg-[#1a3a66] h-11"
+            disabled={!stripe || paying || step < 2}
+            onClick={handleSubmit}
+          >
             <Lock className="h-4 w-4 mr-2" />
             {paying ? "Traitement..." : `Payer ${formatCurrency(invoice.amountTtc)}`}
           </Button>
-          <Button type="button" variant="outline" className="w-full" onClick={onCancel} disabled={paying}>
-            Annuler
-          </Button>
         </div>
       </div>
-    </form>
+    </div>
   );
 }
 
@@ -201,7 +293,6 @@ export function StripePaymentModal({
           </div>
         </div>
 
-        {/* Content */}
         {loading ? (
           <div className="p-12 text-center">
             <div className="h-8 w-8 border-2 border-[#0F2D52] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
