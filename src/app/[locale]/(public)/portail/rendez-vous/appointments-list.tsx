@@ -13,12 +13,20 @@ import {
   Hash,
   CalendarClock,
   Clock,
+  Link2,
+  FileText,
+  X,
 } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 import { formatDate, formatTime } from "@/lib/utils";
 import Link from "next/link";
 
@@ -32,29 +40,44 @@ type Appointment = {
   meetingLink: string | null;
   status: string;
   isUpcoming: boolean;
+  notesClient: string | null;
+  notesAdmin: string | null;
+  durationMin: number | null;
 };
 
 const FILTER_OPTIONS: FilterOption[] = [
   { value: "upcoming", label: "A venir" },
   { value: "past", label: "Passes" },
-  { value: "confirmed", label: "Confirmes" },
+  { value: "with_link", label: "Avec lien" },
   { value: "cancelled", label: "Annules" },
 ];
 
 const TYPE_ICON = { video: Video, phone: Phone, onsite: MapPin } as Record<string, typeof Video>;
+const TYPE_LABEL: Record<string, string> = { video: "Video", phone: "Telephone", onsite: "Sur place" };
 
 export function AppointmentsList({ appointments }: { appointments: Appointment[] }) {
   const router = useRouter();
   const [cancelId, setCancelId] = useState<number | null>(null);
+  const [detail, setDetail] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const kpis = useMemo(() => {
-    const total = appointments.length;
-    const upcoming = appointments.filter((a) => a.isUpcoming).length;
-    const past = appointments.filter((a) => !a.isUpcoming).length;
-    const video = appointments.filter((a) => a.meetingType === "video").length;
-    return { total, upcoming, past, video };
+  // Tri : a venir d'abord (prochain en haut), puis passes (recent en haut)
+  const sorted = useMemo(() => {
+    const upcoming = appointments.filter((a) => a.isUpcoming).sort(
+      (a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime()
+    );
+    const past = appointments.filter((a) => !a.isUpcoming).sort(
+      (a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime()
+    );
+    return [...upcoming, ...past];
   }, [appointments]);
+
+  const kpis = useMemo(() => ({
+    total: appointments.length,
+    upcoming: appointments.filter((a) => a.isUpcoming && a.status !== "cancelled").length,
+    past: appointments.filter((a) => !a.isUpcoming).length,
+    withLink: appointments.filter((a) => !!a.meetingLink).length,
+  }), [appointments]);
 
   async function handleCancel() {
     if (!cancelId) return;
@@ -67,7 +90,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
 
   const columns: Column<Appointment>[] = [
     {
-      key: "icon",
+      key: "type",
       header: "",
       className: "w-10",
       accessor: (r) => {
@@ -80,50 +103,51 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
       },
     },
     {
-      key: "subject",
-      header: "Sujet",
+      key: "info",
+      header: "Rendez-vous",
       accessor: (r) => (
         <div>
           <span className="font-medium text-sm">{r.subject ?? "Rendez-vous"}</span>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {r.meetingType === "video" ? "Video" : r.meetingType === "phone" ? "Telephone" : "Sur place"}
-          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-xs text-muted-foreground">
+              {formatDate(r.appointmentDate)} · {formatTime(r.startTime)} - {formatTime(r.endTime)}
+            </span>
+            {r.meetingLink && (
+              <Link2 className="h-3 w-3 text-emerald-600" />
+            )}
+          </div>
         </div>
-      ),
-      sortable: true,
-      sortBy: (r) => r.subject ?? "",
-    },
-    {
-      key: "date",
-      header: "Date",
-      accessor: (r) => (
-        <span className="text-sm">{formatDate(r.appointmentDate)}</span>
       ),
       sortable: true,
       sortBy: (r) => new Date(r.appointmentDate).getTime(),
     },
     {
-      key: "time",
-      header: "Heure",
+      key: "meetingType",
+      header: "Type",
       accessor: (r) => (
-        <span className="text-sm text-muted-foreground">
-          {formatTime(r.startTime)} - {formatTime(r.endTime)}
-        </span>
+        <span className="text-xs text-muted-foreground">{TYPE_LABEL[r.meetingType] ?? r.meetingType}</span>
       ),
       hiddenOnMobile: true,
     },
     {
       key: "status",
       header: "Statut",
-      accessor: (r) => <StatusBadge status={r.status} />,
+      accessor: (r) => (
+        <div className="flex flex-col items-start gap-1">
+          <StatusBadge status={r.status} />
+          {r.isUpcoming && r.status !== "cancelled" && (
+            <span className="text-[10px] text-emerald-600 font-medium">A venir</span>
+          )}
+        </div>
+      ),
     },
     {
       key: "actions",
       header: "",
-      className: "w-[180px]",
+      className: "w-[140px]",
       accessor: (r) => (
         <div className="flex gap-1.5 justify-end" onClick={(e) => e.stopPropagation()}>
-          {r.meetingLink && r.isUpcoming && (
+          {r.meetingLink && r.isUpcoming && r.status !== "cancelled" && (
             <Button size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]" asChild>
               <a href={r.meetingLink} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-3.5 w-3.5 mr-1" />
@@ -143,8 +167,9 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
 
   const renderCard = (a: Appointment) => {
     const Icon = TYPE_ICON[a.meetingType] ?? Video;
+    const isCancelled = a.status === "cancelled";
     return (
-      <Card className="border shadow-sm hover:shadow-md transition-shadow">
+      <Card className={`border shadow-sm hover:shadow-md transition-shadow ${isCancelled ? "opacity-60" : ""}`}>
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
@@ -156,11 +181,15 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {formatDate(a.appointmentDate)} · {formatTime(a.startTime)} - {formatTime(a.endTime)}
                 </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{TYPE_LABEL[a.meetingType] ?? a.meetingType}</Badge>
+                  {a.meetingLink && <Link2 className="h-3 w-3 text-emerald-600" />}
+                </div>
               </div>
             </div>
             <StatusBadge status={a.status} />
           </div>
-          {a.isUpcoming && (
+          {a.isUpcoming && !isCancelled && (
             <div className="mt-3 flex gap-2">
               {a.meetingLink && (
                 <Button size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]" asChild>
@@ -170,12 +199,10 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                   </a>
                 </Button>
               )}
-              {a.status !== "cancelled" && (
-                <Button size="sm" variant="outline" className="text-destructive" onClick={() => setCancelId(a.id)}>
-                  <XCircle className="h-3.5 w-3.5 mr-1" />
-                  Annuler
-                </Button>
-              )}
+              <Button size="sm" variant="outline" className="text-destructive" onClick={(e) => { e.stopPropagation(); setCancelId(a.id); }}>
+                <XCircle className="h-3.5 w-3.5 mr-1" />
+                Annuler
+              </Button>
             </div>
           )}
         </CardContent>
@@ -184,25 +211,26 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
   };
 
   const filterFn = (r: Appointment) => {
-    if (r.isUpcoming) return "upcoming";
     if (r.status === "cancelled") return "cancelled";
-    if (r.status === "confirmed") return "confirmed";
+    if (r.meetingLink) return "with_link";
+    if (r.isUpcoming) return "upcoming";
     return "past";
   };
 
   return (
     <>
       <DataTable
-        data={appointments}
+        data={sorted}
         columns={columns}
         getRowId={(r) => r.id}
         renderCard={renderCard}
+        onRowClick={(r) => setDetail(r)}
         storageKey="portal-appointments"
         searchPlaceholder="Rechercher un rendez-vous..."
-        searchFn={(r) => `${r.subject ?? ""} ${r.meetingType}`}
+        searchFn={(r) => `${r.subject ?? ""} ${TYPE_LABEL[r.meetingType] ?? ""}`}
         filterOptions={FILTER_OPTIONS}
         filterFn={filterFn}
-        filterLabel="Tous les statuts"
+        filterLabel="Tous"
         pageSize={8}
         emptyMessage="Aucun rendez-vous"
         stickyHeader={
@@ -225,54 +253,129 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
               </Button>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
-                    <Hash className="h-4 w-4 text-[#0F2D52]" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total</p>
-                    <p className="text-2xl font-bold">{kpis.total}</p>
-                  </div>
-                </div>
+              <div className="rounded-xl border bg-[#0F2D52]/5 p-3">
+                <p className="text-2xl font-bold">{kpis.total}</p>
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total</p>
               </div>
-              <div className="rounded-xl border bg-emerald-50/60 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <CalendarClock className="h-4 w-4 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">A venir</p>
-                    <p className="text-2xl font-bold">{kpis.upcoming}</p>
-                  </div>
-                </div>
+              <div className="rounded-xl border bg-emerald-50/60 p-3">
+                <p className="text-2xl font-bold">{kpis.upcoming}</p>
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">A venir</p>
               </div>
-              <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
-                    <Clock className="h-4 w-4 text-[#0F2D52]" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Passes</p>
-                    <p className="text-2xl font-bold">{kpis.past}</p>
-                  </div>
-                </div>
+              <div className="rounded-xl border bg-[#0F2D52]/5 p-3">
+                <p className="text-2xl font-bold">{kpis.past}</p>
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Passes</p>
               </div>
-              <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
-                    <Video className="h-4 w-4 text-[#0F2D52]" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Video</p>
-                    <p className="text-2xl font-bold">{kpis.video}</p>
-                  </div>
-                </div>
+              <div className="rounded-xl border bg-[#0F2D52]/5 p-3">
+                <p className="text-2xl font-bold">{kpis.withLink}</p>
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Avec lien</p>
               </div>
             </div>
           </>
         }
       />
+
+      {/* Detail modal */}
+      {detail && (
+        <Dialog open={!!detail} onOpenChange={(o) => { if (!o) setDetail(null); }}>
+          <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
+            <div className="bg-[#0F2D52] px-6 py-5 text-white relative">
+              <button onClick={() => setDetail(null)} className="absolute top-4 right-4 h-8 w-8 rounded-lg hover:bg-white/10 flex items-center justify-center">
+                <X className="h-4 w-4 text-white/70" />
+              </button>
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-white/15 flex items-center justify-center">
+                  {(() => { const I = TYPE_ICON[detail.meetingType] ?? Video; return <I className="h-6 w-6 text-white" />; })()}
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold">{detail.subject ?? "Rendez-vous"}</h2>
+                  <p className="text-white/60 text-sm">{TYPE_LABEL[detail.meetingType] ?? detail.meetingType}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {/* Date/heure */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Date</p>
+                    <p className="text-sm font-medium">{formatDate(detail.appointmentDate)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Heure</p>
+                    <p className="text-sm font-medium">{formatTime(detail.startTime)} - {formatTime(detail.endTime)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Statut + lien */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Statut :</span>
+                  <StatusBadge status={detail.status} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Lien :</span>
+                  {detail.meetingLink ? (
+                    <span className="text-xs font-medium text-emerald-600 flex items-center gap-1">
+                      <Link2 className="h-3 w-3" /> Disponible
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Non disponible</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Lien meeting */}
+              {detail.meetingLink && detail.status !== "cancelled" && (
+                <Button className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" asChild>
+                  <a href={detail.meetingLink} target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Rejoindre la reunion
+                  </a>
+                </Button>
+              )}
+
+              {/* Notes VNK */}
+              {detail.notesAdmin && (
+                <div className="rounded-lg border p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="h-3.5 w-3.5 text-[#0F2D52]" />
+                    <span className="text-xs font-semibold text-[#0F2D52] uppercase tracking-wider">Notes VNK</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{detail.notesAdmin}</p>
+                </div>
+              )}
+
+              {/* Notes client */}
+              {detail.notesClient && (
+                <div className="rounded-lg border p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vos notes</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{detail.notesClient}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t flex justify-end gap-2">
+              {detail.isUpcoming && detail.status !== "cancelled" && (
+                <Button size="sm" variant="outline" className="text-destructive" onClick={() => { setDetail(null); setCancelId(detail.id); }}>
+                  <XCircle className="h-3.5 w-3.5 mr-1" />
+                  Annuler
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => setDetail(null)}>Fermer</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <ConfirmDialog
         open={cancelId !== null}
