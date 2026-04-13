@@ -61,7 +61,7 @@ export default async function PortalLayout({
       `}</style>
 
       {/* Avatar utilisateur dans la nav — devant EN + hamburger */}
-      <div className="fixed top-0 right-[96px] sm:right-[108px] lg:right-[220px] z-[35] h-[72px] flex items-center">
+      <div className="fixed top-0 right-[105px] sm:right-[116px] lg:right-[220px] z-[35] h-[72px] flex items-center">
         <PortalUserMenu
           name={client?.fullName ?? ""}
           initials={(client?.fullName ?? "C").split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)}
