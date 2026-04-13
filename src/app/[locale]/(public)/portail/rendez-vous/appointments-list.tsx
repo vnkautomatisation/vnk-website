@@ -183,20 +183,20 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
   return (
     <div className="space-y-4">
       {/* ── Header + KPIs ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
+          <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg shrink-0">
             <Calendar className="h-5 w-5 text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-bold">Rendez-vous</h1>
-            <p className="text-sm text-muted-foreground">Planifiez et gerez vos rendez-vous</p>
+            <p className="text-sm text-muted-foreground hidden sm:block">Planifiez et gerez vos rendez-vous</p>
           </div>
         </div>
-        <Button asChild className="bg-[#0F2D52] hover:bg-[#1a3a66] shadow-sm">
+        <Button asChild size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66] shadow-sm">
           <Link href="/portail/reserver">
-            <CalendarCheck className="h-4 w-4 mr-1.5" />
-            Reserver
+            <CalendarCheck className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Reserver</span>
           </Link>
         </Button>
       </div>
@@ -221,7 +221,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
       </div>
 
       {/* ── Calendrier + Agenda ── */}
-      <div className="grid lg:grid-cols-[340px_1fr] gap-4 items-start">
+      <div className="grid md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr] gap-4 items-start">
         {/* Calendrier mensuel */}
         <Card className="p-4">
           {/* Nav mois */}

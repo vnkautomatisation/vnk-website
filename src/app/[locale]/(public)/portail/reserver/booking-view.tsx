@@ -136,7 +136,7 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
   const today = new Date().toLocaleDateString("sv-SE");
 
   return (
-    <div className="grid lg:grid-cols-[1fr_380px] gap-6">
+    <div className="grid md:grid-cols-[1fr_340px] lg:grid-cols-[1fr_380px] gap-4 lg:gap-6">
       {/* Left: Calendar */}
       <Card className="border-0 shadow-sm ring-1 ring-border/50">
         <CardContent className="p-6">
