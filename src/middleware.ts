@@ -12,7 +12,7 @@ export default function middleware(request: NextRequest) {
     request.cookies.get("authjs.session-token") ||
     request.cookies.get("__Secure-authjs.session-token");
 
-  // ── /admin/* : pas de préfixe locale, auth requise (sauf login) ──
+  // ── /admin/* : pas de prefixe locale, auth requise (sauf login) ──
   if (pathname.startsWith("/admin")) {
     if (!pathname.startsWith("/admin/login") && !sessionCookie) {
       const url = request.nextUrl.clone();
@@ -23,7 +23,7 @@ export default function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── /portail/* : pas de préfixe locale, auth requise (sauf login) ──
+  // ── /portail/* : pas de prefixe locale, auth requise (sauf login) ──
   if (pathname.startsWith("/portail")) {
     if (!pathname.startsWith("/portail/login") && !sessionCookie) {
       const url = request.nextUrl.clone();
@@ -34,11 +34,22 @@ export default function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── Site public : next-intl middleware (FR sans préfixe, EN avec /en) ──
+  // ── Site public : next-intl middleware (FR sans prefixe, EN avec /en) ──
   return intlMiddleware(request);
 }
 
 export const config = {
-  // Match tous les chemins sauf fichiers statiques et API
-  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
+  // Match uniquement les routes qui en ont besoin — skip fichiers statiques, API, images
+  matcher: [
+    // Public pages (intl)
+    "/",
+    "/(fr|en)/:path*",
+    // Portal + Admin (auth check)
+    "/portail/:path*",
+    "/admin/:path*",
+    // Public pages without locale prefix
+    "/services",
+    "/a-propos",
+    "/contact",
+  ],
 };
