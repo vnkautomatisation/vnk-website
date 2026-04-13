@@ -7,15 +7,19 @@ export default async function PortalAppointmentsPage() {
   const clientId = session!.user.clientId!;
   const now = new Date();
 
-  // Auto-complete les RDV passes encore "confirmed"
-  await prisma.appointment.updateMany({
-    where: {
-      clientId,
-      status: "confirmed",
-      appointmentDate: { lt: now },
-    },
-    data: { status: "completed" },
-  });
+  // Auto-maj les RDV passes
+  await Promise.all([
+    // confirmed + passe → completed
+    prisma.appointment.updateMany({
+      where: { clientId, status: "confirmed", appointmentDate: { lt: now } },
+      data: { status: "completed" },
+    }),
+    // pending + passe → no_show
+    prisma.appointment.updateMany({
+      where: { clientId, status: "pending", appointmentDate: { lt: now } },
+      data: { status: "no_show" },
+    }),
+  ]);
 
   const appointments = await prisma.appointment.findMany({
     where: { clientId },
