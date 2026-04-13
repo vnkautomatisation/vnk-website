@@ -1,4 +1,6 @@
 // Portail client layout — sidebar + bottom nav (PublicNav fournie par le parent)
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { auth } from "@/lib/auth";
