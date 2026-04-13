@@ -30,20 +30,29 @@ const SERVICES = [
   { value: "other", label: "Autre" },
 ];
 
-export function BookingView({ slots }: { slots: Slot[] }) {
+type Mandate = { id: number; title: string };
+
+export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?: Mandate[] }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [meetingType, setMeetingType] = useState<"video" | "phone" | "onsite">("video");
+  const [mandateId, setMandateId] = useState("");
   const [service, setService] = useState("");
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
   const [sending, setSending] = useState(false);
 
-  // Group slots by date
+  // Convertit une date ISO en date locale YYYY-MM-DD (pas UTC)
+  const toLocalDate = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  // Group slots by date locale
   const slotsByDate = useMemo(() => {
     const map = new Map<string, Slot[]>();
     for (const s of slots) {
-      const key = new Date(s.slotDate).toISOString().slice(0, 10);
+      const key = toLocalDate(s.slotDate);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(s);
     }
@@ -105,7 +114,7 @@ export function BookingView({ slots }: { slots: Slot[] }) {
   };
 
   const dayNames = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString("sv-SE");
 
   return (
     <div className="grid lg:grid-cols-[1fr_380px] gap-6">
@@ -142,7 +151,7 @@ export function BookingView({ slots }: { slots: Slot[] }) {
                 {calendarWeeks.map((week, wi) => (
                   <div key={wi} className="grid grid-cols-7 border-b last:border-b-0">
                     {week.map((day) => {
-                      const key = day.toISOString().slice(0, 10);
+                      const key = day.toLocaleDateString("sv-SE");
                       const isAvailable = availableSet.has(key);
                       const isSelected = selectedDate === key;
                       const isToday = key === today;
@@ -280,6 +289,23 @@ export function BookingView({ slots }: { slots: Slot[] }) {
               })}
             </div>
           </div>
+
+          {/* Mandat lie */}
+          {mandates.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">Mandat lie <span className="text-muted-foreground font-normal">(optionnel)</span></label>
+              <select
+                value={mandateId}
+                onChange={(e) => setMandateId(e.target.value)}
+                className="w-full h-11 px-3 rounded-lg border bg-background text-sm focus:ring-2 focus:ring-[#0F2D52]/30 focus:border-[#0F2D52] outline-none transition-all"
+              >
+                <option value="">Aucun mandat</option>
+                {mandates.map((m) => (
+                  <option key={m.id} value={m.id}>{m.title}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Service */}
           <div className="space-y-2">
