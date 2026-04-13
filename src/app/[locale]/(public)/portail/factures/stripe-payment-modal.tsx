@@ -42,13 +42,17 @@ function PaymentForm({
   const [step, setStep] = useState(0);
   const [validating, setValidating] = useState(false);
 
+  const [addressComplete, setAddressComplete] = useState(false);
+
   const handleNext = async () => {
-    // Etape 1 (adresse) : pas de validation Stripe, juste avancer
     if (step === 0) {
+      if (!addressComplete) {
+        toast.error("Veuillez completer l'adresse de facturation");
+        return;
+      }
       setStep(1);
       return;
     }
-    // Etape 2 (paiement) : valider carte via Stripe
     if (!elements) return;
     setValidating(true);
     const { error } = await elements.submit();
@@ -143,6 +147,7 @@ function PaymentForm({
                 fields: { phone: "always" },
                 display: { name: "full" },
               }}
+              onChange={(e) => setAddressComplete(e.complete)}
             />
           </div>
 
