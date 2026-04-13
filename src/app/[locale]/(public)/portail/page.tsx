@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 // Portail · Tableau de bord client — Design SaaS pro
 import { cache } from "react";
 import { getTranslations } from "next-intl/server";
