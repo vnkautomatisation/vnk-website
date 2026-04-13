@@ -153,16 +153,19 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
     {
       key: "status",
       header: "Statut",
+      accessor: (r) => <StatusBadge status={r.status} />,
+    },
+    {
+      key: "signedAt",
+      header: "Signe le",
       accessor: (r) => (
-        <div>
-          <StatusBadge status={r.status} />
-          {r.signedAt && (
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Signe le {formatDate(r.signedAt)}
-            </p>
-          )}
-        </div>
+        <span className="text-sm text-muted-foreground">
+          {r.signedAt ? formatDate(r.signedAt) : "\u2014"}
+        </span>
       ),
+      sortable: true,
+      sortBy: (r) => r.signedAt ? new Date(r.signedAt).getTime() : 0,
+      hiddenOnMobile: true,
     },
     {
       key: "signatures",

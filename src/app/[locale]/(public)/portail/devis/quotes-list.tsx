@@ -141,16 +141,19 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
     {
       key: "status",
       header: "Statut",
+      accessor: (r) => <StatusBadge status={r.status} />,
+    },
+    {
+      key: "acceptedAt",
+      header: "Accepte le",
       accessor: (r) => (
-        <div>
-          <StatusBadge status={r.status} />
-          {r.acceptedAt && (
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Accepte le {formatDate(r.acceptedAt)}
-            </p>
-          )}
-        </div>
+        <span className="text-sm text-muted-foreground">
+          {r.acceptedAt ? formatDate(r.acceptedAt) : "\u2014"}
+        </span>
       ),
+      sortable: true,
+      sortBy: (r) => r.acceptedAt ? new Date(r.acceptedAt).getTime() : 0,
+      hiddenOnMobile: true,
     },
     {
       key: "expiry",

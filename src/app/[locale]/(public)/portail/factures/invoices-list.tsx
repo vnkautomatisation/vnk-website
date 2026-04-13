@@ -128,16 +128,19 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
     {
       key: "status",
       header: "Statut",
+      accessor: (r) => <StatusBadge status={r.status} />,
+    },
+    {
+      key: "paidAt",
+      header: "Paye le",
       accessor: (r) => (
-        <div>
-          <StatusBadge status={r.status} />
-          {r.paidAt && (
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              {formatDate(r.paidAt)}
-            </p>
-          )}
-        </div>
+        <span className="text-sm text-muted-foreground">
+          {r.paidAt ? formatDate(r.paidAt) : "\u2014"}
+        </span>
       ),
+      sortable: true,
+      sortBy: (r) => r.paidAt ? new Date(r.paidAt).getTime() : 0,
+      hiddenOnMobile: true,
     },
     {
       key: "actions",
