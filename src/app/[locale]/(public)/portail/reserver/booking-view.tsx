@@ -8,7 +8,7 @@ import { Video, Phone, MapPin, CalendarCheck, Clock, ChevronLeft, ChevronRight }
 
 type Slot = {
   id: number;
-  slotDate: Date;
+  slotDate: string;
   startTime: string;
   endTime: string;
   durationMin: number;
