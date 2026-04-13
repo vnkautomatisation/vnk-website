@@ -7,13 +7,22 @@ export default async function BookingPage() {
   const horizon = new Date();
   horizon.setDate(now.getDate() + 30);
 
-  const slots = await prisma.availabilitySlot.findMany({
+  const rawSlots = await prisma.availabilitySlot.findMany({
     where: {
       slotDate: { gte: now, lte: horizon },
       status: "available",
     },
     orderBy: [{ slotDate: "asc" }, { startTime: "asc" }],
   });
+
+  // Serialiser les dates pour le client component
+  const slots = rawSlots.map((s) => ({
+    id: s.id,
+    slotDate: s.slotDate.toISOString(),
+    startTime: s.startTime,
+    endTime: s.endTime,
+    durationMin: s.durationMin,
+  }));
 
   return (
     <div className="space-y-6">
@@ -23,7 +32,7 @@ export default async function BookingPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold">Reserver un appel</h1>
-          <p className="text-sm text-muted-foreground">Choisissez un creneau disponible pour planifier un rendez-vous</p>
+          <p className="text-sm text-muted-foreground">Choisissez un creneau disponible</p>
         </div>
       </div>
       <BookingView slots={slots} />
