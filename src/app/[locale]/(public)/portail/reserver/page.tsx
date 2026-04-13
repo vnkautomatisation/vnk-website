@@ -1,11 +1,13 @@
 import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { BookingView } from "./booking-view";
 import { CalendarPlus } from "lucide-react";
 
 export default async function BookingPage() {
   const session = await auth();
-  const clientId = session!.user.clientId!;
+  if (!session?.user?.clientId) redirect("/portail/login");
+  const clientId = session.user.clientId;
 
   const now = new Date();
   const horizon = new Date();

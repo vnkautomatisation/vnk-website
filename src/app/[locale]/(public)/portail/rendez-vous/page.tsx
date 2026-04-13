@@ -1,10 +1,12 @@
 import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AppointmentsList } from "./appointments-list";
 
 export default async function PortalAppointmentsPage() {
   const session = await auth();
-  const clientId = session!.user.clientId!;
+  if (!session?.user?.clientId) redirect("/portail/login");
+  const clientId = session.user.clientId;
   const now = new Date();
 
   // Auto-maj les RDV passes
