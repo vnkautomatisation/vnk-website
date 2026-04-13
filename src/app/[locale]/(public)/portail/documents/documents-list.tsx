@@ -48,15 +48,17 @@ function getFileTypeBadge(title: string, url: string | null) {
   return { label: 'DOC', bg: 'bg-gray-100 text-gray-600' };
 }
 
-export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
+export function PortalDocumentsList({ documents: initialDocuments }: { documents: Doc[] }) {
+  const [docs, setDocs] = useState(initialDocuments);
   const [readFilter, setReadFilter] = useState<"all" | "unread" | "read">("all");
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
 
   const handlePreview = (doc: Doc, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setPreviewDoc(doc);
-    // Mark as read
+    // Mark as read — local + server
     if (!doc.isRead) {
+      setDocs((prev) => prev.map((d) => d.id === doc.id ? { ...d, isRead: true } : d));
       fetch(`/api/documents/${doc.id}/read`, { method: "PATCH" }).catch(() => {});
     }
   };
@@ -74,10 +76,10 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
 
   const filteredDocs =
     readFilter === "all"
-      ? documents
+      ? docs
       : readFilter === "unread"
-        ? documents.filter((d) => !d.isRead)
-        : documents.filter((d) => d.isRead);
+        ? docs.filter((d) => !d.isRead)
+        : docs.filter((d) => d.isRead);
 
   const columns: Column<Doc>[] = [
     {
@@ -141,15 +143,16 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
     {
       key: "actions",
       header: "",
-      className: "w-[160px]",
+      className: "w-[230px]",
       accessor: (r) => (
         <div className="flex gap-1.5 justify-end" onClick={(e) => e.stopPropagation()}>
           <Button size="sm" variant="outline" onClick={(e) => handlePreview(r, e)}>
             <Eye className="h-3.5 w-3.5 mr-1" />
             Voir
           </Button>
-          <Button size="sm" variant="ghost" onClick={(e) => handleDownload(r, e)} title="Telecharger">
-            <Download className="h-3.5 w-3.5" />
+          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={(e) => handleDownload(r, e)}>
+            <Download className="h-3.5 w-3.5 mr-1" />
+            Telecharger
           </Button>
         </div>
       ),
@@ -207,8 +210,9 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
               <Eye className="h-3.5 w-3.5 mr-1" />
               Voir
             </Button>
-            <Button size="sm" variant="ghost" onClick={(e) => handleDownload(doc, e)}>
-              <Download className="h-3.5 w-3.5" />
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white flex-1" onClick={(e) => handleDownload(doc, e)}>
+              <Download className="h-3.5 w-3.5 mr-1" />
+              Telecharger
             </Button>
           </div>
         </CardContent>
@@ -262,7 +266,7 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
                   </div>
                   <div>
                     <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total documents</p>
-                    <p className="text-2xl font-bold">{documents.length}</p>
+                    <p className="text-2xl font-bold">{docs.length}</p>
                   </div>
                 </div>
               </div>
@@ -273,7 +277,7 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
                   </div>
                   <div>
                     <p className="text-[11px] uppercase tracking-wider font-semibold text-[#0F2D52]">Non lus</p>
-                    <p className="text-2xl font-bold">{documents.filter((d) => !d.isRead).length}</p>
+                    <p className="text-2xl font-bold">{docs.filter((d) => !d.isRead).length}</p>
                   </div>
                 </div>
               </div>
@@ -284,7 +288,7 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
                   </div>
                   <div>
                     <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Rapports</p>
-                    <p className="text-2xl font-bold">{documents.filter((d) => d.category === "Rapports").length}</p>
+                    <p className="text-2xl font-bold">{docs.filter((d) => d.category === "Rapports").length}</p>
                   </div>
                 </div>
               </div>
@@ -295,7 +299,7 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
                   </div>
                   <div>
                     <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Contrats</p>
-                    <p className="text-2xl font-bold">{documents.filter((d) => d.category === "Contrats").length}</p>
+                    <p className="text-2xl font-bold">{docs.filter((d) => d.category === "Contrats").length}</p>
                   </div>
                 </div>
               </div>

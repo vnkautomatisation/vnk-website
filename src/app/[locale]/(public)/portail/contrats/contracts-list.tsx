@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FileSignature, PenLine, Eye, ClipboardList, CheckCircle, DollarSign, X, ShieldCheck } from "lucide-react";
+import { FileSignature, PenLine, Eye, ClipboardList, CheckCircle, DollarSign, X, ShieldCheck, Download } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
@@ -338,10 +338,15 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
           downloadName={`contrat-${pdfContract.contractNumber}`}
           actions={
             signed ? (
-              <div className="flex items-center gap-2 text-emerald-600 font-semibold text-sm">
-                <CheckCircle className="h-4 w-4" />
-                Contrat signe
-              </div>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm" onClick={() => {
+                const a = document.createElement("a");
+                a.href = pdfContract.fileUrl ?? `/api/contracts/${pdfContract.id}/pdf`;
+                a.download = `contrat-${pdfContract.contractNumber}.pdf`;
+                a.click();
+              }}>
+                <Download className="h-4 w-4 mr-1.5" />
+                Telecharger le contrat
+              </Button>
             ) : pdfContract.status === "pending" && !pdfContract.clientSignatureData && !showSignature ? (
               <Button
                 className="bg-[#0F2D52] hover:bg-[#1a3a66]"

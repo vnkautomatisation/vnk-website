@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { markInvoicePaid } from "@/lib/workflow";
 
 const schema = z.object({
   invoiceId: z.number().int().positive(),
@@ -37,15 +38,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, alreadyPaid: true });
   }
 
-  await prisma.invoice.update({
-    where: { id: invoice.id },
-    data: {
-      status: "paid",
-      paidAt: new Date(),
-      stripePaymentIntentId: parsed.data.paymentIntentId,
-      paymentMethod: "stripe",
-    },
-  });
+  await markInvoicePaid(invoice.id, "stripe", parsed.data.paymentIntentId);
 
   return NextResponse.json({ success: true });
 }

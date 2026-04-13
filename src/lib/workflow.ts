@@ -129,7 +129,20 @@ export async function acceptQuote(quoteId: number, triggeredBy = "client") {
     },
   });
 
-  // 4. Workflow events
+  // 4. Auto-générer le document pour le devis accepté
+  await prisma.document.create({
+    data: {
+      clientId: quote.clientId,
+      title: `Devis ${quote.quoteNumber} — ${quote.title}`,
+      fileUrl: `/api/quotes/${quote.id}/pdf`,
+      fileType: "pdf",
+      category: "Devis",
+      uploadedBy: "system",
+      isRead: false,
+    },
+  });
+
+  // 5. Workflow events
   await createWorkflowEvent({
     clientId: quote.clientId,
     quoteId: quote.id,
@@ -201,6 +214,19 @@ export async function onContractFullySigned(
     },
   });
 
+  // Auto-générer le document pour le contrat signé
+  await prisma.document.create({
+    data: {
+      clientId: contract.clientId,
+      title: `Contrat ${contract.contractNumber} — ${contract.title}`,
+      fileUrl: `/api/contracts/${contract.id}/pdf`,
+      fileType: "pdf",
+      category: "Contrats",
+      uploadedBy: "system",
+      isRead: false,
+    },
+  });
+
   await createWorkflowEvent({
     clientId: contract.clientId,
     contractId: contract.id,
@@ -239,6 +265,19 @@ export async function markInvoicePaid(
       paymentMethod,
       stripePaymentIntentId,
       paidAt: new Date(),
+    },
+  });
+
+  // Auto-générer le document pour la facture payée
+  await prisma.document.create({
+    data: {
+      clientId: invoice.clientId,
+      title: `Facture ${invoice.invoiceNumber} — ${invoice.title}`,
+      fileUrl: `/api/invoices/${invoice.id}/pdf`,
+      fileType: "pdf",
+      category: "Factures",
+      uploadedBy: "system",
+      isRead: false,
     },
   });
 

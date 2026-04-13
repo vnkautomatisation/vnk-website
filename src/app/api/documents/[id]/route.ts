@@ -1,10 +1,13 @@
-// GET /api/documents/[id] — sert le fichier document (redirect vers fileUrl)
+// GET /api/documents/[id] — sert le fichier document
+// Pour les URLs internes (/api/...), proxy le contenu directement.
+// Pour les URLs externes, redirect.
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { headers } from "next/headers";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
@@ -38,6 +41,33 @@ export async function GET(
     );
   }
 
-  // Redirect to the actual file URL
+  // Pour les URLs internes (API PDF routes), proxy le contenu
+  if (doc.fileUrl.startsWith("/api/")) {
+    const hdrs = await headers();
+    const host = hdrs.get("host") ?? "localhost:3000";
+    const proto = hdrs.get("x-forwarded-proto") ?? "http";
+    const absoluteUrl = `${proto}://${host}${doc.fileUrl}`;
+
+    const pdfRes = await fetch(absoluteUrl, {
+      headers: { cookie: req.headers.get("cookie") ?? "" },
+    });
+
+    if (!pdfRes.ok) {
+      return NextResponse.json(
+        { error: "Erreur generation PDF" },
+        { status: pdfRes.status }
+      );
+    }
+
+    const pdfBuffer = await pdfRes.arrayBuffer();
+    return new Response(pdfBuffer, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename="${doc.title}.pdf"`,
+      },
+    });
+  }
+
+  // Pour les URLs externes, redirect
   return NextResponse.redirect(doc.fileUrl);
 }
