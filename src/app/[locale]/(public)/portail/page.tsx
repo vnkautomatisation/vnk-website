@@ -138,36 +138,35 @@ export default async function PortalDashboard() {
       <div className="sticky top-0 z-10 bg-background pb-4 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 space-y-4 overflow-hidden">
 
       {/* ── Welcome Banner ───────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl vnk-gradient p-6 sm:p-8 text-white">
-        {/* Decorative circles */}
-        <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-white/5" />
-        <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/5" />
-        <div className="absolute top-1/2 right-1/4 h-20 w-20 rounded-full bg-white/5" />
+      <div className="relative overflow-hidden rounded-xl sm:rounded-2xl vnk-gradient p-4 sm:p-6 lg:p-8 text-white">
+        {/* Decorative circles — hidden on small screens */}
+        <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-white/5 hidden sm:block" />
+        <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/5 hidden sm:block" />
 
         <div className="relative z-10">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          <h1 className="portal-title text-white tracking-tight">
             {t("greeting", { name: firstName })}
           </h1>
-          <p className="text-white/70 mt-1 text-sm sm:text-base">
+          <p className="text-white/70 mt-0.5 portal-subtitle">
             {client?.companyName}
           </p>
 
           {/* Quick stats row inside banner */}
-          <div className="mt-5 flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
-              <Briefcase className="h-3.5 w-3.5" />
+          <div className="mt-3 sm:mt-5 flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm">
+            <div className="flex items-center gap-1.5 bg-white/10 rounded-md px-2 py-1 sm:px-3 sm:py-1.5">
+              <Briefcase className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
               <span className="font-semibold">{activeMandates}</span>
-              <span className="text-white/70">mandats actifs</span>
+              <span className="text-white/70">mandats</span>
             </div>
-            <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
-              <FileSignature className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-1.5 bg-white/10 rounded-md px-2 py-1 sm:px-3 sm:py-1.5">
+              <FileSignature className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
               <span className="font-semibold">{totalContracts}</span>
-              <span className="text-white/70">contrats signes</span>
+              <span className="text-white/70">contrats</span>
             </div>
             {nextAppointment && (
-              <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
-                <CalendarCheck className="h-3.5 w-3.5" />
-                <span className="text-white/70">Prochain RDV :</span>
+              <div className="flex items-center gap-1.5 bg-white/10 rounded-md px-2 py-1 sm:px-3 sm:py-1.5">
+                <CalendarCheck className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+                <span className="text-white/70">RDV :</span>
                 <span className="font-semibold">
                   {formatDate(nextAppointment.appointmentDate)}
                 </span>
@@ -183,13 +182,13 @@ export default async function PortalDashboard() {
           const Icon = k.icon;
           return (
             <Link key={k.label} href={k.href}>
-              <div className={`rounded-xl border ${k.bg} p-4 hover:shadow-md transition-shadow cursor-pointer`}>
-                <div className="flex items-center gap-3">
-                  <div className={`h-9 w-9 rounded-lg ${k.iconBg} flex items-center justify-center`}>
-                    <Icon className={`h-4 w-4 ${k.iconColor}`} />
+              <div className={`rounded-xl border ${k.bg} portal-kpi-card hover:shadow-md transition-shadow cursor-pointer`}>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className={`portal-icon-sm rounded-lg ${k.iconBg} flex items-center justify-center shrink-0`}>
+                    <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${k.iconColor}`} />
                   </div>
-                  <div>
-                    <p className={`portal-kpi-label ${k.labelColor}`}>
+                  <div className="min-w-0">
+                    <p className={`portal-kpi-label ${k.labelColor} truncate`}>
                       {k.label}
                     </p>
                     <p className="portal-kpi-number">{k.value}</p>
@@ -203,10 +202,10 @@ export default async function PortalDashboard() {
 
       {/* ── Quick Actions ────────────────────────────── */}
       <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+        <h2 className="portal-kpi-label text-muted-foreground mb-2 sm:mb-3">
           Actions rapides
         </h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
           {quickActions.map((a) => {
             const Icon = a.icon;
             return (
@@ -215,12 +214,12 @@ export default async function PortalDashboard() {
                 variant="outline"
                 size="sm"
                 asChild
-                className="shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
+                className="shadow-sm hover:shadow-md hover:border-primary/30 transition-all h-8 sm:h-9 text-xs sm:text-sm px-2.5 sm:px-3"
               >
                 <Link href={a.href}>
-                  <Icon className="h-4 w-4 mr-1.5" />
-                  {a.label}
-                  <ArrowRight className="h-3 w-3 ml-1.5 opacity-50" />
+                  <Icon className="h-3.5 w-3.5 mr-1 shrink-0" />
+                  <span className="truncate">{a.label}</span>
+                  <ArrowRight className="h-3 w-3 ml-1 opacity-50 shrink-0" />
                 </Link>
               </Button>
             );

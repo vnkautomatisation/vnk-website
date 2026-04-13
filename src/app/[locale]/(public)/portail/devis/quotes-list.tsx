@@ -312,7 +312,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
               </div>
               <div className="rounded-xl border bg-amber-50/60 portal-kpi-card">
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
+                  <div className="portal-icon-sm rounded-lg bg-amber-100 flex items-center justify-center">
                     <Clock className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
@@ -323,7 +323,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
               </div>
               <div className="rounded-xl border bg-emerald-50/60 portal-kpi-card">
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <div className="portal-icon-sm rounded-lg bg-emerald-100 flex items-center justify-center">
                     <CheckCircle className="h-4 w-4 text-emerald-600" />
                   </div>
                   <div>
