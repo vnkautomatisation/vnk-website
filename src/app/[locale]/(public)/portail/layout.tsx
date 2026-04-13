@@ -57,7 +57,7 @@ export default async function PortalLayout({
         body, html { overflow: hidden !important; height: 100vh !important; }
       `}</style>
 
-      <div className="fixed inset-0 top-[70px] flex">
+      <div className="fixed inset-0 top-[72px] flex">
         <PortalSidebar
           clientName={client?.fullName ?? ""}
           clientCompany={client?.companyName ?? undefined}
