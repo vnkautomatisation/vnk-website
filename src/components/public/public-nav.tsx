@@ -47,15 +47,15 @@ export function PublicNav() {
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 sm:gap-3 group min-w-0">
-          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
-            <span className="text-white font-bold text-xs sm:text-sm">VNK</span>
+        <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group min-w-0">
+          <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
+            <span className="text-white font-bold text-sm">VNK</span>
           </div>
           <div className="min-w-0">
-            <div className="text-xs sm:text-sm font-bold leading-tight text-white truncate">
+            <div className="text-sm font-bold leading-tight text-white truncate">
               Automatisation Inc.
             </div>
-            <div className="text-[7px] sm:text-[9px] text-white/60 tracking-[0.1em] sm:tracking-[0.15em] font-medium">
+            <div className="text-[8px] sm:text-[9px] text-white/60 tracking-[0.1em] sm:tracking-[0.15em] font-medium">
               VALUE · NETWORK · KNOWLEDGE
             </div>
           </div>
@@ -113,21 +113,21 @@ export function PublicNav() {
         </nav>
 
         {/* Mobile — langue + menu */}
-        <div className="lg:hidden flex items-center gap-1.5 shrink-0">
+        <div className="lg:hidden flex items-center gap-2 shrink-0">
           <NextLink
             href={switcherHref}
             aria-label={`Changer vers ${otherLabel}`}
-            className="inline-flex items-center justify-center h-8 w-10 sm:h-10 sm:w-12 rounded-md border border-white/20 text-[10px] sm:text-xs font-bold text-white hover:bg-white/10"
+            className="inline-flex items-center justify-center h-9 w-11 sm:h-10 sm:w-12 rounded-md border border-white/20 text-xs font-bold text-white hover:bg-white/10"
           >
             {otherLabel}
           </NextLink>
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="h-8 w-8 sm:h-10 sm:w-10 rounded-md border border-white/20 flex items-center justify-center text-white hover:bg-white/10"
+            className="h-9 w-9 sm:h-10 sm:w-10 rounded-md border border-white/20 flex items-center justify-center text-white hover:bg-white/10"
             aria-label={t("menu")}
           >
-            <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
+            <Menu className="h-5 w-5" />
           </button>
         </div>
       </div>
