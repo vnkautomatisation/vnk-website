@@ -64,8 +64,8 @@ export default async function PortalLayout({
           clientCompany={client?.companyName ?? undefined}
           badges={badges}
         />
-        <main className="flex-1 lg:pl-[240px] overflow-y-auto no-scrollbar pb-[64px] lg:pb-0">
-          <div className="p-4 sm:p-6 lg:p-8">{children}</div>
+        <main className="flex-1 lg:pl-[240px] overflow-y-auto overflow-x-hidden no-scrollbar pb-[64px] lg:pb-0">
+          <div className="p-4 sm:p-6 lg:p-8 max-w-full">{children}</div>
         </main>
       </div>
       <PortalBottomNav />
