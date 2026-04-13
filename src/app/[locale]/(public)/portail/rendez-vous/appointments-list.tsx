@@ -308,16 +308,26 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                 </div>
               </div>
 
-              {/* Statut + duree */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Statut :</span>
+              {/* Details complets */}
+              <div className="rounded-lg border p-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Statut</span>
                   <StatusBadge status={detail.status} />
                 </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Type</span>
+                  <span className="font-medium">{TYPE_LABEL[detail.meetingType] ?? detail.meetingType}</span>
+                </div>
                 {detail.durationMin && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {detail.durationMin} min
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Duree</span>
+                    <span className="font-medium">{detail.durationMin} min</span>
+                  </div>
+                )}
+                {detail.subject && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Sujet / Service</span>
+                    <span className="font-medium text-right max-w-[200px]">{detail.subject}</span>
                   </div>
                 )}
               </div>
