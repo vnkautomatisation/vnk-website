@@ -112,6 +112,7 @@ export function PortalTopbar({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch
                 className="px-3 py-2 rounded-md text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 transition-all"
               >
                 {item.label}
@@ -123,6 +124,7 @@ export function PortalTopbar({
             {/* Portail link (active) */}
             <Link
               href="/portail"
+              prefetch
               className="px-3 py-2 rounded-md text-sm font-medium text-white bg-white/15"
             >
               Mon portail
@@ -170,13 +172,13 @@ export function PortalTopbar({
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/portail">
+                  <Link href="/portail" prefetch>
                     <Home className="h-4 w-4 mr-2" />
                     Tableau de bord
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/portail/profil">
+                  <Link href="/portail/profil" prefetch>
                     <User className="h-4 w-4 mr-2" />
                     Mon profil
                   </Link>
@@ -229,6 +231,7 @@ export function PortalTopbar({
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch
                     onClick={() => setMobileOpen(false)}
                     className="flex items-center gap-3 px-4 py-3 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors"
                   >
@@ -240,6 +243,7 @@ export function PortalTopbar({
               <div className="border-t border-white/10 my-3" />
               <Link
                 href="/portail"
+                prefetch
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-3 px-4 py-3 rounded-md bg-white/10 text-white font-medium"
               >

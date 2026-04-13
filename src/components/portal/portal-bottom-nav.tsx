@@ -67,6 +67,7 @@ export function PortalBottomNav({
           <Link
             key={item.key}
             href={item.href}
+            prefetch
             className="flex-1"
             aria-current={active ? "page" : undefined}
           >

@@ -118,6 +118,7 @@ function SidebarContent({
           <NextLink
             key={tab.key}
             href={tab.href}
+            prefetch
             onClick={onNavigate}
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
