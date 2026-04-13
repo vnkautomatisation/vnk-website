@@ -54,7 +54,7 @@ export function PortalBottomNav({ badges }: { badges?: PortalBadges }) {
     <>
       {/* Bottom nav bar */}
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-card border-t h-[64px] pb-safe flex items-stretch justify-around"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-card border-t h-[56px] sm:h-[64px] pb-safe flex items-stretch justify-around"
         aria-label="Navigation mobile"
       >
         {BOTTOM_ITEMS.map((item) => {
@@ -70,8 +70,8 @@ export function PortalBottomNav({ badges }: { badges?: PortalBadges }) {
                 prefetch
                 className="flex flex-col items-center justify-center flex-1 relative"
               >
-                <div className="h-11 w-11 rounded-full vnk-gradient text-white flex items-center justify-center shadow-lg -mt-6">
-                  <Icon className="h-5 w-5" />
+                <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full vnk-gradient text-white flex items-center justify-center shadow-lg -mt-5 sm:-mt-6">
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
               </Link>
             );
@@ -83,11 +83,11 @@ export function PortalBottomNav({ badges }: { badges?: PortalBadges }) {
                 key={item.key}
                 type="button"
                 onClick={() => setMoreOpen(true)}
-                className="flex flex-col items-center justify-center flex-1 gap-0.5 text-xs text-muted-foreground relative"
+                className="flex flex-col items-center justify-center flex-1 gap-0.5 text-[10px] sm:text-xs text-muted-foreground relative"
                 aria-label="Plus"
               >
                 <div className="relative">
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                   {hasMoreNotif && (
                     <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500" />
                   )}
@@ -103,12 +103,12 @@ export function PortalBottomNav({ badges }: { badges?: PortalBadges }) {
               href={item.href}
               prefetch
               className={cn(
-                "flex flex-col items-center justify-center flex-1 gap-0.5 text-xs",
+                "flex flex-col items-center justify-center flex-1 gap-0.5 text-[10px] sm:text-xs",
                 active ? "text-[#0F2D52] font-medium" : "text-muted-foreground"
               )}
               aria-current={active ? "page" : undefined}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>{t(item.key as "dashboard")}</span>
             </Link>
           );

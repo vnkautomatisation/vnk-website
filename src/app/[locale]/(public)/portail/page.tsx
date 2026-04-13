@@ -133,9 +133,9 @@ export default async function PortalDashboard() {
   const firstName = client?.fullName.split(" ")[0] ?? "";
 
   return (
-    <div className="space-y-8">
-      {/* ── Banner + KPIs + actions (sticky dans le main scrollable) ── */}
-      <div className="sticky top-0 z-10 bg-background pb-4 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 space-y-4 overflow-hidden">
+    <div className="space-y-4">
+      {/* ── Banner + KPIs + actions ── */}
+      <div className="space-y-4">
 
       {/* ── Welcome Banner ───────────────────────────── */}
       <div className="relative overflow-hidden rounded-xl sm:rounded-2xl vnk-gradient p-4 sm:p-6 lg:p-8 text-white">
