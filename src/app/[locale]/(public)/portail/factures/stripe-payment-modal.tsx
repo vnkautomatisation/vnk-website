@@ -40,6 +40,20 @@ function PaymentForm({
   const elements = useElements();
   const [paying, setPaying] = useState(false);
   const [step, setStep] = useState(0);
+  const [validating, setValidating] = useState(false);
+
+  const handleNext = async () => {
+    if (!elements) return;
+    setValidating(true);
+    // Valider les elements Stripe de l'etape actuelle
+    const { error } = await elements.submit();
+    setValidating(false);
+    if (error) {
+      toast.error(error.message ?? "Veuillez completer tous les champs");
+      return;
+    }
+    setStep(step + 1);
+  };
 
   const handleSubmit = async () => {
     if (!stripe || !elements) return;
@@ -176,10 +190,11 @@ function PaymentForm({
               type="button"
               size="sm"
               className="bg-[#0F2D52] hover:bg-[#1a3a66]"
-              onClick={() => setStep(step + 1)}
+              onClick={handleNext}
+              disabled={validating}
             >
-              Suivant
-              <ChevronRight className="h-4 w-4 ml-1" />
+              {validating ? "Verification..." : "Suivant"}
+              {!validating && <ChevronRight className="h-4 w-4 ml-1" />}
             </Button>
           ) : null}
         </div>
