@@ -65,15 +65,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           ...raw,
           kind: "admin",
         });
-        if (!parsed.success) return null;
+        if (!parsed.success) {
+          return null;
+        }
 
         const admin = await prisma.admin.findUnique({
           where: { email: parsed.data.email },
         });
-        if (!admin || !admin.isActive) return null;
+        if (!admin || !admin.isActive) {
+          return null;
+        }
 
         const valid = await bcrypt.compare(parsed.data.password, admin.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          return null;
+        }
 
         // Mettre à jour lastLogin
         await prisma.admin.update({
@@ -111,15 +117,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           ...raw,
           kind: "client",
         });
-        if (!parsed.success) return null;
+        if (!parsed.success) {
+          return null;
+        }
 
         const client = await prisma.client.findUnique({
           where: { email: parsed.data.email },
         });
-        if (!client || !client.isActive || client.archived) return null;
+        if (!client || !client.isActive || client.archived) {
+          return null;
+        }
 
         const valid = await bcrypt.compare(parsed.data.password, client.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          return null;
+        }
 
         // 2FA verification si active
         if (client.twoFactorEnabled && client.twoFactorSecret) {

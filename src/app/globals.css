@@ -99,10 +99,10 @@
   html {
     font-size: 16px;
   }
-  /* Fluid scaling seulement sous lg (1024px) */
+  /* Fluid scaling sous lg — min 14px pour lisibilite */
   @media (max-width: 1023px) {
     html {
-      font-size: clamp(12.5px, 10px + 0.5vw, 16px);
+      font-size: clamp(14px, 12px + 0.4vw, 16px);
     }
   }
   html, body {
