@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Elements, PaymentElement, AddressElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { CreditCard, Lock, X, ShieldCheck } from "lucide-react";
@@ -33,11 +33,6 @@ function PaymentForm({
   const stripe = useStripe();
   const elements = useElements();
   const [paying, setPaying] = useState(false);
-  const [name, setName] = useState(clientInfo.fullName);
-  const [email, setEmail] = useState(clientInfo.email);
-  const [address, setAddress] = useState(clientInfo.address ?? "");
-  const [city, setCity] = useState(clientInfo.city ?? "");
-  const [postalCode, setPostalCode] = useState(clientInfo.postalCode ?? "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,13 +43,6 @@ function PaymentForm({
       elements,
       confirmParams: {
         return_url: `${window.location.origin}/portail/factures?paid=${invoice.id}`,
-        receipt_email: email,
-        payment_method_data: {
-          billing_details: {
-            name, email,
-            address: { line1: address || undefined, city: city || undefined, state: clientInfo.province || undefined, postal_code: postalCode || undefined, country: "CA" },
-          },
-        },
       },
       redirect: "if_required",
     });
@@ -74,39 +62,34 @@ function PaymentForm({
     }
   };
 
-  const inputCls = "w-full h-9 px-3 rounded-md border bg-background text-sm focus:ring-2 focus:ring-[#0F2D52]/20 focus:border-[#0F2D52] outline-none";
-
   return (
     <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row">
-      {/* LEFT — Infos client + Stripe Elements */}
-      <div className="flex-1 p-6 space-y-4 border-r-0 lg:border-r overflow-y-auto max-h-[70vh] no-scrollbar">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Informations de facturation</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-muted-foreground">Nom complet</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground">Courriel</label>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} />
-          </div>
-        </div>
+      {/* LEFT — Adresse + Mode de paiement */}
+      <div className="flex-1 p-6 space-y-5 border-r-0 lg:border-r overflow-y-auto max-h-[75vh] no-scrollbar">
+        {/* Adresse de facturation — Stripe AddressElement gere pays/province/code postal */}
         <div>
-          <label className="text-xs text-muted-foreground">Adresse</label>
-          <input value={address} onChange={(e) => setAddress(e.target.value)} className={inputCls} placeholder="123 rue Exemple" />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-muted-foreground">Ville</label>
-            <input value={city} onChange={(e) => setCity(e.target.value)} className={inputCls} />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground">Code postal</label>
-            <input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} className={inputCls} />
-          </div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Adresse de facturation</p>
+          <AddressElement
+            options={{
+              mode: "billing",
+              defaultValues: {
+                name: clientInfo.fullName,
+                address: {
+                  line1: clientInfo.address ?? "",
+                  city: clientInfo.city ?? "",
+                  state: clientInfo.province ?? "",
+                  postal_code: clientInfo.postalCode ?? "",
+                  country: "CA",
+                },
+              },
+              fields: { phone: "always" },
+              display: { name: "full" },
+            }}
+          />
         </div>
 
-        <div className="pt-2">
+        {/* Mode de paiement */}
+        <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Mode de paiement</p>
           <PaymentElement options={{ layout: "tabs" }} />
         </div>
@@ -138,7 +121,7 @@ function PaymentForm({
           <div className="mt-6 rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 p-3 flex items-start gap-2">
             <ShieldCheck className="h-4 w-4 text-[#0F2D52] shrink-0 mt-0.5" />
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Paiement securise via Stripe. Vos donnees bancaires ne sont jamais stockees sur nos serveurs.
+              Paiement securise via Stripe. Vos donnees bancaires ne transitent jamais par nos serveurs.
             </p>
           </div>
         </div>
