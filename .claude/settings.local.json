@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(ls -la /f/Logiciel/Developpement/GIT/vnk-website/.claude/worktrees/great-neumann/src/app/\\\\\\(portal\\\\\\)/)",
+      "Bash(ls -la /f/Logiciel/Developpement/GIT/vnk-website/.claude/worktrees/great-neumann/src/app/\\\\\\(portal\\\\\\)/portail/)",
+      "Bash(ls -la /f/Logiciel/Developpement/GIT/vnk-website/.claude/worktrees/great-neumann/src/app/\\\\\\(portal\\\\\\)/portail/contrats/)",
+      "Bash(ls -la /f/Logiciel/Developpement/GIT/vnk-website/.claude/worktrees/great-neumann/src/app/\\\\\\(portal\\\\\\)/portail/devis/)",
+      "Bash(ls -la /f/Logiciel/Developpement/GIT/vnk-website/.claude/worktrees/great-neumann/src/app/\\\\\\(portal\\\\\\)/portail/factures/)",
+      "Bash(npm install:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm ci:*)",
+      "Bash(ls node_modules/@auth/core/*.js)",
+      "Bash(xargs grep:*)",
+      "Bash(ls \"F:/Logiciel/Developpement/GIT/vnk-website/.claude/worktrees/great-neumann/src/app/\\(admin\\)/admin/\"*/page.tsx)",
+      "Bash(ls \"F:/Logiciel/Developpement/GIT/vnk-website/.claude/worktrees/great-neumann/src/app/\\(admin\\)/admin/page.tsx\")",
+      "Bash(find \"F:/Logiciel/Developpement/GIT/vnk-website/.claude/worktrees/great-neumann/src/app/\\(admin\\)/admin\" -name \"page.tsx\" -type f)",
+      "Bash(find \"F:/Logiciel/Developpement/GIT/vnk-website/.claude/worktrees/great-neumann/src/app/\\(admin\\)/admin\" -name \"loading.tsx\" -type f)",
+      "Bash(find \"src/app/\\(admin\\)/admin\" -name \"loading.tsx\" -type f)",
+      "Bash(node -e \"console.log\\(require\\(''crypto''\\).randomBytes\\(32\\).toString\\(''base64''\\)\\)\")",
+      "Bash(find src/components -name \"*.tsx\" -exec wc -l {} +)",
+      "Bash(cat \"src/app/\\(admin\\)/admin/layout.tsx\")",
+      "Bash(wc -l \"F:\\\\Logiciel\\\\Developpement\\\\GIT\\\\vnk-website\\\\.claude\\\\worktrees\\\\great-neumann\\\\src\\\\app\\\\[locale]\\\\\\(public\\)\\\\page.tsx\" \"F:\\\\Logiciel\\\\Developpement\\\\GIT\\\\vnk-website\\\\.claude\\\\worktrees\\\\great-neumann\\\\src\\\\app\\\\[locale]\\\\\\(public\\)\\\\services\\\\page.tsx\" \"F:\\\\Logiciel\\\\Developpement\\\\GIT\\\\vnk-website\\\\.claude\\\\worktrees\\\\great-neumann\\\\src\\\\app\\\\[locale]\\\\\\(public\\)\\\\a-propos\\\\page.tsx\" \"F:\\\\Logiciel\\\\Developpement\\\\GIT\\\\vnk-website\\\\.claude\\\\worktrees\\\\great-neumann\\\\src\\\\app\\\\[locale]\\\\\\(public\\)\\\\contact\\\\page.tsx\")",
+      "Bash(ls \"F:/Logiciel/Developpement/GIT/vnk-website/.claude/worktrees/great-neumann/src/app/\\(portal\\)/portail/\")",
+      "Bash(npx prisma:*)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(rm -rf .next)",
+      "Bash(mv page.tsx \"\\(with-footer\\)/page.tsx\")",
+      "Bash(mv services:*)",
+      "Bash(mv a-propos:*)",
+      "Bash(mv contact:*)",
+      "Bash(mkdir -p \"src/app/[locale]/\\(public\\)/portail\")",
+      "Bash(ls src/app/\\\\\\(portal\\\\\\)/portail/)",
+      "Bash(for dir:*)",
+      "Bash(do cp:*)",
+      "Bash(done)",
+      "Bash(cp \"src/app/\\(portal\\)/portail/page.tsx\" \"src/app/[locale]/\\(public\\)/portail/page.tsx\")",
+      "Bash(cp \"src/app/\\(portal\\)/portail/loading.tsx\" \"src/app/[locale]/\\(public\\)/portail/loading.tsx\")"
+    ]
+  }
+}
