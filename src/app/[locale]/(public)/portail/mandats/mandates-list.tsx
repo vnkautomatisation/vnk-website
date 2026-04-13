@@ -54,14 +54,6 @@ const STEPS = [
 
 function getActiveStep(progress: number, status: string): number {
   if (status === "completed") return 5;
-  if (status === "pending") return 0;
-  if (status === "paused") {
-    if (progress >= 86) return 4;
-    if (progress >= 61) return 3;
-    if (progress >= 31) return 2;
-    if (progress >= 11) return 1;
-    return 0;
-  }
   if (progress >= 86) return 4;
   if (progress >= 61) return 3;
   if (progress >= 31) return 2;
