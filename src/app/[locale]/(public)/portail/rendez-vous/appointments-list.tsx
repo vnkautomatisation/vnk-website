@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Calendar,
@@ -106,8 +106,28 @@ function timelineColor(status: string): string {
 // ── Composant principal ──
 export function AppointmentsList({ appointments }: { appointments: Appointment[] }) {
   const router = useRouter();
-  const [currentMonth, setCurrentMonth] = useState(() => new Date());
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    // Centrer le mois sur le prochain RDV a venir
+    const upcoming = appointments
+      .filter((a) => a.isUpcoming && a.status !== "cancelled")
+      .sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime());
+    if (upcoming.length > 0) {
+      const d = new Date(upcoming[0].appointmentDate);
+      return new Date(d.getFullYear(), d.getMonth(), 1);
+    }
+    return new Date();
+  });
+  const [selectedDate, setSelectedDate] = useState<string | null>(() => {
+    const today = todayKey();
+    const byDateInit = new Map<string, boolean>();
+    for (const a of appointments) byDateInit.set(toDateKey(a.appointmentDate), true);
+    if (byDateInit.has(today)) return today;
+    const upcoming = appointments
+      .filter((a) => a.isUpcoming && a.status !== "cancelled")
+      .sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime());
+    if (upcoming.length > 0) return toDateKey(upcoming[0].appointmentDate);
+    return today;
+  });
   const [detail, setDetail] = useState<Appointment | null>(null);
   const [cancelId, setCancelId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -138,27 +158,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
     [currentMonth]
   );
 
-  // Auto-select aujourd'hui ou prochain RDV au montage
-  useEffect(() => {
-    const today = todayKey();
-    if (byDate.has(today)) {
-      setSelectedDate(today);
-      return;
-    }
-    // Prochain RDV a venir
-    const upcoming = appointments
-      .filter((a) => a.isUpcoming && a.status !== "cancelled")
-      .sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime());
-    if (upcoming.length > 0) {
-      const key = toDateKey(upcoming[0].appointmentDate);
-      setSelectedDate(key);
-      const d = new Date(upcoming[0].appointmentDate);
-      setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
-    } else {
-      setSelectedDate(today);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // useEffect removed — auto-select done in useState initializer
 
   const prevMonth = () => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   const nextMonth = () => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
