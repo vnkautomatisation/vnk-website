@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Receipt, CreditCard, Eye, FileText, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
-import { PaymentModal } from "./payment-modal";
+import { StripePaymentModal } from "./stripe-payment-modal";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,8 +41,11 @@ const filterOptions: FilterOption[] = [
 ];
 
 export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
+  const router = useRouter();
   const [pdfInvoice, setPdfInvoice] = useState<Invoice | null>(null);
-  const [payInvoice, setPayInvoice] = useState<Invoice | null>(null);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paid, setPaid] = useState(false);
+  const [pdfKey, setPdfKey] = useState(0);
 
   const invoiceKpis = useMemo(() => {
     const totalCount = invoices.length;
@@ -57,8 +62,22 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
     setPdfInvoice(inv);
   };
 
-  const handlePay = (inv: Invoice) => {
-    setPayInvoice(inv);
+  const startPay = () => {
+    setShowPayment(true);
+  };
+
+  const handlePaid = () => {
+    setShowPayment(false);
+    setPaid(true);
+    setPdfKey((k) => k + 1);
+    toast.success("Paiement effectue — merci !");
+    router.refresh();
+  };
+
+  const closePdf = () => {
+    setPdfInvoice(null);
+    setShowPayment(false);
+    setPaid(false);
   };
 
   const columns: Column<Invoice>[] = [
@@ -281,21 +300,24 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
       {pdfInvoice && (
         <PdfViewerModal
           open={!!pdfInvoice}
-          onClose={() => setPdfInvoice(null)}
+          onClose={closePdf}
           pdfUrl={`/api/invoices/${pdfInvoice.id}/pdf`}
+          refreshKey={pdfKey}
           title={pdfInvoice.title}
           documentNumber={pdfInvoice.invoiceNumber}
           date={pdfInvoice.dueDate ? formatDate(new Date(pdfInvoice.dueDate)) : undefined}
           downloadName={`facture-${pdfInvoice.invoiceNumber}`}
           actions={
-            (pdfInvoice.status === "unpaid" || pdfInvoice.status === "overdue") ? (
+            paid ? (
+              <div className="flex items-center gap-2 text-emerald-600 font-semibold text-sm">
+                <CheckCircle className="h-4 w-4" />
+                Facture payee
+              </div>
+            ) : (pdfInvoice.status === "unpaid" || pdfInvoice.status === "overdue") && !showPayment ? (
               <Button
                 className="bg-[#0F2D52] hover:bg-[#1a3a66]"
                 size="sm"
-                onClick={() => {
-                  setPdfInvoice(null);
-                  setPayInvoice(pdfInvoice);
-                }}
+                onClick={startPay}
               >
                 <CreditCard className="h-4 w-4 mr-1" />
                 Payer maintenant
@@ -305,12 +327,15 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
         />
       )}
 
-      {/* Payment recap modal before Stripe redirect */}
-      <PaymentModal
-        invoice={payInvoice}
-        open={!!payInvoice}
-        onClose={() => setPayInvoice(null)}
-      />
+      {/* Stripe payment overlay — SUR le PDF */}
+      {pdfInvoice && showPayment && (
+        <StripePaymentModal
+          invoice={pdfInvoice}
+          open={showPayment}
+          onClose={() => setShowPayment(false)}
+          onPaid={handlePaid}
+        />
+      )}
     </div>
   );
 }
