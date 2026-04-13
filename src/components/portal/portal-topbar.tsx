@@ -33,10 +33,10 @@ import {
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { label: "Accueil", href: "/portail/accueil", icon: Home },
-  { label: "Services", href: "/portail/nos-services", icon: Wrench },
-  { label: "A propos", href: "/portail/a-propos", icon: Info },
-  { label: "Contact", href: "/portail/nous-contacter", icon: Phone },
+  { label: "Accueil", href: "/", icon: Home },
+  { label: "Services", href: "/services", icon: Wrench },
+  { label: "A propos", href: "/a-propos", icon: Info },
+  { label: "Contact", href: "/contact", icon: Phone },
 ];
 
 export function PortalTopbar({
@@ -86,8 +86,8 @@ export function PortalTopbar({
         className={cn(
           "sticky top-0 z-30 transition-all duration-300",
           scrolled
-            ? "bg-[#1B4F8A]/95 backdrop-blur-md shadow-lg"
-            : "bg-[#1B4F8A]"
+            ? "bg-[#0F2D52]/95 backdrop-blur-md shadow-lg"
+            : "bg-[#0F2D52]/80 backdrop-blur-sm"
         )}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-[64px] flex items-center justify-between">
@@ -214,7 +214,7 @@ export function PortalTopbar({
             className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="lg:hidden fixed top-0 right-0 bottom-0 z-50 w-[85%] max-w-sm bg-[#1B4F8A] text-white flex flex-col">
+          <div className="lg:hidden fixed top-0 right-0 bottom-0 z-50 w-[85%] max-w-sm bg-[#0F2D52] text-white flex flex-col">
             <div className="h-[64px] px-5 flex items-center justify-between border-b border-white/10">
               <span className="font-bold">Menu</span>
               <button
