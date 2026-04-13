@@ -55,7 +55,7 @@ export function PublicNav() {
             <div className="text-xs sm:text-sm font-bold leading-tight text-white truncate">
               Automatisation Inc.
             </div>
-            <div className="text-[7px] sm:text-[9px] text-white/60 tracking-[0.1em] sm:tracking-[0.15em] font-medium hidden xs:block">
+            <div className="text-[7px] sm:text-[9px] text-white/60 tracking-[0.1em] sm:tracking-[0.15em] font-medium">
               VALUE · NETWORK · KNOWLEDGE
             </div>
           </div>
