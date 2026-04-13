@@ -15,14 +15,6 @@ datasource db {
 // AUTHENTIFICATION & RÔLES
 // ════════════════════════════════════════════════════════════
 
-enum AdminRole {
-  super_admin
-  admin
-  accountant
-  sales
-  readonly
-}
-
 model Admin {
   id            Int       @id @default(autoincrement())
   email         String    @unique
@@ -129,15 +121,6 @@ model ClientTeamMember {
 // MANDATS, DEVIS, CONTRATS, FACTURES
 // ════════════════════════════════════════════════════════════
 
-enum MandateStatus {
-  pending
-  active
-  in_progress
-  paused
-  completed
-  cancelled
-}
-
 model Mandate {
   id          Int          @id @default(autoincrement())
   clientId    Int          @map("client_id")
@@ -191,13 +174,6 @@ model TimeEntry {
   @@map("time_entries")
 }
 
-enum QuoteStatus {
-  pending
-  accepted
-  declined
-  expired
-}
-
 model Quote {
   id                    Int         @id @default(autoincrement())
   clientId              Int         @map("client_id")
@@ -237,14 +213,6 @@ model Quote {
   @@map("quotes")
 }
 
-enum ContractStatus {
-  draft
-  pending
-  sent
-  signed
-  cancelled
-}
-
 model Contract {
   id                   Int            @id @default(autoincrement())
   clientId             Int            @map("client_id")
@@ -276,15 +244,6 @@ model Contract {
   @@index([status])
   @@index([quoteId])
   @@map("contracts")
-}
-
-enum InvoiceStatus {
-  draft
-  unpaid
-  paid
-  overdue
-  cancelled
-  refunded
 }
 
 model Invoice {
@@ -372,20 +331,6 @@ model Refund {
 
   @@index([clientId])
   @@map("refunds")
-}
-
-enum DisputeStatus {
-  open
-  in_progress
-  resolved
-  escalated
-}
-
-enum DisputePriority {
-  low
-  medium
-  high
-  critical
 }
 
 model Dispute {
@@ -642,20 +587,6 @@ model Appointment {
 // NOUVELLE : PROJET REQUEST (table dédiée, plus de parsing string)
 // ════════════════════════════════════════════════════════════
 
-enum ProjectRequestStatus {
-  new
-  in_progress
-  converted
-  closed
-}
-
-enum ProjectRequestUrgency {
-  low
-  normal
-  urgent
-  critical
-}
-
 model ProjectRequest {
   id           Int                  @id @default(autoincrement())
   clientId     Int                  @map("client_id")
@@ -681,13 +612,7 @@ model ProjectRequest {
 // SETTINGS (configuration via section Paramètres)
 // ════════════════════════════════════════════════════════════
 
-enum SettingType {
-  string
-  number
-  boolean
-  json
-  secret // chiffré en DB
-}
+
 
 model Setting {
   id          Int         @id @default(autoincrement())
