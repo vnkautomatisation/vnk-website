@@ -80,6 +80,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
   };
 
   const [signed, setSigned] = useState(false);
+  const [pdfKey, setPdfKey] = useState(0);
 
   const handleSign = async (signatureDataUrl: string) => {
     if (!pdfContract) return;
@@ -98,9 +99,10 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
               ? "Contrat signe par les deux parties — facture generee"
               : "Votre signature a ete enregistree"
           );
-          // Rester dans le PDF, fermer juste la signature overlay
+          // Rester dans le PDF, fermer signature, recharger PDF avec signature
           setShowSignature(false);
           setSigned(true);
+          setPdfKey((k) => k + 1);
           router.refresh();
         } else {
           const err = await res.json().catch(() => ({}));
@@ -316,6 +318,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
           open={!!pdfContract}
           onClose={closePdf}
           pdfUrl={pdfContract.fileUrl ?? `/api/contracts/${pdfContract.id}/pdf`}
+          refreshKey={pdfKey}
           title={pdfContract.title}
           documentNumber={pdfContract.contractNumber}
           date={formatDate(new Date(pdfContract.createdAt))}
