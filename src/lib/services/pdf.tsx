@@ -1,10 +1,11 @@
 // PDF generation — wrapper Next.js autour de l'ancien pdf-templates.js (Express)
 // Les fonctions dans pdf-templates.js attendent (res, entity, client) format Express.
-// Ce wrapper cree un faux response object qui capture le stream PDF.
+// On passe un PassThrough stream comme "res" — PDFKit fait doc.pipe(res).
 import "server-only";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PdfTemplates = require("./pdf-templates.js");
+
 import { PassThrough } from "stream";
 
 type Client = {
@@ -61,29 +62,17 @@ type ContractPdfData = {
   signedAt?: Date | null;
 };
 
-// Faux response Express qui capture le PDF dans un buffer
-function createFakeResponse(): { res: any; getBuffer: () => Promise<Buffer> } {
+// Cree un faux "res" Express : un PassThrough stream avec setHeader noop.
+// PDFKit fait doc.pipe(res) et res recoit le PDF binaire.
+function createFakeRes(): { fakeRes: PassThrough & { setHeader: () => void }; getBuffer: () => Promise<Buffer> } {
   const stream = new PassThrough();
   const chunks: Buffer[] = [];
-  stream.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+  stream.on("data", (chunk: Buffer) => chunks.push(chunk));
 
-  const res = {
+  // Ajoute setHeader noop — les templates Express appellent res.setHeader()
+  const fakeRes = Object.assign(stream, {
     setHeader: () => {},
-    write: (chunk: any) => stream.write(chunk),
-    end: (chunk?: any) => {
-      if (chunk) stream.write(chunk);
-      stream.end();
-    },
-    // PDFKit doc.pipe(res) needs this to be a writable stream
-    on: stream.on.bind(stream),
-    once: stream.once.bind(stream),
-    emit: stream.emit.bind(stream),
-    writable: true,
-    _write: stream._write.bind(stream),
-  };
-
-  // Make it pipeable — PDFKit calls doc.pipe(res)
-  Object.setPrototypeOf(res, stream);
+  });
 
   const getBuffer = () =>
     new Promise<Buffer>((resolve, reject) => {
@@ -91,13 +80,25 @@ function createFakeResponse(): { res: any; getBuffer: () => Promise<Buffer> } {
       stream.on("error", reject);
     });
 
-  return { res: stream, getBuffer };
+  return { fakeRes, getBuffer };
+}
+
+function toSnakeClient(c: Client) {
+  return {
+    full_name: c.fullName,
+    company_name: c.companyName,
+    email: c.email,
+    phone: c.phone,
+    address: c.address,
+    city: c.city,
+    province: c.province,
+    postal_code: c.postalCode,
+  };
 }
 
 export async function generateQuotePdf(data: QuotePdfData): Promise<Buffer> {
-  const { res, getBuffer } = createFakeResponse();
+  const { fakeRes, getBuffer } = createFakeRes();
 
-  // pdf-templates.js attend (res, quote, client, lines)
   const quote = {
     quote_number: data.quoteNumber,
     title: data.title,
@@ -113,23 +114,12 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<Buffer> {
     payment_pct_2: data.paymentPct2,
   };
 
-  const client = {
-    full_name: data.client.fullName,
-    company_name: data.client.companyName,
-    email: data.client.email,
-    phone: data.client.phone,
-    address: data.client.address,
-    city: data.client.city,
-    province: data.client.province,
-    postal_code: data.client.postalCode,
-  };
-
-  await PdfTemplates.generateQuotePDF(res, quote, client, []);
+  await PdfTemplates.generateQuotePDF(fakeRes, quote, toSnakeClient(data.client), []);
   return getBuffer();
 }
 
 export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
-  const { res, getBuffer } = createFakeResponse();
+  const { fakeRes, getBuffer } = createFakeRes();
 
   const invoice = {
     invoice_number: data.invoiceNumber,
@@ -146,23 +136,12 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     phase_number: data.phaseNumber,
   };
 
-  const client = {
-    full_name: data.client.fullName,
-    company_name: data.client.companyName,
-    email: data.client.email,
-    phone: data.client.phone,
-    address: data.client.address,
-    city: data.client.city,
-    province: data.client.province,
-    postal_code: data.client.postalCode,
-  };
-
-  await PdfTemplates.generateInvoicePDF(res, invoice, client);
+  await PdfTemplates.generateInvoicePDF(fakeRes, invoice, toSnakeClient(data.client));
   return getBuffer();
 }
 
 export async function generateContractPdf(data: ContractPdfData): Promise<Buffer> {
-  const { res, getBuffer } = createFakeResponse();
+  const { fakeRes, getBuffer } = createFakeRes();
 
   const contract = {
     contract_number: data.contractNumber,
@@ -174,17 +153,6 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
     signed_at: data.signedAt,
   };
 
-  const client = {
-    full_name: data.client.fullName,
-    company_name: data.client.companyName,
-    email: data.client.email,
-    phone: data.client.phone,
-    address: data.client.address,
-    city: data.client.city,
-    province: data.client.province,
-    postal_code: data.client.postalCode,
-  };
-
-  await PdfTemplates.generateContractPDF(res, contract, client, null);
+  await PdfTemplates.generateContractPDF(fakeRes, contract, toSnakeClient(data.client), null);
   return getBuffer();
 }
