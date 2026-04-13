@@ -19,19 +19,27 @@ import {
   X,
 } from "lucide-react";
 
+export type PortalBadges = {
+  unpaidInvoices: number;
+  pendingQuotes: number;
+  pendingContracts: number;
+  unreadDocs: number;
+};
+
 type Tab = {
   key: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string;
+  badgeKey?: keyof PortalBadges;
 };
 
 const TABS: Tab[] = [
   { key: "dashboard", icon: LayoutDashboard, href: "/portail" },
   { key: "mandates", icon: Briefcase, href: "/portail/mandats" },
-  { key: "quotes", icon: FileText, href: "/portail/devis" },
-  { key: "invoices", icon: Receipt, href: "/portail/factures" },
-  { key: "contracts", icon: FileSignature, href: "/portail/contrats" },
-  { key: "documents", icon: FolderOpen, href: "/portail/documents" },
+  { key: "quotes", icon: FileText, href: "/portail/devis", badgeKey: "pendingQuotes" },
+  { key: "invoices", icon: Receipt, href: "/portail/factures", badgeKey: "unpaidInvoices" },
+  { key: "contracts", icon: FileSignature, href: "/portail/contrats", badgeKey: "pendingContracts" },
+  { key: "documents", icon: FolderOpen, href: "/portail/documents", badgeKey: "unreadDocs" },
   { key: "my_requests", icon: Inbox, href: "/portail/demandes" },
   { key: "booking", icon: CalendarPlus, href: "/portail/reserver" },
   { key: "appointments", icon: Calendar, href: "/portail/rendez-vous" },
@@ -40,9 +48,11 @@ const TABS: Tab[] = [
 export function PortalSidebar({
   clientName,
   clientCompany,
+  badges,
 }: {
   clientName: string;
   clientCompany?: string;
+  badges?: PortalBadges;
 }) {
   const t = useTranslations("portal.sidebar");
   const pathname = usePathname();
@@ -55,7 +65,7 @@ export function PortalSidebar({
         className="hidden lg:flex fixed top-[70px] left-0 bottom-0 z-20 w-[240px] flex-col border-r bg-card"
         aria-label="Navigation portail"
       >
-        <SidebarContent pathname={pathname} t={t} />
+        <SidebarContent pathname={pathname} t={t} badges={badges} />
       </aside>
 
       {/* Mobile trigger */}
@@ -88,6 +98,7 @@ export function PortalSidebar({
             <SidebarContent
               pathname={pathname}
               t={t}
+              badges={badges}
               onNavigate={() => setOpen(false)}
             />
           </aside>
@@ -100,10 +111,12 @@ export function PortalSidebar({
 function SidebarContent({
   pathname,
   t,
+  badges,
   onNavigate,
 }: {
   pathname: string;
   t: (key: string) => string;
+  badges?: PortalBadges;
   onNavigate?: () => void;
 }) {
   return (
@@ -114,6 +127,7 @@ function SidebarContent({
           tab.href === "/portail"
             ? pathname === "/portail"
             : pathname === tab.href || pathname.startsWith(tab.href + "/");
+        const count = tab.badgeKey && badges ? badges[tab.badgeKey] : 0;
         return (
           <NextLink
             key={tab.key}
@@ -130,6 +144,18 @@ function SidebarContent({
           >
             <Icon className="h-4 w-4 shrink-0" />
             <span className="flex-1 truncate">{t(tab.key)}</span>
+            {count > 0 && (
+              <span
+                className={cn(
+                  "min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0",
+                  active
+                    ? "bg-white/20 text-white"
+                    : "bg-red-500 text-white"
+                )}
+              >
+                {count}
+              </span>
+            )}
           </NextLink>
         );
       })}
