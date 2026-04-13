@@ -38,6 +38,8 @@ type Appointment = {
   endTime: string;
   meetingType: string;
   meetingLink: string | null;
+  meetingId: string | null;
+  meetingPassword: string | null;
   status: string;
   isUpcoming: boolean;
   notesClient: string | null;
@@ -144,22 +146,12 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
     {
       key: "actions",
       header: "",
-      className: "w-[140px]",
+      className: "w-[80px]",
       accessor: (r) => (
-        <div className="flex gap-1.5 justify-end" onClick={(e) => e.stopPropagation()}>
-          {r.meetingLink && r.isUpcoming && r.status !== "cancelled" && (
-            <Button size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]" asChild>
-              <a href={r.meetingLink} target="_blank" rel="noreferrer">
-                <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                Rejoindre
-              </a>
-            </Button>
-          )}
-          {r.isUpcoming && r.status !== "cancelled" && (
-            <Button size="sm" variant="outline" className="text-destructive" onClick={() => setCancelId(r.id)}>
-              <XCircle className="h-3.5 w-3.5" />
-            </Button>
-          )}
+        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+          <Button size="sm" variant="outline" onClick={() => setDetail(r)}>
+            Voir
+          </Button>
         </div>
       ),
     },
@@ -330,14 +322,40 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                 </div>
               </div>
 
-              {/* Lien meeting */}
-              {detail.meetingLink && detail.status !== "cancelled" && (
-                <Button className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" asChild>
-                  <a href={detail.meetingLink} target="_blank" rel="noreferrer">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Rejoindre la reunion
-                  </a>
-                </Button>
+              {/* Infos reunion */}
+              {(detail.meetingLink || detail.meetingId) && (
+                <div className="rounded-lg border p-3 space-y-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Video className="h-3.5 w-3.5 text-[#0F2D52]" />
+                    <span className="text-xs font-semibold text-[#0F2D52] uppercase tracking-wider">Informations reunion</span>
+                  </div>
+                  {detail.meetingId && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">ID reunion</span>
+                      <span className="font-mono font-medium">{detail.meetingId}</span>
+                    </div>
+                  )}
+                  {detail.meetingPassword && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Mot de passe</span>
+                      <span className="font-mono font-medium">{detail.meetingPassword}</span>
+                    </div>
+                  )}
+                  {detail.durationMin && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Duree</span>
+                      <span className="font-medium">{detail.durationMin} min</span>
+                    </div>
+                  )}
+                  {detail.meetingLink && detail.status !== "cancelled" && (
+                    <Button className="w-full mt-2 bg-[#0F2D52] hover:bg-[#1a3a66]" asChild>
+                      <a href={detail.meetingLink} target="_blank" rel="noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Rejoindre la reunion
+                      </a>
+                    </Button>
+                  )}
+                </div>
               )}
 
               {/* Notes VNK */}
