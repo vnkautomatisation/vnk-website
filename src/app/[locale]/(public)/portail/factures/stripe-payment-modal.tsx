@@ -73,6 +73,17 @@ function PaymentForm({
       toast.error(error.message ?? "Erreur de paiement");
       setPaying(false);
     } else {
+      // Confirmer cote serveur pour marquer la facture payee
+      try {
+        await fetch("/api/payments/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            invoiceId: invoice.id,
+            paymentIntentId: "stripe_confirmed",
+          }),
+        });
+      } catch { /* ignore */ }
       onSuccess();
     }
   };
