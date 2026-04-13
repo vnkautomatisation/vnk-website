@@ -35,7 +35,7 @@ export async function createPaymentIntent(params: {
     metadata: {
       invoice_id: String(params.invoiceId),
     },
-    automatic_payment_methods: { enabled: true },
+    payment_method_types: ["card"],
   });
 }
 

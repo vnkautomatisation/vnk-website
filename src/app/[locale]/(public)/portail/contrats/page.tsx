@@ -17,6 +17,7 @@ export default async function PortalContractsPage() {
     fileUrl: c.fileUrl,
     adminSignedAt: c.adminSignedAt?.toISOString() ?? null,
     clientSignatureData: !!c.clientSignatureData,
+    signedAt: c.signedAt?.toISOString() ?? null,
     createdAt: c.createdAt.toISOString(),
   }));
   return <PortalContractsList contracts={contracts} />;
