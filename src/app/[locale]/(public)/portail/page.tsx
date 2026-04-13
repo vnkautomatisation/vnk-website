@@ -231,15 +231,15 @@ export default async function PortalDashboard() {
       {/* ── Activity Timeline ────────────────────────── */}
       <div className="mt-4">
       <Card className="shadow-sm border-0 ring-1 ring-border/50">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg vnk-gradient flex items-center justify-center">
-                <TrendingUp className="h-4 w-4 text-white" />
+        <CardContent className="p-3 sm:p-6">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="portal-icon-sm rounded-lg vnk-gradient flex items-center justify-center shrink-0">
+                <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
               </div>
-              <h2 className="font-semibold text-lg">{t("recent_activity")}</h2>
+              <h2 className="font-semibold text-sm sm:text-lg">{t("recent_activity")}</h2>
             </div>
-            <span className="text-xs text-muted-foreground px-2.5 py-1 bg-muted rounded-full">
+            <span className="text-[10px] sm:text-xs text-muted-foreground px-2 py-0.5 sm:px-2.5 sm:py-1 bg-muted rounded-full shrink-0">
               {recentEvents.length} evenements
             </span>
           </div>
@@ -259,31 +259,31 @@ export default async function PortalDashboard() {
           ) : (
             <div className="relative">
               {/* Timeline line */}
-              <div className="absolute left-[19px] top-2 bottom-2 w-px bg-gradient-to-b from-border via-border to-transparent" />
+              <div className="absolute left-[15px] sm:left-[19px] top-2 bottom-2 w-px bg-gradient-to-b from-border via-border to-transparent" />
 
-              <ul className="space-y-1">
+              <ul className="space-y-0.5">
                 {recentEvents.map((ev, i) => {
                   const EvIcon = eventIcon(ev.eventType);
                   return (
                     <li
                       key={ev.id}
-                      className="flex items-start gap-4 relative py-2.5 px-2 -mx-2 rounded-lg hover:bg-muted/30 transition-colors group"
+                      className="flex items-start gap-2.5 sm:gap-4 relative py-2 sm:py-2.5 px-1 sm:px-2 -mx-1 sm:-mx-2 rounded-lg hover:bg-muted/30 transition-colors group"
                     >
                       {/* Icon dot */}
                       <div
-                        className={`h-10 w-10 rounded-lg ${eventColor(ev.eventType)} flex items-center justify-center shrink-0 z-10 shadow-sm`}
+                        className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg ${eventColor(ev.eventType)} flex items-center justify-center shrink-0 z-10 shadow-sm`}
                       >
-                        <EvIcon className="h-4 w-4 text-white" />
+                        <EvIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
                       </div>
                       <div className="flex-1 min-w-0 py-0.5">
-                        <p className="text-sm font-medium leading-snug">
+                        <p className="text-xs sm:text-sm font-medium leading-snug">
                           {ev.eventLabel}
                         </p>
-                        <time className="text-xs text-muted-foreground mt-0.5 block">
+                        <time className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 block">
                           {formatDate(ev.createdAt)}
                         </time>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground/0 group-hover:text-muted-foreground/40 transition-colors shrink-0 mt-1.5" />
+                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/0 group-hover:text-muted-foreground/40 transition-colors shrink-0 mt-1 hidden sm:block" />
                     </li>
                   );
                 })}
