@@ -228,7 +228,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
       header: "",
       className: "w-10",
       accessor: () => (
-        <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+        <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
           <Briefcase className="h-4 w-4 text-[#0F2D52]" />
         </div>
       ),
@@ -377,29 +377,29 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
       {/* ── Header : titre + KPIs ─────────── */}
       <div>
         <div className="flex items-center gap-3 mb-4">
-          <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
+          <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
             <Briefcase className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Mandats</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">Mandats</h1>
             <p className="text-sm text-muted-foreground">Suivi de vos projets en cours</p>
           </div>
         </div>
         <div className="grid grid-cols-3 lg:grid-cols-4 gap-3">
-          <div className="rounded-xl border bg-emerald-50/60 p-4">
-            <p className="text-2xl font-bold">{kpis.active}</p>
+          <div className="rounded-xl border bg-emerald-50/60 p-2.5 sm:p-4">
+            <p className="text-lg sm:text-2xl font-bold">{kpis.active}</p>
             <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">En cours</p>
           </div>
-          <div className="rounded-xl border bg-emerald-50/60 p-4">
-            <p className="text-2xl font-bold">{kpis.completed}</p>
+          <div className="rounded-xl border bg-emerald-50/60 p-2.5 sm:p-4">
+            <p className="text-lg sm:text-2xl font-bold">{kpis.completed}</p>
             <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Completes</p>
           </div>
-          <div className="rounded-xl border bg-red-50/60 p-4">
-            <p className="text-2xl font-bold">{kpis.total - kpis.active - kpis.completed}</p>
+          <div className="rounded-xl border bg-red-50/60 p-2.5 sm:p-4">
+            <p className="text-lg sm:text-2xl font-bold">{kpis.total - kpis.active - kpis.completed}</p>
             <p className="text-[11px] uppercase tracking-wider font-semibold text-red-600">En retard</p>
           </div>
-          <div className="hidden lg:block rounded-xl border bg-[#0F2D52]/5 p-4">
-            <p className="text-2xl font-bold">{kpis.avgProgress}%</p>
+          <div className="hidden lg:block rounded-xl border bg-[#0F2D52]/5 p-2.5 sm:p-4">
+            <p className="text-lg sm:text-2xl font-bold">{kpis.avgProgress}%</p>
             <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Progression moy.</p>
           </div>
         </div>

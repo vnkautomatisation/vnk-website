@@ -12,7 +12,7 @@ export default function Loading() {
       {/* 2-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Calendar grid skeleton */}
-        <div className="rounded-xl border p-4 space-y-4">
+        <div className="rounded-xl border p-2.5 sm:p-4 space-y-4">
           <div className="flex items-center justify-between">
             <div className="h-5 w-28 rounded bg-muted" />
             <div className="flex gap-2">
@@ -30,7 +30,7 @@ export default function Loading() {
           </div>
         </div>
         {/* Time slots skeleton */}
-        <div className="rounded-xl border p-4 space-y-3">
+        <div className="rounded-xl border p-2.5 sm:p-4 space-y-3">
           <div className="h-5 w-36 rounded bg-muted" />
           <div className="grid grid-cols-2 gap-2">
             {[...Array(8)].map((_, i) => (
