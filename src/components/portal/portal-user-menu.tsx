@@ -38,8 +38,16 @@ export function PortalUserMenu({ name, initials }: { name: string; initials: str
               onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors"
             >
-              <Settings className="h-4 w-4 text-muted-foreground" />
+              <User className="h-4 w-4 text-muted-foreground" />
               Profil
+            </Link>
+            <Link
+              href="/portail/parametres"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors"
+            >
+              <Settings className="h-4 w-4 text-muted-foreground" />
+              Parametres
             </Link>
             <a
               href="/api/auth/signout"

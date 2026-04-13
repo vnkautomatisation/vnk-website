@@ -11,7 +11,6 @@ export default async function PortalProfilePage() {
 
   if (!client) return null;
 
-  // Serialize for client component (remove passwordHash, convert dates)
   const data = {
     id: client.id,
     fullName: client.fullName,
@@ -25,8 +24,24 @@ export default async function PortalProfilePage() {
     sector: client.sector ?? "",
     technologies: client.technologies ?? "",
     avatarUrl: client.avatarUrl ?? "",
+    twoFactorEnabled: client.twoFactorEnabled,
+    storageQuotaMb: client.storageQuotaMb,
     createdAt: client.createdAt.toISOString(),
+    lastLogin: client.lastLogin?.toISOString() ?? null,
   };
 
-  return <ProfileForm client={data} />;
+  // Stats client
+  const [mandateCount, invoiceCount, contractCount, documentCount] = await Promise.all([
+    prisma.mandate.count({ where: { clientId: client.id } }),
+    prisma.invoice.count({ where: { clientId: client.id } }),
+    prisma.contract.count({ where: { clientId: client.id } }),
+    prisma.document.count({ where: { clientId: client.id } }),
+  ]);
+
+  return (
+    <ProfileForm
+      client={data}
+      stats={{ mandates: mandateCount, invoices: invoiceCount, contracts: contractCount, documents: documentCount }}
+    />
+  );
 }
