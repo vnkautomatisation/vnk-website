@@ -76,7 +76,10 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
   const closePdf = () => {
     setPdfContract(null);
     setShowSignature(false);
+    setSigned(false);
   };
+
+  const [signed, setSigned] = useState(false);
 
   const handleSign = async (signatureDataUrl: string) => {
     if (!pdfContract) return;
@@ -95,7 +98,9 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
               ? "Contrat signe par les deux parties — facture generee"
               : "Votre signature a ete enregistree"
           );
-          closePdf();
+          // Rester dans le PDF, fermer juste la signature overlay
+          setShowSignature(false);
+          setSigned(true);
           router.refresh();
         } else {
           const err = await res.json().catch(() => ({}));
@@ -316,7 +321,12 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
           date={formatDate(new Date(pdfContract.createdAt))}
           downloadName={`contrat-${pdfContract.contractNumber}`}
           actions={
-            pdfContract.status === "pending" && !pdfContract.clientSignatureData && !showSignature ? (
+            signed ? (
+              <div className="flex items-center gap-2 text-emerald-600 font-semibold text-sm">
+                <CheckCircle className="h-4 w-4" />
+                Contrat signe
+              </div>
+            ) : pdfContract.status === "pending" && !pdfContract.clientSignatureData && !showSignature ? (
               <Button
                 className="bg-[#0F2D52] hover:bg-[#1a3a66]"
                 size="sm"
