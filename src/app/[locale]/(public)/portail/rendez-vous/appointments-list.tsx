@@ -144,14 +144,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
     {
       key: "status",
       header: "Statut",
-      accessor: (r) => (
-        <div className="flex flex-col items-start gap-1">
-          <StatusBadge status={r.status} />
-          {r.isUpcoming && r.status !== "cancelled" && (
-            <span className="text-[10px] text-emerald-600 font-medium">A venir</span>
-          )}
-        </div>
-      ),
+      accessor: (r) => <StatusBadge status={r.status} />,
     },
     {
       key: "actions",
