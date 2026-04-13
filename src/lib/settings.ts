@@ -2,10 +2,8 @@
 // Usage : const companyName = await getSetting('general', 'company_name')
 import "server-only";
 import { prisma } from "./prisma";
-import type { SettingType } from "@prisma/client";
-
 // ── Cache mémoire (invalidé à chaque update via revalidatePath) ──
-type CacheEntry = { value: string | null; type: SettingType; fetchedAt: number };
+type CacheEntry = { value: string | null; type: string; fetchedAt: number };
 const cache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 60_000; // 1 minute
 
@@ -122,7 +120,7 @@ export function invalidateSettingsCache() {
 // PARSE
 // ═══════════════════════════════════════════════════════════
 
-function parseSettingValue<T>(value: string | null, type: SettingType): T | null {
+function parseSettingValue<T>(value: string | null, type: string): T | null {
   if (value === null || value === undefined) return null;
   try {
     switch (type) {
