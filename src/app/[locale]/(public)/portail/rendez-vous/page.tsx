@@ -21,6 +21,9 @@ export default async function PortalAppointmentsPage() {
     meetingLink: a.meetingLink,
     status: a.status,
     isUpcoming: a.appointmentDate >= now,
+    notesClient: a.notesClient ?? null,
+    notesAdmin: a.notesAdmin ?? null,
+    durationMin: a.durationMin ?? null,
   }));
 
   return <AppointmentsList appointments={serialized} />;
