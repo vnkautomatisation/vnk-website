@@ -36,6 +36,11 @@ function PaymentForm({
   const stripe = useStripe();
   const elements = useElements();
   const [paying, setPaying] = useState(false);
+  const [name, setName] = useState(clientInfo.fullName);
+  const [email, setEmail] = useState(clientInfo.email);
+  const [address, setAddress] = useState(clientInfo.address ?? "");
+  const [city, setCity] = useState(clientInfo.city ?? "");
+  const [postalCode, setPostalCode] = useState(clientInfo.postalCode ?? "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,16 +51,16 @@ function PaymentForm({
       elements,
       confirmParams: {
         return_url: `${window.location.origin}/portail/factures?paid=${invoice.id}`,
-        receipt_email: clientInfo.email,
+        receipt_email: email,
         payment_method_data: {
           billing_details: {
-            name: clientInfo.fullName,
-            email: clientInfo.email,
+            name,
+            email,
             address: {
-              line1: clientInfo.address || undefined,
-              city: clientInfo.city || undefined,
+              line1: address || undefined,
+              city: city || undefined,
               state: clientInfo.province || undefined,
-              postal_code: clientInfo.postalCode || undefined,
+              postal_code: postalCode || undefined,
               country: "CA",
             },
           },
@@ -91,6 +96,35 @@ function PaymentForm({
         <div className="border-t pt-2 flex justify-between">
           <span className="font-semibold">Total TTC</span>
           <span className="text-xl font-bold text-[#0F2D52]">{formatCurrency(invoice.amountTtc)}</span>
+        </div>
+      </div>
+
+      {/* Infos facturation */}
+      <div className="px-6 py-4 border-t space-y-3">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Informations de facturation</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-muted-foreground">Nom complet</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} className="w-full h-9 px-3 rounded-md border bg-background text-sm" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Courriel</label>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full h-9 px-3 rounded-md border bg-background text-sm" />
+          </div>
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground">Adresse</label>
+          <input value={address} onChange={(e) => setAddress(e.target.value)} className="w-full h-9 px-3 rounded-md border bg-background text-sm" placeholder="123 rue Exemple" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-muted-foreground">Ville</label>
+            <input value={city} onChange={(e) => setCity(e.target.value)} className="w-full h-9 px-3 rounded-md border bg-background text-sm" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Code postal</label>
+            <input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} className="w-full h-9 px-3 rounded-md border bg-background text-sm" />
+          </div>
         </div>
       </div>
 
