@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createWorkflowEvent } from "@/lib/workflow";
+// import { createWorkflowEvent } from "@/lib/workflow";
 
 const createSchema = z.object({
   serviceType: z.string().min(1),
@@ -71,13 +71,6 @@ export async function POST(req: Request) {
       plcBrand: parsed.data.plcBrand || null,
       budgetRange: parsed.data.budget || null,
     },
-  });
-
-  await createWorkflowEvent({
-    clientId,
-    eventType: "request_created",
-    eventLabel: `Nouvelle demande : ${title}`,
-    triggeredBy: "client",
   });
 
   return NextResponse.json({ success: true, request });
