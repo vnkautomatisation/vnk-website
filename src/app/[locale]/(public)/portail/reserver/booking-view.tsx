@@ -88,6 +88,25 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
 
   const availableSet = new Set(dates);
 
+  const selectedMandate = mandates.find((m) => String(m.id) === mandateId);
+  const selectedService = SERVICES.find((s) => s.value === service);
+
+  const buildSubject = () => {
+    const parts: string[] = [];
+    if (selectedService) parts.push(selectedService.label);
+    if (selectedMandate) parts.push(`Mandat: ${selectedMandate.title}`);
+    if (subject) parts.push(subject);
+    return parts.join(" — ") || "Rendez-vous";
+  };
+
+  const buildNotes = () => {
+    const parts: string[] = [];
+    if (selectedService) parts.push(`Service: ${selectedService.label}`);
+    if (selectedMandate) parts.push(`Mandat: ${selectedMandate.title}`);
+    if (notes) parts.push(notes);
+    return parts.join("\n") || undefined;
+  };
+
   const handleBook = async () => {
     if (!selectedSlot) return;
     setSending(true);
@@ -97,8 +116,8 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slotId: selectedSlot.id,
-          subject: subject || (service ? SERVICES.find((s) => s.value === service)?.label : undefined),
-          notesClient: notes || undefined,
+          subject: buildSubject(),
+          notesClient: buildNotes(),
           meetingType,
         }),
       });
