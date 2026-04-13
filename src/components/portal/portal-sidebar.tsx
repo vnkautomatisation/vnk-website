@@ -52,7 +52,7 @@ export function PortalSidebar({
     <>
       {/* Desktop sidebar */}
       <aside
-        className="hidden lg:flex fixed top-[64px] left-0 bottom-0 z-20 w-[240px] flex-col border-r bg-card"
+        className="hidden lg:flex fixed top-[70px] left-0 bottom-0 z-20 w-[240px] flex-col border-r bg-card"
         aria-label="Navigation portail"
       >
         <SidebarContent pathname={pathname} t={t} />
@@ -62,7 +62,7 @@ export function PortalSidebar({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="lg:hidden fixed top-[72px] left-3 z-20 flex h-10 w-10 items-center justify-center rounded-lg bg-card border shadow-sm"
+        className="lg:hidden fixed top-[78px] left-3 z-20 flex h-10 w-10 items-center justify-center rounded-lg bg-card border shadow-sm"
         aria-label="Menu portail"
       >
         <Menu className="h-4 w-4" />
