@@ -10,7 +10,11 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: { bodySizeLimit: "10mb" },
+    // Optimize page loads
+    optimizePackageImports: ["lucide-react", "sonner"],
   },
+  // Reduce cold starts
+  reactStrictMode: false,
   async headers() {
     return [
       {
