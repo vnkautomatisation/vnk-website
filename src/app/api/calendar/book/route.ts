@@ -55,7 +55,7 @@ export async function POST(req: Request) {
         subject: parsed.data.subject,
         notesClient: parsed.data.notesClient,
         meetingType: parsed.data.meetingType,
-        status: "confirmed",
+        status: "pending",
       },
     }),
     prisma.availabilitySlot.update({
