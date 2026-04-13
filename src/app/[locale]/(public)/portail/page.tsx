@@ -106,9 +106,9 @@ export default async function PortalDashboard() {
   ];
 
   const quickActions = [
-    { label: "Mes devis", href: "/portail/devis", icon: FileText },
-    { label: "Mes factures", href: "/portail/factures", icon: Receipt },
-    { label: "Mes contrats", href: "/portail/contrats", icon: FileSignature },
+    { label: "Devis", href: "/portail/devis", icon: FileText },
+    { label: "Factures", href: "/portail/factures", icon: Receipt },
+    { label: "Contrats", href: "/portail/contrats", icon: FileSignature },
     { label: "Nouvelle demande", href: "/portail/demandes", icon: Inbox },
   ];
 

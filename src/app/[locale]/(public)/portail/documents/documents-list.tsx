@@ -236,7 +236,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
                 <FolderOpen className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Mes documents</h1>
+                <h1 className="text-2xl font-bold">Documents</h1>
                 <p className="text-sm text-muted-foreground">
                   Consultez et telechargez vos documents
                 </p>

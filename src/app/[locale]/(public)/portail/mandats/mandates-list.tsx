@@ -358,7 +358,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
                     <Briefcase className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold">Mes mandats</h1>
+                    <h1 className="text-2xl font-bold">Mandats</h1>
                     <p className="text-sm text-muted-foreground">Suivi de vos projets en cours</p>
                   </div>
                 </div>
@@ -399,7 +399,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
         {/* ── Detail panel — inline right side ────── */}
         {selected && (
           <div className="hidden lg:block w-[370px] shrink-0">
-            <Card className="sticky top-20 overflow-hidden border-0 shadow-lg ring-1 ring-border/50">
+            <Card className="sticky top-0 overflow-hidden border-0 shadow-lg ring-1 ring-border/50">
               {/* Header */}
               <div className="bg-gradient-to-br from-[#0F2D52] to-[#1a4a7a] text-white px-5 py-4">
                 <div className="flex items-start justify-between gap-2">
