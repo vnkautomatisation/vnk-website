@@ -38,14 +38,17 @@ export function SignatureCanvas({
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
+    // Force minimum 2x resolution pour eviter la pixelisation
+    const dpr = Math.max(2, window.devicePixelRatio || 2);
     canvas.width = width * dpr;
     canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
+    canvas.style.width = "100%";
     canvas.style.height = `${height}px`;
     ctx.scale(dpr, dpr);
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.lineCap = "round";
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     ctx.lineJoin = "round";
     ctx.strokeStyle = "#0F2D52";
   }, [width, height]);
