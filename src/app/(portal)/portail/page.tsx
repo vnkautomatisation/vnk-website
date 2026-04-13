@@ -1,4 +1,5 @@
 // Portail · Tableau de bord client — Design SaaS pro
+import { cache } from "react";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -19,45 +20,47 @@ import {
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
-export default async function PortalDashboard() {
-  const session = await auth();
-  const clientId = session!.user.clientId!;
-  const t = await getTranslations({ namespace: "portal.dashboard" });
-
+const getDashboardData = cache(async (clientId: number) => {
   const [
     activeMandates,
     pendingQuotes,
     pendingInvoices,
     unreadDocs,
-    recentEvents,
-    client,
     totalMandates,
     totalContracts,
     overdueInvoices,
-    nextAppointment,
-  ] = await Promise.all([
-    prisma.mandate.count({
-      where: { clientId, status: { in: ["active", "in_progress"] } },
-    }),
+  ] = await prisma.$transaction([
+    prisma.mandate.count({ where: { clientId, status: { in: ["active", "in_progress"] } } }),
     prisma.quote.count({ where: { clientId, status: "pending" } }),
-    prisma.invoice.count({
-      where: { clientId, status: { in: ["unpaid", "overdue"] } },
-    }),
+    prisma.invoice.count({ where: { clientId, status: { in: ["unpaid", "overdue"] } } }),
     prisma.document.count({ where: { clientId, isRead: false } }),
+    prisma.mandate.count({ where: { clientId } }),
+    prisma.contract.count({ where: { clientId, status: "signed" } }),
+    prisma.invoice.count({ where: { clientId, status: "overdue" } }),
+  ]);
+
+  const [recentEvents, client, nextAppointment] = await Promise.all([
     prisma.workflowEvent.findMany({
       where: { clientId },
       orderBy: { createdAt: "desc" },
       take: 15,
     }),
     prisma.client.findUnique({ where: { id: clientId } }),
-    prisma.mandate.count({ where: { clientId } }),
-    prisma.contract.count({ where: { clientId, status: "signed" } }),
-    prisma.invoice.count({ where: { clientId, status: "overdue" } }),
     prisma.appointment.findFirst({
       where: { clientId, appointmentDate: { gte: new Date() } },
       orderBy: { appointmentDate: "asc" },
     }),
   ]);
+
+  return { activeMandates, pendingQuotes, pendingInvoices, unreadDocs, totalMandates, totalContracts, overdueInvoices, recentEvents, client, nextAppointment };
+});
+
+export default async function PortalDashboard() {
+  const session = await auth();
+  const clientId = session!.user.clientId!;
+  const t = await getTranslations({ namespace: "portal.dashboard" });
+
+  const { activeMandates, pendingQuotes, pendingInvoices, unreadDocs, totalMandates, totalContracts, overdueInvoices, recentEvents, client, nextAppointment } = await getDashboardData(clientId);
 
   const kpis = [
     {
