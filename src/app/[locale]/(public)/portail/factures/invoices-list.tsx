@@ -321,7 +321,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
           downloadName={`facture-${pdfInvoice.invoiceNumber}`}
           actions={
             paid ? (
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm" onClick={() => {
+              <Button className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white" size="sm" onClick={() => {
                 const a = document.createElement("a");
                 a.href = `/api/invoices/${pdfInvoice.id}/pdf`;
                 a.download = `facture-${pdfInvoice.invoiceNumber}.pdf`;
@@ -330,9 +330,10 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
                 <Download className="h-4 w-4 mr-1.5" />
                 Telecharger la facture
               </Button>
-            ) : (pdfInvoice.status === "unpaid" || pdfInvoice.status === "overdue") && !showPayment ? (
+            ) : showPayment ? null
+              : (pdfInvoice.status === "unpaid" || pdfInvoice.status === "overdue") ? (
               <Button
-                className="bg-[#0F2D52] hover:bg-[#1a3a66]"
+                className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
                 size="sm"
                 onClick={startPay}
               >

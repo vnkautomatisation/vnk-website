@@ -264,7 +264,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
 
   // Build footer actions for PDF modal
   const pdfActions = accepted ? (
-    <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm" onClick={() => {
+    <Button className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white" size="sm" onClick={() => {
       const a = document.createElement("a");
       a.href = `/api/quotes/${pdfQuote!.id}/pdf`;
       a.download = `devis-${pdfQuote!.quoteNumber}.pdf`;
