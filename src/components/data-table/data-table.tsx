@@ -223,17 +223,17 @@ export function DataTable<T>({
       <div className="lg:sticky lg:top-0 z-10 bg-background pb-3 -mx-3 sm:-mx-4 lg:-mx-8 px-3 sm:px-4 lg:px-8 pt-4 overflow-hidden">
         {stickyHeader}
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mt-3">
-        <div className="flex flex-1 gap-2 items-center w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-start sm:items-center justify-between mt-2 sm:mt-3">
+        <div className="flex flex-1 gap-1.5 sm:gap-2 items-center w-full sm:w-auto">
           {/* Search */}
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
             <Input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={searchPlaceholder}
-              className="pl-9 h-9"
+              className="pl-8 sm:pl-9 h-8 sm:h-9 text-xs sm:text-sm"
               aria-label="Rechercher"
             />
           </div>
@@ -243,7 +243,7 @@ export function DataTable<T>({
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm min-w-[140px]"
+              className="h-8 sm:h-9 rounded-md border border-input bg-background px-2 sm:px-3 text-xs sm:text-sm min-w-0 max-w-[130px] sm:min-w-[140px]"
               aria-label="Filtrer par statut"
             >
               <option value="all">{filterLabel}</option>
@@ -256,43 +256,43 @@ export function DataTable<T>({
           )}
         </div>
 
-        <div className="flex gap-2 items-center">
-          <span className="text-xs text-muted-foreground hidden sm:inline">
+        <div className="flex gap-1.5 sm:gap-2 items-center">
+          <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:inline">
             {processed.length} {processed.length > 1 ? "resultats" : "resultat"}
           </span>
 
           {/* View toggle */}
           {renderCard && (
-            <div className="hidden sm:flex border rounded-md overflow-hidden">
+            <div className="flex border rounded-md overflow-hidden">
               <button
                 type="button"
                 onClick={() => setView("list")}
                 className={cn(
-                  "h-9 w-9 flex items-center justify-center transition-colors",
+                  "h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center transition-colors",
                   view === "list" ? "bg-[#0F2D52] text-white" : "hover:bg-muted text-muted-foreground"
                 )}
                 aria-label="Vue liste"
               >
-                <LayoutList className="h-4 w-4" />
+                <LayoutList className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setView("grid")}
                 className={cn(
-                  "h-9 w-9 flex items-center justify-center transition-colors",
+                  "h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center transition-colors",
                   view === "grid" ? "bg-[#0F2D52] text-white" : "hover:bg-muted text-muted-foreground"
                 )}
                 aria-label="Vue cartes"
               >
-                <LayoutGrid className="h-4 w-4" />
+                <LayoutGrid className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
             </div>
           )}
 
           {/* Export */}
           {exportFilename && (
-            <Button variant="outline" size="sm" onClick={handleExport} className="h-9">
-              <Download className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={handleExport} className="h-8 sm:h-9">
+              <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline ml-1">CSV</span>
             </Button>
           )}
