@@ -50,66 +50,18 @@ export function ChatWidget({
       .catch(() => {});
   }, [open, messages.length]);
 
-  // ── WebSocket + fallback polling ───────────────────
+  // ── Polling toutes les 5s ───────────────────
   useEffect(() => {
     if (!open) return;
-
-    let ws: WebSocket | null = null;
-    let pollTimer: ReturnType<typeof setInterval> | null = null;
-    let retryCount = 0;
-
-    const connectWs = () => {
-      try {
-        const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-        ws = new WebSocket(`${protocol}//${location.host}/ws`);
-        ws.onopen = () => {
-          retryCount = 0;
-        };
-        ws.onmessage = (ev) => {
-          try {
-            const data = JSON.parse(ev.data);
-            if (data.type === "new_message" && data.message) {
-              setMessages((prev) => [...prev, data.message]);
-            }
-            if (data.type === "typing") {
-              setTyping(true);
-              setTimeout(() => setTyping(false), 3000);
-            }
-          } catch {}
-        };
-        ws.onclose = () => {
-          // Fallback polling si échec
-          if (!pollTimer) {
-            pollTimer = setInterval(loadMessages, 5000);
-          }
-          // Exponential backoff reconnect
-          if (retryCount < 5) {
-            setTimeout(connectWs, Math.min(30000, 1000 * Math.pow(2, retryCount++)));
-          }
-        };
-        ws.onerror = () => {
-          ws?.close();
-        };
-      } catch {
-        // Polling fallback
-        pollTimer = setInterval(loadMessages, 5000);
-      }
-    };
-
     const loadMessages = async () => {
       try {
         const r = await fetch("/api/messages");
         const data = await r.json();
-        setMessages(data.messages ?? []);
+        if (data.messages) setMessages(data.messages);
       } catch {}
     };
-
-    connectWs();
-
-    return () => {
-      ws?.close();
-      if (pollTimer) clearInterval(pollTimer);
-    };
+    const timer = setInterval(loadMessages, 5000);
+    return () => clearInterval(timer);
   }, [open]);
 
   // ── Auto-scroll on new message ─────────────────────
@@ -184,7 +136,7 @@ export function ChatWidget({
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "fixed bottom-5 right-5 lg:bottom-6 lg:right-6 z-40",
+          "fixed bottom-[70px] right-3 lg:bottom-6 lg:right-6 z-40",
           "h-14 w-14 rounded-full vnk-gradient text-white shadow-lg",
           "flex items-center justify-center",
           "hover:scale-105 transition-transform",
@@ -218,8 +170,8 @@ export function ChatWidget({
               "fixed z-50 bg-card border shadow-2xl flex flex-col",
               // Desktop : pop-up bottom-right
               "lg:bottom-24 lg:right-6 lg:w-[380px] lg:h-[580px] lg:rounded-2xl",
-              // Mobile : bottom-sheet full-width
-              "bottom-0 left-0 right-0 rounded-t-2xl h-[85vh] max-h-[700px] pb-safe"
+              // Mobile : au-dessus de la bottom nav
+              "bottom-14 left-0 right-0 rounded-t-2xl lg:bottom-24 h-[70vh] max-h-[600px] pb-safe"
             )}
           >
             {/* Header */}
