@@ -233,7 +233,7 @@ export default async function PortalDashboard() {
       <div className="mt-4">
       <Card className="shadow-sm border-0 ring-1 ring-border/50">
         <CardContent className="p-0 sm:p-0">
-          <div className="lg:sticky lg:top-0 z-20 bg-card flex items-center justify-between p-3 sm:p-6 pb-3 sm:pb-4 border-b">
+          <div className="flex items-center justify-between p-3 sm:p-6 pb-3 sm:pb-4 border-b">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="portal-icon-sm rounded-lg vnk-gradient flex items-center justify-center shrink-0">
                 <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
