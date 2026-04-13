@@ -68,7 +68,7 @@ export default async function PortalLayout({
           <div className="p-4 sm:p-6 lg:p-8 max-w-full">{children}</div>
         </main>
       </div>
-      <PortalBottomNav />
+      <PortalBottomNav badges={badges} />
     </>
   );
 }
