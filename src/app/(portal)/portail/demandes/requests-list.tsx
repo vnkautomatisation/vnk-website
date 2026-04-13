@@ -1,11 +1,15 @@
 "use client";
 
-import { Inbox, Hash, Sparkles, Loader, CheckCircle } from "lucide-react";
+import { useState } from "react";
+import { Inbox, Hash, Sparkles, Loader, CheckCircle, Plus } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate, truncate } from "@/lib/utils";
+import { NewRequestModal } from "./new-request-modal";
+import { useRouter } from "next/navigation";
 
 // ── Types ────────────────────────────────────────────────
 type Request = {
@@ -49,6 +53,8 @@ const filterOptions: FilterOption[] = [
 
 // ── Component ────────────────────────────────────────────
 export function PortalRequestsList({ requests }: { requests: Request[] }) {
+  const router = useRouter();
+  const [modalOpen, setModalOpen] = useState(false);
   // ── Columns ──────────────────────────────────────────
   const columns: Column<Request>[] = [
     {
@@ -146,16 +152,22 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
-          <Inbox className="h-5 w-5 text-white" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
+            <Inbox className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Mes demandes</h1>
+            <p className="text-sm text-muted-foreground">
+              Suivez vos demandes de projet
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold">Mes demandes</h1>
-          <p className="text-sm text-muted-foreground">
-            Suivez vos demandes de projet
-          </p>
-        </div>
+        <Button size="sm" onClick={() => setModalOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" />
+          Nouvelle demande
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -221,6 +233,12 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
         emptyIcon={
           <Inbox className="h-12 w-12 text-muted-foreground/40 mb-4" />
         }
+      />
+
+      <NewRequestModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        onCreated={() => router.refresh()}
       />
     </div>
   );
