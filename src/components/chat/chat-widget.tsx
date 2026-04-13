@@ -133,13 +133,13 @@ export function ChatWidget({
           className="fixed bottom-[70px] right-3 lg:bottom-6 lg:right-6 z-40 group"
           aria-label="Ouvrir le chat"
         >
-          <div className="relative h-13 w-13 lg:h-14 lg:w-14 rounded-full bg-[#0F2D52] text-white shadow-xl flex items-center justify-center group-hover:scale-110 group-active:scale-95 transition-all ring-2 ring-white/30">
+          <div className="relative h-12 w-12 lg:h-14 lg:w-14 rounded-full bg-[#0F2D52] text-white shadow-xl flex items-center justify-center group-hover:scale-110 group-active:scale-95 transition-all ring-2 ring-white/30">
             <span className="text-sm lg:text-base font-bold">{initials}</span>
             {/* Indicateur en ligne */}
             <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white" />
           </div>
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow-md">
+            <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 rounded-full bg-red-500 text-white text-[0.625rem] font-bold flex items-center justify-center shadow-md">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
@@ -163,17 +163,17 @@ export function ChatWidget({
             )}
           >
             {/* Header */}
-            <div className="shrink-0 h-[56px] px-4 flex items-center justify-between bg-gradient-to-r from-[#0F2D52] to-[#1a4a7a] text-white">
+            <div className="shrink-0 h-14 px-4 flex items-center justify-between bg-gradient-to-r from-[#0F2D52] to-[#1a4a7a] text-white">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="relative h-9 w-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
                   <span className="text-xs font-bold">{initials}</span>
                   <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400 border-2 border-[#0F2D52]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[13px] font-semibold leading-tight">Support VNK</p>
+                  <p className="text-sm font-semibold leading-tight">Support VNK</p>
                   <div className="flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                    <p className="text-[10px] text-white/70">En ligne</p>
+                    <p className="text-[0.625rem] text-white/70">En ligne</p>
                   </div>
                 </div>
               </div>
@@ -194,15 +194,15 @@ export function ChatWidget({
                   <div className="h-14 w-14 rounded-full bg-[#0F2D52] flex items-center justify-center mx-auto mb-3 shadow-lg">
                     <MessageCircle className="h-6 w-6 text-white" />
                   </div>
-                  <p className="text-[13px] font-semibold">Besoin d'aide ?</p>
-                  <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed max-w-[220px] mx-auto">Notre equipe est disponible pour vous assister.</p>
+                  <p className="text-sm font-semibold">Besoin d'aide ?</p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-[220px] mx-auto">Notre equipe est disponible pour vous assister.</p>
                 </div>
               ) : (
                 groupedMessages.map((group) => (
                   <div key={group.date}>
                     {/* Date separator */}
                     <div className="flex items-center justify-center my-3">
-                      <span className="text-[10px] text-muted-foreground bg-white/80 dark:bg-muted px-3 py-0.5 rounded-full shadow-sm">{group.date}</span>
+                      <span className="text-[0.625rem] text-muted-foreground bg-white/80 dark:bg-muted px-3 py-0.5 rounded-full shadow-sm">{group.date}</span>
                     </div>
                     <div className="space-y-1.5">
                       {group.msgs.map((msg) => {
@@ -217,11 +217,11 @@ export function ChatWidget({
                             {/* Avatar VNK */}
                             {!isClient && (
                               <div className="h-6 w-6 rounded-full bg-[#0F2D52] flex items-center justify-center shrink-0 mb-0.5">
-                                <span className="text-[7px] font-bold text-white">VNK</span>
+                                <span className="text-[0.4375rem] font-bold text-white">VNK</span>
                               </div>
                             )}
                             <div className={cn(
-                              "max-w-[78%] px-3 py-2 text-[13px] shadow-sm",
+                              "max-w-[78%] px-3 py-2 text-sm shadow-sm",
                               isClient
                                 ? "bg-[#d9fdd3] dark:bg-emerald-900/40 rounded-xl rounded-tr-sm text-foreground"
                                 : "bg-white dark:bg-card rounded-xl rounded-tl-sm"
@@ -233,15 +233,15 @@ export function ChatWidget({
                                       <FileText className="h-5 w-5 text-red-500" />
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                      <p className="text-[12px] font-semibold truncate">{fileName}</p>
-                                      <p className="text-[10px] text-muted-foreground">Document PDF</p>
+                                      <p className="text-xs font-semibold truncate">{fileName}</p>
+                                      <p className="text-[0.625rem] text-muted-foreground">Document PDF</p>
                                     </div>
                                   </div>
                                   <div className="flex gap-1.5">
                                     <button
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); setPreviewPdf(fileName); }}
-                                      className="flex-1 flex items-center justify-center gap-1 h-7 rounded-md bg-[#0F2D52]/10 text-[#0F2D52] text-[11px] font-medium hover:bg-[#0F2D52]/20 transition-colors"
+                                      className="flex-1 flex items-center justify-center gap-1 h-7 rounded-md bg-[#0F2D52]/10 text-[#0F2D52] text-xs font-medium hover:bg-[#0F2D52]/20 transition-colors"
                                     >
                                       <Eye className="h-3 w-3" />
                                       Voir
@@ -250,7 +250,7 @@ export function ChatWidget({
                                       href={`/api/invoices/1/pdf`}
                                       download={fileName}
                                       onClick={(e) => e.stopPropagation()}
-                                      className="flex-1 flex items-center justify-center gap-1 h-7 rounded-md bg-[#0F2D52]/10 text-[#0F2D52] text-[11px] font-medium hover:bg-[#0F2D52]/20 transition-colors"
+                                      className="flex-1 flex items-center justify-center gap-1 h-7 rounded-md bg-[#0F2D52]/10 text-[#0F2D52] text-xs font-medium hover:bg-[#0F2D52]/20 transition-colors"
                                     >
                                       <Download className="h-3 w-3" />
                                       Telecharger
@@ -261,7 +261,7 @@ export function ChatWidget({
                                 <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
                               )}
                               <div className={cn("flex items-center gap-1 mt-0.5", isClient ? "justify-end" : "")}>
-                                <time className="text-[9px] text-muted-foreground">
+                                <time className="text-[0.5625rem] text-muted-foreground">
                                   {new Date(msg.createdAt).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
                                 </time>
                                 {isClient && (
@@ -272,7 +272,7 @@ export function ChatWidget({
                             {/* Avatar client */}
                             {isClient && (
                               <div className="h-6 w-6 rounded-full bg-[#0F2D52]/15 flex items-center justify-center shrink-0 mb-0.5">
-                                <span className="text-[7px] font-bold text-[#0F2D52]">{initials}</span>
+                                <span className="text-[0.4375rem] font-bold text-[#0F2D52]">{initials}</span>
                               </div>
                             )}
                           </div>
@@ -299,11 +299,11 @@ export function ChatWidget({
             <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="shrink-0 px-3 py-2.5 border-t bg-white dark:bg-card flex items-end gap-2">
               <input type="file" ref={fileRef} className="hidden" accept="image/*,.pdf,.doc,.docx" onChange={handleFile} />
               <button type="button" onClick={() => fileRef.current?.click()} className="h-8 w-8 rounded-full hover:bg-muted flex items-center justify-center shrink-0 text-muted-foreground mb-0.5" aria-label="Fichier">
-                <Paperclip className="h-[18px] w-[18px]" />
+                <Paperclip className="h-4 w-4" />
               </button>
               <div className="flex-1 flex items-end bg-[#f0f2f5] dark:bg-muted rounded-2xl px-3 py-2 gap-1.5 min-h-[40px]">
                 <button type="button" onClick={() => setShowEmojis((s) => !s)} className="h-6 w-6 rounded-full hover:bg-black/5 flex items-center justify-center shrink-0 text-muted-foreground" aria-label="Emoji">
-                  <Smile className="h-[18px] w-[18px]" />
+                  <Smile className="h-4 w-4" />
                 </button>
                 <textarea
                   ref={inputRef}
@@ -313,7 +313,7 @@ export function ChatWidget({
                   placeholder="Ecrivez un message..."
                   disabled={sending}
                   rows={1}
-                  className="flex-1 bg-transparent resize-none text-[13px] focus:outline-none min-h-[24px] max-h-[100px] leading-relaxed"
+                  className="flex-1 bg-transparent resize-none text-sm focus:outline-none min-h-[24px] max-h-[100px] leading-relaxed"
                 />
               </div>
               <button type="submit" disabled={!input.trim() || sending} className="h-9 w-9 rounded-full bg-[#0F2D52] text-white flex items-center justify-center shrink-0 disabled:opacity-30 hover:bg-[#1a3a66] transition-all active:scale-95 mb-0.5" aria-label="Envoyer">
