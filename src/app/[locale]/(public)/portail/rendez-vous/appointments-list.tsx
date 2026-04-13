@@ -323,12 +323,14 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                     const Icon = TYPE_ICON[a.meetingType] ?? Video;
                     const isCancelled = a.status === "cancelled";
                     return (
-                      <button
+                      <div
                         key={a.id}
-                        type="button"
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setDetail(a)}
+                        onKeyDown={(e) => e.key === "Enter" && setDetail(a)}
                         className={cn(
-                          "w-full text-left px-5 py-4 flex gap-4 hover:bg-muted/50 transition-colors",
+                          "w-full text-left px-5 py-4 flex gap-4 hover:bg-muted/50 transition-colors cursor-pointer",
                           isCancelled && "opacity-50"
                         )}
                       >
@@ -395,7 +397,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                             </div>
                           )}
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
