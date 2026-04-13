@@ -33,29 +33,51 @@ export function ChatWidget({
 
   const initials = (clientName ?? "C").split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 
-  // ── Load + poll ──
+  // ── SSE pour les notifications (tourne TOUJOURS, meme chat ferme) ──
   useEffect(() => {
-    if (!open) return;
-    const load = async () => {
-      try {
-        const r = await fetch("/api/messages");
-        const data = await r.json();
-        if (data.messages) setMessages(data.messages);
-      } catch {}
+    let es: EventSource | null = null;
+    let retry: ReturnType<typeof setTimeout>;
+    const connectBg = () => {
+      es = new EventSource("/api/messages/stream");
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "new_message" && data.message) {
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === data.message.id)) return prev;
+              return [...prev, data.message];
+            });
+          }
+          if (data.type === "read_update" && data.ids) {
+            setMessages((prev) =>
+              prev.map((m) => (data.ids.includes(m.id) ? { ...m, isRead: true } : m))
+            );
+          }
+        } catch {}
+      };
+      es.onerror = () => { es?.close(); retry = setTimeout(connectBg, 5000); };
     };
-    load();
-    const timer = setInterval(load, 5000);
-    return () => clearInterval(timer);
-  }, [open]);
 
-  // ── Mark read ──
+    // Charger les messages initiaux pour le badge
+    fetch("/api/messages")
+      .then((r) => r.json())
+      .then((data) => { if (data.messages) setMessages(data.messages); })
+      .catch(() => {});
+
+    connectBg();
+    return () => { es?.close(); clearTimeout(retry); };
+  }, []);
+
+  // ── Marquer lu quand le chat s'ouvre ──
   useEffect(() => {
     if (!open) return;
-    const unread = messages.filter((m) => m.sender === "vnk" && !m.isRead);
-    if (unread.length === 0) return;
-    setMessages((prev) => prev.map((m) => (m.sender === "vnk" && !m.isRead ? { ...m, isRead: true } : m)));
-    fetch("/api/messages/mark-read", { method: "POST" }).catch(() => {});
-  }, [open, messages]);
+    const unread = messages.some((m) => m.sender === "vnk" && !m.isRead);
+    if (unread) {
+      setMessages((prev) => prev.map((m) => (m.sender === "vnk" && !m.isRead ? { ...m, isRead: true } : m)));
+      fetch("/api/messages/mark-read", { method: "POST" }).catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const prevCountRef = useRef(0);
   useEffect(() => {
