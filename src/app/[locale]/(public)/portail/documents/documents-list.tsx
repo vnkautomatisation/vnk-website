@@ -256,7 +256,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
               </div>
               <div className="rounded-xl border bg-sky-50/60 portal-kpi-card">
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-sky-100 flex items-center justify-center">
+                  <div className="portal-icon-sm rounded-lg bg-sky-100 flex items-center justify-center">
                     <EyeOff className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
