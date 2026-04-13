@@ -190,13 +190,13 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
           </div>
           <div>
             <h1 className="portal-title">Rendez-vous</h1>
-            <p className="text-sm text-muted-foreground hidden sm:block">Planifiez et gerez vos rendez-vous</p>
+            <p className="text-sm text-muted-foreground">Planifiez et gerez vos rendez-vous</p>
           </div>
         </div>
         <Button asChild size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66] shadow-sm">
           <Link href="/portail/reserver">
             <CalendarCheck className="h-4 w-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">Reserver</span>
+            Reserver
           </Link>
         </Button>
       </div>
