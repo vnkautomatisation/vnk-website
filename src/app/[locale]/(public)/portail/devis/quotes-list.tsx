@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, Eye, CheckCircle, PenLine, Clock, Hash, DollarSign, AlertTriangle, Calendar, X } from "lucide-react";
+import { FileText, Eye, CheckCircle, PenLine, Clock, Hash, DollarSign, AlertTriangle, Calendar, X, Download } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { SignatureCanvas } from "@/components/signature/signature-canvas";
@@ -264,10 +264,15 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
 
   // Build footer actions for PDF modal
   const pdfActions = accepted ? (
-    <div className="flex items-center gap-2 text-emerald-600 font-semibold text-sm">
-      <CheckCircle className="h-4 w-4" />
-      Devis accepte — contrat genere
-    </div>
+    <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm" onClick={() => {
+      const a = document.createElement("a");
+      a.href = `/api/quotes/${pdfQuote!.id}/pdf`;
+      a.download = `devis-${pdfQuote!.quoteNumber}.pdf`;
+      a.click();
+    }}>
+      <Download className="h-4 w-4 mr-1.5" />
+      Telecharger le devis
+    </Button>
   ) : pdfQuote?.status === "pending" ? (
     showSignature ? null : (
       <Button className="bg-[#0F2D52] hover:bg-[#1a3a66]" size="sm" onClick={startAccept}>

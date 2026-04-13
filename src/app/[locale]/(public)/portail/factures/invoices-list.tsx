@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Receipt, CreditCard, Eye, FileText, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { Receipt, CreditCard, Eye, FileText, AlertTriangle, CheckCircle, Clock, Download } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { StripePaymentModal } from "./stripe-payment-modal";
@@ -321,10 +321,15 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
           downloadName={`facture-${pdfInvoice.invoiceNumber}`}
           actions={
             paid ? (
-              <div className="flex items-center gap-2 text-emerald-600 font-semibold text-sm">
-                <CheckCircle className="h-4 w-4" />
-                Facture payee
-              </div>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm" onClick={() => {
+                const a = document.createElement("a");
+                a.href = `/api/invoices/${pdfInvoice.id}/pdf`;
+                a.download = `facture-${pdfInvoice.invoiceNumber}.pdf`;
+                a.click();
+              }}>
+                <Download className="h-4 w-4 mr-1.5" />
+                Telecharger la facture
+              </Button>
             ) : (pdfInvoice.status === "unpaid" || pdfInvoice.status === "overdue") && !showPayment ? (
               <Button
                 className="bg-[#0F2D52] hover:bg-[#1a3a66]"
