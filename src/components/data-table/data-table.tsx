@@ -334,8 +334,7 @@ export function DataTable<T>({
       ) : (
         /* ── Table view ──────────────────────────────── */
         <>
-          {/* Desktop table */}
-          <div className="hidden md:block">
+          <div>
             <Card className="overflow-clip rounded-lg">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -345,7 +344,7 @@ export function DataTable<T>({
                         <th
                           key={col.key}
                           className={cn(
-                            "text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground",
+                            "text-left px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap",
                             col.hiddenOnMobile && "hidden md:table-cell",
                             col.sortable && "cursor-pointer select-none hover:text-foreground",
                             col.className
@@ -381,7 +380,7 @@ export function DataTable<T>({
                           <td
                             key={col.key}
                             className={cn(
-                              "px-4 py-3",
+                              "px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm",
                               col.hiddenOnMobile && "hidden md:table-cell",
                               col.className
                             )}
@@ -396,38 +395,6 @@ export function DataTable<T>({
               </div>
             </Card>
           </div>
-
-          {/* Mobile cards */}
-          {renderCard ? (
-            <div className="md:hidden space-y-3">
-              {pageData.map((row) => (
-                <div
-                  key={getRowId(row)}
-                  onClick={() => onRowClick?.(row)}
-                  className={cn(onRowClick && "cursor-pointer")}
-                >
-                  {renderCard(row)}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="md:hidden space-y-2">
-              {pageData.map((row) => (
-                <Card
-                  key={getRowId(row)}
-                  onClick={() => onRowClick?.(row)}
-                  className={cn("p-4", onRowClick && "cursor-pointer hover:bg-muted/30")}
-                >
-                  {columns.slice(0, 4).map((col) => (
-                    <div key={col.key} className="flex justify-between py-1">
-                      <span className="text-xs text-muted-foreground">{col.header}</span>
-                      <span className="text-sm font-medium">{col.accessor(row)}</span>
-                    </div>
-                  ))}
-                </Card>
-              ))}
-            </div>
-          )}
 
           <PaginationBar page={safePage} totalPages={totalPages} showing={showingText} onPageChange={setPage} />
         </>
