@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import {
   Briefcase,
@@ -116,11 +117,19 @@ export default async function PortalDashboard() {
   // Event type colors for timeline
   const eventColor = (type: string) => {
     if (type.includes("quote")) return "bg-amber-500";
-    if (type.includes("invoice") || type.includes("payment"))
-      return "bg-emerald-500";
+    if (type.includes("invoice") || type.includes("payment")) return "bg-emerald-500";
     if (type.includes("contract")) return "bg-blue-500";
     if (type.includes("mandate")) return "bg-purple-500";
+    if (type.includes("appointment")) return "bg-sky-500";
     return "bg-gray-400";
+  };
+  const eventBgHover = (type: string) => {
+    if (type.includes("quote")) return "hover:bg-amber-50";
+    if (type.includes("invoice") || type.includes("payment")) return "hover:bg-emerald-50";
+    if (type.includes("contract")) return "hover:bg-blue-50";
+    if (type.includes("mandate")) return "hover:bg-purple-50";
+    if (type.includes("appointment")) return "hover:bg-sky-50";
+    return "hover:bg-muted/30";
   };
 
   const eventIcon = (type: string) => {
@@ -268,7 +277,7 @@ export default async function PortalDashboard() {
                   return (
                     <li
                       key={ev.id}
-                      className="flex items-start gap-2.5 sm:gap-4 relative py-2 sm:py-2.5 px-1 sm:px-2 -mx-1 sm:-mx-2 rounded-lg hover:bg-muted/30 transition-colors group"
+                      className={cn("flex items-start gap-2.5 sm:gap-4 relative py-2 sm:py-2.5 px-1 sm:px-2 -mx-1 sm:-mx-2 rounded-lg transition-colors group", eventBgHover(ev.eventType))}
                     >
                       {/* Icon dot */}
                       <div
