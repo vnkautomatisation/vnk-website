@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import type { Metadata } from "next";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
 export async function generateMetadata({
   params,
@@ -326,6 +327,7 @@ export default async function HomePage({
       {/* ═══════════════════════════════════════════════════
           MARQUES D'AUTOMATES
           ═══════════════════════════════════════════════════ */}
+      <ScrollReveal animation="animate-reveal-up">
       <section className="py-16 bg-muted/30 border-y">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <p className="text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-8">
@@ -347,6 +349,7 @@ export default async function HomePage({
           </div>
         </div>
       </section>
+      </ScrollReveal>
 
       {/* ═══════════════════════════════════════════════════
           SERVICES — 4 cartes avec image
@@ -366,10 +369,11 @@ export default async function HomePage({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {SERVICES.map((svc) => {
+            {SERVICES.map((svc, i) => {
               const Icon = svc.icon;
               return (
-                <Card key={svc.key} className="vnk-card-hover overflow-hidden group">
+                <ScrollReveal key={svc.key} delay={i * 100}>
+                <Card className="vnk-card-hover overflow-hidden group">
                   {/* Image */}
                   <div className="relative h-44 overflow-hidden bg-muted">
                     <Image
@@ -416,6 +420,7 @@ export default async function HomePage({
                     </div>
                   </CardContent>
                 </Card>
+                </ScrollReveal>
               );
             })}
           </div>
@@ -434,6 +439,7 @@ export default async function HomePage({
       {/* ═══════════════════════════════════════════════════
           STATS — bande stats
           ═══════════════════════════════════════════════════ */}
+      <ScrollReveal animation="animate-reveal-scale">
       <section className="py-20 vnk-gradient text-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
@@ -453,10 +459,12 @@ export default async function HomePage({
           </div>
         </div>
       </section>
+      </ScrollReveal>
 
       {/* ═══════════════════════════════════════════════════
           POURQUOI VNK — avec image + 4 cards
           ═══════════════════════════════════════════════════ */}
+      <ScrollReveal animation="animate-reveal-up">
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -518,6 +526,7 @@ export default async function HomePage({
           </div>
         </div>
       </section>
+      </ScrollReveal>
 
       {/* ═══════════════════════════════════════════════════
           TÉMOIGNAGES
@@ -697,6 +706,7 @@ export default async function HomePage({
       {/* ═══════════════════════════════════════════════════
           CTA FINAL
           ═══════════════════════════════════════════════════ */}
+      <ScrollReveal animation="animate-reveal-scale">
       <section className="py-24 vnk-gradient text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <Image
@@ -734,6 +744,7 @@ export default async function HomePage({
           </div>
         </div>
       </section>
+      </ScrollReveal>
     </>
   );
 }
