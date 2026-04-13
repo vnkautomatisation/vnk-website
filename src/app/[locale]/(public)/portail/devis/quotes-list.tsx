@@ -45,6 +45,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
   const [pdfQuote, setPdfQuote] = useState<Q | null>(null);
   const [showSignature, setShowSignature] = useState(false);
   const [accepting, setAccepting] = useState(false);
+  const [accepted, setAccepted] = useState(false);
   const [, startTransition] = useTransition();
 
   const openPdf = (q: Q, e?: React.MouseEvent) => {
@@ -56,6 +57,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
   const closePdf = () => {
     setPdfQuote(null);
     setShowSignature(false);
+    setAccepted(false);
   };
 
   // Step 1: user clicks "Accepter ce devis" in footer → show signature canvas
@@ -76,7 +78,8 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
         });
         if (res.ok) {
           toast.success("Devis accepte et signe — contrat genere automatiquement");
-          closePdf();
+          setShowSignature(false);
+          setAccepted(true);
           router.refresh();
         } else {
           const data = await res.json().catch(() => ({}));
@@ -247,7 +250,12 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
   };
 
   // Build footer actions for PDF modal
-  const pdfActions = pdfQuote?.status === "pending" ? (
+  const pdfActions = accepted ? (
+    <div className="flex items-center gap-2 text-emerald-600 font-semibold text-sm">
+      <CheckCircle className="h-4 w-4" />
+      Devis accepte — contrat genere
+    </div>
+  ) : pdfQuote?.status === "pending" ? (
     showSignature ? null : (
       <Button className="bg-[#0F2D52] hover:bg-[#1a3a66]" size="sm" onClick={startAccept}>
         <PenLine className="h-4 w-4 mr-1.5" />
