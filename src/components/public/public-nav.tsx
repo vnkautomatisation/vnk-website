@@ -41,10 +41,8 @@ export function PublicNav() {
   return (
     <header
       className={cn(
-        "fixed top-0 inset-x-0 z-30 transition-all duration-300 border-b border-white/10",
-        scrolled
-          ? "bg-[#0F2D52] shadow-lg"
-          : "bg-[#0F2D52] backdrop-blur-md"
+        "fixed top-0 inset-x-0 z-30 border-b border-white/10 bg-[#0F2D52]",
+        scrolled && "shadow-lg"
       )}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between">
