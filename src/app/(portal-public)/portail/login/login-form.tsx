@@ -27,6 +27,30 @@ export function PortalLoginForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     startTransition(async () => {
+      // Step 1 : si pas encore en mode 2FA, verifier d'abord si 2FA requis
+      if (!needs2FA) {
+        try {
+          const check = await fetch("/api/auth/check-2fa", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+          const data = await check.json();
+          if (!data.valid) {
+            toast.error("Identifiants invalides");
+            return;
+          }
+          if (data.requires2FA) {
+            setNeeds2FA(true);
+            return;
+          }
+        } catch {
+          toast.error("Erreur de connexion");
+          return;
+        }
+      }
+
+      // Step 2 : signIn avec ou sans code 2FA
       const result = await signIn("client-credentials", {
         email,
         password,
@@ -35,18 +59,12 @@ export function PortalLoginForm() {
       });
 
       if (result?.error) {
-        // NextAuth encode l'erreur dans result.error
-        if (result.error.includes("2FA_REQUIRED")) {
-          setNeeds2FA(true);
-          toast.info("Code 2FA requis");
-          return;
-        }
-        if (result.error.includes("2FA_INVALID")) {
+        if (needs2FA) {
           toast.error("Code 2FA incorrect");
           setTwoFactorCode("");
-          return;
+        } else {
+          toast.error("Identifiants invalides");
         }
-        toast.error("Identifiants invalides");
         return;
       }
 

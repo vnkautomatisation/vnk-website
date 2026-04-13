@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { signOut } from "next-auth/react";
 import { User, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 
@@ -49,13 +50,14 @@ export function PortalUserMenu({ name, initials }: { name: string; initials: str
               <Settings className="h-4 w-4 text-muted-foreground" />
               Parametres
             </Link>
-            <a
-              href="/api/auth/signout"
-              className="flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors text-destructive"
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/portail/login" })}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors text-destructive"
             >
               <LogOut className="h-4 w-4" />
               Deconnexion
-            </a>
+            </button>
           </div>
         </div>
       )}
