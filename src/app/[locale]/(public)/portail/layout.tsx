@@ -53,16 +53,11 @@ export default async function PortalLayout({
 
   return (
     <>
-      {/* Cacher la nav publique sur mobile dans le portail */}
       <style>{`
         body, html { overflow: hidden !important; height: 100vh !important; }
-        @media (max-width: 1023px) {
-          header { display: none !important; }
-          .pt-\[70px\] { padding-top: 0 !important; }
-        }
       `}</style>
 
-      <div className="fixed inset-0 top-0 lg:top-[70px] flex">
+      <div className="fixed inset-0 top-[70px] flex">
         <PortalSidebar
           clientName={client?.fullName ?? ""}
           clientCompany={client?.companyName ?? undefined}
