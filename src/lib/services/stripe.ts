@@ -7,7 +7,8 @@ let _stripeClient: unknown = null;
 
 export async function getStripe() {
   if (_stripeClient) return _stripeClient;
-  const secretKey = await getSetting<string>("integrations", "stripe_secret_key");
+  const secretKey = process.env.STRIPE_SECRET_KEY
+    ?? await getSetting<string>("integrations", "stripe_secret_key");
   if (!secretKey) return null;
   const Stripe = (await import("stripe")).default;
   _stripeClient = new Stripe(secretKey, {
