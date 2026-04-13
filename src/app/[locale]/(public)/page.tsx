@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
 import {
   ArrowRight,
   Clock,
@@ -99,10 +100,10 @@ const BRANDS = [
 
 // ─── Stats ────────────────────────────────────────────
 const STATS = [
-  { value: "120", unit: "CAD/h", label: "Taux horaire de départ — support PLC" },
-  { value: "24h", unit: "", label: "Temps de réponse maximum" },
-  { value: "100", unit: "%", label: "Intervention documentée avec rapport écrit" },
-  { value: "5", unit: "+", label: "Marques d'automates supportées" },
+  { num: 120, unit: "CAD/h", label: "Taux horaire de départ — support PLC" },
+  { num: 24, unit: "h", label: "Temps de réponse maximum" },
+  { num: 100, unit: "%", label: "Intervention documentée avec rapport écrit" },
+  { num: 5, unit: "+", label: "Marques d'automates supportées" },
 ];
 
 // ─── Pourquoi VNK ? ───────────────────────────────────
@@ -446,7 +447,7 @@ export default async function HomePage({
             {STATS.map((stat, i) => (
               <div key={i} className="text-center">
                 <div className="text-5xl sm:text-6xl font-bold tracking-tight">
-                  {stat.value}
+                  <AnimatedCounter value={stat.num} duration={1500 + i * 200} />
                   <span className="text-2xl font-semibold opacity-80 ml-1">
                     {stat.unit}
                   </span>
