@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { MessageCircle, X, Send, Paperclip, Maximize2, Minimize2, Check, CheckCheck, Smile, FileText, Download } from "lucide-react";
+import { MessageCircle, X, Send, Paperclip, Maximize2, Minimize2, Check, CheckCheck, Smile, FileText, Download, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Message = {
@@ -26,6 +26,7 @@ export function ChatWidget({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
+  const [previewPdf, setPreviewPdf] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -226,21 +227,36 @@ export function ChatWidget({
                                 : "bg-white dark:bg-card rounded-xl rounded-tl-sm"
                             )}>
                               {isFile ? (
-                                <a
-                                  href={isPdf ? `/api/invoices/1/pdf` : "#"}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="flex items-center gap-2 py-1 hover:opacity-80 transition-opacity"
-                                >
-                                  <div className="h-9 w-9 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
-                                    <FileText className="h-4 w-4 text-red-600" />
+                                <div className="py-0.5">
+                                  <div className="flex items-center gap-2.5 mb-1.5">
+                                    <div className="h-10 w-10 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
+                                      <FileText className="h-5 w-5 text-red-500" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-[12px] font-semibold truncate">{fileName}</p>
+                                      <p className="text-[10px] text-muted-foreground">Document PDF</p>
+                                    </div>
                                   </div>
-                                  <div className="min-w-0">
-                                    <p className="text-xs font-medium truncate">{fileName}</p>
-                                    <p className="text-[10px] text-muted-foreground">PDF</p>
+                                  <div className="flex gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); setPreviewPdf(fileName); }}
+                                      className="flex-1 flex items-center justify-center gap-1 h-7 rounded-md bg-[#0F2D52]/10 text-[#0F2D52] text-[11px] font-medium hover:bg-[#0F2D52]/20 transition-colors"
+                                    >
+                                      <Eye className="h-3 w-3" />
+                                      Voir
+                                    </button>
+                                    <a
+                                      href={`/api/invoices/1/pdf`}
+                                      download={fileName}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="flex-1 flex items-center justify-center gap-1 h-7 rounded-md bg-[#0F2D52]/10 text-[#0F2D52] text-[11px] font-medium hover:bg-[#0F2D52]/20 transition-colors"
+                                    >
+                                      <Download className="h-3 w-3" />
+                                      Telecharger
+                                    </a>
                                   </div>
-                                  <Download className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                </a>
+                                </div>
                               ) : (
                                 <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
                               )}
@@ -306,6 +322,45 @@ export function ChatWidget({
             </form>
           </div>
         </>
+      )}
+
+      {/* ── PDF Preview Modal ── */}
+      {previewPdf && (
+        <div className="fixed inset-0 z-[9999]" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setPreviewPdf(null)} />
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center justify-between px-4 h-12 bg-[#0F2D52] text-white shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="h-4 w-4 shrink-0" />
+                <span className="text-sm font-medium truncate">{previewPdf}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <a
+                  href={`/api/invoices/1/pdf`}
+                  download={previewPdf}
+                  className="h-8 w-8 rounded-md hover:bg-white/10 flex items-center justify-center"
+                  aria-label="Telecharger"
+                >
+                  <Download className="h-4 w-4" />
+                </a>
+                <button
+                  onClick={() => setPreviewPdf(null)}
+                  className="h-8 w-8 rounded-md hover:bg-white/10 flex items-center justify-center"
+                  aria-label="Fermer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 bg-[#525659]">
+              <iframe
+                src={`/api/invoices/1/pdf`}
+                className="w-full h-full border-0"
+                title={previewPdf}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
