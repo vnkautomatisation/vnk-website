@@ -60,8 +60,8 @@ export default async function PortalLayout({
         body, html { overflow: hidden !important; height: 100vh !important; }
       `}</style>
 
-      {/* Avatar utilisateur dans la nav */}
-      <div className="fixed top-0 right-16 lg:right-20 z-40 h-[72px] flex items-center">
+      {/* Avatar utilisateur dans la nav — devant EN + hamburger */}
+      <div className="fixed top-0 right-[88px] sm:right-[100px] lg:right-[220px] z-[35] h-[72px] flex items-center">
         <PortalUserMenu
           name={client?.fullName ?? ""}
           initials={(client?.fullName ?? "C").split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)}
