@@ -20,11 +20,23 @@ const MEETING_TYPES = [
   { key: "onsite" as const, label: "Sur place", icon: MapPin },
 ];
 
+const SERVICES = [
+  { value: "plc-support", label: "Support PLC" },
+  { value: "plc-programming", label: "Programmation PLC" },
+  { value: "scada", label: "SCADA / HMI" },
+  { value: "audit", label: "Audit technique" },
+  { value: "documentation", label: "Documentation" },
+  { value: "consultation", label: "Consultation" },
+  { value: "other", label: "Autre" },
+];
+
 export function BookingView({ slots }: { slots: Slot[] }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [meetingType, setMeetingType] = useState<"video" | "phone" | "onsite">("video");
+  const [service, setService] = useState("");
   const [subject, setSubject] = useState("");
+  const [notes, setNotes] = useState("");
   const [sending, setSending] = useState(false);
 
   // Group slots by date
@@ -76,7 +88,8 @@ export function BookingView({ slots }: { slots: Slot[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slotId: selectedSlot.id,
-          subject,
+          subject: subject || (service ? SERVICES.find((s) => s.value === service)?.label : undefined),
+          notesClient: notes || undefined,
           meetingType,
         }),
       });
@@ -268,6 +281,21 @@ export function BookingView({ slots }: { slots: Slot[] }) {
             </div>
           </div>
 
+          {/* Service */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold">Service concerne</label>
+            <select
+              value={service}
+              onChange={(e) => setService(e.target.value)}
+              className="w-full h-11 px-3 rounded-lg border bg-background text-sm focus:ring-2 focus:ring-[#0F2D52]/30 focus:border-[#0F2D52] outline-none transition-all"
+            >
+              <option value="">Selectionnez un service</option>
+              {SERVICES.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Subject */}
           <div className="space-y-2">
             <label className="text-sm font-semibold">Sujet</label>
@@ -276,6 +304,18 @@ export function BookingView({ slots }: { slots: Slot[] }) {
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Ex. Discussion projet PLC"
               className="w-full h-11 px-3 rounded-lg border bg-background text-sm focus:ring-2 focus:ring-[#0F2D52]/30 focus:border-[#0F2D52] outline-none transition-all"
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold">Notes <span className="text-muted-foreground font-normal">(optionnel)</span></label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Decrivez brievement votre besoin ou les points a discuter..."
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg border bg-background text-sm focus:ring-2 focus:ring-[#0F2D52]/30 focus:border-[#0F2D52] outline-none transition-all resize-none"
             />
           </div>
 
