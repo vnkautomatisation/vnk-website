@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       clientSecret: intent.client_secret,
       paymentIntentId: intent.id,
-      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
       client: {
         fullName: invoice.client.fullName,
         email: invoice.client.email,
