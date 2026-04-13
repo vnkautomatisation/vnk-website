@@ -47,6 +47,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
   const [showSignature, setShowSignature] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  const [pdfKey, setPdfKey] = useState(0);
   const [, startTransition] = useTransition();
 
   const openPdf = (q: Q, e?: React.MouseEvent) => {
@@ -81,6 +82,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
           toast.success("Devis accepte et signe — contrat genere automatiquement");
           setShowSignature(false);
           setAccepted(true);
+          setPdfKey((k) => k + 1);
           router.refresh();
         } else {
           const data = await res.json().catch(() => ({}));
@@ -362,6 +364,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
           open={!!pdfQuote}
           onClose={closePdf}
           pdfUrl={`/api/quotes/${pdfQuote.id}/pdf`}
+          refreshKey={pdfKey}
           title={pdfQuote.title}
           documentNumber={pdfQuote.quoteNumber}
           date={pdfQuote.expiryDate ? `Expire le ${formatDate(new Date(pdfQuote.expiryDate))}` : undefined}
