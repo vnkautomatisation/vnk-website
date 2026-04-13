@@ -38,9 +38,9 @@ export default async function PortalAppointmentsPage() {
   const videoCount = appointments.filter((a) => a.meetingType === "video").length;
 
   return (
-    <div>
-      {/* ── Sticky header + KPIs ─────────────────── */}
-      <div className="sticky top-[70px] z-10 bg-background -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-3 border-b border-border/50">
+    <div className="space-y-6">
+      {/* ── Header + KPIs ─────────────────── */}
+      <div>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">

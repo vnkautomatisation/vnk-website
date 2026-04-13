@@ -218,9 +218,9 @@ export function DataTable<T>({
   // ══════════════════════════════════════════════════════
 
   return (
-    <div>
-      {/* ── Sticky zone : header + KPIs + toolbar ── */}
-      <div className="sticky top-[70px] z-10 bg-background -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-3 border-b border-border/50">
+    <div className="space-y-4">
+      {/* ── Header + KPIs + toolbar ── */}
+      <div>
         {stickyHeader}
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mt-3">
