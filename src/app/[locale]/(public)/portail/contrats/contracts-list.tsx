@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FileSignature, PenLine, Eye, ClipboardList, CheckCircle, DollarSign } from "lucide-react";
+import { FileSignature, PenLine, Eye, ClipboardList, CheckCircle, DollarSign, X, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
-import { SignatureDialog } from "@/components/signature/signature-dialog";
+import { SignatureCanvas } from "@/components/signature/signature-canvas";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,7 +50,9 @@ function SignatureCheck({ signed, label }: { signed: boolean; label: string }) {
 export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
   const router = useRouter();
   const [pdfContract, setPdfContract] = useState<Contract | null>(null);
-  const [signingContract, setSigningContract] = useState<Contract | null>(null);
+  const [showSignature, setShowSignature] = useState(false);
+  const [signing, setSigning] = useState(false);
+  const [, startTransition] = useTransition();
 
   const contractKpis = useMemo(() => {
     const total = contracts.length;
@@ -67,9 +69,44 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
     setPdfContract(c);
   };
 
-  const startSign = (c: Contract) => {
+  const startSign = () => {
+    setShowSignature(true);
+  };
+
+  const closePdf = () => {
     setPdfContract(null);
-    setSigningContract(c);
+    setShowSignature(false);
+  };
+
+  const handleSign = async (signatureDataUrl: string) => {
+    if (!pdfContract) return;
+    setSigning(true);
+    startTransition(async () => {
+      try {
+        const res = await fetch(`/api/contracts/${pdfContract.id}/sign`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ signatureData: signatureDataUrl }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          toast.success(
+            data.fullySigned
+              ? "Contrat signe par les deux parties — facture generee"
+              : "Votre signature a ete enregistree"
+          );
+          closePdf();
+          router.refresh();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err.error ?? "Erreur signature");
+        }
+      } catch {
+        toast.error("Erreur de connexion");
+      } finally {
+        setSigning(false);
+      }
+    });
   };
 
   const columns: Column<Contract>[] = [
@@ -272,18 +309,18 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
       {pdfContract && (
         <PdfViewerModal
           open={!!pdfContract}
-          onClose={() => setPdfContract(null)}
+          onClose={closePdf}
           pdfUrl={pdfContract.fileUrl ?? `/api/contracts/${pdfContract.id}/pdf`}
           title={pdfContract.title}
           documentNumber={pdfContract.contractNumber}
           date={formatDate(new Date(pdfContract.createdAt))}
           downloadName={`contrat-${pdfContract.contractNumber}`}
           actions={
-            pdfContract.status === "pending" && !pdfContract.clientSignatureData ? (
+            pdfContract.status === "pending" && !pdfContract.clientSignatureData && !showSignature ? (
               <Button
                 className="bg-[#0F2D52] hover:bg-[#1a3a66]"
                 size="sm"
-                onClick={() => startSign(pdfContract)}
+                onClick={startSign}
               >
                 <PenLine className="h-4 w-4 mr-1" />
                 Signer ce contrat
@@ -293,16 +330,57 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
         />
       )}
 
-      {/* Signature dialog — opens when user clicks "Signer ce contrat" */}
-      {signingContract && (
-        <SignatureDialog
-          contractId={signingContract.id}
-          contractNumber={signingContract.contractNumber}
-          contractTitle={signingContract.title}
-          contractAmount={signingContract.amountTtc}
-          open={!!signingContract}
-          onOpenChange={(open) => { if (!open) setSigningContract(null); }}
-        />
+      {/* Signature overlay — SUR le PDF modal */}
+      {pdfContract && showSignature && (
+        <div className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSignature(false)} />
+          <div className="relative z-10 w-full max-w-xl mx-4 mb-4 sm:mb-0 bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="bg-[#0F2D52] px-6 py-5 text-white relative">
+              <button
+                onClick={() => setShowSignature(false)}
+                className="absolute top-4 right-4 h-8 w-8 rounded-lg hover:bg-white/10 flex items-center justify-center"
+              >
+                <X className="h-4 w-4 text-white/70" />
+              </button>
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-white/15 flex items-center justify-center">
+                  <FileSignature className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold">Signer le contrat</h2>
+                  <p className="text-white/60 text-sm">{pdfContract.contractNumber} — {pdfContract.title}</p>
+                </div>
+              </div>
+              <div className="mt-4 bg-white/10 rounded-lg px-3 py-2 w-fit">
+                <span className="text-white/70 text-sm">Montant : </span>
+                <span className="text-white font-bold">{formatCurrency(pdfContract.amountTtc)}</span>
+              </div>
+            </div>
+            <div className="px-6 py-5">
+              <SignatureCanvas
+                onSave={handleSign}
+                width={480}
+                height={180}
+                disabled={signing}
+                legalText="les conditions du contrat"
+              />
+              {signing && (
+                <p className="text-xs text-muted-foreground text-center mt-2 animate-pulse">
+                  Signature en cours...
+                </p>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t bg-muted/30 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span>Signature juridiquement valide</span>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setShowSignature(false)} disabled={signing}>
+                Annuler
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
