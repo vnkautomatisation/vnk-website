@@ -57,7 +57,7 @@ export function PortalSidebar({
   return (
     /* Desktop sidebar only — mobile uses PortalBottomNav */
     <aside
-      className="hidden lg:flex fixed top-[70px] left-0 bottom-0 z-20 w-[240px] flex-col border-r bg-card"
+      className="hidden lg:flex fixed top-[72px] left-0 bottom-0 z-20 w-[240px] flex-col border-r bg-card"
       aria-label="Navigation portail"
     >
       <SidebarContent pathname={pathname} t={t} badges={badges} />

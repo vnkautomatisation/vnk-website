@@ -9,7 +9,7 @@ export default function PublicLayout({
   return (
     <>
       <PublicNav />
-      <main className="pt-[70px]">{children}</main>
+      <main className="pt-[72px]">{children}</main>
     </>
   );
 }
