@@ -124,15 +124,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // 2FA verification si active
         if (client.twoFactorEnabled && client.twoFactorSecret) {
           const code = parsed.data.twoFactorCode;
-          if (!code) {
-            // Pas de code fourni — signaler que 2FA est requis
-            throw new Error("2FA_REQUIRED");
-          }
+          if (!code) return null; // 2FA requis mais pas fourni
           const { verifySync } = await import("otplib");
           const isValid = verifySync({ token: code, secret: client.twoFactorSecret });
-          if (!isValid) {
-            throw new Error("2FA_INVALID");
-          }
+          if (!isValid) return null; // Code 2FA incorrect
         }
 
         await prisma.client.update({
