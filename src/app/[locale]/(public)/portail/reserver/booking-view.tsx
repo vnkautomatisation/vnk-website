@@ -45,12 +45,12 @@ export function BookingView({ slots }: { slots: Slot[] }) {
     if (dates.length === 0) return [];
     const first = new Date(dates[0]);
     const last = new Date(dates[dates.length - 1]);
-    // Start from Monday of first week
+    // Start from Sunday of first week
     const start = new Date(first);
-    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-    // End at Sunday of last week
+    start.setDate(start.getDate() - start.getDay());
+    // End at Saturday of last week
     const end = new Date(last);
-    end.setDate(end.getDate() + (7 - end.getDay()) % 7);
+    end.setDate(end.getDate() + (6 - end.getDay()));
 
     const weeks: Date[][] = [];
     let current = new Date(start);
@@ -91,7 +91,7 @@ export function BookingView({ slots }: { slots: Slot[] }) {
     }
   };
 
-  const dayNames = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+  const dayNames = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
   const today = new Date().toISOString().slice(0, 10);
 
   return (
