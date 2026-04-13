@@ -1,7 +1,7 @@
 // Seed Prisma — valeurs par défaut de la section Paramètres + compte admin VNK
 // Exécution : npm run db:seed
 
-import { PrismaClient, SettingType, AdminRole } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -14,7 +14,7 @@ type SeedSetting = {
   category: string;
   key: string;
   value: string;
-  type?: SettingType;
+  type?: string;
   label: string;
   description?: string;
   isPublic?: boolean;
@@ -218,7 +218,7 @@ async function main() {
         email: adminEmail,
         passwordHash,
         fullName: "Yan Verone Kengne",
-        role: AdminRole.super_admin,
+        role: "super_admin",
         isActive: true,
       },
     });
