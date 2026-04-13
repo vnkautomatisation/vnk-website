@@ -128,7 +128,16 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
     {
       key: "status",
       header: "Statut",
-      accessor: (r) => <StatusBadge status={r.status} />,
+      accessor: (r) => (
+        <div>
+          <StatusBadge status={r.status} />
+          {r.paidAt && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {formatDate(r.paidAt)}
+            </p>
+          )}
+        </div>
+      ),
     },
     {
       key: "actions",
