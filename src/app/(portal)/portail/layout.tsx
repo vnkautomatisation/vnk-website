@@ -1,10 +1,19 @@
 // Portail client layout : topbar VNK + sidebar + bottom nav mobile
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PortalTopbar } from "@/components/portal/portal-topbar";
 import { PortalSidebar } from "@/components/portal/portal-sidebar";
 import { PortalBottomNav } from "@/components/portal/portal-bottom-nav";
+
+// Cache le client pour eviter re-query a chaque navigation dans le meme request
+const getClient = cache(async (clientId: number) =>
+  prisma.client.findUnique({
+    where: { id: clientId },
+    select: { fullName: true, companyName: true },
+  })
+);
 
 export default async function PortalLayout({
   children,
@@ -17,10 +26,7 @@ export default async function PortalLayout({
     redirect("/portail/login");
   }
 
-  const client = await prisma.client.findUnique({
-    where: { id: session!.user.clientId! },
-    select: { fullName: true, companyName: true },
-  });
+  const client = await getClient(session!.user.clientId!);
 
   return (
     <div className="min-h-screen bg-muted/30">
