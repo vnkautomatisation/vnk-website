@@ -97,8 +97,8 @@
     @apply border-border;
   }
   html {
-    /* Fluid root font-size: 14px a 320px → 16px a 1280px */
-    font-size: clamp(14px, 13px + 0.2vw, 16px);
+    /* Fluid root: 12.5px a 320px → 16px a 1280px (ratio ~0.78x a ~1x) */
+    font-size: clamp(12.5px, 10px + 0.5vw, 16px);
   }
   html, body {
     @apply bg-background text-foreground antialiased;
