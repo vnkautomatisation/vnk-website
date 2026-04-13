@@ -13,6 +13,88 @@ type Message = {
 
 const EMOJIS = ["👍", "👋", "😊", "🙏", "✅", "⏰", "🔧", "⚡", "🎉", "💡", "📎", "❤️"];
 
+// ── Rich message renderer pour les messages automatises ──
+function RichMessageContent({ content }: { content: string }) {
+  // Demande de projet
+  if (content.includes("NOUVELLE DEMANDE DE PROJET")) {
+    const lines = content.split("\n").filter((l) => l.trim());
+    const fields: { key: string; val: string }[] = [];
+    let desc = "";
+    let inDesc = false;
+    for (const line of lines) {
+      if (line.includes("DESCRIPTION")) { inDesc = true; continue; }
+      if (inDesc && !line.startsWith("─")) { desc += line.trim() + " "; continue; }
+      const match = line.match(/^(\w[\w\s.]+?)\s*:\s*(.+)$/);
+      if (match) fields.push({ key: match[1].trim(), val: match[2].trim() });
+    }
+    const urgence = fields.find((f) => f.key === "Urgence")?.val ?? "";
+    const isUrgent = urgence.toLowerCase().includes("urgent");
+    return (
+      <div className="space-y-2">
+        <div className={cn("flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold", isUrgent ? "bg-red-50 text-red-700" : "bg-[#0F2D52]/10 text-[#0F2D52]")}>
+          <span>{isUrgent ? "🔴" : "🚀"}</span>
+          <span>Nouvelle demande de projet</span>
+        </div>
+        <div className="space-y-1 text-xs">
+          {fields.map((f) => (
+            <div key={f.key} className="flex gap-2">
+              <span className="text-muted-foreground shrink-0 w-16">{f.key}</span>
+              <span className="font-medium">{f.val}</span>
+            </div>
+          ))}
+        </div>
+        {desc.trim() && (
+          <div className="border-t pt-1.5 mt-1">
+            <p className="text-[0.625rem] text-muted-foreground uppercase font-semibold mb-0.5">Description</p>
+            <p className="text-xs leading-relaxed">{desc.trim()}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Facture / Devis / Contrat genere
+  if (content.includes("Facture") && content.includes("generee") || content.includes("Devis") && content.includes("envoye") || content.includes("Contrat") && content.includes("genere")) {
+    const numMatch = content.match(/(F-\d{4}-\d+|D-\d{4}-\d+|CT-\d{4}-\d+)/);
+    const amountMatch = content.match(/([\d\s]+,?\d*)\s*\$/);
+    const num = numMatch?.[1] ?? "";
+    const amount = amountMatch?.[1]?.trim() ?? "";
+    const isInvoice = num.startsWith("F-");
+    const isQuote = num.startsWith("D-");
+    const isContract = num.startsWith("CT-");
+    const color = isInvoice ? "emerald" : isQuote ? "amber" : "blue";
+    const label = isInvoice ? "Facture" : isQuote ? "Devis" : "Contrat";
+    const icon = isInvoice ? "💰" : isQuote ? "📋" : "📝";
+
+    return (
+      <div className={cn("rounded-lg border p-2.5 space-y-1.5", `border-${color}-200 bg-${color}-50/50`)}>
+        <div className="flex items-center gap-2">
+          <span className="text-base">{icon}</span>
+          <div>
+            <p className="text-xs font-semibold">{label} {num}</p>
+            {amount && <p className="text-sm font-bold">{amount} $</p>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // RDV reserve
+  if (content.includes("RDV reserve") || content.includes("rendez-vous") && content.includes("confirme")) {
+    return (
+      <div className="rounded-lg border border-sky-200 bg-sky-50/50 p-2.5">
+        <div className="flex items-center gap-2">
+          <span className="text-base">📅</span>
+          <p className="text-xs font-semibold">{content}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Message normal
+  return <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>;
+}
+
 export function ChatWidget({
   clientId,
   clientName,
@@ -280,7 +362,7 @@ export function ChatWidget({
                                   </div>
                                 </div>
                               ) : (
-                                <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+                                <RichMessageContent content={msg.content} />
                               )}
                               <div className={cn("flex items-center gap-1 mt-0.5", isClient ? "justify-end" : "")}>
                                 <time className="text-[0.5625rem] text-muted-foreground">
