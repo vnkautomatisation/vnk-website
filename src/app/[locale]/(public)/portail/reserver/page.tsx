@@ -1,27 +1,42 @@
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { BookingView } from "./booking-view";
 import { CalendarPlus } from "lucide-react";
 
 export default async function BookingPage() {
+  const session = await auth();
+  const clientId = session!.user.clientId!;
+
   const now = new Date();
   const horizon = new Date();
   horizon.setDate(now.getDate() + 30);
 
-  const rawSlots = await prisma.availabilitySlot.findMany({
-    where: {
-      slotDate: { gte: now, lte: horizon },
-      status: "available",
-    },
-    orderBy: [{ slotDate: "asc" }, { startTime: "asc" }],
-  });
+  const [rawSlots, rawMandates] = await Promise.all([
+    prisma.availabilitySlot.findMany({
+      where: {
+        slotDate: { gte: now, lte: horizon },
+        status: "available",
+      },
+      orderBy: [{ slotDate: "asc" }, { startTime: "asc" }],
+    }),
+    prisma.mandate.findMany({
+      where: { clientId, status: { in: ["active", "in_progress", "pending"] } },
+      select: { id: true, title: true },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
-  // Serialiser les dates pour le client component
   const slots = rawSlots.map((s) => ({
     id: s.id,
     slotDate: s.slotDate.toISOString(),
     startTime: s.startTime,
     endTime: s.endTime,
     durationMin: s.durationMin,
+  }));
+
+  const mandates = rawMandates.map((m) => ({
+    id: m.id,
+    title: m.title,
   }));
 
   return (
@@ -35,7 +50,7 @@ export default async function BookingPage() {
           <p className="text-sm text-muted-foreground">Choisissez un creneau disponible</p>
         </div>
       </div>
-      <BookingView slots={slots} />
+      <BookingView slots={slots} mandates={mandates} />
     </div>
   );
 }
