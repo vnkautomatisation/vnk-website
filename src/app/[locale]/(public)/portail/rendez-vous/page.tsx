@@ -38,28 +38,27 @@ export default async function PortalAppointmentsPage() {
   const videoCount = appointments.filter((a) => a.meetingType === "video").length;
 
   return (
-    <div className="space-y-6">
-      {/* ── Page header ───────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
-            <Calendar className="h-5 w-5 text-white" />
+    <div>
+      {/* ── Sticky header + KPIs ─────────────────── */}
+      <div className="sticky top-[70px] z-10 bg-muted/30 backdrop-blur-sm -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-3">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
+              <Calendar className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Mes rendez-vous</h1>
+              <p className="text-sm text-muted-foreground">Planifiez et gerez vos rendez-vous</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">Mes rendez-vous</h1>
-            <p className="text-sm text-muted-foreground">Planifiez et gerez vos rendez-vous</p>
-          </div>
+          <Button asChild className="bg-[#0F2D52] hover:bg-[#1a3a66] shadow-sm">
+            <Link href="/portail/reserver">
+              <CalendarCheck className="h-4 w-4 mr-1.5" />
+              Reserver
+            </Link>
+          </Button>
         </div>
-        <Button asChild className="bg-[#0F2D52] hover:bg-[#1a3a66] shadow-sm">
-          <Link href="/portail/reserver">
-            <CalendarCheck className="h-4 w-4 mr-1.5" />
-            Reserver
-          </Link>
-        </Button>
-      </div>
-
-      {/* ── KPI Strip ─────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
           <p className="text-2xl font-bold">{total}</p>
           <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total</p>
@@ -76,10 +75,13 @@ export default async function PortalAppointmentsPage() {
           <p className="text-2xl font-bold">{videoCount}</p>
           <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Video</p>
         </div>
+        </div>
       </div>
 
       {/* ── Appointments list (client component) ── */}
-      <AppointmentsList upcoming={serialize(upcoming)} past={serialize(past)} />
+      <div className="mt-4">
+        <AppointmentsList upcoming={serialize(upcoming)} past={serialize(past)} />
+      </div>
     </div>
   );
 }
