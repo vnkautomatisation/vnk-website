@@ -134,9 +134,9 @@ export default async function PortalDashboard() {
   const firstName = client?.fullName.split(" ")[0] ?? "";
 
   return (
-    <div className="space-y-4">
-      {/* ── Banner + KPIs + actions (sticky desktop) ── */}
-      <div className="lg:sticky lg:top-0 z-10 bg-background lg:-mx-8 lg:px-8 lg:pt-4 lg:pb-3 space-y-4 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-72px-56px)] lg:h-[calc(100vh-72px)] gap-3">
+      {/* ── Header : Banner + KPIs + actions ── */}
+      <div className="shrink-0 space-y-3">
 
       {/* ── Welcome Banner ───────────────────────────── */}
       <div className="relative overflow-hidden rounded-xl sm:rounded-2xl vnk-gradient p-4 sm:p-6 lg:p-8 text-white">
@@ -229,11 +229,10 @@ export default async function PortalDashboard() {
       </div>
       </div>
 
-      {/* ── Activity Timeline ────────────────────────── */}
-      <div className="mt-4">
-      <Card className="shadow-sm border-0 ring-1 ring-border/50">
-        <CardContent className="p-0 sm:p-0">
-          <div className="flex items-center justify-between p-3 sm:p-6 pb-3 sm:pb-4 border-b">
+      {/* ── Activity Timeline — scroll interne ── */}
+      <Card className="shadow-sm border-0 ring-1 ring-border/50 flex-1 min-h-0 flex flex-col">
+        <CardContent className="p-0 flex flex-col flex-1 min-h-0">
+          <div className="flex items-center justify-between p-3 sm:p-6 pb-3 sm:pb-4 border-b shrink-0">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="portal-icon-sm rounded-lg vnk-gradient flex items-center justify-center shrink-0">
                 <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
@@ -244,7 +243,7 @@ export default async function PortalDashboard() {
               {recentEvents.length} evenements
             </span>
           </div>
-          <div className="p-3 sm:p-6 pt-3 sm:pt-4">
+          <div className="p-3 sm:p-6 pt-3 sm:pt-4 flex-1 overflow-y-auto">
 
           {recentEvents.length === 0 ? (
             <div className="text-center py-16">
@@ -295,7 +294,6 @@ export default async function PortalDashboard() {
           </div>
         </CardContent>
       </Card>
-      </div>
     </div>
   );
 }
