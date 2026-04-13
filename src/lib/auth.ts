@@ -33,6 +33,7 @@ const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
   kind: z.enum(["admin", "client"]).default("client"),
+  twoFactorCode: z.string().optional(),
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -103,6 +104,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Courriel", type: "email" },
         password: { label: "Mot de passe", type: "password" },
+        twoFactorCode: { label: "Code 2FA", type: "text" },
       },
       authorize: async (raw) => {
         const parsed = credentialsSchema.safeParse({
@@ -118,6 +120,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const valid = await bcrypt.compare(parsed.data.password, client.passwordHash);
         if (!valid) return null;
+
+        // 2FA verification si active
+        if (client.twoFactorEnabled && client.twoFactorSecret) {
+          const code = parsed.data.twoFactorCode;
+          if (!code) {
+            // Pas de code fourni — signaler que 2FA est requis
+            throw new Error("2FA_REQUIRED");
+          }
+          const { verifySync } = await import("otplib");
+          const isValid = verifySync({ token: code, secret: client.twoFactorSecret });
+          if (!isValid) {
+            throw new Error("2FA_INVALID");
+          }
+        }
 
         await prisma.client.update({
           where: { id: client.id },
