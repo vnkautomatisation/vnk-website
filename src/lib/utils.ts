@@ -6,6 +6,20 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Base URL auto-detectee (fonctionne sur localhost, Railway, domaine custom)
+export function getBaseUrl(headersList?: { get: (key: string) => string | null }): string {
+  // 1. En runtime serveur avec headers
+  if (headersList) {
+    const host = headersList.get("host");
+    const proto = headersList.get("x-forwarded-proto") ?? "http";
+    if (host) return `${proto}://${host}`;
+  }
+  // 2. Env var explicite (optionnel)
+  if (process.env.AUTH_URL) return process.env.AUTH_URL;
+  // 3. Fallback dev
+  return `http://localhost:${process.env.PORT ?? 3000}`;
+}
+
 // Formatage devise
 export function formatCurrency(
   amount: number | string,
