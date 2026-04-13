@@ -43,16 +43,21 @@ function PaymentForm({
   const [validating, setValidating] = useState(false);
 
   const handleNext = async () => {
+    // Etape 1 (adresse) : pas de validation Stripe, juste avancer
+    if (step === 0) {
+      setStep(1);
+      return;
+    }
+    // Etape 2 (paiement) : valider carte via Stripe
     if (!elements) return;
     setValidating(true);
-    // Valider les elements Stripe de l'etape actuelle
     const { error } = await elements.submit();
     setValidating(false);
     if (error) {
-      toast.error(error.message ?? "Veuillez completer tous les champs");
+      toast.error(error.message ?? "Veuillez completer le mode de paiement");
       return;
     }
-    setStep(step + 1);
+    setStep(2);
   };
 
   const handleSubmit = async () => {
