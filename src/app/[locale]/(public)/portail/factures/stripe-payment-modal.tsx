@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import { CreditCard, Lock, X, CheckCircle, ShieldCheck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "");
+// Stripe se charge via la cle retournee par l'API (pas besoin de NEXT_PUBLIC_)
+let stripePromise: ReturnType<typeof loadStripe> | null = null;
 
 type Invoice = {
   id: number;
@@ -149,6 +150,7 @@ export function StripePaymentModal({
 }) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [clientInfo, setClientInfo] = useState<any>(null);
+  const [stripeInstance, setStripeInstance] = useState<ReturnType<typeof loadStripe> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -164,11 +166,12 @@ export function StripePaymentModal({
     })
       .then((r) => r.json())
       .then((data) => {
-        if (data.clientSecret) {
+        if (data.clientSecret && data.publishableKey) {
           setClientSecret(data.clientSecret);
           setClientInfo(data.client);
+          setStripeInstance(loadStripe(data.publishableKey));
         } else {
-          setError(data.error ?? "Erreur");
+          setError(data.error ?? "Stripe non configure");
         }
       })
       .catch(() => setError("Erreur de connexion"))
@@ -208,9 +211,9 @@ export function StripePaymentModal({
             <p className="text-sm text-destructive">{error}</p>
             <Button variant="outline" size="sm" onClick={onClose} className="mt-3">Fermer</Button>
           </div>
-        ) : clientSecret ? (
+        ) : clientSecret && stripeInstance ? (
           <Elements
-            stripe={stripePromise}
+            stripe={stripeInstance}
             options={{
               clientSecret,
               appearance: {
