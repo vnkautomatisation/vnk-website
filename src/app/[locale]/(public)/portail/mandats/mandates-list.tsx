@@ -519,7 +519,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
 
       {/* ── Mobile: bottom sheet ──────────────────── */}
       {selected && (
-        <div className="lg:hidden fixed inset-0 z-50">
+        <div className="lg:hidden fixed inset-0 bottom-14 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSelected(null)} />
           <div className="absolute bottom-0 left-0 right-0 bg-background rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto">
             <div className="flex justify-center pt-2 pb-1">
