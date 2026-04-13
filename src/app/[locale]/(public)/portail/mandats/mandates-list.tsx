@@ -153,6 +153,54 @@ function MandateTimeline({ progress, status, compact }: { progress: number; stat
   );
 }
 
+// ── Barre de progression segmentee par etape ──
+// Chaque segment correspond a une etape du projet
+const STEP_RANGES = [
+  { min: 0, max: 10 },   // Demarrage
+  { min: 11, max: 30 },  // Diagnostic
+  { min: 31, max: 60 },  // Intervention
+  { min: 61, max: 85 },  // Tests
+  { min: 86, max: 100 }, // Livraison
+];
+
+function SteppedProgressBar({ progress, status, late }: { progress: number; status: string; late: boolean }) {
+  const isCompleted = status === "completed";
+  const isPaused = status === "paused";
+
+  return (
+    <div className="flex gap-1">
+      {STEP_RANGES.map((range, i) => {
+        const segmentSpan = range.max - range.min;
+        let fill = 0;
+        if (isCompleted || progress > range.max) {
+          fill = 100;
+        } else if (progress >= range.min) {
+          fill = Math.round(((progress - range.min) / segmentSpan) * 100);
+        }
+
+        const barColor = late
+          ? "bg-red-400"
+          : isCompleted
+            ? "bg-emerald-500"
+            : isPaused
+              ? "bg-slate-300"
+              : "bg-[#0F2D52]";
+
+        return (
+          <div key={i} className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
+            {fill > 0 && (
+              <div
+                className={`h-full rounded-full transition-all ${barColor}`}
+                style={{ width: `${fill}%` }}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Progress bar helpers — couleur par STATUT, tons doux ──
 function statusBarColor(status: string, late: boolean): string {
   if (late) return "bg-red-400";
@@ -430,16 +478,11 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
               <div className="px-5 py-4 border-b">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Progression</span>
-                  <span className={`text-lg font-bold text-[#0F2D52]`}>
+                  <span className="text-lg font-bold text-[#0F2D52]">
                     {selected.progress}%
                   </span>
                 </div>
-                <div className="h-3 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${statusBarColor(selected.status, isLate(selected))} transition-all`}
-                    style={{ width: `${selected.progress}%` }}
-                  />
-                </div>
+                <SteppedProgressBar progress={selected.progress} status={selected.status} late={isLate(selected)} />
               </div>
 
               {/* Info rows */}
