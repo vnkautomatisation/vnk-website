@@ -15,6 +15,25 @@ const getClient = cache(async (clientId: number) =>
   })
 );
 
+const getBadgeCounts = cache(async (clientId: number) => {
+  const [unpaidInvoices, pendingQuotes, pendingContracts, unreadDocs] =
+    await Promise.all([
+      prisma.invoice.count({
+        where: { clientId, status: { in: ["unpaid", "overdue"] } },
+      }),
+      prisma.quote.count({
+        where: { clientId, status: "pending" },
+      }),
+      prisma.contract.count({
+        where: { clientId, status: "pending", clientSignatureData: null },
+      }),
+      prisma.document.count({
+        where: { clientId, isRead: false },
+      }),
+    ]);
+  return { unpaidInvoices, pendingQuotes, pendingContracts, unreadDocs };
+});
+
 export default async function PortalLayout({
   children,
 }: {
@@ -26,7 +45,11 @@ export default async function PortalLayout({
     redirect("/portail/login");
   }
 
-  const client = await getClient(session!.user.clientId!);
+  const clientId = session!.user.clientId!;
+  const [client, badges] = await Promise.all([
+    getClient(clientId),
+    getBadgeCounts(clientId),
+  ]);
 
   return (
     <>
@@ -39,6 +62,7 @@ export default async function PortalLayout({
         <PortalSidebar
           clientName={client?.fullName ?? ""}
           clientCompany={client?.companyName ?? undefined}
+          badges={badges}
         />
         <main className="flex-1 lg:pl-[240px] overflow-y-auto no-scrollbar pb-[64px] lg:pb-0">
           <div className="p-4 sm:p-6 lg:p-8">{children}</div>
