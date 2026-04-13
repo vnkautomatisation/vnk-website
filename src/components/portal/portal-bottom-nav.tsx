@@ -100,7 +100,7 @@ export function PortalBottomNav({ badges }: { badges?: PortalBadges }) {
                     <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500" />
                   )}
                 </div>
-                <span className={cn("text-[10px]", moreActive ? "font-semibold" : "font-medium")}>{item.label}</span>
+                <span className={cn("text-[0.65rem]", moreActive ? "font-semibold" : "font-medium")}>{item.label}</span>
               </button>
             );
           }
@@ -120,7 +120,7 @@ export function PortalBottomNav({ badges }: { badges?: PortalBadges }) {
                 <span className="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#0F2D52]" />
               )}
               <Icon className={cn("h-5 w-5", active && "mt-0.5")} />
-              <span className={cn("text-[10px]", active ? "font-semibold" : "font-medium")}>{item.label}</span>
+              <span className={cn("text-[0.65rem]", active ? "font-semibold" : "font-medium")}>{item.label}</span>
             </Link>
           );
         })}

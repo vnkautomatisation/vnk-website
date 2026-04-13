@@ -321,7 +321,7 @@ export function ChatWidget({
                             {/* Avatar VNK */}
                             {!isClient && (
                               <div className="h-6 w-6 rounded-full bg-[#0F2D52] flex items-center justify-center shrink-0 mb-0.5">
-                                <span className="text-[0.4375rem] font-bold text-white">VNK</span>
+                                <span className="text-[0.5rem] font-bold text-white">VNK</span>
                               </div>
                             )}
                             <div className={cn(
@@ -376,7 +376,7 @@ export function ChatWidget({
                             {/* Avatar client */}
                             {isClient && (
                               <div className="h-6 w-6 rounded-full bg-[#0F2D52]/15 flex items-center justify-center shrink-0 mb-0.5">
-                                <span className="text-[0.4375rem] font-bold text-[#0F2D52]">{initials}</span>
+                                <span className="text-[0.5rem] font-bold text-[#0F2D52]">{initials}</span>
                               </div>
                             )}
                           </div>
