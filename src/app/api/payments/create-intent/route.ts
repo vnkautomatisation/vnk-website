@@ -1,11 +1,9 @@
-// POST /api/payments/create-intent — cree un Stripe Checkout Session pour payer une facture
+// POST /api/payments/create-intent — cree un Stripe PaymentIntent pour payer inline
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createCheckoutSession } from "@/lib/services/stripe";
-import { headers } from "next/headers";
-import { getBaseUrl } from "@/lib/utils";
+import { createPaymentIntent } from "@/lib/services/stripe";
 
 const schema = z.object({
   invoiceId: z.number().int().positive(),
@@ -25,14 +23,13 @@ export async function POST(req: Request) {
 
   const invoice = await prisma.invoice.findUnique({
     where: { id: parsed.data.invoiceId },
-    include: { client: { select: { email: true, fullName: true } } },
+    include: { client: { select: { email: true, fullName: true, companyName: true, address: true, city: true, province: true, postalCode: true } } },
   });
 
   if (!invoice) {
     return NextResponse.json({ error: "Facture introuvable" }, { status: 404 });
   }
 
-  // Client only allowed on their own invoices
   if (session.user.role === "client" && invoice.clientId !== session.user.clientId) {
     return NextResponse.json({ error: "Non autorise" }, { status: 403 });
   }
@@ -42,21 +39,27 @@ export async function POST(req: Request) {
   }
 
   try {
-    const headersList = await headers();
-    const baseUrl = getBaseUrl(headersList);
-
-    const checkoutSession = await createCheckoutSession({
+    const intent = (await createPaymentIntent({
       amount: Number(invoice.amountTtc),
       currency: invoice.currency,
       clientEmail: invoice.client.email,
       invoiceId: invoice.id,
-      invoiceNumber: invoice.invoiceNumber,
       description: `${invoice.invoiceNumber} — ${invoice.title}`,
-      successUrl: `${baseUrl}/portail/factures?paid=${invoice.id}`,
-      cancelUrl: `${baseUrl}/portail/factures`,
-    });
+    })) as any;
 
-    return NextResponse.json({ url: checkoutSession.url });
+    return NextResponse.json({
+      clientSecret: intent.client_secret,
+      paymentIntentId: intent.id,
+      client: {
+        fullName: invoice.client.fullName,
+        email: invoice.client.email,
+        companyName: invoice.client.companyName,
+        address: invoice.client.address,
+        city: invoice.client.city,
+        province: invoice.client.province,
+        postalCode: invoice.client.postalCode,
+      },
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Erreur Stripe" },
