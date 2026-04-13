@@ -337,14 +337,14 @@ export function DataTable<T>({
           <div>
             <Card className="overflow-clip rounded-lg">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-xs sm:text-sm">
                   <thead className="bg-muted/50 border-b sticky top-0 z-[5]">
                     <tr>
                       {columns.map((col) => (
                         <th
                           key={col.key}
                           className={cn(
-                            "text-left px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap",
+                            "text-left px-2 sm:px-4 py-2 sm:py-3 font-semibold text-[0.6rem] sm:text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap",
                             col.hiddenOnMobile && "hidden md:table-cell",
                             col.sortable && "cursor-pointer select-none hover:text-foreground",
                             col.className
@@ -380,7 +380,7 @@ export function DataTable<T>({
                           <td
                             key={col.key}
                             className={cn(
-                              "px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm",
+                              "px-2 sm:px-4 py-1.5 sm:py-3",
                               col.hiddenOnMobile && "hidden md:table-cell",
                               col.className
                             )}
