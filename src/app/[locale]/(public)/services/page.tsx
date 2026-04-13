@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import type { Metadata } from "next";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
 export async function generateMetadata({
   params,
@@ -177,8 +178,8 @@ export default async function ServicesPage({
             const Icon = svc.icon;
             const reverse = i % 2 === 1;
             return (
+              <ScrollReveal key={svc.id} animation={reverse ? "animate-reveal-left" : "animate-reveal-right"} delay={i * 100}>
               <article
-                key={svc.id}
                 id={svc.id}
                 className="scroll-mt-[160px] grid lg:grid-cols-2 gap-12 items-center"
               >
@@ -238,12 +239,14 @@ export default async function ServicesPage({
                   </div>
                 </div>
               </article>
+              </ScrollReveal>
             );
           })}
         </div>
       </section>
 
       {/* ── Tableau comparatif ───────────────────────── */}
+      <ScrollReveal animation="animate-reveal-up">
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl">
           <div className="text-center mb-12">
@@ -297,8 +300,10 @@ export default async function ServicesPage({
           </Card>
         </div>
       </section>
+      </ScrollReveal>
 
       {/* ── CTA final ───────────────────────────────── */}
+      <ScrollReveal animation="animate-reveal-scale">
       <section className="py-24 vnk-gradient text-white">
         <div className="container mx-auto px-4 text-center max-w-3xl">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold">
@@ -320,6 +325,7 @@ export default async function ServicesPage({
           </Button>
         </div>
       </section>
+      </ScrollReveal>
     </>
   );
 }
