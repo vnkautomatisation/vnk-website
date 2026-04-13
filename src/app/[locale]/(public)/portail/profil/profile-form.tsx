@@ -1,32 +1,16 @@
 "use client";
-
-import { useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  UserCircle,
-  Pencil,
-  Save,
-  X,
-  Eye,
-  EyeOff,
-  Lock,
-  ChevronDown,
-  ChevronUp,
-  Building2,
-  Phone,
-  MapPin,
-  Mail,
-  Calendar,
-  Briefcase,
+  User, Building2, MapPin, Mail, Camera, Save, Briefcase,
+  FileText, FileSignature, FolderOpen, Calendar, HardDrive,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
+import { formatDate } from "@/lib/utils";
 
 type ClientData = {
   id: number;
@@ -41,483 +25,199 @@ type ClientData = {
   sector: string;
   technologies: string;
   avatarUrl: string;
+  twoFactorEnabled: boolean;
+  storageQuotaMb: number;
   createdAt: string;
+  lastLogin: string | null;
 };
 
+type Stats = { mandates: number; invoices: number; contracts: number; documents: number };
+
 const PROVINCES = [
-  "QC", "ON", "BC", "AB", "SK", "MB", "NS", "NB", "NL", "PE", "NT", "YT", "NU",
+  { value: "QC", label: "Quebec" }, { value: "ON", label: "Ontario" },
+  { value: "BC", label: "Colombie-Britannique" }, { value: "AB", label: "Alberta" },
+  { value: "MB", label: "Manitoba" }, { value: "SK", label: "Saskatchewan" },
+  { value: "NS", label: "Nouvelle-Ecosse" }, { value: "NB", label: "Nouveau-Brunswick" },
+  { value: "PE", label: "Ile-du-Prince-Edouard" }, { value: "NL", label: "Terre-Neuve" },
 ];
 
 const SECTORS = [
-  "Fabrication industrielle",
-  "Agroalimentaire",
-  "Chimie",
-  "Pharmaceutique",
-  "Pates et papiers",
-  "Energie",
-  "Metallurgie",
-  "Automobile",
-  "Mines",
-  "Transport",
-  "Autres",
+  "Manufacturier", "Agroalimentaire", "Minier", "Energie", "Petrochimie",
+  "Pharmaceutique", "Papetier", "Metallurgie", "Eau / Environnement",
+  "Batiment / CVC", "Autre",
 ];
 
-export function ProfileForm({ client }: { client: ClientData }) {
+export function ProfileForm({ client, stats }: { client: ClientData; stats: Stats }) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(client);
-  const [pending, startTransition] = useTransition();
+  const [saving, setSaving] = useState(false);
 
-  // Password section
-  const [pwOpen, setPwOpen] = useState(false);
-  const [currentPw, setCurrentPw] = useState("");
-  const [newPw, setNewPw] = useState("");
-  const [confirmPw, setConfirmPw] = useState("");
-  const [showPw, setShowPw] = useState(false);
-  const [pwPending, startPwTransition] = useTransition();
+  const initials = form.fullName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+  const update = (key: string, val: string) => setForm((f) => ({ ...f, [key]: val }));
 
-  const initials = client.fullName
-    .split(" ")
-    .map((s) => s[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
-  const handleSave = () => {
-    startTransition(async () => {
+  async function handleSave() {
+    setSaving(true);
+    try {
       const res = await fetch(`/api/clients/${client.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName: form.fullName,
-          companyName: form.companyName,
-          phone: form.phone,
-          address: form.address,
-          city: form.city,
-          province: form.province,
-          postalCode: form.postalCode,
-          sector: form.sector,
-          technologies: form.technologies,
-          avatarUrl: form.avatarUrl,
+          fullName: form.fullName, companyName: form.companyName || null,
+          phone: form.phone || null, address: form.address || null,
+          city: form.city || null, province: form.province,
+          postalCode: form.postalCode || null, sector: form.sector || null,
+          technologies: form.technologies || null, avatarUrl: form.avatarUrl || null,
         }),
       });
-      if (res.ok) {
-        toast.success("Profil mis a jour");
-        setEditing(false);
-        router.refresh();
-      } else {
-        const data = await res.json().catch(() => ({}));
-        toast.error(data.error ?? "Erreur lors de la sauvegarde");
-      }
-    });
-  };
+      if (res.ok) { toast.success("Profil mis a jour"); router.refresh(); }
+      else toast.error("Erreur lors de la sauvegarde");
+    } catch { toast.error("Erreur de connexion"); }
+    finally { setSaving(false); }
+  }
 
-  const handlePasswordChange = () => {
-    if (newPw.length < 8) {
-      toast.error("Le nouveau mot de passe doit faire au moins 8 caracteres");
-      return;
-    }
-    if (newPw !== confirmPw) {
-      toast.error("Les mots de passe ne correspondent pas");
-      return;
-    }
-    startPwTransition(async () => {
-      const res = await fetch("/api/auth/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentPassword: currentPw,
-          newPassword: newPw,
-          confirmPassword: confirmPw,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        toast.success("Mot de passe modifie");
-        setCurrentPw("");
-        setNewPw("");
-        setConfirmPw("");
-        setPwOpen(false);
-      } else {
-        toast.error(data.error ?? "Erreur");
-      }
-    });
-  };
-
-  const handleCancel = () => {
-    setForm(client);
-    setEditing(false);
-  };
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image trop lourde (max 2 Mo)");
-      return;
-    }
+    if (file.size > 2 * 1024 * 1024) { toast.error("Image trop lourde (max 2 Mo)"); return; }
     const reader = new FileReader();
-    reader.onload = () => {
-      setForm((f) => ({ ...f, avatarUrl: reader.result as string }));
-    };
+    reader.onload = () => update("avatarUrl", reader.result as string);
     reader.readAsDataURL(file);
-  };
-
-  const update = (key: keyof ClientData, val: string) =>
-    setForm((f) => ({ ...f, [key]: val }));
+  }
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <UserCircle className="h-6 w-6 text-[#0F2D52]" />
-          <h1 className="text-2xl font-bold">Mon profil</h1>
+    <div className="max-w-3xl mx-auto space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="portal-icon-lg rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
+          <User className="h-5 w-5 text-white" />
         </div>
-        {!editing ? (
-          <Button onClick={() => setEditing(true)} variant="outline" size="sm">
-            <Pencil className="h-4 w-4 mr-1" />
-            Modifier
-          </Button>
-        ) : (
-          <div className="flex gap-2">
-            <Button
-              onClick={handleCancel}
-              variant="outline"
-              size="sm"
-              disabled={pending}
-            >
-              <X className="h-4 w-4 mr-1" />
-              Annuler
-            </Button>
-            <Button onClick={handleSave} size="sm" disabled={pending}>
-              <Save className="h-4 w-4 mr-1" />
-              {pending ? "Sauvegarde..." : "Enregistrer"}
-            </Button>
-          </div>
-        )}
+        <div>
+          <h1 className="portal-title">Profil</h1>
+          <p className="text-sm text-muted-foreground">Vos informations personnelles</p>
+        </div>
       </div>
 
-      {/* Info Card */}
+      {/* ── Avatar + Resume ── */}
       <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Informations personnelles</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Avatar + Name */}
-          <div className="flex items-center gap-5">
-            <div className="relative">
-              <Avatar className="h-20 w-20">
-                {form.avatarUrl ? (
-                  <AvatarImage src={form.avatarUrl} alt={form.fullName} />
-                ) : null}
-                <AvatarFallback className="vnk-gradient text-white text-xl font-bold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              {editing && (
-                <label className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-[#0F2D52] text-white flex items-center justify-center cursor-pointer hover:bg-[#1a3a66] transition-colors">
-                  <Pencil className="h-3 w-3" />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarChange}
-                  />
-                </label>
-              )}
-            </div>
-            <div>
-              {editing ? (
-                <div className="space-y-1">
-                  <Label htmlFor="fullName" className="text-xs">
-                    Nom complet
-                  </Label>
-                  <Input
-                    id="fullName"
-                    value={form.fullName}
-                    onChange={(e) => update("fullName", e.target.value)}
-                    className="h-9"
-                  />
-                </div>
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+            <label className="relative group cursor-pointer shrink-0">
+              <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} />
+              {form.avatarUrl ? (
+                <img src={form.avatarUrl} alt="" className="h-20 w-20 rounded-full object-cover ring-4 ring-[#0F2D52]/10" />
               ) : (
-                <>
-                  <p className="font-semibold text-xl">{client.fullName}</p>
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Mail className="h-3 w-3" />
-                    {client.email}
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Fields grid */}
-          <div className="grid sm:grid-cols-2 gap-5">
-            {/* Entreprise */}
-            <div>
-              <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
-                <Building2 className="h-3 w-3" />
-                Entreprise
-              </Label>
-              {editing ? (
-                <Input
-                  value={form.companyName}
-                  onChange={(e) => update("companyName", e.target.value)}
-                  className="h-9"
-                />
-              ) : (
-                <p className="text-sm font-medium">
-                  {client.companyName || "—"}
-                </p>
-              )}
-            </div>
-
-            {/* Telephone */}
-            <div>
-              <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
-                <Phone className="h-3 w-3" />
-                Telephone
-              </Label>
-              {editing ? (
-                <Input
-                  value={form.phone}
-                  onChange={(e) => update("phone", e.target.value)}
-                  placeholder="418-555-1234"
-                  className="h-9"
-                />
-              ) : (
-                <p className="text-sm font-medium">{client.phone || "—"}</p>
-              )}
-            </div>
-
-            {/* Secteur */}
-            <div>
-              <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
-                <Briefcase className="h-3 w-3" />
-                Secteur
-              </Label>
-              {editing ? (
-                <select
-                  value={form.sector}
-                  onChange={(e) => update("sector", e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-                >
-                  <option value="">Choisir...</option>
-                  {SECTORS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-sm font-medium">{client.sector || "—"}</p>
-              )}
-            </div>
-
-            {/* Adresse */}
-            <div>
-              <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
-                <MapPin className="h-3 w-3" />
-                Adresse
-              </Label>
-              {editing ? (
-                <Input
-                  value={form.address}
-                  onChange={(e) => update("address", e.target.value)}
-                  placeholder="123 rue Principale"
-                  className="h-9"
-                />
-              ) : (
-                <p className="text-sm font-medium">{client.address || "—"}</p>
-              )}
-            </div>
-
-            {/* Ville */}
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1">
-                Ville
-              </Label>
-              {editing ? (
-                <Input
-                  value={form.city}
-                  onChange={(e) => update("city", e.target.value)}
-                  className="h-9"
-                />
-              ) : (
-                <p className="text-sm font-medium">{client.city || "—"}</p>
-              )}
-            </div>
-
-            {/* Province */}
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1">
-                Province
-              </Label>
-              {editing ? (
-                <select
-                  value={form.province}
-                  onChange={(e) => update("province", e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-                >
-                  {PROVINCES.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-sm font-medium">
-                  {client.province || "—"}
-                </p>
-              )}
-            </div>
-
-            {/* Code postal */}
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1">
-                Code postal
-              </Label>
-              {editing ? (
-                <Input
-                  value={form.postalCode}
-                  onChange={(e) => update("postalCode", e.target.value)}
-                  placeholder="G1A 1A1"
-                  className="h-9"
-                />
-              ) : (
-                <p className="text-sm font-medium">
-                  {client.postalCode || "—"}
-                </p>
-              )}
-            </div>
-
-            {/* Technologies */}
-            <div className="sm:col-span-2">
-              <Label className="text-xs text-muted-foreground mb-1">
-                Technologies / PLC
-              </Label>
-              {editing ? (
-                <Input
-                  value={form.technologies}
-                  onChange={(e) => update("technologies", e.target.value)}
-                  placeholder="Siemens S7-1500, TIA Portal, WinCC"
-                  className="h-9"
-                />
-              ) : (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {client.technologies ? (
-                    client.technologies.split(",").map((t) => (
-                      <span
-                        key={t}
-                        className="text-xs px-2 py-0.5 rounded-full bg-[#0F2D52]/10 text-[#0F2D52] font-medium"
-                      >
-                        {t.trim()}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground">—</span>
-                  )}
+                <div className="h-20 w-20 rounded-full bg-[#0F2D52] flex items-center justify-center ring-4 ring-[#0F2D52]/10">
+                  <span className="text-xl font-bold text-white">{initials}</span>
                 </div>
               )}
+              <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera className="h-5 w-5 text-white" />
+              </div>
+            </label>
+            <div className="text-center sm:text-left flex-1 min-w-0">
+              <h2 className="text-lg font-bold">{form.fullName}</h2>
+              <p className="text-sm text-muted-foreground">{form.companyName || "—"}</p>
+              <div className="flex items-center gap-1.5 justify-center sm:justify-start mt-1 text-xs text-muted-foreground">
+                <Mail className="h-3 w-3 shrink-0" />
+                <span className="truncate">{form.email}</span>
+              </div>
             </div>
-          </div>
-
-          <Separator />
-
-          {/* Member since */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            Client depuis{" "}
-            {new Date(client.createdAt).toLocaleDateString("fr-CA", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
+            <div className="grid grid-cols-4 gap-3 text-center shrink-0">
+              {[
+                { icon: Briefcase, val: stats.mandates, label: "Mandats" },
+                { icon: FileText, val: stats.invoices, label: "Factures" },
+                { icon: FileSignature, val: stats.contracts, label: "Contrats" },
+                { icon: FolderOpen, val: stats.documents, label: "Docs" },
+              ].map((s) => (
+                <div key={s.label}>
+                  <p className="text-lg font-bold text-[#0F2D52]">{s.val}</p>
+                  <p className="text-[0.625rem] text-muted-foreground">{s.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Password section */}
+      {/* ── Informations personnelles ── */}
       <Card>
-        <CardContent className="p-0">
-          <button
-            type="button"
-            onClick={() => setPwOpen((v) => !v)}
-            className="w-full flex items-center justify-between p-5 hover:bg-muted/30 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Lock className="h-5 w-5 text-[#0F2D52]" />
-              <span className="font-semibold">Changer le mot de passe</span>
-            </div>
-            {pwOpen ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
-
-          {pwOpen && (
-            <div className="px-5 pb-5 space-y-4 border-t pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPw">Mot de passe actuel</Label>
-                <div className="relative">
-                  <Input
-                    id="currentPw"
-                    type={showPw ? "text" : "password"}
-                    value={currentPw}
-                    onChange={(e) => setCurrentPw(e.target.value)}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPw((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  >
-                    {showPw ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="newPw">Nouveau mot de passe</Label>
-                  <Input
-                    id="newPw"
-                    type="password"
-                    value={newPw}
-                    onChange={(e) => setNewPw(e.target.value)}
-                    placeholder="Min. 8 caracteres"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPw">Confirmer</Label>
-                  <Input
-                    id="confirmPw"
-                    type="password"
-                    value={confirmPw}
-                    onChange={(e) => setConfirmPw(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <Button
-                onClick={handlePasswordChange}
-                disabled={pwPending || !currentPw || !newPw || !confirmPw}
-              >
-                <Lock className="h-4 w-4 mr-1" />
-                {pwPending ? "Modification..." : "Modifier le mot de passe"}
-              </Button>
-            </div>
-          )}
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <User className="h-4 w-4 text-[#0F2D52]" />
+            Informations personnelles
+          </h3>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div><Label className="text-xs">Nom complet</Label><Input value={form.fullName} onChange={(e) => update("fullName", e.target.value)} /></div>
+            <div><Label className="text-xs">Courriel</Label><Input value={form.email} disabled className="bg-muted" /></div>
+            <div><Label className="text-xs">Telephone</Label><Input value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="(514) 000-0000" /></div>
+            <div><Label className="text-xs">Entreprise</Label><Input value={form.companyName} onChange={(e) => update("companyName", e.target.value)} /></div>
+          </div>
         </CardContent>
       </Card>
+
+      {/* ── Adresse ── */}
+      <Card>
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-[#0F2D52]" />
+            Adresse
+          </h3>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="sm:col-span-2"><Label className="text-xs">Adresse</Label><Input value={form.address} onChange={(e) => update("address", e.target.value)} placeholder="123 rue Example" /></div>
+            <div><Label className="text-xs">Ville</Label><Input value={form.city} onChange={(e) => update("city", e.target.value)} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Province</Label>
+                <select value={form.province} onChange={(e) => update("province", e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  {PROVINCES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </select>
+              </div>
+              <div><Label className="text-xs">Code postal</Label><Input value={form.postalCode} onChange={(e) => update("postalCode", e.target.value)} placeholder="G1A 1A1" /></div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Profil industriel ── */}
+      <Card>
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-[#0F2D52]" />
+            Profil industriel
+          </h3>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Secteur</Label>
+              <select value={form.sector} onChange={(e) => update("sector", e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+                <option value="">Selectionnez...</option>
+                {SECTORS.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div><Label className="text-xs">Technologies / PLC</Label><Input value={form.technologies} onChange={(e) => update("technologies", e.target.value)} placeholder="Siemens, Allen-Bradley..." /></div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Compte ── */}
+      <Card>
+        <CardContent className="p-4 sm:p-6">
+          <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+            <Calendar className="h-4 w-4 text-[#0F2D52]" />
+            Compte
+          </h3>
+          <div className="grid sm:grid-cols-3 gap-3 text-sm">
+            <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><div><p className="text-xs text-muted-foreground">Membre depuis</p><p className="font-medium">{formatDate(client.createdAt)}</p></div></div>
+            <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><div><p className="text-xs text-muted-foreground">Derniere connexion</p><p className="font-medium">{client.lastLogin ? formatDate(client.lastLogin) : "—"}</p></div></div>
+            <div className="flex items-center gap-2"><HardDrive className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><div><p className="text-xs text-muted-foreground">Stockage</p><p className="font-medium">{(client.storageQuotaMb / 1024).toFixed(1)} Go</p></div></div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end pb-4">
+        <Button onClick={handleSave} disabled={saving} className="bg-[#0F2D52] hover:bg-[#1a3a66]">
+          <Save className="h-4 w-4 mr-1.5" />
+          {saving ? "Enregistrement..." : "Enregistrer"}
+        </Button>
+      </div>
     </div>
   );
 }
