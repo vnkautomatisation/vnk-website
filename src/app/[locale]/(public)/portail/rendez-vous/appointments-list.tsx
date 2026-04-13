@@ -201,7 +201,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-xl border bg-[#0F2D52]/5 p-3">
           <p className="text-2xl font-bold">{kpis.total}</p>
           <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total</p>

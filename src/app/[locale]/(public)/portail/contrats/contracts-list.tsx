@@ -265,7 +265,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
                 <p className="text-sm text-muted-foreground">Signez et consultez vos contrats</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
               <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
