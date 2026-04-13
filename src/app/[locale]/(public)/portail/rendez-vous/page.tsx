@@ -4,13 +4,24 @@ import { AppointmentsList } from "./appointments-list";
 
 export default async function PortalAppointmentsPage() {
   const session = await auth();
+  const clientId = session!.user.clientId!;
+  const now = new Date();
+
+  // Auto-complete les RDV passes encore "confirmed"
+  await prisma.appointment.updateMany({
+    where: {
+      clientId,
+      status: "confirmed",
+      appointmentDate: { lt: now },
+    },
+    data: { status: "completed" },
+  });
 
   const appointments = await prisma.appointment.findMany({
-    where: { clientId: session!.user.clientId! },
+    where: { clientId },
     orderBy: { appointmentDate: "desc" },
   });
 
-  const now = new Date();
   const serialized = appointments.map((a) => ({
     id: a.id,
     subject: a.subject,
