@@ -134,7 +134,7 @@ export default async function PortalDashboard() {
   const firstName = client?.fullName.split(" ")[0] ?? "";
 
   return (
-    <div className="flex flex-col h-[calc(100vh-72px-56px)] lg:h-[calc(100vh-72px)] gap-3">
+    <div className="flex flex-col h-full gap-3">
       {/* ── Header : Banner + KPIs + actions ── */}
       <div className="shrink-0 space-y-3">
 
