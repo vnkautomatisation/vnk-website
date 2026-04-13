@@ -95,10 +95,13 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
       accessor: (r) => (
         <div>
           <div className="flex items-center gap-2">
-            {!r.isRead && (
-              <span className="h-2 w-2 rounded-full bg-sky-500 shrink-0 animate-pulse" />
-            )}
             <span className={!r.isRead ? "font-semibold" : "font-medium"}>{r.title}</span>
+            {!r.isRead && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-200 shrink-0">
+                <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse" />
+                Non lu
+              </span>
+            )}
           </div>
           {r.mandateTitle && (
             <p className="text-xs text-muted-foreground mt-0.5">Mandat : {r.mandateTitle}</p>
@@ -165,17 +168,15 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
                 </span>
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  {!doc.isRead && (
-                    <span className="relative flex h-2.5 w-2.5 shrink-0">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-500" />
-                    </span>
-                  )}
-                  <p className={`text-sm truncate ${!doc.isRead ? "font-semibold" : "font-medium"}`}>
-                    {doc.title}
-                  </p>
-                </div>
+                <p className={`text-sm truncate ${!doc.isRead ? "font-semibold" : "font-medium"}`}>
+                  {doc.title}
+                </p>
+                {!doc.isRead && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-200 mt-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse" />
+                    Non lu
+                  </span>
+                )}
                 {doc.mandateTitle && (
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">
                     Mandat : {doc.mandateTitle}
