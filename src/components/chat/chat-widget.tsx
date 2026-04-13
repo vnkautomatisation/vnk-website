@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { MessageCircle, X, Send, Paperclip, Maximize2, Minimize2, Check, CheckCheck, Smile } from "lucide-react";
+import { MessageCircle, X, Send, Paperclip, Maximize2, Minimize2, Check, CheckCheck, Smile, FileText, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Message = {
@@ -191,26 +191,64 @@ export function ChatWidget({
                       <span className="text-[10px] text-muted-foreground bg-white/80 dark:bg-muted px-3 py-0.5 rounded-full shadow-sm">{group.date}</span>
                     </div>
                     <div className="space-y-1.5">
-                      {group.msgs.map((msg) => (
-                        <div key={msg.id} className={cn("flex", msg.sender === "client" ? "justify-end" : "justify-start")}>
-                          <div className={cn(
-                            "max-w-[80%] px-3 py-1.5 text-sm shadow-sm",
-                            msg.sender === "client"
-                              ? "bg-[#d9fdd3] dark:bg-emerald-900/40 rounded-2xl rounded-tr-md text-foreground"
-                              : "bg-white dark:bg-card rounded-2xl rounded-tl-md"
-                          )}>
-                            <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
-                            <div className={cn("flex items-center gap-1 mt-0.5", msg.sender === "client" ? "justify-end" : "")}>
-                              <time className="text-[9px] text-muted-foreground">
-                                {new Date(msg.createdAt).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
-                              </time>
-                              {msg.sender === "client" && (
-                                msg.isRead ? <CheckCheck className="h-3 w-3 text-blue-500" /> : <Check className="h-3 w-3 text-muted-foreground" />
+                      {group.msgs.map((msg) => {
+                        const isClient = msg.sender === "client";
+                        const fileMatch = msg.content.match(/^\[Fichier: (.+)\]$/);
+                        const isFile = !!fileMatch;
+                        const fileName = fileMatch?.[1] ?? "";
+                        const isPdf = fileName.toLowerCase().endsWith(".pdf");
+
+                        return (
+                          <div key={msg.id} className={cn("flex items-end gap-1.5", isClient ? "justify-end" : "justify-start")}>
+                            {/* Avatar VNK */}
+                            {!isClient && (
+                              <div className="h-6 w-6 rounded-full bg-[#0F2D52] flex items-center justify-center shrink-0 mb-0.5">
+                                <span className="text-[7px] font-bold text-white">VNK</span>
+                              </div>
+                            )}
+                            <div className={cn(
+                              "max-w-[75%] px-3 py-1.5 text-sm shadow-sm",
+                              isClient
+                                ? "bg-[#d9fdd3] dark:bg-emerald-900/40 rounded-2xl rounded-tr-md text-foreground"
+                                : "bg-white dark:bg-card rounded-2xl rounded-tl-md"
+                            )}>
+                              {isFile ? (
+                                <a
+                                  href={isPdf ? `/api/invoices/1/pdf` : "#"}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center gap-2 py-1 hover:opacity-80 transition-opacity"
+                                >
+                                  <div className="h-9 w-9 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+                                    <FileText className="h-4 w-4 text-red-600" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-medium truncate">{fileName}</p>
+                                    <p className="text-[10px] text-muted-foreground">PDF</p>
+                                  </div>
+                                  <Download className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                </a>
+                              ) : (
+                                <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
                               )}
+                              <div className={cn("flex items-center gap-1 mt-0.5", isClient ? "justify-end" : "")}>
+                                <time className="text-[9px] text-muted-foreground">
+                                  {new Date(msg.createdAt).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
+                                </time>
+                                {isClient && (
+                                  msg.isRead ? <CheckCheck className="h-3 w-3 text-blue-500" /> : <Check className="h-3 w-3 text-muted-foreground" />
+                                )}
+                              </div>
                             </div>
+                            {/* Avatar client */}
+                            {isClient && (
+                              <div className="h-6 w-6 rounded-full bg-[#0F2D52]/15 flex items-center justify-center shrink-0 mb-0.5">
+                                <span className="text-[7px] font-bold text-[#0F2D52]">{initials}</span>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))
