@@ -44,8 +44,8 @@ export function PublicNav() {
         "fixed top-0 inset-x-0 z-30 transition-all duration-300",
         // VNK navy background — toujours bleu comme l'ancien site
         scrolled
-          ? "bg-[#0F2D52]/95 backdrop-blur-md shadow-lg"
-          : "bg-[#0F2D52]/80 backdrop-blur-sm"
+          ? "bg-[#0F2D52] shadow-lg"
+          : "bg-[#0F2D52]/90 backdrop-blur-md"
       )}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between">
@@ -97,11 +97,11 @@ export function PublicNav() {
           {/* Portail CTA */}
           <Button
             asChild
-            className="bg-white text-[#0F2D52] hover:bg-white/90 font-semibold"
+            size="sm"
+            className="bg-white text-[#0F2D52] hover:bg-white/90 font-semibold px-4"
           >
             <Link href="/portail">
               {t("portal")}
-              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </Button>
 
@@ -186,7 +186,6 @@ export function PublicNav() {
               >
                 <Link href="/portail">
                   {t("portal")}
-                  <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             </nav>
