@@ -1,6 +1,7 @@
-// Portail client layout — sidebar + contenu scrollable (nav publique fournie par parent)
+// Portail client layout — sidebar + contenu scrollable
 export const dynamic = "force-dynamic";
 
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { auth } from "@/lib/auth";
@@ -64,7 +65,9 @@ export default async function PortalLayout({
           badges={badges}
         />
         <main className="flex-1 lg:pl-[240px] overflow-y-auto overflow-x-hidden no-scrollbar pb-[56px] sm:pb-[64px] lg:pb-0">
-          <div className="p-3 sm:p-4 lg:p-8 max-w-full">{children}</div>
+          <div className="p-3 sm:p-4 lg:p-8 max-w-full">
+            <Suspense>{children}</Suspense>
+          </div>
         </main>
       </div>
       <PortalBottomNav badges={badges} />
