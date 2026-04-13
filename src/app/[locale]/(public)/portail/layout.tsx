@@ -29,17 +29,17 @@ export default async function PortalLayout({
   const client = await getClient(session!.user.clientId!);
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="pb-[64px] lg:pb-0">
+    <div className="h-[calc(100vh-70px)] overflow-hidden">
+      <div className="flex h-full">
         <PortalSidebar
           clientName={client?.fullName ?? ""}
           clientCompany={client?.companyName ?? undefined}
         />
-        <main className="lg:pl-[240px]">
+        <main className="flex-1 overflow-y-auto lg:pl-[240px] pb-[64px] lg:pb-0">
           <div className="p-4 sm:p-6 lg:p-8">{children}</div>
         </main>
-        <PortalBottomNav />
       </div>
+      <PortalBottomNav />
     </div>
   );
 }
