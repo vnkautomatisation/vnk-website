@@ -238,57 +238,57 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
         stickyHeader={
           <>
             <div className="flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
+              <div className="portal-icon-lg rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
                 <Receipt className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold">Factures</h1>
+                <h1 className="portal-title">Factures</h1>
                 <p className="text-sm text-muted-foreground">Suivi de vos factures et paiements</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-3">
-              <div className="rounded-xl border bg-[#0F2D52]/5 p-2.5 sm:p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 portal-kpi-grid mb-3">
+              <div className="rounded-xl border bg-[#0F2D52]/5 portal-kpi-card">
                 <div className="flex items-center gap-3">
                   <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
                     <FileText className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total factures</p>
-                    <p className="text-lg sm:text-2xl font-bold">{invoiceKpis.totalCount}</p>
+                    <p className="portal-kpi-label text-muted-foreground">Total factures</p>
+                    <p className="portal-kpi-number">{invoiceKpis.totalCount}</p>
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl border bg-amber-50/60 p-2.5 sm:p-4">
+              <div className="rounded-xl border bg-amber-50/60 portal-kpi-card">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
                     <Clock className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-600">A payer</p>
-                    <p className="text-lg sm:text-2xl font-bold">{invoiceKpis.aPayerCount}</p>
+                    <p className="portal-kpi-label text-amber-600">A payer</p>
+                    <p className="portal-kpi-number">{invoiceKpis.aPayerCount}</p>
                     <p className="text-xs text-muted-foreground">{formatCurrency(invoiceKpis.aPayerSum)}</p>
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl border bg-red-50/60 p-2.5 sm:p-4">
+              <div className="rounded-xl border bg-red-50/60 portal-kpi-card">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-red-100 flex items-center justify-center">
                     <AlertTriangle className="h-4 w-4 text-red-600" />
                   </div>
                   <div>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-red-600">En retard</p>
-                    <p className="text-lg sm:text-2xl font-bold">{invoiceKpis.enRetardCount}</p>
+                    <p className="portal-kpi-label text-red-600">En retard</p>
+                    <p className="portal-kpi-number">{invoiceKpis.enRetardCount}</p>
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl border bg-emerald-50/60 p-2.5 sm:p-4">
+              <div className="rounded-xl border bg-emerald-50/60 portal-kpi-card">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
                     <CheckCircle className="h-4 w-4 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Payees</p>
-                    <p className="text-lg sm:text-2xl font-bold">{invoiceKpis.payeesCount}</p>
+                    <p className="portal-kpi-label text-emerald-600">Payees</p>
+                    <p className="portal-kpi-number">{invoiceKpis.payeesCount}</p>
                   </div>
                 </div>
               </div>
