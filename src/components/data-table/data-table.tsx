@@ -216,8 +216,8 @@ export function DataTable<T>({
 
   return (
     <div className="space-y-4">
-      {/* ── Toolbar ────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+      {/* ── Toolbar (sticky) ────────────────────────── */}
+      <div className="sticky top-[70px] z-10 bg-muted/30 backdrop-blur-sm pb-3 -mx-1 px-1 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex flex-1 gap-2 items-center w-full sm:w-auto">
           {/* Search */}
           <div className="relative flex-1 max-w-sm">

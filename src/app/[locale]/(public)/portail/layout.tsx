@@ -27,14 +27,14 @@ export default async function PortalLayout({
   const client = await getClient(session!.user.clientId!);
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-muted/30 no-scrollbar">
       <div className="pb-[64px] lg:pb-0">
         <PortalSidebar
           clientName={client?.fullName ?? ""}
           clientCompany={client?.companyName ?? undefined}
         />
         <main className="lg:pl-[240px]">
-          <div className="p-4 sm:p-6 lg:p-8">{children}</div>
+          <div className="p-4 sm:p-6 lg:p-8 no-scrollbar">{children}</div>
         </main>
         <PortalBottomNav />
       </div>
