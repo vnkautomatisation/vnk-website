@@ -9,14 +9,15 @@ import { logAudit } from "@/lib/audit";
 const updateSchema = z.object({
   fullName: z.string().optional(),
   email: z.string().email().optional(),
-  companyName: z.string().optional(),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
+  companyName: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
   province: z.string().optional(),
-  postalCode: z.string().optional(),
-  sector: z.string().optional(),
-  technologies: z.string().optional(),
+  postalCode: z.string().nullable().optional(),
+  sector: z.string().nullable().optional(),
+  technologies: z.string().nullable().optional(),
+  avatarUrl: z.string().nullable().optional(),
   internalNotes: z.string().optional(),
   isActive: z.boolean().optional(),
   archived: z.boolean().optional(),
@@ -56,29 +57,43 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session?.user) {
+    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
   }
 
   const { id } = await params;
+  const clientId = Number(id);
+
+  // Client peut modifier uniquement son propre profil
+  if (session.user.role === "client" && session.user.clientId !== clientId) {
+    return NextResponse.json({ error: "Non autorise" }, { status: 403 });
+  }
+
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Données invalides" }, { status: 400 });
+    return NextResponse.json({ error: "Donnees invalides" }, { status: 400 });
   }
 
+  // Client ne peut pas changer isActive, archived, internalNotes
+  const data = session.user.role === "client"
+    ? (({ isActive, archived, internalNotes, ...rest }) => rest)(parsed.data as Record<string, unknown>)
+    : parsed.data;
+
   const client = await prisma.client.update({
-    where: { id: Number(id) },
-    data: parsed.data,
+    where: { id: clientId },
+    data,
   });
 
-  await logAudit({
-    adminId: session.user.adminId,
-    action: "update",
-    entityType: "clients",
-    entityId: client.id,
-    changes: parsed.data,
-  });
+  if (session.user.role === "admin") {
+    await logAudit({
+      adminId: session.user.adminId,
+      action: "update",
+      entityType: "clients",
+      entityId: client.id,
+      changes: parsed.data,
+    });
+  }
 
   return NextResponse.json({ success: true, client });
 }
