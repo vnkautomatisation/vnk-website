@@ -27,8 +27,22 @@ export function PortalLoginForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     startTransition(async () => {
-      // Step 1 : si pas encore en mode 2FA, verifier d'abord si 2FA requis
+      // Si on n'a pas encore verifie la 2FA
       if (!needs2FA) {
+        // D'abord essayer le signIn sans code 2FA
+        const result = await signIn("client-credentials", {
+          email,
+          password,
+          twoFactorCode: "",
+          redirect: false,
+        });
+
+        if (result?.ok) {
+          router.push(searchParams.get("redirect") ?? "/portail");
+          return;
+        }
+
+        // Si echec, verifier si c'est parce que 2FA est requis
         try {
           const check = await fetch("/api/auth/check-2fa", {
             method: "POST",
@@ -36,40 +50,31 @@ export function PortalLoginForm() {
             body: JSON.stringify({ email, password }),
           });
           const data = await check.json();
-          if (!data.valid) {
-            toast.error("Identifiants invalides");
-            return;
-          }
-          if (data.requires2FA) {
+          if (data.valid && data.requires2FA) {
             setNeeds2FA(true);
             return;
           }
-        } catch {
-          toast.error("Erreur de connexion");
-          return;
-        }
-      }
+        } catch {}
 
-      // Step 2 : signIn avec ou sans code 2FA
-      const result = await signIn("client-credentials", {
-        email,
-        password,
-        twoFactorCode: needs2FA ? twoFactorCode : "",
-        redirect: false,
-      });
-
-      if (result?.error) {
-        if (needs2FA) {
-          toast.error("Code 2FA incorrect");
-          setTwoFactorCode("");
-        } else {
-          toast.error("Identifiants invalides");
-        }
+        toast.error("Identifiants invalides");
         return;
       }
 
-      const redirectTo = searchParams.get("redirect") ?? "/portail";
-      router.push(redirectTo);
+      // Step 2 : signIn avec code 2FA
+      const result = await signIn("client-credentials", {
+        email,
+        password,
+        twoFactorCode,
+        redirect: false,
+      });
+
+      if (result?.ok) {
+        router.push(searchParams.get("redirect") ?? "/portail");
+        return;
+      }
+
+      toast.error("Code 2FA incorrect");
+      setTwoFactorCode("");
     });
   };
 
