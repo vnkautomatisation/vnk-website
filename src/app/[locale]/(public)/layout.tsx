@@ -1,6 +1,5 @@
-// Public site layout — navbar + footer
+// Public layout — navbar only (footer added by sub-groups)
 import { PublicNav } from "@/components/public/public-nav";
-import { PublicFooter } from "@/components/public/public-footer";
 
 export default function PublicLayout({
   children,
@@ -11,7 +10,6 @@ export default function PublicLayout({
     <>
       <PublicNav />
       <main className="pt-[70px]">{children}</main>
-      <PublicFooter />
     </>
   );
 }

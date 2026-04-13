@@ -23,31 +23,28 @@ export default function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── /portail/* : pas de prefixe locale, auth requise (sauf login) ──
-  if (pathname.startsWith("/portail")) {
-    if (!pathname.startsWith("/portail/login") && !sessionCookie) {
+  // ── /portail/* : auth check PUIS passer au intl middleware ──
+  if (pathname.startsWith("/portail") || pathname.match(/^\/(fr|en)\/portail/)) {
+    if (!pathname.includes("/portail/login") && !sessionCookie) {
       const url = request.nextUrl.clone();
       url.pathname = "/portail/login";
       url.searchParams.set("redirect", pathname);
       return NextResponse.redirect(url);
     }
-    return NextResponse.next();
+    // Passe au intl middleware pour resoudre la locale
+    return intlMiddleware(request);
   }
 
-  // ── Site public : next-intl middleware (FR sans prefixe, EN avec /en) ──
+  // ── Site public : next-intl middleware ──
   return intlMiddleware(request);
 }
 
 export const config = {
-  // Match uniquement les routes qui en ont besoin — skip fichiers statiques, API, images
   matcher: [
-    // Public pages (intl)
     "/",
     "/(fr|en)/:path*",
-    // Portal + Admin (auth check)
     "/portail/:path*",
     "/admin/:path*",
-    // Public pages without locale prefix
     "/services",
     "/a-propos",
     "/contact",
