@@ -147,14 +147,12 @@ function SidebarContent({
             {count > 0 && (
               <span
                 className={cn(
-                  "min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0",
+                  "h-2.5 w-2.5 rounded-full shrink-0",
                   active
-                    ? "bg-white/20 text-white"
-                    : "bg-red-500 text-white"
+                    ? "bg-white/70"
+                    : "bg-red-500"
                 )}
-              >
-                {count}
-              </span>
+              />
             )}
           </NextLink>
         );
