@@ -53,19 +53,23 @@ export default async function PortalLayout({
 
   return (
     <>
-      {/* Force le parent (main du layout public) a ne pas scroller */}
+      {/* Cacher la nav publique sur mobile dans le portail */}
       <style>{`
         body, html { overflow: hidden !important; height: 100vh !important; }
+        @media (max-width: 1023px) {
+          header { display: none !important; }
+          .pt-\[70px\] { padding-top: 0 !important; }
+        }
       `}</style>
 
-      <div className="fixed inset-0 top-[70px] flex">
+      <div className="fixed inset-0 top-0 lg:top-[70px] flex">
         <PortalSidebar
           clientName={client?.fullName ?? ""}
           clientCompany={client?.companyName ?? undefined}
           badges={badges}
         />
         <main className="flex-1 lg:pl-[240px] overflow-y-auto overflow-x-hidden no-scrollbar pb-[64px] lg:pb-0">
-          <div className="p-4 sm:p-6 lg:p-8 max-w-full">{children}</div>
+          <div className="p-3 sm:p-4 lg:p-8 max-w-full">{children}</div>
         </main>
       </div>
       <PortalBottomNav badges={badges} />

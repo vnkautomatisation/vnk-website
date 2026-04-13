@@ -257,56 +257,56 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
         stickyHeader={
           <>
             <div className="flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
+              <div className="portal-icon-lg rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
                 <FileSignature className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold">Contrats</h1>
+                <h1 className="portal-title">Contrats</h1>
                 <p className="text-sm text-muted-foreground">Signez et consultez vos contrats</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-3">
-              <div className="rounded-xl border bg-[#0F2D52]/5 p-2.5 sm:p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 portal-kpi-grid mb-3">
+              <div className="rounded-xl border bg-[#0F2D52]/5 portal-kpi-card">
                 <div className="flex items-center gap-3">
                   <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
                     <ClipboardList className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total contrats</p>
-                    <p className="text-lg sm:text-2xl font-bold">{contractKpis.total}</p>
+                    <p className="portal-kpi-label text-muted-foreground">Total contrats</p>
+                    <p className="portal-kpi-number">{contractKpis.total}</p>
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl border bg-amber-50/60 p-2.5 sm:p-4">
+              <div className="rounded-xl border bg-amber-50/60 portal-kpi-card">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
                     <PenLine className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-600">A signer</p>
-                    <p className="text-lg sm:text-2xl font-bold">{contractKpis.aSigner}</p>
+                    <p className="portal-kpi-label text-amber-600">A signer</p>
+                    <p className="portal-kpi-number">{contractKpis.aSigner}</p>
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl border bg-emerald-50/60 p-2.5 sm:p-4">
+              <div className="rounded-xl border bg-emerald-50/60 portal-kpi-card">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
                     <CheckCircle className="h-4 w-4 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Signes</p>
-                    <p className="text-lg sm:text-2xl font-bold">{contractKpis.signes}</p>
+                    <p className="portal-kpi-label text-emerald-600">Signes</p>
+                    <p className="portal-kpi-number">{contractKpis.signes}</p>
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl border bg-[#0F2D52]/5 p-2.5 sm:p-4">
+              <div className="rounded-xl border bg-[#0F2D52]/5 portal-kpi-card">
                 <div className="flex items-center gap-3">
                   <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
                     <DollarSign className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Montant total</p>
-                    <p className="text-lg sm:text-2xl font-bold">{formatCurrency(contractKpis.montantTotal)}</p>
+                    <p className="portal-kpi-label text-muted-foreground">Montant total</p>
+                    <p className="portal-kpi-number">{formatCurrency(contractKpis.montantTotal)}</p>
                   </div>
                 </div>
               </div>

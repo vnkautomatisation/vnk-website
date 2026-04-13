@@ -185,11 +185,11 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
       {/* ── Header + KPIs ── */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg shrink-0">
+          <div className="portal-icon-lg rounded-xl vnk-gradient flex items-center justify-center shadow-lg shrink-0">
             <Calendar className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold">Rendez-vous</h1>
+            <h1 className="portal-title">Rendez-vous</h1>
             <p className="text-sm text-muted-foreground hidden sm:block">Planifiez et gerez vos rendez-vous</p>
           </div>
         </div>
@@ -201,22 +201,22 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 portal-kpi-grid">
         <div className="rounded-xl border bg-[#0F2D52]/5 p-3">
-          <p className="text-lg sm:text-2xl font-bold">{kpis.total}</p>
-          <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total</p>
+          <p className="portal-kpi-number">{kpis.total}</p>
+          <p className="portal-kpi-label text-muted-foreground">Total</p>
         </div>
         <div className="rounded-xl border bg-emerald-50/60 p-3">
-          <p className="text-lg sm:text-2xl font-bold">{kpis.upcoming}</p>
-          <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">A venir</p>
+          <p className="portal-kpi-number">{kpis.upcoming}</p>
+          <p className="portal-kpi-label text-emerald-600">A venir</p>
         </div>
         <div className="rounded-xl border bg-[#0F2D52]/5 p-3">
-          <p className="text-lg sm:text-2xl font-bold">{kpis.past}</p>
-          <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Passes</p>
+          <p className="portal-kpi-number">{kpis.past}</p>
+          <p className="portal-kpi-label text-muted-foreground">Passes</p>
         </div>
         <div className="rounded-xl border bg-[#0F2D52]/5 p-3">
-          <p className="text-lg sm:text-2xl font-bold">{kpis.withLink}</p>
-          <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Avec lien</p>
+          <p className="portal-kpi-number">{kpis.withLink}</p>
+          <p className="portal-kpi-label text-muted-foreground">Avec lien</p>
         </div>
       </div>
 
