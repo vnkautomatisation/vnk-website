@@ -64,15 +64,17 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
   const [detail, setDetail] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Tri : a venir d'abord (prochain en haut), puis passes (recent en haut)
+  // Tri : a venir (prochain en haut), passes (recent en haut), annules en dernier
   const sorted = useMemo(() => {
-    const upcoming = appointments.filter((a) => a.isUpcoming).sort(
+    const active = appointments.filter((a) => a.status !== "cancelled");
+    const cancelled = appointments.filter((a) => a.status === "cancelled");
+    const upcoming = active.filter((a) => a.isUpcoming).sort(
       (a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime()
     );
-    const past = appointments.filter((a) => !a.isUpcoming).sort(
+    const past = active.filter((a) => !a.isUpcoming).sort(
       (a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime()
     );
-    return [...upcoming, ...past];
+    return [...upcoming, ...past, ...cancelled];
   }, [appointments]);
 
   const kpis = useMemo(() => ({
