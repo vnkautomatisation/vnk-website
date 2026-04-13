@@ -135,8 +135,8 @@ export default async function PortalDashboard() {
 
   return (
     <div className="space-y-4">
-      {/* ── Banner + KPIs + actions ── */}
-      <div className="space-y-4">
+      {/* ── Banner + KPIs + actions (sticky desktop) ── */}
+      <div className="lg:sticky lg:top-0 z-10 bg-background lg:-mx-8 lg:px-8 lg:pt-4 lg:pb-3 space-y-4 overflow-hidden">
 
       {/* ── Welcome Banner ───────────────────────────── */}
       <div className="relative overflow-hidden rounded-xl sm:rounded-2xl vnk-gradient p-4 sm:p-6 lg:p-8 text-white">
