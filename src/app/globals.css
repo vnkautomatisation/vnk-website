@@ -97,8 +97,13 @@
     @apply border-border;
   }
   html {
-    /* Fluid root: 12.5px a 320px → 16px a 1280px (ratio ~0.78x a ~1x) */
-    font-size: clamp(12.5px, 10px + 0.5vw, 16px);
+    font-size: 16px;
+  }
+  /* Fluid scaling seulement sous lg (1024px) */
+  @media (max-width: 1023px) {
+    html {
+      font-size: clamp(12.5px, 10px + 0.5vw, 16px);
+    }
   }
   html, body {
     @apply bg-background text-foreground antialiased;
