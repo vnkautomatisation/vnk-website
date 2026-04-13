@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PortalSidebar } from "@/components/portal/portal-sidebar";
 import { PortalBottomNav } from "@/components/portal/portal-bottom-nav";
+import { PortalUserMenu } from "@/components/portal/portal-user-menu";
 import { ChatWidget } from "@/components/chat/chat-widget";
 
 const getClient = cache(async (clientId: number) =>
@@ -58,6 +59,14 @@ export default async function PortalLayout({
       <style>{`
         body, html { overflow: hidden !important; height: 100vh !important; }
       `}</style>
+
+      {/* Avatar utilisateur dans la nav */}
+      <div className="fixed top-0 right-16 lg:right-20 z-40 h-[72px] flex items-center">
+        <PortalUserMenu
+          name={client?.fullName ?? ""}
+          initials={(client?.fullName ?? "C").split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)}
+        />
+      </div>
 
       <div className="fixed inset-0 top-[72px] flex">
         <PortalSidebar

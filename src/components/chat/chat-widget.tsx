@@ -171,7 +171,7 @@ export function ChatWidget({
       {open && (
         <>
           <div
-            className="lg:hidden fixed inset-0 bottom-14 z-40 bg-black/40"
+            className="sm:hidden fixed inset-0 bottom-14 z-40 bg-black/40"
             onClick={() => setOpen(false)}
           />
           <div
@@ -184,7 +184,7 @@ export function ChatWidget({
                 ? "inset-4 lg:inset-8 rounded-2xl bottom-[70px] lg:bottom-8"
                 : cn(
                     "lg:bottom-24 lg:right-6 lg:w-[400px] lg:h-[600px] lg:rounded-2xl",
-                    "bottom-14 left-0 right-0 rounded-t-2xl lg:rounded-2xl h-[70vh] max-h-[600px]"
+                    "bottom-14 right-0 w-full sm:w-[400px] sm:right-3 rounded-t-2xl sm:rounded-2xl h-[70vh] max-h-[600px]"
                   )
             )}
           >
