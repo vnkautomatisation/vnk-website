@@ -6,7 +6,7 @@ export default function Loading() {
       {/* KPI strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-xl border p-4 space-y-2">
+          <div key={i} className="rounded-xl border p-2.5 sm:p-4 space-y-2">
             <div className="h-4 w-20 rounded bg-muted" />
             <div className="h-7 w-12 rounded bg-muted" />
           </div>

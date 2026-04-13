@@ -178,7 +178,7 @@ export default async function PortalDashboard() {
       </div>
 
       {/* ── KPI Cards ────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
         {kpis.map((k) => {
           const Icon = k.icon;
           return (
@@ -192,7 +192,7 @@ export default async function PortalDashboard() {
                     <p className={`text-[11px] uppercase tracking-wider font-semibold ${k.labelColor}`}>
                       {k.label}
                     </p>
-                    <p className="text-2xl font-bold">{k.value}</p>
+                    <p className="text-lg sm:text-2xl font-bold">{k.value}</p>
                   </div>
                 </div>
               </div>

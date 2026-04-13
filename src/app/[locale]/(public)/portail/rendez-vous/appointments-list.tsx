@@ -185,11 +185,11 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
       {/* ── Header + KPIs ── */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg shrink-0">
+          <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg shrink-0">
             <Calendar className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Rendez-vous</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">Rendez-vous</h1>
             <p className="text-sm text-muted-foreground hidden sm:block">Planifiez et gerez vos rendez-vous</p>
           </div>
         </div>
@@ -201,21 +201,21 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
         <div className="rounded-xl border bg-[#0F2D52]/5 p-3">
-          <p className="text-2xl font-bold">{kpis.total}</p>
+          <p className="text-lg sm:text-2xl font-bold">{kpis.total}</p>
           <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total</p>
         </div>
         <div className="rounded-xl border bg-emerald-50/60 p-3">
-          <p className="text-2xl font-bold">{kpis.upcoming}</p>
+          <p className="text-lg sm:text-2xl font-bold">{kpis.upcoming}</p>
           <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">A venir</p>
         </div>
         <div className="rounded-xl border bg-[#0F2D52]/5 p-3">
-          <p className="text-2xl font-bold">{kpis.past}</p>
+          <p className="text-lg sm:text-2xl font-bold">{kpis.past}</p>
           <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Passes</p>
         </div>
         <div className="rounded-xl border bg-[#0F2D52]/5 p-3">
-          <p className="text-2xl font-bold">{kpis.withLink}</p>
+          <p className="text-lg sm:text-2xl font-bold">{kpis.withLink}</p>
           <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Avec lien</p>
         </div>
       </div>
@@ -342,7 +342,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                         {/* Contenu */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start gap-3">
-                            <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center shrink-0">
+                            <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center shrink-0">
                               <Icon className="h-4 w-4 text-[#0F2D52]" />
                             </div>
                             <div className="flex-1 min-w-0">

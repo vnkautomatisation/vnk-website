@@ -44,11 +44,11 @@ export default async function BookingPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
+        <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
           <CalendarPlus className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Reserver un appel</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Reserver un appel</h1>
           <p className="text-sm text-muted-foreground">Choisissez un creneau disponible</p>
         </div>
       </div>

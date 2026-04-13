@@ -12,7 +12,7 @@ export default function Loading() {
       {/* KPI strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-xl border p-4 space-y-2">
+          <div key={i} className="rounded-xl border p-2.5 sm:p-4 space-y-2">
             <div className="h-4 w-20 rounded bg-muted" />
             <div className="h-7 w-12 rounded bg-muted" />
           </div>
@@ -21,7 +21,7 @@ export default function Loading() {
       {/* Card list skeleton */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-xl border p-4 space-y-3">
+          <div key={i} className="rounded-xl border p-2.5 sm:p-4 space-y-3">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-muted" />
               <div className="flex-1 space-y-1.5">
