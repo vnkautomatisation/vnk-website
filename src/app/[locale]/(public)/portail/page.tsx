@@ -232,8 +232,8 @@ export default async function PortalDashboard() {
       {/* ── Activity Timeline ────────────────────────── */}
       <div className="mt-4">
       <Card className="shadow-sm border-0 ring-1 ring-border/50">
-        <CardContent className="p-3 sm:p-6">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <CardContent className="p-0 sm:p-0">
+          <div className="lg:sticky lg:top-0 z-20 bg-card flex items-center justify-between p-3 sm:p-6 pb-3 sm:pb-4 border-b">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="portal-icon-sm rounded-lg vnk-gradient flex items-center justify-center shrink-0">
                 <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
@@ -244,6 +244,7 @@ export default async function PortalDashboard() {
               {recentEvents.length} evenements
             </span>
           </div>
+          <div className="p-3 sm:p-6 pt-3 sm:pt-4">
 
           {recentEvents.length === 0 ? (
             <div className="text-center py-16">
@@ -272,7 +273,7 @@ export default async function PortalDashboard() {
                     >
                       {/* Icon dot */}
                       <div
-                        className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg ${eventColor(ev.eventType)} flex items-center justify-center shrink-0 z-10 shadow-sm`}
+                        className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg ${eventColor(ev.eventType)} flex items-center justify-center shrink-0 shadow-sm`}
                       >
                         <EvIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
                       </div>
@@ -291,6 +292,7 @@ export default async function PortalDashboard() {
               </ul>
             </div>
           )}
+          </div>
         </CardContent>
       </Card>
       </div>
