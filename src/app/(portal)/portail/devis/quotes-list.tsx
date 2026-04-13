@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, Eye, CheckCircle, PenLine, Clock, Hash, DollarSign, AlertTriangle, Calendar } from "lucide-react";
+import { FileText, Eye, CheckCircle, PenLine, Clock, Hash, DollarSign, AlertTriangle, Calendar, X } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { SignatureCanvas } from "@/components/signature/signature-canvas";
@@ -346,19 +346,53 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
       {/* Signature overlay — appears on top of the PDF modal */}
       {pdfQuote && showSignature && (
         <div className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowSignature(false)} />
-          <div className="relative z-10 w-full max-w-lg mx-4 mb-4 sm:mb-0 bg-white rounded-xl shadow-2xl overflow-hidden">
-            <div className="bg-[#0F2D52] text-white px-5 py-3">
-              <h3 className="font-semibold">Signez pour accepter le devis</h3>
-              <p className="text-xs text-white/60">{pdfQuote.quoteNumber} — {formatCurrency(pdfQuote.amountTtc)}</p>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSignature(false)} />
+          <div className="relative z-10 w-full max-w-xl mx-4 mb-4 sm:mb-0 bg-white rounded-2xl shadow-2xl overflow-hidden">
+            {/* Header navy */}
+            <div className="bg-[#0F2D52] px-6 py-5 text-white relative">
+              <button
+                onClick={() => setShowSignature(false)}
+                className="absolute top-4 right-4 h-8 w-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors"
+              >
+                <X className="h-4 w-4 text-white/70" />
+              </button>
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                  <FileText className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold">Accepter le devis</h2>
+                  <p className="text-white/60 text-sm mt-0.5">
+                    {pdfQuote.quoteNumber} — {pdfQuote.title}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-3">
+                <div className="bg-white/10 rounded-lg px-3 py-2">
+                  <span className="text-white/70 text-xs">Montant TTC</span>
+                  <p className="text-white font-bold text-lg">{formatCurrency(pdfQuote.amountTtc)}</p>
+                </div>
+                {pdfQuote.expiryDate && (
+                  <div className="bg-white/10 rounded-lg px-3 py-2">
+                    <span className="text-white/70 text-xs">Expire le</span>
+                    <p className="text-white font-medium text-sm">{formatDate(new Date(pdfQuote.expiryDate))}</p>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="p-5">
-              <p className="text-xs text-muted-foreground mb-3">
-                En signant, vous acceptez le devis et un contrat sera automatiquement genere.
+
+            {/* Info banner */}
+            <div className="mx-6 mt-5 rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 px-4 py-3">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                En signant, vous acceptez ce devis. Un contrat de service sera automatiquement genere pour signature.
               </p>
+            </div>
+
+            {/* Signature canvas */}
+            <div className="px-6 py-4">
               <SignatureCanvas
                 onSave={handleSignAndAccept}
-                width={460}
+                width={480}
                 height={180}
                 disabled={accepting}
                 legalText="les conditions du devis"
@@ -369,7 +403,13 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
                 </p>
               )}
             </div>
-            <div className="px-5 py-3 border-t flex justify-end gap-2">
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t bg-muted/30 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <CheckCircle className="h-3.5 w-3.5" />
+                <span>Contrat genere automatiquement</span>
+              </div>
               <Button variant="outline" size="sm" onClick={() => setShowSignature(false)} disabled={accepting}>
                 Annuler
               </Button>

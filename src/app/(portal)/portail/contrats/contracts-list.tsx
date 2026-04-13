@@ -299,6 +299,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
           contractId={signingContract.id}
           contractNumber={signingContract.contractNumber}
           contractTitle={signingContract.title}
+          contractAmount={signingContract.amountTtc}
           open={!!signingContract}
           onOpenChange={(open) => { if (!open) setSigningContract(null); }}
         />
