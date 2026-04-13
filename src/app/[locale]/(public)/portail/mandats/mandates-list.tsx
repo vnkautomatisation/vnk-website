@@ -154,40 +154,30 @@ function MandateTimeline({ progress, status, compact }: { progress: number; stat
 }
 
 // ── Barre de progression segmentee par etape ──
-// Chaque segment correspond a une etape du projet
-const STEP_RANGES = [
-  { min: 0, max: 10 },   // Demarrage
-  { min: 11, max: 30 },  // Diagnostic
-  { min: 31, max: 60 },  // Intervention
-  { min: 61, max: 85 },  // Tests
-  { min: 86, max: 100 }, // Livraison
-];
-
-function SteppedProgressBar({ progress, status, late }: { progress: number; status: string; late: boolean }) {
+// Suit exactement la logique de getActiveStep() pour rester coherent avec le timeline
+function SteppedProgressBar({ progress, status, late, compact }: { progress: number; status: string; late: boolean; compact?: boolean }) {
+  const activeStep = getActiveStep(progress, status);
   const isCompleted = status === "completed";
   const isPaused = status === "paused";
 
-  return (
-    <div className="flex gap-1">
-      {STEP_RANGES.map((range, i) => {
-        const segmentSpan = range.max - range.min;
-        let fill = 0;
-        if (isCompleted || progress > range.max) {
-          fill = 100;
-        } else if (progress >= range.min) {
-          fill = Math.round(((progress - range.min) / segmentSpan) * 100);
-        }
+  const barColor = late
+    ? "bg-red-400"
+    : isCompleted
+      ? "bg-emerald-500"
+      : isPaused
+        ? "bg-slate-300"
+        : "bg-[#0F2D52]";
 
-        const barColor = late
-          ? "bg-red-400"
-          : isCompleted
-            ? "bg-emerald-500"
-            : isPaused
-              ? "bg-slate-300"
-              : "bg-[#0F2D52]";
+  return (
+    <div className={cn("flex", compact ? "gap-0.5" : "gap-1")}>
+      {STEPS.map((_, i) => {
+        const done = isCompleted || i < activeStep;
+        const current = !isCompleted && i === activeStep;
+        // Le segment actif se remplit proportionnellement (min 20% pour visibilite)
+        const fill = done ? 100 : current ? Math.max(20, Math.round((progress % 20) * 5)) : 0;
 
         return (
-          <div key={i} className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
+          <div key={i} className={cn("flex-1 rounded-full bg-muted overflow-hidden", compact ? "h-1.5" : "h-2.5")}>
             {fill > 0 && (
               <div
                 className={`h-full rounded-full transition-all ${barColor}`}
@@ -280,13 +270,10 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
       header: "Progression",
       accessor: (r) => (
         <div className="flex items-center gap-2 min-w-[120px]">
-          <div className="h-2.5 flex-1 rounded-full bg-muted overflow-hidden">
-            <div
-              className={`h-full rounded-full ${statusBarColor(r.status, isLate(r))}`}
-              style={{ width: `${r.progress}%` }}
-            />
+          <div className="flex-1">
+            <SteppedProgressBar progress={r.progress} status={r.status} late={isLate(r)} compact />
           </div>
-          <span className={`text-xs font-bold tabular-nums text-[#0F2D52]`}>
+          <span className="text-xs font-bold tabular-nums text-[#0F2D52]">
             {r.progress}%
           </span>
         </div>
