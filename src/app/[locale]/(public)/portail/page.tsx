@@ -133,7 +133,10 @@ export default async function PortalDashboard() {
   const firstName = client?.fullName.split(" ")[0] ?? "";
 
   return (
-    <div className="space-y-8">
+    <div>
+      {/* ── Sticky zone : banner + KPIs + actions ── */}
+      <div className="sticky top-[70px] z-10 bg-muted/30 backdrop-blur-sm -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-3 space-y-4">
+
       {/* ── Welcome Banner ───────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl vnk-gradient p-6 sm:p-8 text-white">
         {/* Decorative circles */}
@@ -224,8 +227,10 @@ export default async function PortalDashboard() {
           })}
         </div>
       </div>
+      </div>
 
       {/* ── Activity Timeline ────────────────────────── */}
+      <div className="mt-4">
       <Card className="shadow-sm border-0 ring-1 ring-border/50">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-6">
@@ -288,6 +293,7 @@ export default async function PortalDashboard() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
