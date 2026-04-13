@@ -142,23 +142,23 @@ export function PdfViewerModal({
           )}
         </div>
 
-        {/* Footer — actions bien visibles */}
+        {/* Footer — Fermer a gauche, action ou Telecharger a droite */}
         <div className="flex items-center justify-between px-4 sm:px-6 h-16 bg-white border-t border-gray-200 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownload}
-            disabled={!blobUrl}
-          >
-            <Download className="h-4 w-4 mr-1.5" />
-            Telecharger
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Fermer
           </Button>
-
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={onClose}>
-              Fermer
-            </Button>
-            {actions}
+            {actions === undefined ? (
+              <Button
+                className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
+                size="sm"
+                onClick={handleDownload}
+                disabled={!blobUrl}
+              >
+                <Download className="h-4 w-4 mr-1.5" />
+                Telecharger
+              </Button>
+            ) : actions}
           </div>
         </div>
       </div>

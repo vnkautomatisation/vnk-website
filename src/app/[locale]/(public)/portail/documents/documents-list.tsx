@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { FolderOpen, Download, Eye, FileText, EyeOff, FileBarChart, FileSignature } from "lucide-react";
+import { toast } from "sonner";
+import { FolderOpen, Eye, FileText, EyeOff, FileBarChart, FileSignature } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
 
@@ -55,22 +55,15 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
 
   const handlePreview = (doc: Doc, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    if (!doc.fileUrl) {
+      toast.error("Aucun fichier attache a ce document");
+      return;
+    }
     setPreviewDoc(doc);
     // Mark as read — local + server
     if (!doc.isRead) {
       setDocs((prev) => prev.map((d) => d.id === doc.id ? { ...d, isRead: true } : d));
       fetch(`/api/documents/${doc.id}/read`, { method: "PATCH" }).catch(() => {});
-    }
-  };
-
-  const handleDownload = (doc: Doc, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    if (doc.fileUrl) {
-      const a = document.createElement("a");
-      a.href = doc.fileUrl;
-      a.download = doc.title;
-      a.target = "_blank";
-      a.click();
     }
   };
 
@@ -143,16 +136,12 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
     {
       key: "actions",
       header: "",
-      className: "w-[230px]",
+      className: "w-[100px]",
       accessor: (r) => (
-        <div className="flex gap-1.5 justify-end" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
           <Button size="sm" variant="outline" onClick={(e) => handlePreview(r, e)}>
             <Eye className="h-3.5 w-3.5 mr-1" />
             Voir
-          </Button>
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={(e) => handleDownload(r, e)}>
-            <Download className="h-3.5 w-3.5 mr-1" />
-            Telecharger
           </Button>
         </div>
       ),
@@ -205,16 +194,10 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="flex-1" onClick={(e) => handlePreview(doc, e)}>
-              <Eye className="h-3.5 w-3.5 mr-1" />
-              Voir
-            </Button>
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white flex-1" onClick={(e) => handleDownload(doc, e)}>
-              <Download className="h-3.5 w-3.5 mr-1" />
-              Telecharger
-            </Button>
-          </div>
+          <Button size="sm" variant="outline" className="w-full" onClick={(e) => handlePreview(doc, e)}>
+            <Eye className="h-3.5 w-3.5 mr-1" />
+            Voir
+          </Button>
         </CardContent>
       </Card>
     );

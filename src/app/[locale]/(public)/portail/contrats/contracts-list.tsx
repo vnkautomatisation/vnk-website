@@ -338,7 +338,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
           downloadName={`contrat-${pdfContract.contractNumber}`}
           actions={
             signed ? (
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm" onClick={() => {
+              <Button className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white" size="sm" onClick={() => {
                 const a = document.createElement("a");
                 a.href = pdfContract.fileUrl ?? `/api/contracts/${pdfContract.id}/pdf`;
                 a.download = `contrat-${pdfContract.contractNumber}.pdf`;
@@ -347,9 +347,10 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
                 <Download className="h-4 w-4 mr-1.5" />
                 Telecharger le contrat
               </Button>
-            ) : pdfContract.status === "pending" && !pdfContract.clientSignatureData && !showSignature ? (
+            ) : showSignature ? null
+              : pdfContract.status === "pending" && !pdfContract.clientSignatureData ? (
               <Button
-                className="bg-[#0F2D52] hover:bg-[#1a3a66]"
+                className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
                 size="sm"
                 onClick={startSign}
               >
