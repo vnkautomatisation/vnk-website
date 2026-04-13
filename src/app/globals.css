@@ -154,6 +154,17 @@
     width: clamp(1.5rem, 1.25rem + 0.5vw, 2.25rem);
     height: clamp(1.5rem, 1.25rem + 0.5vw, 2.25rem);
   }
+  /* Scale global du contenu portail sur petits ecrans */
+  .portal-content {
+    font-size: clamp(13px, 12px + 0.25vw, 16px);
+  }
+  .portal-content .text-sm { font-size: clamp(11px, 10px + 0.25vw, 14px); }
+  .portal-content .text-xs { font-size: clamp(10px, 9px + 0.15vw, 12px); }
+  .portal-content .text-2xl { font-size: clamp(1.1rem, 0.9rem + 1vw, 1.5rem); }
+  .portal-content .text-lg { font-size: clamp(0.95rem, 0.85rem + 0.5vw, 1.125rem); }
+  .portal-content button, .portal-content .btn, .portal-content [class*="Button"] {
+    font-size: inherit;
+  }
 
   .vnk-gradient {
     background: linear-gradient(135deg, #0F2D52 0%, #1B4F8A 100%);

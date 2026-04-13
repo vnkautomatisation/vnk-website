@@ -65,7 +65,7 @@ export default async function PortalLayout({
           badges={badges}
         />
         <main className="flex-1 lg:pl-[240px] overflow-y-auto overflow-x-hidden no-scrollbar pb-14 lg:pb-0">
-          <div className="p-3 sm:p-4 lg:p-8 max-w-full">
+          <div className="p-3 sm:p-4 lg:p-8 max-w-full portal-content">
             <Suspense>{children}</Suspense>
           </div>
         </main>
