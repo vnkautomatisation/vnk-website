@@ -113,14 +113,21 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
       accessor: (r) => (
         <div>
           <span className="font-medium text-sm">{r.subject ?? "Rendez-vous"}</span>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs text-muted-foreground">
-              {formatDate(r.appointmentDate)} · {formatTime(r.startTime)} - {formatTime(r.endTime)}
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {formatDate(r.appointmentDate)} · {formatTime(r.startTime)} - {formatTime(r.endTime)}
+          </p>
+          {r.meetingLink && r.status !== "cancelled" && (
+            <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+              <Link2 className="h-3 w-3" />
+              Lien disponible
             </span>
-            {r.meetingLink && (
-              <Link2 className="h-3 w-3 text-emerald-600" />
-            )}
-          </div>
+          )}
+          {!r.meetingLink && r.isUpcoming && r.status !== "cancelled" && (
+            <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+              <Clock className="h-3 w-3" />
+              En attente du lien
+            </span>
+          )}
         </div>
       ),
       sortable: true,
