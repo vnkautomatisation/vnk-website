@@ -152,72 +152,74 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
-            <Inbox className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">Mes demandes</h1>
-            <p className="text-sm text-muted-foreground">
-              Suivez vos demandes de projet
-            </p>
-          </div>
-        </div>
-        <Button size="sm" onClick={() => setModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" />
-          Nouvelle demande
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
-              <Hash className="h-4 w-4 text-[#0F2D52]" />
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total demandes</p>
-              <p className="text-2xl font-bold">{totalCount}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border bg-sky-50/60 p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-sky-100 flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-[#0F2D52]" />
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider font-semibold text-[#0F2D52]">Nouvelles</p>
-              <p className="text-2xl font-bold">{newCount}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border bg-amber-50/60 p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
-              <Loader className="h-4 w-4 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-600">En cours</p>
-              <p className="text-2xl font-bold">{inProgressCount}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border bg-emerald-50/60 p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
-              <CheckCircle className="h-4 w-4 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Converties</p>
-              <p className="text-2xl font-bold">{convertedCount}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <DataTable
+        stickyHeader={
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
+                  <Inbox className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold">Mes demandes</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Suivez vos demandes de projet
+                  </p>
+                </div>
+              </div>
+              <Button size="sm" onClick={() => setModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" />
+                Nouvelle demande
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+              <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+                    <Hash className="h-4 w-4 text-[#0F2D52]" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total demandes</p>
+                    <p className="text-2xl font-bold">{totalCount}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border bg-sky-50/60 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-sky-100 flex items-center justify-center">
+                    <Sparkles className="h-4 w-4 text-[#0F2D52]" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-[#0F2D52]">Nouvelles</p>
+                    <p className="text-2xl font-bold">{newCount}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border bg-amber-50/60 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <Loader className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-600">En cours</p>
+                    <p className="text-2xl font-bold">{inProgressCount}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border bg-emerald-50/60 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <CheckCircle className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Converties</p>
+                    <p className="text-2xl font-bold">{convertedCount}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        }
         data={requests}
         columns={columns}
         getRowId={(r) => r.id}

@@ -240,66 +240,68 @@ export function PortalDocumentsList({ documents }: { documents: Doc[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
-          <FolderOpen className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">Mes documents</h1>
-          <p className="text-sm text-muted-foreground">
-            Consultez et telechargez vos documents
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
-              <FolderOpen className="h-4 w-4 text-[#0F2D52]" />
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total documents</p>
-              <p className="text-2xl font-bold">{documents.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border bg-sky-50/60 p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-sky-100 flex items-center justify-center">
-              <EyeOff className="h-4 w-4 text-[#0F2D52]" />
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider font-semibold text-[#0F2D52]">Non lus</p>
-              <p className="text-2xl font-bold">{documents.filter((d) => !d.isRead).length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
-              <FileBarChart className="h-4 w-4 text-[#0F2D52]" />
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Rapports</p>
-              <p className="text-2xl font-bold">{documents.filter((d) => d.category === "Rapports").length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
-              <FileSignature className="h-4 w-4 text-[#0F2D52]" />
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Contrats</p>
-              <p className="text-2xl font-bold">{documents.filter((d) => d.category === "Contrats").length}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <DataTable
+        stickyHeader={
+          <>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-12 w-12 rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
+                <FolderOpen className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">Mes documents</h1>
+                <p className="text-sm text-muted-foreground">
+                  Consultez et telechargez vos documents
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+              <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+                    <FolderOpen className="h-4 w-4 text-[#0F2D52]" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Total documents</p>
+                    <p className="text-2xl font-bold">{documents.length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border bg-sky-50/60 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-sky-100 flex items-center justify-center">
+                    <EyeOff className="h-4 w-4 text-[#0F2D52]" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-[#0F2D52]">Non lus</p>
+                    <p className="text-2xl font-bold">{documents.filter((d) => !d.isRead).length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+                    <FileBarChart className="h-4 w-4 text-[#0F2D52]" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Rapports</p>
+                    <p className="text-2xl font-bold">{documents.filter((d) => d.category === "Rapports").length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border bg-[#0F2D52]/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+                    <FileSignature className="h-4 w-4 text-[#0F2D52]" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Contrats</p>
+                    <p className="text-2xl font-bold">{documents.filter((d) => d.category === "Contrats").length}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        }
         data={filteredDocs}
         columns={columns}
         getRowId={(r) => r.id}
