@@ -14,6 +14,8 @@ type Props = {
   /** Action buttons rendered in the footer (e.g. Accepter, Signer, Payer) */
   actions?: React.ReactNode;
   downloadName?: string;
+  /** Change this to force re-fetch the PDF (e.g. after signing) */
+  refreshKey?: number;
 };
 
 export function PdfViewerModal({
@@ -25,6 +27,7 @@ export function PdfViewerModal({
   date,
   actions,
   downloadName,
+  refreshKey,
 }: Props) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,7 +63,7 @@ export function PdfViewerModal({
       });
 
     return () => { cancelled = true; };
-  }, [open, pdfUrl]);
+  }, [open, pdfUrl, refreshKey]);
 
   useEffect(() => {
     return () => { if (blobUrl) URL.revokeObjectURL(blobUrl); };
