@@ -35,7 +35,7 @@ export default async function PortalLayout({
           clientName={client?.fullName ?? ""}
           clientCompany={client?.companyName ?? undefined}
         />
-        <main className="flex-1 overflow-y-auto lg:pl-[240px] pb-[64px] lg:pb-0">
+        <main className="flex-1 overflow-y-auto lg:pl-[240px] pb-[64px] lg:pb-0 no-scrollbar">
           <div className="p-4 sm:p-6 lg:p-8">{children}</div>
         </main>
       </div>
