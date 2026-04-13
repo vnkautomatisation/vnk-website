@@ -48,7 +48,7 @@ type Appointment = {
 
 const TYPE_ICON = { video: Video, phone: Phone, onsite: MapPin } as Record<string, typeof Video>;
 const TYPE_LABEL: Record<string, string> = { video: "Video", phone: "Telephone", onsite: "Sur place" };
-const DAY_NAMES = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+const DAY_NAMES = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
 // ── Helpers dates ──
 function toDateKey(iso: string): string {
@@ -63,7 +63,7 @@ function todayKey(): string {
 function getMonthWeeks(year: number, month: number): Date[][] {
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
-  const startOffset = (first.getDay() + 6) % 7; // lundi = 0
+  const startOffset = first.getDay(); // dimanche = 0
   const start = new Date(year, month, 1 - startOffset);
   const weeks: Date[][] = [];
   const cur = new Date(start);
