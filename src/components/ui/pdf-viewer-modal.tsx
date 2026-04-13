@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, Download, Loader2, FileText, AlertCircle } from "lucide-react";
+import { X, Download, Loader2, FileText, AlertCircle, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Props = {
@@ -32,6 +32,7 @@ export function PdfViewerModal({
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(100);
 
   useEffect(() => {
     if (!open) {
@@ -91,15 +92,15 @@ export function PdfViewerModal({
       <div className="absolute inset-0 bg-[#0a1628]" onClick={onClose} />
 
       <div className="relative z-10 flex flex-col h-full">
-        {/* Header — titre + info */}
-        <div className="flex items-center justify-between px-4 sm:px-6 h-14 bg-[#0F2D52] text-white shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-              <FileText className="h-4 w-4" />
+        {/* Header compact */}
+        <div className="flex items-center justify-between px-3 sm:px-6 h-12 sm:h-14 bg-[#0F2D52] text-white shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </div>
             <div className="min-w-0">
-              <h2 className="font-semibold text-sm sm:text-base truncate">{title}</h2>
-              <div className="flex items-center gap-2 text-[11px] text-white/60">
+              <h2 className="font-semibold text-xs sm:text-base truncate">{title}</h2>
+              <div className="flex items-center gap-2 text-[9px] sm:text-[11px] text-white/60">
                 {documentNumber && <span className="font-mono">{documentNumber}</span>}
                 {documentNumber && date && <span>·</span>}
                 {date && <span>{date}</span>}
@@ -107,21 +108,31 @@ export function PdfViewerModal({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="h-8 w-8 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors shrink-0"
-            aria-label="Fermer"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Zoom controls */}
+            <button onClick={() => setZoom((z) => Math.max(50, z - 25))} className="h-7 w-7 sm:h-8 sm:w-8 rounded-md hover:bg-white/10 flex items-center justify-center" aria-label="Zoom arriere">
+              <ZoomOut className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            </button>
+            <span className="text-[10px] sm:text-xs font-mono w-8 text-center">{zoom}%</span>
+            <button onClick={() => setZoom((z) => Math.min(200, z + 25))} className="h-7 w-7 sm:h-8 sm:w-8 rounded-md hover:bg-white/10 flex items-center justify-center" aria-label="Zoom avant">
+              <ZoomIn className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            </button>
+            <button
+              onClick={onClose}
+              className="h-7 w-7 sm:h-8 sm:w-8 rounded-md hover:bg-white/10 flex items-center justify-center ml-1"
+              aria-label="Fermer"
+            >
+              <X className="h-4 w-4 sm:h-5 sm:w-5" />
+            </button>
+          </div>
         </div>
 
-        {/* PDF body */}
-        <div className="flex-1 bg-[#525659] relative">
+        {/* PDF body — zoomable */}
+        <div className="flex-1 bg-[#525659] relative overflow-auto">
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
               <Loader2 className="h-10 w-10 animate-spin text-white/40" />
-              <p className="text-sm text-white/50">Chargement du document...</p>
+              <p className="text-sm text-white/50">Chargement...</p>
             </div>
           )}
           {error && (
@@ -136,14 +147,15 @@ export function PdfViewerModal({
           {blobUrl && (
             <iframe
               src={blobUrl}
-              className="w-full h-full border-0"
+              className="border-0 origin-top-left"
+              style={{ width: `${zoom}%`, height: `${zoom}%`, minWidth: "100%", minHeight: "100%" }}
               title={title}
             />
           )}
         </div>
 
         {/* Footer — Fermer a gauche, action ou Telecharger a droite */}
-        <div className="flex items-center justify-between px-4 sm:px-6 h-16 bg-white border-t border-gray-200 shrink-0">
+        <div className="flex items-center justify-between px-3 sm:px-6 h-12 sm:h-16 bg-white border-t border-gray-200 shrink-0">
           <Button variant="outline" size="sm" onClick={onClose}>
             Fermer
           </Button>
