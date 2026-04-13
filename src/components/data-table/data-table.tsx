@@ -432,23 +432,23 @@ function PaginationBar({
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-      <span className="text-xs text-muted-foreground">{showing}</span>
-      <div className="flex items-center gap-1">
-        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
-          <ChevronLeft className="h-4 w-4" />
+    <div className="flex items-center justify-between gap-2 pt-2">
+      <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0">{showing}</span>
+      <div className="flex items-center gap-0.5 sm:gap-1">
+        <Button variant="outline" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+          <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </Button>
         {pages.map((p, i) =>
           p === "..." ? (
-            <span key={`d${i}`} className="px-1 text-muted-foreground text-xs">...</span>
+            <span key={`d${i}`} className="px-0.5 text-muted-foreground text-[10px]">...</span>
           ) : (
-            <Button key={p} variant={p === page ? "default" : "outline"} size="icon" className="h-8 w-8 text-xs" onClick={() => onPageChange(p as number)}>
+            <Button key={p} variant={p === page ? "default" : "outline"} size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-[10px] sm:text-xs" onClick={() => onPageChange(p as number)}>
               {p}
             </Button>
           )
         )}
-        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
-          <ChevronRight className="h-4 w-4" />
+        <Button variant="outline" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+          <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </Button>
       </div>
     </div>
