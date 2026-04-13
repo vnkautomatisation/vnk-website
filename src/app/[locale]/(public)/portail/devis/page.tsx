@@ -19,6 +19,7 @@ export default async function PortalQuotesPage() {
     amountTtc: Number(q.amountTtc),
     discountAmount: q.discountAmount != null ? Number(q.discountAmount) : null,
     expiryDate: q.expiryDate?.toISOString() ?? null,
+    acceptedAt: q.acceptedAt?.toISOString() ?? null,
     createdAt: q.createdAt.toISOString(),
   }));
   return <PortalQuotesList quotes={quotes} />;
