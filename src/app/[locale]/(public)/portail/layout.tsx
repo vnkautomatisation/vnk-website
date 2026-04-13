@@ -64,8 +64,8 @@ export default async function PortalLayout({
           clientCompany={client?.companyName ?? undefined}
           badges={badges}
         />
-        <main className="flex-1 lg:pl-[240px] overflow-y-auto overflow-x-hidden pb-14 lg:pb-0">
-          <div className="p-3 sm:p-4 lg:p-8 max-w-full portal-content">
+        <main className="flex-1 lg:pl-[240px] overflow-hidden pb-14 lg:pb-0 flex flex-col">
+          <div className="p-3 sm:p-4 lg:p-8 max-w-full portal-content flex-1 overflow-y-auto">
             <Suspense>{children}</Suspense>
           </div>
         </main>
