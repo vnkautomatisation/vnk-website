@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { formatDate, formatTime } from "@/lib/utils";
 import Link from "next/link";
@@ -270,6 +271,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
       {detail && (
         <Dialog open={!!detail} onOpenChange={(o) => { if (!o) setDetail(null); }}>
           <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
+            <DialogTitle className="sr-only">{detail.subject ?? "Rendez-vous"}</DialogTitle>
             <div className="bg-[#0F2D52] px-6 py-5 text-white relative">
               <button onClick={() => setDetail(null)} className="absolute top-4 right-4 h-8 w-8 rounded-lg hover:bg-white/10 flex items-center justify-center">
                 <X className="h-4 w-4 text-white/70" />
