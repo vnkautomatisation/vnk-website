@@ -12,6 +12,7 @@ import { QuickActions } from "./quick-actions";
 import { OverdueAlerts } from "./overdue-alerts";
 import { UpcomingAppointments } from "./upcoming-appointments";
 import { RecentActivity } from "./recent-activity";
+import { RevenueChart } from "./revenue-chart";
 
 type OverdueInvoice = {
   id: number;
@@ -53,6 +54,7 @@ export type DashboardData = {
   overdueInvoices: OverdueInvoice[];
   upcomingAppointments: UpcomingAppt[];
   recentEvents: WorkflowEvent[];
+  revenueByMonth: { month: string; revenue: number }[];
 };
 
 export function DashboardView({ data }: { data: DashboardData }) {
@@ -103,9 +105,19 @@ export function DashboardView({ data }: { data: DashboardData }) {
         />
       </div>
 
+      {/* Graphique revenus + Alertes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <RevenueChart data={data.revenueByMonth} />
+        </div>
         <div className="space-y-4">
           <OverdueAlerts invoices={data.overdueInvoices} />
+        </div>
+      </div>
+
+      {/* RDV + Activite */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div>
           <UpcomingAppointments appointments={data.upcomingAppointments} />
         </div>
         <div className="lg:col-span-2">

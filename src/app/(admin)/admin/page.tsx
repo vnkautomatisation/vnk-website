@@ -96,6 +96,22 @@ export default async function AdminDashboard() {
     }),
   ]);
 
+  // Revenus 6 derniers mois pour le graphique
+  const monthNames = ["Jan", "Fev", "Mar", "Avr", "Mai", "Jun", "Jul", "Aou", "Sep", "Oct", "Nov", "Dec"];
+  const revenueByMonth: { month: string; revenue: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const mStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const mEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+    const agg = await prisma.invoice.aggregate({
+      _sum: { amountTtc: true },
+      where: { status: "paid", paidAt: { gte: mStart, lt: mEnd } },
+    });
+    revenueByMonth.push({
+      month: monthNames[mStart.getMonth()],
+      revenue: Number(agg._sum.amountTtc ?? 0),
+    });
+  }
+
   const receivableAmount = Number(receivable._sum.amountTtc ?? 0);
   const thisMonthAmount = Number(thisMonthRevenue._sum.amountTtc ?? 0);
   const lastMonthAmount = Number(lastMonthRevenue._sum.amountTtc ?? 0);
@@ -147,6 +163,7 @@ export default async function AdminDashboard() {
           companyName: ev.client.companyName,
           createdAt: ev.createdAt.toISOString(),
         })),
+        revenueByMonth,
       }}
     />
   );
