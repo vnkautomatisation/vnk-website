@@ -53,14 +53,16 @@ const COLUMNS: Array<{
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   dotColor: string;
-  accent: string;
+  header: string;
+  stripe: string;
+  iconColor: string;
 }> = [
-  { id: "prospect", label: "Nouveau client", icon: UserPlus, dotColor: "bg-slate-400", accent: "bg-slate-50 border-slate-200" },
-  { id: "mandate_active", label: "Mandat en cours", icon: Briefcase, dotColor: "bg-blue-500", accent: "bg-blue-50 border-blue-200" },
-  { id: "quote_pending", label: "Devis envoye", icon: FileText, dotColor: "bg-amber-500", accent: "bg-amber-50 border-amber-200" },
-  { id: "contract_pending", label: "Contrat a signer", icon: FileSignature, dotColor: "bg-violet-500", accent: "bg-violet-50 border-violet-200" },
-  { id: "invoice_unpaid", label: "Paiement en attente", icon: CreditCard, dotColor: "bg-red-500", accent: "bg-red-50 border-red-200" },
-  { id: "complete", label: "Complete", icon: CheckCircle2, dotColor: "bg-emerald-500", accent: "bg-emerald-50 border-emerald-200" },
+  { id: "prospect", label: "Nouveau client", icon: UserPlus, dotColor: "bg-slate-500", header: "bg-slate-100 border-slate-300", stripe: "bg-slate-400", iconColor: "text-slate-600" },
+  { id: "mandate_active", label: "Mandat en cours", icon: Briefcase, dotColor: "bg-blue-500", header: "bg-blue-100 border-blue-300", stripe: "bg-blue-500", iconColor: "text-blue-600" },
+  { id: "quote_pending", label: "Devis envoye", icon: FileText, dotColor: "bg-amber-500", header: "bg-amber-100 border-amber-300", stripe: "bg-amber-500", iconColor: "text-amber-600" },
+  { id: "contract_pending", label: "Contrat a signer", icon: FileSignature, dotColor: "bg-violet-500", header: "bg-violet-100 border-violet-300", stripe: "bg-violet-500", iconColor: "text-violet-600" },
+  { id: "invoice_unpaid", label: "Paiement en attente", icon: CreditCard, dotColor: "bg-red-500", header: "bg-red-100 border-red-300", stripe: "bg-red-500", iconColor: "text-red-600" },
+  { id: "complete", label: "Complete", icon: CheckCircle2, dotColor: "bg-emerald-500", header: "bg-emerald-100 border-emerald-300", stripe: "bg-emerald-500", iconColor: "text-emerald-600" },
 ];
 
 function getStep(c: ClientData): Step {
@@ -256,22 +258,26 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
       <div className="overflow-x-auto pb-4">
         <div className="grid grid-cols-6 gap-3 min-w-[1200px]">
           {COLUMNS.map((col) => {
+            const ColIcon = col.icon;
             const items = columns[col.id];
             return (
               <div key={col.id} className="space-y-2">
                 {/* Column header */}
-                <div className={cn("rounded-lg border p-3 flex items-center justify-between", col.accent)}>
-                  <div className="flex items-center gap-2">
-                    <span className={cn("h-2.5 w-2.5 rounded-full", col.dotColor)} />
-                    <span className="text-xs font-semibold">{col.label}</span>
+                <div className={cn("rounded-lg border p-3 flex items-center justify-between", col.header)}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <ColIcon className={cn("h-3.5 w-3.5 shrink-0", col.iconColor)} />
+                    <span className="text-xs font-semibold truncate">{col.label}</span>
                   </div>
-                  <Badge variant="secondary" className="text-[10px]">{items.length}</Badge>
+                  <Badge variant="secondary" className="text-[10px] bg-white shrink-0">{items.length}</Badge>
                 </div>
 
                 {/* Cards */}
                 <div className="space-y-2 min-h-[80px]">
                   {items.length === 0 ? (
-                    <div className="text-[10px] text-center text-muted-foreground/50 py-8">—</div>
+                    <div className="rounded-lg border-2 border-dashed py-8 px-3 text-center">
+                      <ColIcon className={cn("h-5 w-5 mx-auto opacity-30", col.iconColor)} />
+                      <p className="text-[10px] text-muted-foreground/60 mt-1.5">Aucun client</p>
+                    </div>
                   ) : (
                     items.map((c) => {
                       const unpaid = c.invoices
@@ -287,13 +293,15 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
                         <Card
                           key={c.id}
                           className={cn(
-                            "vnk-card-hover cursor-pointer transition-shadow",
-                            isOverdue && "border-red-300",
+                            "vnk-card-hover cursor-pointer transition-shadow overflow-hidden",
+                            isOverdue && "border-red-400 ring-1 ring-red-200",
                             alert && !isOverdue && "border-amber-300",
                             busy && "opacity-60 pointer-events-none"
                           )}
                           onClick={() => setPanelClientId(c.id)}
                         >
+                          {/* Accent stripe selon etape */}
+                          <div className={cn("h-1 w-full", col.stripe)} />
                           <CardContent className="p-3">
                             <div className="flex items-start justify-between gap-1">
                               <div className="min-w-0 flex-1">
