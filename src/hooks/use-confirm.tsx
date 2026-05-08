@@ -24,7 +24,6 @@ type State = ConfirmOptions & { resolve: (v: boolean) => void };
  */
 export function useConfirm(): { confirm: (opts: ConfirmOptions) => Promise<boolean>; ConfirmModal: ReactNode } {
   const [state, setState] = useState<State | null>(null);
-  const [pending, setPending] = useState(false);
 
   const confirm = useCallback((options: ConfirmOptions) => {
     return new Promise<boolean>((resolve) => {
@@ -34,30 +33,27 @@ export function useConfirm(): { confirm: (opts: ConfirmOptions) => Promise<boole
 
   const handleConfirm = () => {
     if (!state) return;
-    setPending(true);
-    state.resolve(true);
-    setTimeout(() => {
-      setState(null);
-      setPending(false);
-    }, 100);
+    const resolveFn = state.resolve;
+    setState(null);
+    resolveFn(true);
   };
 
   const handleCancel = () => {
     if (!state) return;
-    state.resolve(false);
+    const resolveFn = state.resolve;
     setState(null);
+    resolveFn(false);
   };
 
   const ConfirmModal: ReactNode = state ? (
     <ConfirmDialog
       open={true}
-      onOpenChange={(o) => { if (!o && !pending) handleCancel(); }}
+      onOpenChange={(o) => { if (!o) handleCancel(); }}
       title={state.title}
       description={state.description}
       confirmLabel={state.confirmLabel ?? "Confirmer"}
       cancelLabel={state.cancelLabel ?? "Annuler"}
       variant={state.variant ?? "default"}
-      loading={pending}
       onConfirm={handleConfirm}
     />
   ) : null;

@@ -337,29 +337,26 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
                                 {isOverdue && (
                                   <AlertTriangle className="h-3 w-3 text-red-500" />
                                 )}
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted transition-colors"
-                                    >
-                                      <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-48">
-                                    {actions.map((action, i) => (
-                                      <div key={i}>
-                                        {i === 1 && <DropdownMenuSeparator />}
-                                        <DropdownMenuItem
-                                          onSelect={(e) => { e.preventDefault(); action.onClick(); }}
-                                        >
-                                          <span className="mr-2">{action.icon}</span>
-                                          {action.label}
-                                        </DropdownMenuItem>
-                                      </div>
-                                    ))}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted transition-colors">
+                                        <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      {actions.map((action, i) => (
+                                        <div key={i}>
+                                          {i === 1 && <DropdownMenuSeparator />}
+                                          <DropdownMenuItem onSelect={() => action.onClick()}>
+                                            <span className="mr-2">{action.icon}</span>
+                                            {action.label}
+                                          </DropdownMenuItem>
+                                        </div>
+                                      ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
                               </div>
                             </div>
 
