@@ -68,4 +68,4 @@ $RECYCLE.BIN/
 *.sql.gz
 
 # ─── Worktrees internes ──────────────────────────────
-.claude/worktrees/
+.claude/
