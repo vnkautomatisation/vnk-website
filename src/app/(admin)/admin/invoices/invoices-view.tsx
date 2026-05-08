@@ -9,9 +9,10 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle2,
-  DollarSign,
   CreditCard,
   Eye,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,8 +27,10 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -75,6 +78,14 @@ export function InvoicesView({
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
 
+  // Edit/Delete
+  const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editDue, setEditDue] = useState("");
+  const [deleteInvoice, setDeleteInvoice] = useState<Invoice | null>(null);
+
   // ── Creation form ────────────────────────────────────
   const [newClientId, setNewClientId] = useState("");
   const [newTitle, setNewTitle] = useState("");
@@ -82,6 +93,40 @@ export function InvoicesView({
   const [newAmount, setNewAmount] = useState("");
 
   const resetForm = () => { setNewClientId(""); setNewTitle(""); setNewDesc(""); setNewAmount(""); };
+
+  const openEdit = (i: Invoice) => {
+    setEditInvoice(i);
+    setEditTitle(i.title);
+    setEditDesc("");
+    setEditAmount(String(i.amountHt));
+    setEditDue(i.dueDate ? i.dueDate.slice(0, 10) : "");
+  };
+
+  const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!editInvoice || !editTitle.trim() || !editAmount) return { success: false, error: "Titre et montant requis" };
+    try {
+      const res = await fetch(`/api/invoices/${editInvoice.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          description: editDesc.trim() || undefined,
+          amountHt: Number(editAmount),
+          dueDate: editDue || undefined,
+        }),
+      });
+      if (res.ok) { router.refresh(); return { success: true }; }
+      const data = await res.json();
+      return { success: false, error: data.error || "Erreur" };
+    } catch { return { success: false, error: "Erreur reseau" }; }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteInvoice) return;
+    const res = await fetch(`/api/invoices/${deleteInvoice.id}`, { method: "DELETE" });
+    if (res.ok) { toast.success("Facture supprimee"); setDeleteInvoice(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+  };
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
     if (!newClientId || !newTitle.trim() || !newAmount) {
@@ -128,10 +173,15 @@ export function InvoicesView({
   }, [invoices, statusFilter, searchQuery]);
 
   // Actions menu pour EntityCard
-  const getActions = useCallback((inv: Invoice) => [
-    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
-    ...((inv.status === "unpaid" || inv.status === "overdue") ? [{ label: "Marquer payee", icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => handleMarkPaid(inv.id, inv.invoiceNumber) }] : []),
-  ], []);
+  const getActions = useCallback((inv: Invoice) => {
+    const editable = inv.status !== "paid";
+    return [
+      { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+      ...((inv.status === "unpaid" || inv.status === "overdue") ? [{ label: "Marquer payee", icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => handleMarkPaid(inv.id, inv.invoiceNumber) }] : []),
+      ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(inv) }] : []),
+      ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteInvoice(inv), separator: true, variant: "destructive" as const }] : []),
+    ];
+  }, []);
 
   const columns: Column<Invoice>[] = [
     { key: "number", header: "Numero", accessor: (r) => <span className="font-mono text-xs">{r.invoiceNumber}</span>, sortable: true, sortBy: (r) => r.invoiceNumber },
@@ -219,6 +269,24 @@ export function InvoicesView({
       ) : (
         <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="factures" storageKey="admin-invoices" />
       )}
+
+      <EditModal open={!!editInvoice} onOpenChange={(o) => { if (!o) setEditInvoice(null); }} title="Modifier la facture" description={editInvoice?.invoiceNumber} icon={Pencil} accent="bg-amber-500" onSubmit={handleEdit}>
+        <div className="space-y-4">
+          <div className="space-y-2"><Label>Titre *</Label><Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Montant HT (CAD) *</Label><Input type="number" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Echeance</Label><Input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Description</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={3} /></div>
+        </div>
+      </EditModal>
+
+      <ConfirmDialog
+        open={!!deleteInvoice}
+        onOpenChange={(o) => { if (!o) setDeleteInvoice(null); }}
+        title="Supprimer cette facture ?"
+        description={`La facture "${deleteInvoice?.invoiceNumber}" sera supprimee definitivement.`}
+        confirmLabel="Supprimer"
+        onConfirm={handleDelete}
+      />
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouvelle facture" icon={Receipt} accent="bg-amber-500" submitLabel="Creer la facture" onSubmit={handleCreate}>
         <div className="space-y-4">

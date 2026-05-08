@@ -12,6 +12,8 @@ import {
   UserCheck,
   ShieldCheck,
   Eye,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,8 +28,10 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -76,7 +80,49 @@ export function ContractsView({
   const [newContent, setNewContent] = useState("");
   const [newStatus, setNewStatus] = useState("pending");
 
+  // Edit/Delete
+  const [editContract, setEditContract] = useState<Contract | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editStatus, setEditStatus] = useState("pending");
+  const [editAmount, setEditAmount] = useState("");
+  const [deleteContract, setDeleteContract] = useState<Contract | null>(null);
+
   const resetForm = () => { setNewClientId(""); setNewTitle(""); setNewContent(""); setNewStatus("pending"); };
+
+  const openEdit = (c: Contract) => {
+    setEditContract(c);
+    setEditTitle(c.title);
+    setEditContent("");
+    setEditStatus(c.status);
+    setEditAmount(c.amountTtc != null ? String(c.amountTtc) : "");
+  };
+
+  const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!editContract || !editTitle.trim()) return { success: false, error: "Titre requis" };
+    try {
+      const res = await fetch(`/api/contracts/${editContract.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          content: editContent.trim() || undefined,
+          status: editStatus,
+          amountTtc: editAmount ? Number(editAmount) : undefined,
+        }),
+      });
+      if (res.ok) { router.refresh(); return { success: true }; }
+      const data = await res.json();
+      return { success: false, error: data.error || "Erreur" };
+    } catch { return { success: false, error: "Erreur reseau" }; }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteContract) return;
+    const res = await fetch(`/api/contracts/${deleteContract.id}`, { method: "DELETE" });
+    if (res.ok) { toast.success("Contrat supprime"); setDeleteContract(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+  };
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
     if (!newClientId || !newTitle.trim()) return { success: false, error: "Client et titre requis" };
@@ -115,23 +161,28 @@ export function ContractsView({
   }, [contracts, statusFilter, searchQuery]);
 
   // Actions menu pour EntityCard
-  const getActions = useCallback((c: Contract) => [
-    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
-    ...(c.status === "pending" && !c.adminSignatureData ? [{
-      label: "Signer",
-      icon: <PenTool className="h-3.5 w-3.5" />,
-      onClick: async () => {
-        if (!confirm("Signer ce contrat en tant qu'admin ?")) return;
-        const res = await fetch(`/api/contracts/${c.id}/sign`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ signatureData: "admin-signed-via-dashboard" }),
-        });
-        if (res.ok) { toast.success("Contrat signe"); router.refresh(); }
-        else { const d = await res.json(); toast.error(d.error); }
-      },
-    }] : []),
-  ], [router]);
+  const getActions = useCallback((c: Contract) => {
+    const editable = !c.clientSignatureData && !c.signedAt;
+    return [
+      { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+      ...(c.status === "pending" && !c.adminSignatureData ? [{
+        label: "Signer",
+        icon: <PenTool className="h-3.5 w-3.5" />,
+        onClick: async () => {
+          if (!confirm("Signer ce contrat en tant qu'admin ?")) return;
+          const res = await fetch(`/api/contracts/${c.id}/sign`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ signatureData: "admin-signed-via-dashboard" }),
+          });
+          if (res.ok) { toast.success("Contrat signe"); router.refresh(); }
+          else { const d = await res.json(); toast.error(d.error); }
+        },
+      }] : []),
+      ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(c) }] : []),
+      ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteContract(c), separator: true, variant: "destructive" as const }] : []),
+    ];
+  }, [router]);
 
   const columns: Column<Contract>[] = [
     { key: "number", header: "Numero", accessor: (r) => <span className="font-mono text-xs">{r.contractNumber}</span>, sortable: true, sortBy: (r) => r.contractNumber },
@@ -246,6 +297,33 @@ export function ContractsView({
       ) : (
         <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="contrats" storageKey="admin-contracts" />
       )}
+
+      <EditModal open={!!editContract} onOpenChange={(o) => { if (!o) setEditContract(null); }} title="Modifier le contrat" description={editContract?.contractNumber} icon={Pencil} accent="bg-amber-500" onSubmit={handleEdit}>
+        <div className="space-y-4">
+          <div className="space-y-2"><Label>Titre *</Label><Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Montant TTC (CAD)</Label><Input type="number" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Statut</Label>
+            <Select value={editStatus} onValueChange={setEditStatus}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">En attente</SelectItem>
+                <SelectItem value="draft">Brouillon</SelectItem>
+                <SelectItem value="expired">Expire</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2"><Label>Contenu</Label><Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={5} placeholder="Laisser vide pour ne pas modifier" /></div>
+        </div>
+      </EditModal>
+
+      <ConfirmDialog
+        open={!!deleteContract}
+        onOpenChange={(o) => { if (!o) setDeleteContract(null); }}
+        title="Supprimer ce contrat ?"
+        description={`Le contrat "${deleteContract?.contractNumber}" sera supprime definitivement.`}
+        confirmLabel="Supprimer"
+        onConfirm={handleDelete}
+      />
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau contrat" icon={FileSignature} accent="bg-indigo-500" submitLabel="Creer le contrat" onSubmit={handleCreate}>
         <div className="space-y-4">

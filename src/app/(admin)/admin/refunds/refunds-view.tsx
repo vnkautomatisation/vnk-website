@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   RotateCcw,
   Plus,
@@ -8,6 +9,8 @@ import {
   Clock,
   CheckCircle2,
   Eye,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +25,10 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -81,12 +86,54 @@ export function RefundsView({
   const [newAmount, setNewAmount] = useState("");
   const [newNotes, setNewNotes] = useState("");
 
+  // Edit/Delete
+  const [editRefund, setEditRefund] = useState<Refund | null>(null);
+  const [editReason, setEditReason] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editStatus, setEditStatus] = useState("pending");
+  const [editNotes, setEditNotes] = useState("");
+  const [deleteRefund, setDeleteRefund] = useState<Refund | null>(null);
+
   const resetForm = () => {
     setNewClientId("");
     setNewInvoiceId("");
     setNewReason("");
     setNewAmount("");
     setNewNotes("");
+  };
+
+  const openEdit = (r: Refund) => {
+    setEditRefund(r);
+    setEditReason(r.reason);
+    setEditAmount(String(r.amount));
+    setEditStatus(r.status);
+    setEditNotes(r.notes ?? "");
+  };
+
+  const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!editRefund || !editReason.trim() || !editAmount) return { success: false, error: "Raison et montant requis" };
+    try {
+      const res = await fetch(`/api/refunds/${editRefund.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: editReason.trim(),
+          amount: Number(editAmount),
+          status: editStatus,
+          notes: editNotes.trim() || undefined,
+        }),
+      });
+      if (res.ok) { router.refresh(); return { success: true }; }
+      const data = await res.json();
+      return { success: false, error: data.error || "Erreur" };
+    } catch { return { success: false, error: "Erreur reseau" }; }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteRefund) return;
+    const res = await fetch(`/api/refunds/${deleteRefund.id}`, { method: "DELETE" });
+    if (res.ok) { toast.success("Remboursement supprime"); setDeleteRefund(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
   };
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
@@ -133,9 +180,14 @@ export function RefundsView({
   }, [refunds, statusFilter, searchQuery]);
 
   // Actions menu pour EntityCard
-  const getActions = useCallback((r: Refund) => [
-    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
-  ], []);
+  const getActions = useCallback((r: Refund) => {
+    const editable = r.status !== "processed" && !r.processedAt;
+    return [
+      { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+      ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(r) }] : []),
+      ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteRefund(r), separator: true, variant: "destructive" as const }] : []),
+    ];
+  }, []);
 
   const columns: Column<Refund>[] = [
     {
@@ -257,6 +309,33 @@ export function RefundsView({
       ) : (
         <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="remboursements" storageKey="admin-refunds" />
       )}
+
+      <EditModal open={!!editRefund} onOpenChange={(o) => { if (!o) setEditRefund(null); }} title="Modifier le remboursement" description={editRefund?.refundNumber} icon={Pencil} accent="bg-amber-500" onSubmit={handleEdit}>
+        <div className="space-y-4">
+          <div className="space-y-2"><Label>Raison *</Label><Textarea value={editReason} onChange={(e) => setEditReason(e.target.value)} rows={3} /></div>
+          <div className="space-y-2"><Label>Montant HT (CAD) *</Label><Input type="number" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Statut</Label>
+            <Select value={editStatus} onValueChange={setEditStatus}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">En attente</SelectItem>
+                <SelectItem value="processed">Traite</SelectItem>
+                <SelectItem value="confirmed">Confirme</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2"><Label>Notes</Label><Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} /></div>
+        </div>
+      </EditModal>
+
+      <ConfirmDialog
+        open={!!deleteRefund}
+        onOpenChange={(o) => { if (!o) setDeleteRefund(null); }}
+        title="Supprimer ce remboursement ?"
+        description={`Le remboursement "${deleteRefund?.refundNumber}" sera supprime definitivement.`}
+        confirmLabel="Supprimer"
+        onConfirm={handleDelete}
+      />
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau remboursement" icon={RotateCcw} accent="bg-amber-500" submitLabel="Creer le remboursement" onSubmit={handleCreate}>
         <div className="space-y-4">

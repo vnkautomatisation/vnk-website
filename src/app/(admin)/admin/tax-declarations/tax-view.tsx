@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   FileBarChart,
   Plus,
@@ -9,6 +10,8 @@ import {
   Receipt,
   TrendingUp,
   Eye,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,8 +26,10 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -68,12 +73,51 @@ export function TaxView({
   const [newEnd, setNewEnd] = useState("");
   const [newNotes, setNewNotes] = useState("");
 
+  // Edit/Delete
+  const [editDecl, setEditDecl] = useState<TaxDeclaration | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editStatus, setEditStatus] = useState("draft");
+  const [editNotes, setEditNotes] = useState("");
+  const [deleteDecl, setDeleteDecl] = useState<TaxDeclaration | null>(null);
+
   const resetForm = () => {
     setNewType("");
     setNewLabel("");
     setNewStart("");
     setNewEnd("");
     setNewNotes("");
+  };
+
+  const openEdit = (d: TaxDeclaration) => {
+    setEditDecl(d);
+    setEditLabel(d.periodLabel);
+    setEditStatus(d.status);
+    setEditNotes(d.notes ?? "");
+  };
+
+  const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!editDecl || !editLabel.trim()) return { success: false, error: "Periode requise" };
+    try {
+      const res = await fetch(`/api/tax-declarations/${editDecl.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          periodLabel: editLabel.trim(),
+          status: editStatus,
+          notes: editNotes.trim() || undefined,
+        }),
+      });
+      if (res.ok) { router.refresh(); return { success: true }; }
+      const data = await res.json();
+      return { success: false, error: data.error || "Erreur" };
+    } catch { return { success: false, error: "Erreur reseau" }; }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteDecl) return;
+    const res = await fetch(`/api/tax-declarations/${deleteDecl.id}`, { method: "DELETE" });
+    if (res.ok) { toast.success("Declaration supprimee"); setDeleteDecl(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
   };
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
@@ -115,9 +159,14 @@ export function TaxView({
   }, [declarations, searchQuery]);
 
   // Actions menu pour EntityCard
-  const getActions = useCallback((d: TaxDeclaration) => [
-    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
-  ], []);
+  const getActions = useCallback((d: TaxDeclaration) => {
+    const editable = d.status !== "submitted" && !d.submittedAt;
+    return [
+      { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+      ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(d) }] : []),
+      ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteDecl(d), separator: true, variant: "destructive" as const }] : []),
+    ];
+  }, []);
 
   const columns: Column<TaxDeclaration>[] = [
     { key: "period", header: "Periode", accessor: (r) => r.periodLabel, sortable: true, sortBy: (r) => r.periodLabel },
@@ -225,6 +274,32 @@ export function TaxView({
       ) : (
         <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="declarations-fiscales" storageKey="admin-tax-declarations" />
       )}
+
+      <EditModal open={!!editDecl} onOpenChange={(o) => { if (!o) setEditDecl(null); }} title="Modifier la declaration" description={editDecl?.periodLabel} icon={Pencil} accent="bg-amber-500" onSubmit={handleEdit}>
+        <div className="space-y-4">
+          <div className="space-y-2"><Label>Periode *</Label><Input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Statut</Label>
+            <Select value={editStatus} onValueChange={setEditStatus}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Brouillon</SelectItem>
+                <SelectItem value="submitted">Soumise</SelectItem>
+                <SelectItem value="confirmed">Confirmee</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2"><Label>Notes</Label><Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} /></div>
+        </div>
+      </EditModal>
+
+      <ConfirmDialog
+        open={!!deleteDecl}
+        onOpenChange={(o) => { if (!o) setDeleteDecl(null); }}
+        title="Supprimer cette declaration ?"
+        description={`La declaration "${deleteDecl?.periodLabel}" sera supprimee definitivement.`}
+        confirmLabel="Supprimer"
+        onConfirm={handleDelete}
+      />
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouvelle declaration" icon={FileBarChart} accent="bg-amber-500" submitLabel="Creer la declaration" onSubmit={handleCreate}>
         <div className="space-y-4">

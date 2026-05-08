@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Wallet,
   Plus,
@@ -8,6 +9,8 @@ import {
   DollarSign,
   Receipt,
   Eye,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +25,10 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -74,6 +79,18 @@ export function ExpensesView({
   const [newTvq, setNewTvq] = useState("");
   const [newNotes, setNewNotes] = useState("");
 
+  // Edit/Delete
+  const [editExpense, setEditExpense] = useState<Expense | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editVendor, setEditVendor] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editTps, setEditTps] = useState("");
+  const [editTvq, setEditTvq] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [deleteExpense, setDeleteExpense] = useState<Expense | null>(null);
+
   const resetForm = () => {
     setNewDate("");
     setNewCategory("");
@@ -83,6 +100,48 @@ export function ExpensesView({
     setNewTps("");
     setNewTvq("");
     setNewNotes("");
+  };
+
+  const openEdit = (e: Expense) => {
+    setEditExpense(e);
+    setEditDate(e.expenseDate.slice(0, 10));
+    setEditCategory(e.category);
+    setEditTitle(e.title);
+    setEditVendor(e.vendor ?? "");
+    setEditAmount(String(e.amount));
+    setEditTps(String(e.tpsPaid));
+    setEditTvq(String(e.tvqPaid));
+    setEditNotes(e.notes ?? "");
+  };
+
+  const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!editExpense || !editTitle.trim() || !editAmount) return { success: false, error: "Description et montant requis" };
+    try {
+      const res = await fetch(`/api/expenses/${editExpense.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expenseDate: editDate || undefined,
+          category: editCategory,
+          title: editTitle.trim(),
+          vendor: editVendor.trim() || undefined,
+          amount: Number(editAmount),
+          tpsPaid: editTps ? Number(editTps) : 0,
+          tvqPaid: editTvq ? Number(editTvq) : 0,
+          notes: editNotes.trim() || undefined,
+        }),
+      });
+      if (res.ok) { router.refresh(); return { success: true }; }
+      const data = await res.json();
+      return { success: false, error: data.error || "Erreur" };
+    } catch { return { success: false, error: "Erreur reseau" }; }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteExpense) return;
+    const res = await fetch(`/api/expenses/${deleteExpense.id}`, { method: "DELETE" });
+    if (res.ok) { toast.success("Depense supprimee"); setDeleteExpense(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
   };
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
@@ -130,6 +189,8 @@ export function ExpensesView({
   // Actions menu pour EntityCard
   const getActions = useCallback((e: Expense) => [
     { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+    { label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(e) },
+    { label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteExpense(e), separator: true, variant: "destructive" as const },
   ], []);
 
   const columns: Column<Expense>[] = [
@@ -237,6 +298,39 @@ export function ExpensesView({
       ) : (
         <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="depenses" storageKey="admin-expenses" />
       )}
+
+      <EditModal open={!!editExpense} onOpenChange={(o) => { if (!o) setEditExpense(null); }} title="Modifier la depense" description={editExpense?.title} icon={Pencil} accent="bg-amber-500" onSubmit={handleEdit}>
+        <div className="space-y-4">
+          <div className="space-y-2"><Label>Date</Label><Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Categorie</Label>
+            <Select value={editCategory} onValueChange={setEditCategory}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {EXPENSE_CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2"><Label>Description *</Label><Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Fournisseur</Label><Input value={editVendor} onChange={(e) => setEditVendor(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Montant HT (CAD) *</Label><Input type="number" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2"><Label>TPS payee</Label><Input type="number" step="0.01" value={editTps} onChange={(e) => setEditTps(e.target.value)} /></div>
+            <div className="space-y-2"><Label>TVQ payee</Label><Input type="number" step="0.01" value={editTvq} onChange={(e) => setEditTvq(e.target.value)} /></div>
+          </div>
+          <div className="space-y-2"><Label>Notes</Label><Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} /></div>
+        </div>
+      </EditModal>
+
+      <ConfirmDialog
+        open={!!deleteExpense}
+        onOpenChange={(o) => { if (!o) setDeleteExpense(null); }}
+        title="Supprimer cette depense ?"
+        description={`La depense "${deleteExpense?.title}" sera supprimee definitivement.`}
+        confirmLabel="Supprimer"
+        onConfirm={handleDelete}
+      />
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouvelle depense" icon={Wallet} accent="bg-red-500" submitLabel="Creer la depense" onSubmit={handleCreate}>
         <div className="space-y-4">

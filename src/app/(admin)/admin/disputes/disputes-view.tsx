@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   AlertCircle,
   Plus,
@@ -8,6 +9,8 @@ import {
   ShieldAlert,
   CheckCircle2,
   Eye,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +25,10 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatDate } from "@/lib/utils";
@@ -86,11 +91,56 @@ export function DisputesView({
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
 
+  // Edit/Delete
+  const [editDispute, setEditDispute] = useState<Dispute | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editStatus, setEditStatus] = useState("open");
+  const [editPriority, setEditPriority] = useState("medium");
+  const [editResolution, setEditResolution] = useState("");
+  const [deleteDispute, setDeleteDispute] = useState<Dispute | null>(null);
+
   const resetForm = () => {
     setNewClientId("");
     setNewPriority("medium");
     setNewTitle("");
     setNewDesc("");
+  };
+
+  const openEdit = (d: Dispute) => {
+    setEditDispute(d);
+    setEditTitle(d.title);
+    setEditDesc(d.description ?? "");
+    setEditStatus(d.status);
+    setEditPriority(d.priority);
+    setEditResolution(d.resolution ?? "");
+  };
+
+  const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!editDispute || !editTitle.trim()) return { success: false, error: "Titre requis" };
+    try {
+      const res = await fetch(`/api/disputes/${editDispute.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          description: editDesc.trim() || undefined,
+          status: editStatus,
+          priority: editPriority,
+          resolution: editResolution.trim() || undefined,
+        }),
+      });
+      if (res.ok) { router.refresh(); return { success: true }; }
+      const data = await res.json();
+      return { success: false, error: data.error || "Erreur" };
+    } catch { return { success: false, error: "Erreur reseau" }; }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteDispute) return;
+    const res = await fetch(`/api/disputes/${deleteDispute.id}`, { method: "DELETE" });
+    if (res.ok) { toast.success("Litige supprime"); setDeleteDispute(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
   };
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
@@ -137,6 +187,8 @@ export function DisputesView({
   // Actions menu pour EntityCard
   const getActions = useCallback((d: Dispute) => [
     { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+    { label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(d) },
+    { label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteDispute(d), separator: true, variant: "destructive" as const },
   ], []);
 
   const columns: Column<Dispute>[] = [
@@ -255,6 +307,46 @@ export function DisputesView({
       ) : (
         <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="litiges" storageKey="admin-disputes" />
       )}
+
+      <EditModal open={!!editDispute} onOpenChange={(o) => { if (!o) setEditDispute(null); }} title="Modifier le litige" description={editDispute?.title} icon={Pencil} accent="bg-amber-500" onSubmit={handleEdit}>
+        <div className="space-y-4">
+          <div className="space-y-2"><Label>Titre *</Label><Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} /></div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2"><Label>Statut</Label>
+              <Select value={editStatus} onValueChange={setEditStatus}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">Ouvert</SelectItem>
+                  <SelectItem value="in_progress">En cours</SelectItem>
+                  <SelectItem value="resolved">Resolu</SelectItem>
+                  <SelectItem value="closed">Ferme</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2"><Label>Priorite</Label>
+              <Select value={editPriority} onValueChange={setEditPriority}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Faible</SelectItem>
+                  <SelectItem value="medium">Moyenne</SelectItem>
+                  <SelectItem value="high">Elevee</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2"><Label>Description</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={3} /></div>
+          <div className="space-y-2"><Label>Resolution</Label><Textarea value={editResolution} onChange={(e) => setEditResolution(e.target.value)} rows={3} placeholder="Notes de resolution..." /></div>
+        </div>
+      </EditModal>
+
+      <ConfirmDialog
+        open={!!deleteDispute}
+        onOpenChange={(o) => { if (!o) setDeleteDispute(null); }}
+        title="Supprimer ce litige ?"
+        description={`Le litige "${deleteDispute?.title}" sera supprime definitivement.`}
+        confirmLabel="Supprimer"
+        onConfirm={handleDelete}
+      />
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau litige" icon={AlertCircle} accent="bg-red-500" submitLabel="Creer le litige" onSubmit={handleCreate}>
         <div className="space-y-4">

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   FolderOpen,
   Plus,
@@ -10,6 +11,8 @@ import {
   Eye,
   EyeOff,
   Calendar,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,8 +27,10 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { cn, formatDate } from "@/lib/utils";
 
@@ -89,11 +94,50 @@ export function DocumentsView({
   const [newCategory, setNewCategory] = useState("");
   const [newDesc, setNewDesc] = useState("");
 
+  // Edit/Delete
+  const [editDoc, setEditDoc] = useState<Doc | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [deleteDoc, setDeleteDoc] = useState<Doc | null>(null);
+
   const resetForm = () => {
     setNewClientId("");
     setNewTitle("");
     setNewCategory("");
     setNewDesc("");
+  };
+
+  const openEdit = (d: Doc) => {
+    setEditDoc(d);
+    setEditTitle(d.title);
+    setEditCategory(d.category ?? "");
+    setEditDesc(d.description ?? "");
+  };
+
+  const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!editDoc || !editTitle.trim()) return { success: false, error: "Titre requis" };
+    try {
+      const res = await fetch(`/api/documents/${editDoc.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          category: editCategory || undefined,
+          description: editDesc.trim() || undefined,
+        }),
+      });
+      if (res.ok) { router.refresh(); return { success: true }; }
+      const data = await res.json();
+      return { success: false, error: data.error || "Erreur" };
+    } catch { return { success: false, error: "Erreur reseau" }; }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteDoc) return;
+    const res = await fetch(`/api/documents/${deleteDoc.id}`, { method: "DELETE" });
+    if (res.ok) { toast.success("Document supprime"); setDeleteDoc(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
   };
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
@@ -144,6 +188,8 @@ export function DocumentsView({
   // Actions menu pour EntityCard
   const getActions = useCallback((d: Doc) => [
     { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+    { label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(d) },
+    { label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteDoc(d), separator: true, variant: "destructive" as const },
   ], []);
 
   const columns: Column<Doc>[] = [
@@ -268,6 +314,32 @@ export function DocumentsView({
       ) : (
         <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="documents" storageKey="admin-documents" />
       )}
+
+      <EditModal open={!!editDoc} onOpenChange={(o) => { if (!o) setEditDoc(null); }} title="Modifier le document" description={editDoc?.title} icon={Pencil} accent="bg-amber-500" onSubmit={handleEdit}>
+        <div className="space-y-4">
+          <div className="space-y-2"><Label>Titre *</Label><Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Categorie</Label>
+            <Select value={editCategory} onValueChange={setEditCategory}>
+              <SelectTrigger><SelectValue placeholder="Selectionner" /></SelectTrigger>
+              <SelectContent>
+                {CATEGORY_OPTIONS.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2"><Label>Description</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={3} /></div>
+        </div>
+      </EditModal>
+
+      <ConfirmDialog
+        open={!!deleteDoc}
+        onOpenChange={(o) => { if (!o) setDeleteDoc(null); }}
+        title="Supprimer ce document ?"
+        description={`Le document "${deleteDoc?.title}" sera supprime definitivement.`}
+        confirmLabel="Supprimer"
+        onConfirm={handleDelete}
+      />
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau document" icon={FolderOpen} accent="bg-blue-500" submitLabel="Creer le document" onSubmit={handleCreate}>
         <div className="space-y-4">

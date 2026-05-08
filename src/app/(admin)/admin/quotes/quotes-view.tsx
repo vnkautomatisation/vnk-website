@@ -7,9 +7,10 @@ import {
   Search,
   Clock,
   CheckCircle2,
-  XCircle,
   AlertCircle,
   Eye,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,8 +25,10 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -71,6 +74,14 @@ export function QuotesView({
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
 
+  // Edit/Delete
+  const [editQuote, setEditQuote] = useState<Quote | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editExpiry, setEditExpiry] = useState("");
+  const [deleteQuote, setDeleteQuote] = useState<Quote | null>(null);
+
   // ── Creation form ────────────────────────────────────
   const [newClientId, setNewClientId] = useState("");
   const [newTitle, setNewTitle] = useState("");
@@ -78,6 +89,40 @@ export function QuotesView({
   const [newAmount, setNewAmount] = useState("");
 
   const resetForm = () => { setNewClientId(""); setNewTitle(""); setNewDesc(""); setNewAmount(""); };
+
+  const openEdit = (q: Quote) => {
+    setEditQuote(q);
+    setEditTitle(q.title);
+    setEditDesc("");
+    setEditAmount(String(q.amountHt));
+    setEditExpiry(q.expiryDate ? q.expiryDate.slice(0, 10) : "");
+  };
+
+  const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!editQuote || !editTitle.trim() || !editAmount) return { success: false, error: "Titre et montant requis" };
+    try {
+      const res = await fetch(`/api/quotes/${editQuote.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          description: editDesc.trim() || undefined,
+          amountHt: Number(editAmount),
+          expiryDate: editExpiry || undefined,
+        }),
+      });
+      if (res.ok) { router.refresh(); return { success: true }; }
+      const data = await res.json();
+      return { success: false, error: data.error || "Erreur" };
+    } catch { return { success: false, error: "Erreur reseau" }; }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteQuote) return;
+    const res = await fetch(`/api/quotes/${deleteQuote.id}`, { method: "DELETE" });
+    if (res.ok) { toast.success("Devis supprime"); setDeleteQuote(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+  };
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
     if (!newClientId || !newTitle.trim() || !newAmount) {
@@ -129,10 +174,15 @@ export function QuotesView({
   }, [quotes, statusFilter, searchQuery]);
 
   // Actions menu pour EntityCard
-  const getActions = useCallback((q: Quote) => [
-    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
-    ...(q.status === "pending" ? [{ label: "Accepter", icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => handleAccept(q.id, q.quoteNumber) }] : []),
-  ], []);
+  const getActions = useCallback((q: Quote) => {
+    const editable = q.status !== "accepted";
+    return [
+      { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+      ...(q.status === "pending" ? [{ label: "Accepter", icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => handleAccept(q.id, q.quoteNumber) }] : []),
+      ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(q) }] : []),
+      ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteQuote(q), separator: true, variant: "destructive" as const }] : []),
+    ];
+  }, []);
 
   const columns: Column<Quote>[] = [
     { key: "number", header: "Numero", accessor: (r) => <span className="font-mono text-xs">{r.quoteNumber}</span>, sortable: true, sortBy: (r) => r.quoteNumber },
@@ -218,6 +268,24 @@ export function QuotesView({
       ) : (
         <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="devis" storageKey="admin-quotes" />
       )}
+
+      <EditModal open={!!editQuote} onOpenChange={(o) => { if (!o) setEditQuote(null); }} title="Modifier le devis" description={editQuote?.quoteNumber} icon={Pencil} accent="bg-amber-500" onSubmit={handleEdit}>
+        <div className="space-y-4">
+          <div className="space-y-2"><Label>Titre *</Label><Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Montant HT (CAD) *</Label><Input type="number" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Date d&apos;expiration</Label><Input type="date" value={editExpiry} onChange={(e) => setEditExpiry(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Description</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={3} /></div>
+        </div>
+      </EditModal>
+
+      <ConfirmDialog
+        open={!!deleteQuote}
+        onOpenChange={(o) => { if (!o) setDeleteQuote(null); }}
+        title="Supprimer ce devis ?"
+        description={`Le devis "${deleteQuote?.quoteNumber}" sera supprime definitivement.`}
+        confirmLabel="Supprimer"
+        onConfirm={handleDelete}
+      />
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau devis" icon={FileText} accent="bg-blue-500" submitLabel="Creer le devis" onSubmit={handleCreate}>
         <div className="space-y-4">
