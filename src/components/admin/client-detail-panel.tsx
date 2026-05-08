@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { useConfirm } from "@/hooks/use-confirm";
 import { initials, formatCurrency, formatDate } from "@/lib/utils";
 import {
   Mail,
@@ -71,6 +72,7 @@ export function ClientDetailPanel({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const { confirm, ConfirmModal } = useConfirm();
   const [client, setClient] = useState<ClientFull | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -93,7 +95,13 @@ export function ClientDetailPanel({
   };
 
   const acceptQuote = async (id: number, num: string) => {
-    if (!confirm(`Accepter le devis ${num} ? Un contrat sera genere.`)) return;
+    const ok = await confirm({
+      title: "Accepter ce devis ?",
+      description: `Le devis ${num} sera marque comme accepte et un contrat sera genere automatiquement.`,
+      confirmLabel: "Accepter",
+      variant: "default",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/quotes/${id}/accept`, { method: "POST" });
@@ -103,7 +111,13 @@ export function ClientDetailPanel({
   };
 
   const markPaid = async (id: number, num: string) => {
-    if (!confirm(`Marquer ${num} comme payee ?`)) return;
+    const ok = await confirm({
+      title: "Marquer comme payee ?",
+      description: `La facture ${num} sera marquee comme payee.`,
+      confirmLabel: "Marquer payee",
+      variant: "default",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/invoices/${id}/mark-paid`, { method: "POST" });
@@ -113,7 +127,13 @@ export function ClientDetailPanel({
   };
 
   const signContract = async (id: number) => {
-    if (!confirm("Signer en tant qu'admin ?")) return;
+    const ok = await confirm({
+      title: "Signer ce contrat ?",
+      description: "Vous allez apposer votre signature en tant qu'administrateur. Cette action sera enregistree.",
+      confirmLabel: "Signer",
+      variant: "default",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/contracts/${id}/sign`, {
@@ -339,6 +359,7 @@ export function ClientDetailPanel({
             </div>
           </>
         )}
+        {ConfirmModal}
       </SheetContent>
     </Sheet>
   );

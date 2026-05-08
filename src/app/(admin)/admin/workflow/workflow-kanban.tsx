@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { StatCard } from "@/components/admin/stat-card";
 import { ClientDetailPanel } from "@/components/admin/client-detail-panel";
+import { useConfirm } from "@/hooks/use-confirm";
 import { cn, formatCurrency } from "@/lib/utils";
 
 type ClientData = {
@@ -85,6 +86,7 @@ function hasAlert(c: ClientData): boolean {
 
 export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
   const router = useRouter();
+  const { confirm, ConfirmModal } = useConfirm();
   const [searchQuery, setSearchQuery] = useState("");
   const [alertsOnly, setAlertsOnly] = useState(false);
   const [panelClientId, setPanelClientId] = useState<number | null>(null);
@@ -122,7 +124,13 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
 
   // Actions API
   const acceptQuote = async (clientId: number, quoteId: number, num: string) => {
-    if (!confirm(`Accepter le devis ${num} ? Un contrat sera genere automatiquement.`)) return;
+    const ok = await confirm({
+      title: "Accepter ce devis ?",
+      description: `Le devis ${num} sera marque comme accepte et un contrat sera genere automatiquement.`,
+      confirmLabel: "Accepter",
+      variant: "default",
+    });
+    if (!ok) return;
     setBusyClientId(clientId);
     try {
       const res = await fetch(`/api/quotes/${quoteId}/accept`, { method: "POST" });
@@ -132,7 +140,13 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
   };
 
   const signContract = async (clientId: number, contractId: number) => {
-    if (!confirm("Signer ce contrat en tant qu'admin ?")) return;
+    const ok = await confirm({
+      title: "Signer ce contrat ?",
+      description: "Vous allez apposer votre signature en tant qu'administrateur. Cette action sera enregistree.",
+      confirmLabel: "Signer",
+      variant: "default",
+    });
+    if (!ok) return;
     setBusyClientId(clientId);
     try {
       const res = await fetch(`/api/contracts/${contractId}/sign`, {
@@ -146,7 +160,13 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
   };
 
   const markInvoicePaid = async (clientId: number, invoiceId: number, num: string) => {
-    if (!confirm(`Marquer la facture ${num} comme payee ?`)) return;
+    const ok = await confirm({
+      title: "Marquer comme payee ?",
+      description: `La facture ${num} sera marquee comme payee.`,
+      confirmLabel: "Marquer payee",
+      variant: "default",
+    });
+    if (!ok) return;
     setBusyClientId(clientId);
     try {
       const res = await fetch(`/api/invoices/${invoiceId}/mark-paid`, { method: "POST" });
@@ -318,16 +338,21 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
                                   <AlertTriangle className="h-3 w-3 text-red-500" />
                                 )}
                                 <DropdownMenu>
-                                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                    <button className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted transition-colors">
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted transition-colors"
+                                    >
                                       <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
                                     </button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenuContent align="end" className="w-48">
                                     {actions.map((action, i) => (
                                       <div key={i}>
                                         {i === 1 && <DropdownMenuSeparator />}
-                                        <DropdownMenuItem onClick={action.onClick}>
+                                        <DropdownMenuItem
+                                          onSelect={(e) => { e.preventDefault(); action.onClick(); }}
+                                        >
                                           <span className="mr-2">{action.icon}</span>
                                           {action.label}
                                         </DropdownMenuItem>
@@ -396,6 +421,8 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
         open={panelClientId !== null}
         onOpenChange={(o) => { if (!o) setPanelClientId(null); }}
       />
+
+      {ConfirmModal}
     </div>
   );
 }

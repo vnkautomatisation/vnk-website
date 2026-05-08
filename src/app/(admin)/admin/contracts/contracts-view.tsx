@@ -32,6 +32,7 @@ import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirm } from "@/hooks/use-confirm";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -70,6 +71,7 @@ export function ContractsView({
   clients: ClientOption[];
 }) {
   const router = useRouter();
+  const { confirm, ConfirmModal } = useConfirm();
   const [view, setView] = useViewMode("contracts", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -160,6 +162,23 @@ export function ContractsView({
     return result;
   }, [contracts, statusFilter, searchQuery]);
 
+  const handleSign = async (id: number) => {
+    const ok = await confirm({
+      title: "Signer ce contrat ?",
+      description: "Vous allez apposer votre signature en tant qu'administrateur. Cette action sera enregistree.",
+      confirmLabel: "Signer",
+      variant: "default",
+    });
+    if (!ok) return;
+    const res = await fetch(`/api/contracts/${id}/sign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ signatureData: "admin-signed-via-dashboard" }),
+    });
+    if (res.ok) { toast.success("Contrat signe"); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error); }
+  };
+
   // Actions menu pour EntityCard
   const getActions = useCallback((c: Contract) => {
     const editable = !c.clientSignatureData && !c.signedAt;
@@ -168,20 +187,12 @@ export function ContractsView({
       ...(c.status === "pending" && !c.adminSignatureData ? [{
         label: "Signer",
         icon: <PenTool className="h-3.5 w-3.5" />,
-        onClick: async () => {
-          if (!confirm("Signer ce contrat en tant qu'admin ?")) return;
-          const res = await fetch(`/api/contracts/${c.id}/sign`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ signatureData: "admin-signed-via-dashboard" }),
-          });
-          if (res.ok) { toast.success("Contrat signe"); router.refresh(); }
-          else { const d = await res.json(); toast.error(d.error); }
-        },
+        onClick: () => handleSign(c.id),
       }] : []),
       ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(c) }] : []),
       ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteContract(c), separator: true, variant: "destructive" as const }] : []),
     ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const columns: Column<Contract>[] = [
@@ -208,16 +219,7 @@ export function ContractsView({
         <div className="flex gap-1">
           {r.status === "pending" && !r.adminSignatureData && (
             <Button variant="ghost" size="sm" title="Signer" className="text-blue-600"
-              onClick={async () => {
-                if (!confirm("Signer ce contrat en tant qu'admin ?")) return;
-                const res = await fetch(`/api/contracts/${r.id}/sign`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ signatureData: "admin-signed-via-dashboard" }),
-                });
-                if (res.ok) { toast.success("Contrat signe"); router.refresh(); }
-                else { const d = await res.json(); toast.error(d.error); }
-              }}
+              onClick={() => handleSign(r.id)}
             >
               <PenTool className="h-3.5 w-3.5" />
             </Button>
@@ -354,6 +356,8 @@ export function ContractsView({
           </div>
         </div>
       </CreateModal>
+
+      {ConfirmModal}
     </div>
   );
 }

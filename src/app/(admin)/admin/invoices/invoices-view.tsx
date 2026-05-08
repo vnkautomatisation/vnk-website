@@ -31,6 +31,7 @@ import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirm } from "@/hooks/use-confirm";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -74,6 +75,7 @@ export function InvoicesView({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { confirm, ConfirmModal } = useConfirm();
   const [view, setView] = useViewMode("invoices", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -164,7 +166,13 @@ export function InvoicesView({
 
   // Actions
   const handleMarkPaid = async (id: number, num: string) => {
-    if (!confirm(`Marquer la facture ${num} comme payee ?`)) return;
+    const ok = await confirm({
+      title: "Marquer comme payee ?",
+      description: `La facture ${num} sera marquee comme payee.`,
+      confirmLabel: "Marquer payee",
+      variant: "default",
+    });
+    if (!ok) return;
     const res = await fetch(`/api/invoices/${id}/mark-paid`, { method: "POST" });
     if (res.ok) { toast.success("Facture marquee comme payee"); router.refresh(); }
     else { const d = await res.json(); toast.error(d.error || "Erreur"); }
@@ -332,6 +340,8 @@ export function InvoicesView({
           </div>
         </div>
       </CreateModal>
+
+      {ConfirmModal}
     </div>
   );
 }

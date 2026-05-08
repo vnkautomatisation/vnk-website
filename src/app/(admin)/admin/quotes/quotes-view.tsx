@@ -29,6 +29,7 @@ import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirm } from "@/hooks/use-confirm";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -70,6 +71,7 @@ export function QuotesView({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { confirm, ConfirmModal } = useConfirm();
   const [view, setView] = useViewMode("quotes", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -160,7 +162,13 @@ export function QuotesView({
 
   // Actions
   const handleAccept = async (id: number, num: string) => {
-    if (!confirm(`Accepter le devis ${num} ? Un contrat sera genere automatiquement.`)) return;
+    const ok = await confirm({
+      title: "Accepter ce devis ?",
+      description: `Le devis ${num} sera marque comme accepte et un contrat sera genere automatiquement.`,
+      confirmLabel: "Accepter",
+      variant: "default",
+    });
+    if (!ok) return;
     const res = await fetch(`/api/quotes/${id}/accept`, { method: "POST" });
     if (res.ok) { toast.success("Devis accepte, contrat genere"); router.refresh(); }
     else { const d = await res.json(); toast.error(d.error); }
@@ -331,6 +339,8 @@ export function QuotesView({
           </div>
         </div>
       </CreateModal>
+
+      {ConfirmModal}
     </div>
   );
 }
