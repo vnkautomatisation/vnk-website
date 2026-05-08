@@ -188,7 +188,7 @@ export function ExpensesView({
 
   // Actions menu pour EntityCard
   const getActions = useCallback((e: Expense) => [
-    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+    { label: "Voir / Modifier", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEdit(e) },
     { label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(e) },
     { label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteExpense(e), separator: true, variant: "destructive" as const },
   ], []);

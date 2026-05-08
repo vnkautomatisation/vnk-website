@@ -162,7 +162,7 @@ export function TaxView({
   const getActions = useCallback((d: TaxDeclaration) => {
     const editable = d.status !== "submitted" && !d.submittedAt;
     return [
-      { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+      { label: "Voir / Modifier", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEdit(d) },
       ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(d) }] : []),
       ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteDecl(d), separator: true, variant: "destructive" as const }] : []),
     ];

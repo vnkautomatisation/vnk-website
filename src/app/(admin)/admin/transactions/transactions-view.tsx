@@ -14,6 +14,7 @@ import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 
 type Payment = {
@@ -48,6 +49,7 @@ export function TransactionsView({
   payments: Payment[];
   kpis: { totalPaid: number; totalRefunded: number; count: number };
 }) {
+  const { open: openEntity } = useEntityPanels();
   const [view, setView] = useViewMode("transactions", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,7 +72,9 @@ export function TransactionsView({
 
   // Actions menu pour EntityCard (lecture seule)
   const getActions = useCallback((p: Payment) => [
-    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+    ...(p.invoiceId ? [{ label: "Voir facture", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("invoice", p.invoiceId!) }] : []),
+    ...(p.clientId ? [{ label: "Voir client", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", p.clientId!) }] : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], []);
 
   const columns: Column<Payment>[] = [

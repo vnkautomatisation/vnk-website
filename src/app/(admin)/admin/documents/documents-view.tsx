@@ -31,6 +31,7 @@ import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { cn, formatDate } from "@/lib/utils";
 
@@ -84,6 +85,7 @@ export function DocumentsView({
   kpis: { total: number; thisMonth: number; unread: number; uniqueClients: number };
 }) {
   const router = useRouter();
+  const { open: openEntity } = useEntityPanels();
   const [view, setView] = useViewMode("documents", "list");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -187,7 +189,7 @@ export function DocumentsView({
 
   // Actions menu pour EntityCard
   const getActions = useCallback((d: Doc) => [
-    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+    { label: "Voir client", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", d.clientId) },
     { label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(d) },
     { label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteDoc(d), separator: true, variant: "destructive" as const },
   ], []);

@@ -24,6 +24,7 @@ import {
   ArrowDownUp,
   TrendingUp,
   Activity,
+  Download,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -388,6 +389,47 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     setFilterAmountMax("");
   };
 
+  // Export CSV des clients filtres avec leur etape pipeline
+  const exportCsv = () => {
+    const stepLabels: Record<Step, string> = {
+      prospect: "Nouveau client",
+      mandate_active: "Mandat en cours",
+      quote_pending: "Devis envoye",
+      contract_pending: "Contrat a signer",
+      invoice_unpaid: "Paiement en attente",
+      complete: "Complete",
+    };
+    const headers = ["Client", "Entreprise", "Etape", "Montant pipeline (CAD)", "Mandats", "Devis", "Contrats", "Factures", "Impaye (CAD)", "Alerte", "Messages non lus", "Derniere activite"];
+    const rows = filtered.map((c) => {
+      const step = getStep(c);
+      const unpaid = c.invoices.filter((i) => i.status === "unpaid" || i.status === "overdue").reduce((s, i) => s + i.amountTtc, 0);
+      return [
+        c.fullName,
+        c.companyName ?? "",
+        stepLabels[step],
+        getClientStageValue(c, step).toFixed(2),
+        String(c.mandates.length),
+        String(c.quotes.length),
+        String(c.contracts.length),
+        String(c.invoices.length),
+        unpaid.toFixed(2),
+        hasAlert(c) ? "Oui" : "Non",
+        String(c.unreadMessages),
+        new Date(getClientLastActivity(c)).toISOString().slice(0, 10),
+      ];
+    });
+    const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const csv = [headers, ...rows].map((row) => row.map(escape).join(",")).join("\r\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pipeline-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Export CSV: ${filtered.length} clients`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -401,12 +443,17 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
             Cycle de vie complet de chaque client — de la prospection au paiement
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setActivityOpen(true)} className="shrink-0">
-          <Activity className="h-4 w-4 mr-1.5" />
-          <span className="hidden sm:inline">Activite recente</span>
-          <span className="sm:hidden">Activite</span>
-          {events.length > 0 && <Badge variant="secondary" className="ml-2">{events.length}</Badge>}
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={exportCsv} title="Exporter en CSV">
+            <Download className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setActivityOpen(true)}>
+            <Activity className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Activite</span>
+            {events.length > 0 && <Badge variant="secondary" className="ml-1.5">{events.length}</Badge>}
+          </Button>
+        </div>
       </div>
 
       {/* KPIs */}

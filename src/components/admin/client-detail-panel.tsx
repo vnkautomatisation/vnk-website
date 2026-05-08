@@ -32,6 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { useGooglePlaces, parseAddressComponents } from "@/hooks/use-google-places";
 import { initials, formatCurrency, formatDate } from "@/lib/utils";
 import {
@@ -88,6 +89,7 @@ export function ClientDetailPanel({
 }) {
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
+  const { open: openEntity } = useEntityPanels();
   const [client, setClient] = useState<ClientFull | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -434,7 +436,12 @@ export function ClientDetailPanel({
                     <EmptyState text="Aucun mandat" actionLabel="Creer un mandat" actionHref={`/admin/mandates?newFor=${client.id}`} />
                   ) : (
                     client.mandates.map((m) => (
-                      <div key={m.id} className="p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => openEntity("mandate", m.id)}
+                        className="w-full text-left p-3 rounded-lg border bg-card hover:shadow-sm hover:border-primary transition-all"
+                      >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium truncate">{m.title}</p>
@@ -447,7 +454,7 @@ export function ClientDetailPanel({
                             <StatusBadge status={m.status} />
                           </div>
                         </div>
-                      </div>
+                      </button>
                     ))
                   )}
                 </TabsContent>
@@ -464,6 +471,7 @@ export function ClientDetailPanel({
                         secondary={q.expiryDate ? `Expire le ${formatDate(q.expiryDate)}` : undefined}
                         amount={Number(q.amountTtc)}
                         status={q.status}
+                        onClick={() => openEntity("quote", q.id)}
                         actions={[
                           ...(q.status === "pending" ? [{
                             label: "Marquer accepte",
@@ -502,6 +510,7 @@ export function ClientDetailPanel({
                         amount={Number(i.amountTtc)}
                         status={i.status}
                         alert={i.status === "overdue"}
+                        onClick={() => openEntity("invoice", i.id)}
                         actions={[
                           ...(i.status === "unpaid" || i.status === "overdue" ? [{
                             label: "Marquer payee",
@@ -542,6 +551,7 @@ export function ClientDetailPanel({
                         key={c.id}
                         ref1={c.contractNumber}
                         status={c.status}
+                        onClick={() => openEntity("contract", c.id)}
                         actions={[
                           ...(c.status === "pending" ? [{
                             label: "Signer admin",
@@ -1291,6 +1301,7 @@ function EntityRow({
   actions,
   alert,
   busy,
+  onClick,
 }: {
   ref1: string;
   title?: string;
@@ -1300,10 +1311,12 @@ function EntityRow({
   actions?: Array<{ label: string; icon: React.ReactNode; onClick: () => void }>;
   alert?: boolean;
   busy?: boolean;
+  /** Si fourni, le contenu (sauf actions menu) est cliquable et appelle onClick */
+  onClick?: () => void;
 }) {
-  return (
-    <div className={`p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow flex items-start justify-between gap-2 ${alert ? "border-red-300" : ""}`}>
-      <div className="min-w-0 flex-1">
+  const innerContent = (
+    <>
+      <div className="min-w-0 flex-1 text-left">
         <p className="text-[10px] text-muted-foreground font-mono">{ref1}</p>
         {title && <p className="text-sm font-medium truncate mt-0.5">{title}</p>}
         {secondary && <p className="text-[11px] text-muted-foreground mt-0.5">{secondary}</p>}
@@ -1312,6 +1325,21 @@ function EntityRow({
         {status && <StatusBadge status={status} />}
         {amount !== undefined && <p className="text-sm font-bold">{formatCurrency(amount)}</p>}
       </div>
+    </>
+  );
+  return (
+    <div className={`p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow flex items-start justify-between gap-2 ${alert ? "border-red-300" : ""} ${onClick ? "hover:border-primary cursor-pointer" : ""}`}>
+      {onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          className="contents bg-transparent border-0 p-0 m-0 cursor-pointer text-left"
+        >
+          {innerContent}
+        </button>
+      ) : (
+        innerContent
+      )}
       {actions && actions.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

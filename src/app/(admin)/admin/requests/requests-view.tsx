@@ -14,6 +14,7 @@ import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { cn, formatDate } from "@/lib/utils";
 
 type Request = {
@@ -59,6 +60,7 @@ export function RequestsView({
   requests: Request[];
   kpis: { total: number; newCount: number; inProgress: number; converted: number };
 }) {
+  const { open: openEntity } = useEntityPanels();
   const [view, setView] = useViewMode("requests", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,7 +82,7 @@ export function RequestsView({
 
   // Actions menu pour EntityCard (lecture seule)
   const getActions = useCallback((r: Request) => [
-    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+    { label: "Voir client", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", r.clientId) },
   ], []);
 
   const columns: Column<Request>[] = [

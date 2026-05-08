@@ -29,6 +29,7 @@ import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -75,6 +76,7 @@ export function RefundsView({
   kpis: { total: number; pending: number; processed: number };
 }) {
   const router = useRouter();
+  const { open: openEntity } = useEntityPanels();
   const [view, setView] = useViewMode("refunds", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -183,7 +185,7 @@ export function RefundsView({
   const getActions = useCallback((r: Refund) => {
     const editable = r.status !== "processed" && !r.processedAt;
     return [
-      { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+      { label: "Voir client", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", r.clientId) },
       ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(r) }] : []),
       ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteRefund(r), separator: true, variant: "destructive" as const }] : []),
     ];
