@@ -1,4 +1,5 @@
-// Admin layout : sidebar + topbar + main content
+// Admin layout — topbar pleine largeur + sidebar sous topbar + main content
+// Meme structure que le portail
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
@@ -7,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminTopbar } from "@/components/admin/admin-topbar";
+import { CommandPalette } from "@/components/admin/command-palette";
 
 const getAdmin = cache(async (adminId: number) =>
   prisma.admin.findUnique({
@@ -21,6 +23,25 @@ const getOverdueCount = cache(async () =>
   })
 );
 
+const getSidebarCounts = cache(async () => {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(todayStart.getTime() + 86400000);
+
+  const [unreadMessages, overdueInvoices, pendingQuotes, pendingContracts, activeMandates, newRequests, openDisputes, todayAppointments] = await Promise.all([
+    prisma.message.count({ where: { sender: "client", isRead: false } }),
+    prisma.invoice.count({ where: { status: "overdue" } }),
+    prisma.quote.count({ where: { status: "pending" } }),
+    prisma.contract.count({ where: { status: "pending" } }),
+    prisma.mandate.count({ where: { status: { in: ["active", "in_progress"] } } }),
+    prisma.projectRequest.count({ where: { status: "new" } }),
+    prisma.dispute.count({ where: { status: "open" } }),
+    prisma.appointment.count({ where: { appointmentDate: { gte: todayStart, lt: todayEnd }, status: "confirmed" } }),
+  ]);
+
+  return { unreadMessages, overdueInvoices, pendingQuotes, pendingContracts, activeMandates, newRequests, openDisputes, todayAppointments };
+});
+
 export default async function AdminLayout({
   children,
 }: {
@@ -33,21 +54,29 @@ export default async function AdminLayout({
   }
 
   const adminId = session!.user.adminId;
-  const [admin, overdueCount] = await Promise.all([
+  const [admin, overdueCount, sidebarCounts] = await Promise.all([
     adminId ? getAdmin(adminId) : null,
     getOverdueCount(),
+    getSidebarCounts(),
   ]);
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <AdminSidebar />
+    <div className="min-h-screen bg-muted/40">
+      <CommandPalette />
+
+      {/* Topbar pleine largeur — toujours en haut */}
       <AdminTopbar
         adminName={admin?.fullName ?? admin?.email ?? "Admin"}
         adminEmail={admin?.email ?? ""}
         overdueCount={overdueCount}
       />
+
+      {/* Sidebar — sous le topbar */}
+      <AdminSidebar counts={sidebarCounts} />
+
+      {/* Contenu principal — sous le topbar, a droite du sidebar */}
       <main className="lg:pl-[240px]">
-        <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px]">
+        <div className="p-4 sm:p-5 lg:p-6">
           {children}
         </div>
       </main>

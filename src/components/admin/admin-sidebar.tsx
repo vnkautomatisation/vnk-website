@@ -1,4 +1,6 @@
 "use client";
+// Sidebar admin — meme style que portal-sidebar
+// Se positionne sous le topbar (top-[64px]), items actifs en navy
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
@@ -32,13 +34,9 @@ type NavItem = {
   key: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string;
-  badge?: number;
 };
 
-type NavGroup = {
-  key: string;
-  items: NavItem[];
-};
+type NavGroup = { key: string; items: NavItem[] };
 
 const GROUPS: NavGroup[] = [
   {
@@ -95,136 +93,139 @@ const GROUPS: NavGroup[] = [
   },
 ];
 
-export function AdminSidebar() {
+export type SidebarCounts = {
+  unreadMessages?: number;
+  overdueInvoices?: number;
+  pendingQuotes?: number;
+  pendingContracts?: number;
+  activeMandates?: number;
+  newRequests?: number;
+  openDisputes?: number;
+  todayAppointments?: number;
+};
+
+const BADGE_MAP: Record<string, keyof SidebarCounts> = {
+  messages: "unreadMessages",
+  invoices: "overdueInvoices",
+  quotes: "pendingQuotes",
+  contracts: "pendingContracts",
+  mandates: "activeMandates",
+  requests: "newRequests",
+  disputes: "openDisputes",
+  calendar: "todayAppointments",
+};
+
+export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
   const t = useTranslations("admin.sidebar");
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <>
-      {/* ── Desktop sidebar ─────────────────────────────── */}
+      {/* Desktop sidebar — sous le topbar */}
       <aside
-        className={cn(
-          "hidden lg:flex fixed top-0 left-0 bottom-0 z-40",
-          "w-[240px] flex-col border-r bg-card"
-        )}
-        aria-label={t("dashboard")}
+        className="hidden lg:flex fixed top-[64px] left-0 bottom-0 z-20 w-[240px] flex-col border-r bg-card"
+        aria-label="Navigation admin"
       >
-        <SidebarContent pathname={pathname} t={t} />
+        <SidebarNav pathname={pathname} t={t} counts={counts} />
       </aside>
 
-      {/* ── Mobile menu trigger ─────────────────────────── */}
+      {/* Mobile hamburger — dans le topbar */}
       <button
         type="button"
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-3 left-3 z-30 flex h-11 w-11 items-center justify-center rounded-lg bg-card border shadow-sm"
-        aria-label={t("dashboard")}
+        className="lg:hidden fixed top-[18px] left-4 z-40 flex h-9 w-9 items-center justify-center rounded-md bg-white/10 text-white hover:bg-white/20 transition-colors"
+        aria-label="Menu"
       >
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* ── Mobile drawer ──────────────────────────────── */}
+      {/* Mobile drawer */}
       {mobileOpen && (
         <>
           <div
-            className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
-            aria-hidden="true"
           />
-          <aside
-            className={cn(
-              "lg:hidden fixed top-0 left-0 bottom-0 z-50",
-              "w-[280px] flex-col border-r bg-card flex"
-            )}
-            role="dialog"
-            aria-modal="true"
-            aria-label={t("dashboard")}
-          >
-            <button
-              type="button"
-              onClick={() => setMobileOpen(false)}
-              className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
-              aria-label="Fermer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <SidebarContent
+          <div className="lg:hidden fixed top-0 left-0 bottom-0 z-50 w-[85%] max-w-[300px] bg-card flex flex-col">
+            <div className="h-[64px] px-5 flex items-center justify-between border-b">
+              <span className="font-bold text-sm">Navigation</span>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="h-9 w-9 rounded-md hover:bg-muted flex items-center justify-center"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <SidebarNav
               pathname={pathname}
               t={t}
+              counts={counts}
               onNavigate={() => setMobileOpen(false)}
             />
-          </aside>
+          </div>
         </>
       )}
     </>
   );
 }
 
-function SidebarContent({
+function SidebarNav({
   pathname,
   t,
+  counts = {},
   onNavigate,
 }: {
   pathname: string;
   t: (key: string) => string;
+  counts?: SidebarCounts;
   onNavigate?: () => void;
 }) {
   return (
-    <>
-      {/* Logo */}
-      <div className="h-[60px] flex items-center gap-3 px-5 border-b">
-        <div className="h-9 w-9 rounded-lg vnk-gradient flex items-center justify-center">
-          <span className="text-white font-bold text-sm">VNK</span>
+    <nav className="flex-1 overflow-y-auto p-3 space-y-4" aria-label="Navigation principale">
+      {GROUPS.map((group) => (
+        <div key={group.key}>
+          <div className="px-3 text-[10px] font-bold tracking-wider text-muted-foreground uppercase mb-1.5">
+            {t(group.key)}
+          </div>
+          <ul className="space-y-0.5">
+            {group.items.map((item) => {
+              const Icon = item.icon;
+              const active = item.href === "/admin"
+                ? pathname === "/admin"
+                : pathname === item.href || pathname.startsWith(item.href + "/");
+              const countKey = BADGE_MAP[item.key];
+              const badgeValue = countKey ? counts[countKey] : undefined;
+              return (
+                <li key={item.key}>
+                  <Link
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+                      active
+                        ? "bg-[#0F2D52] text-white font-medium shadow-sm"
+                        : "text-foreground hover:bg-muted"
+                    )}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="flex-1 truncate">{t(item.key)}</span>
+                    {badgeValue && badgeValue > 0 ? (
+                      <span
+                        className={cn(
+                          "h-2.5 w-2.5 rounded-full shrink-0",
+                          active ? "bg-white/70" : "bg-red-500"
+                        )}
+                      />
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </div>
-        <div className="min-w-0">
-          <div className="text-sm font-semibold leading-tight truncate">
-            Automatisation Inc.
-          </div>
-          <div className="text-[10px] text-muted-foreground leading-tight">
-            VALUE · NETWORK · KNOWLEDGE
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5" aria-label="Navigation principale">
-        {GROUPS.map((group) => (
-          <div key={group.key}>
-            <div className="px-3 text-[10px] font-bold tracking-wider text-muted-foreground uppercase mb-2">
-              {t(group.key)}
-            </div>
-            <ul className="space-y-0.5">
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const active = pathname === item.href || pathname.startsWith(item.href + "/");
-                return (
-                  <li key={item.key}>
-                    <Link
-                      href={item.href}
-                      onClick={onNavigate}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                        active
-                          ? "bg-primary text-primary-foreground font-medium"
-                          : "text-foreground hover:bg-accent"
-                      )}
-                      aria-current={active ? "page" : undefined}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span className="flex-1 truncate">{t(item.key)}</span>
-                      {item.badge ? (
-                        <span className="ml-auto text-[10px] bg-destructive text-destructive-foreground rounded-full px-1.5 py-0.5">
-                          {item.badge}
-                        </span>
-                      ) : null}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </nav>
-    </>
+      ))}
+    </nav>
   );
 }

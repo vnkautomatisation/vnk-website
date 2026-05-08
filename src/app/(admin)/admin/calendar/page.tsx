@@ -1,30 +1,60 @@
+// Admin · Calendrier — navigation semaine + slots + RDV + creation
 import { prisma } from "@/lib/prisma";
-import { PageHeader } from "@/components/admin/page-header";
 import { CalendarView } from "./calendar-view";
-import { Calendar } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Calendrier" };
 
 export default async function CalendarPage() {
+  // Charger 4 semaines de donnees (semaine courante + 3)
   const now = new Date();
-  const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay());
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 7);
+  const rangeStart = new Date(now);
+  rangeStart.setDate(now.getDate() - now.getDay() - 7); // 1 semaine avant
+  const rangeEnd = new Date(rangeStart);
+  rangeEnd.setDate(rangeStart.getDate() + 42); // 6 semaines
 
-  const [slots, appointments] = await Promise.all([
+  const [slots, appointments, clients] = await Promise.all([
     prisma.availabilitySlot.findMany({
-      where: { slotDate: { gte: weekStart, lte: weekEnd } },
+      where: { slotDate: { gte: rangeStart, lte: rangeEnd } },
       orderBy: [{ slotDate: "asc" }, { startTime: "asc" }],
     }),
     prisma.appointment.findMany({
-      where: { appointmentDate: { gte: weekStart, lte: weekEnd } },
+      where: { appointmentDate: { gte: rangeStart, lte: rangeEnd } },
       orderBy: [{ appointmentDate: "asc" }, { startTime: "asc" }],
+      include: { client: { select: { id: true, fullName: true } } },
+    }),
+    prisma.client.findMany({
+      where: { isActive: true, archived: false },
+      select: { id: true, fullName: true, companyName: true, email: true },
+      orderBy: { fullName: "asc" },
     }),
   ]);
 
   return (
-    <div className="space-y-4">
-      <PageHeader title="Calendrier" subtitle="Disponibilités et rendez-vous" icon={Calendar} action={{ label: "+ Disponibilité" }} />
-      <CalendarView slots={slots} appointments={appointments} />
-    </div>
+    <CalendarView
+      slots={slots.map((s) => ({
+        id: s.id,
+        slotDate: s.slotDate.toISOString(),
+        startTime: s.startTime,
+        endTime: s.endTime,
+        durationMin: s.durationMin,
+        status: s.status,
+        notes: s.notes,
+      }))}
+      appointments={appointments.map((a) => ({
+        id: a.id,
+        slotId: a.slotId,
+        clientId: a.clientId,
+        clientName: a.clientName,
+        appointmentDate: a.appointmentDate.toISOString(),
+        startTime: a.startTime,
+        endTime: a.endTime,
+        subject: a.subject,
+        status: a.status,
+        meetingType: a.meetingType,
+        meetingLink: a.meetingLink,
+      }))}
+      clients={clients}
+    />
   );
 }

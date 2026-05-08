@@ -1,43 +1,55 @@
 // Pipeline workflow — kanban visuel du cycle de vie client
 import { prisma } from "@/lib/prisma";
-import { PageHeader } from "@/components/admin/page-header";
 import { WorkflowKanban } from "./workflow-kanban";
-import { Workflow } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Pipeline workflow" };
 
 export default async function WorkflowPage() {
-  // Charger tous les clients actifs avec leurs mandats / devis / contrats / factures
-  // Le state machine dans lib/workflow.ts détermine l'étape
   const rawClients = await prisma.client.findMany({
     where: { isActive: true, archived: false },
     include: {
-      mandates: { select: { id: true, status: true, title: true, progress: true } },
-      quotes: { select: { id: true, status: true, quoteNumber: true, amountTtc: true } },
-      contracts: { select: { id: true, status: true, contractNumber: true } },
-      invoices: {
-        select: {
-          id: true,
-          status: true,
-          invoiceNumber: true,
-          amountTtc: true,
-          dueDate: true,
-        },
+      mandates: {
+        select: { id: true, status: true, title: true, progress: true, serviceType: true, endDate: true },
+        orderBy: { createdAt: "desc" },
       },
+      quotes: {
+        select: { id: true, status: true, quoteNumber: true, title: true, amountTtc: true, expiryDate: true },
+        orderBy: { createdAt: "desc" },
+      },
+      contracts: {
+        select: { id: true, status: true, contractNumber: true, title: true },
+        orderBy: { createdAt: "desc" },
+      },
+      invoices: {
+        select: { id: true, status: true, invoiceNumber: true, amountTtc: true, dueDate: true },
+        orderBy: { createdAt: "desc" },
+      },
+      _count: { select: { messages: { where: { isRead: false, sender: "client" } } } },
     },
   });
+
   const clients = rawClients.map((c) => ({
-    ...c,
-    quotes: c.quotes.map((q) => ({ ...q, amountTtc: Number(q.amountTtc) })),
-    invoices: c.invoices.map((i) => ({ ...i, amountTtc: Number(i.amountTtc) })),
+    id: c.id,
+    fullName: c.fullName,
+    companyName: c.companyName,
+    unreadMessages: c._count.messages,
+    mandates: c.mandates.map((m) => ({
+      ...m,
+      endDate: m.endDate?.toISOString() ?? null,
+    })),
+    quotes: c.quotes.map((q) => ({
+      ...q,
+      amountTtc: Number(q.amountTtc),
+      expiryDate: q.expiryDate?.toISOString() ?? null,
+    })),
+    contracts: c.contracts,
+    invoices: c.invoices.map((i) => ({
+      ...i,
+      amountTtc: Number(i.amountTtc),
+      dueDate: i.dueDate?.toISOString() ?? null,
+    })),
   }));
 
-  return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Pipeline workflow"
-        subtitle="Cycle de vie complet de chaque client — de la prospection au paiement"
-        icon={Workflow}
-      />
-      <WorkflowKanban clients={clients} />
-    </div>
-  );
+  return <WorkflowKanban clients={clients} />;
 }

@@ -1,8 +1,10 @@
 "use client";
+// Topbar admin — meme style que portal-topbar
+// Barre pleine largeur, logo VNK, notifs, refresh, locale, avatar
 import { useTransition } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import Image from "next/image";
-import { Bell, ExternalLink, RefreshCw, User } from "lucide-react";
+import { ExternalLink, RefreshCw, User, LogOut, Settings } from "lucide-react";
+import { NotificationBell } from "./notification-bell";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -33,6 +35,13 @@ export function AdminTopbar({
   const otherLocale = currentLocale === "fr" ? "en" : "fr";
   const otherLabel = otherLocale.toUpperCase();
 
+  const initials = adminName
+    .split(" ")
+    .map((s) => s[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   const toggleLocale = () => {
     startTransition(async () => {
       await fetch("/api/locale", {
@@ -45,89 +54,104 @@ export function AdminTopbar({
   };
 
   return (
-    <header className="h-[60px] sticky top-0 z-20 bg-[#0F2D52] text-white flex items-center justify-between px-4 lg:pl-[260px]">
-      <div className="flex items-center gap-3 pl-12 lg:pl-0">
-        <NextLink href="/" className="flex items-center gap-2">
-          <Image src="/images/vnk-icon-transparent-white.svg" alt="VNK" width={24} height={24} />
-          <span className="font-bold text-sm hidden sm:inline">VNK</span>
-        </NextLink>
-        <span className="text-xs bg-white/20 px-2 py-0.5 rounded font-semibold">Admin</span>
-      </div>
-
-      <div className="flex items-center gap-2">
-        {overdueCount > 0 && (
-          <div className="hidden sm:flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-red-500/20 text-red-200 font-medium">
-            <Bell className="h-3.5 w-3.5" />
-            {t("overdue_invoices", { count: overdueCount })}
+    <header className="sticky top-0 z-30 bg-[#0F2D52]/95 backdrop-blur-md shadow-lg">
+      <div className="h-[64px] px-4 sm:px-6 flex items-center justify-between">
+        {/* Logo — identique au portail */}
+        <NextLink href="/admin" className="flex items-center gap-3 group shrink-0">
+          <div className="h-10 w-10 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
+            <span className="text-white font-bold text-sm">VNK</span>
           </div>
-        )}
+          <div className="hidden sm:block">
+            <div className="text-sm font-bold leading-tight text-white">
+              Automatisation Inc.
+            </div>
+            <div className="text-[9px] text-white/60 tracking-[0.15em] font-medium">
+              VALUE · NETWORK · KNOWLEDGE
+            </div>
+          </div>
+        </NextLink>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => window.location.reload()}
-          className="hidden sm:flex text-white/70 hover:text-white hover:bg-white/10"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span className="hidden md:inline">{t("refresh")}</span>
-        </Button>
+        {/* Actions droite */}
+        <div className="flex items-center gap-2">
+          {overdueCount > 0 && (
+            <div className="hidden md:flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-red-500/20 text-red-200 font-medium">
+              {t("overdue_invoices", { count: overdueCount })}
+            </div>
+          )}
 
-        <Button
-          variant="ghost"
-          size="sm"
-          asChild
-          className="hidden sm:flex text-white/70 hover:text-white hover:bg-white/10"
-        >
-          <IntlLink href="/" target="_blank">
-            <ExternalLink className="h-3.5 w-3.5" />
-            <span className="hidden md:inline">{t("site")}</span>
-          </IntlLink>
-        </Button>
+          <NotificationBell />
 
-        {/* Locale switcher — cookie-based (admin sans prefix URL) */}
-        <button
-          type="button"
-          onClick={toggleLocale}
-          disabled={pending}
-          aria-label={`Changer vers ${otherLabel}`}
-          className="inline-flex items-center justify-center h-8 px-2.5 rounded-md border border-white/20 text-xs font-bold tracking-wider hover:bg-white/10 transition-colors disabled:opacity-50"
-        >
-          {otherLabel}
-        </button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => window.location.reload()}
+            className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10"
+            title={t("refresh")}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-full p-0.5 hover:bg-white/10 transition-colors" aria-label="Menu utilisateur">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-white/20 text-white text-xs font-bold">
-                  {adminName.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <div className="text-sm font-medium">{adminName}</div>
-              <div className="text-xs text-muted-foreground truncate">
-                {adminEmail}
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <NextLink href="/admin/profile">
-                <User className="h-4 w-4 mr-2" />
-                Mon profil
-              </NextLink>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => signOut({ callbackUrl: "/admin/login" })}
-              className="text-destructive"
-            >
-              Déconnexion
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="hidden sm:flex h-9 w-9 text-white/70 hover:text-white hover:bg-white/10"
+          >
+            <IntlLink href="/" target="_blank" title={t("site")}>
+              <ExternalLink className="h-4 w-4" />
+            </IntlLink>
+          </Button>
+
+          <button
+            type="button"
+            onClick={toggleLocale}
+            disabled={pending}
+            className="h-8 px-2.5 rounded-md border border-white/20 text-xs font-bold tracking-wider text-white hover:bg-white/10 transition-colors disabled:opacity-50"
+          >
+            {otherLabel}
+          </button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 rounded-full p-0.5 hover:bg-white/10 transition-colors" aria-label="Menu utilisateur">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-white/20 text-white text-xs font-bold">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="text-sm font-medium">{adminName}</div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {adminEmail}
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <NextLink href="/admin/profile">
+                  <User className="h-4 w-4 mr-2" />
+                  Mon profil
+                </NextLink>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <NextLink href="/admin/settings">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Parametres
+                </NextLink>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => signOut({ callbackUrl: "/admin/login" })}
+                className="text-destructive"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Deconnexion
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );

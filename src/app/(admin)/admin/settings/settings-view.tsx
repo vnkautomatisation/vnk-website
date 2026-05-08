@@ -78,6 +78,25 @@ export function SettingsView({
 }) {
   const t = useTranslations("settings");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filtrer categories par recherche
+  const filteredCategories = searchQuery
+    ? CATEGORIES.filter((cat) => {
+        const q = searchQuery.toLowerCase();
+        // Chercher dans le nom de la categorie
+        const catName = t(`categories.${cat.key}`).toLowerCase();
+        if (catName.includes(q)) return true;
+        // Chercher dans les labels/descriptions des parametres
+        const settings = settingsByCategory[cat.key] ?? [];
+        return settings.some(
+          (s) =>
+            s.label.toLowerCase().includes(q) ||
+            s.key.toLowerCase().includes(q) ||
+            s.description?.toLowerCase().includes(q)
+        );
+      })
+    : CATEGORIES;
 
   if (activeCategory) {
     const meta = CATEGORIES.find((c) => c.key === activeCategory)!;
@@ -94,16 +113,32 @@ export function SettingsView({
   return (
     <div className="space-y-8">
       {/* ── Header ───────────────────────────────────────── */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-          {t("page_title")}
-        </h1>
-        <p className="text-muted-foreground mt-1">{t("page_subtitle")}</p>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            {t("page_title")}
+          </h1>
+          <p className="text-muted-foreground mt-1">{t("page_subtitle")}</p>
+        </div>
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Rechercher un parametre..."
+            className="pl-9"
+          />
+        </div>
       </div>
 
-      {/* ── Grille de 15 cartes catégories ──────────────── */}
+      {/* ── Grille de catégories ──────────────────────────── */}
+      {filteredCategories.length === 0 && searchQuery ? (
+        <div className="text-center py-12 text-sm text-muted-foreground">
+          Aucun parametre correspondant a &quot;{searchQuery}&quot;
+        </div>
+      ) : null}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {CATEGORIES.map((cat) => {
+        {filteredCategories.map((cat) => {
           const Icon = cat.icon;
           const count = settingsByCategory[cat.key]?.length ?? 0;
           return (

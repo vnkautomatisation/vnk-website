@@ -1,33 +1,42 @@
 import { prisma } from "@/lib/prisma";
-import { TaxDeclarationsTable } from "./tax-table";
+import { TaxView } from "./tax-view";
+import type { Metadata } from "next";
 
-export default async function TaxPage() {
-  // Calcul du résumé annuel depuis les factures payées
+export const metadata: Metadata = { title: "Declarations fiscales" };
+
+export default async function TaxDeclarationsPage() {
   const yearStart = new Date(new Date().getFullYear(), 0, 1);
-  const [declarations, yearAggregate] = await Promise.all([
-    prisma.taxDeclaration.findMany({ orderBy: { periodStart: "desc" } }).then((rows) =>
-      rows.map((d) => ({
-        ...d,
-        totalRevenueHt: Number(d.totalRevenueHt),
-        totalTps: Number(d.totalTps),
-        totalTvq: Number(d.totalTvq),
-        totalTaxes: Number(d.totalTaxes),
-      }))
-    ),
+
+  const [rawDeclarations, invoiceAggs] = await Promise.all([
+    prisma.taxDeclaration.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.invoice.aggregate({
-      _sum: { amountHt: true, tpsAmount: true, tvqAmount: true, amountTtc: true },
+      _sum: { amountHt: true, tpsAmount: true, tvqAmount: true },
       where: { status: "paid", paidAt: { gte: yearStart } },
     }),
   ]);
 
-  const summary = {
-    revenueHt: Number(yearAggregate._sum.amountHt ?? 0),
-    tps: Number(yearAggregate._sum.tpsAmount ?? 0),
-    tvq: Number(yearAggregate._sum.tvqAmount ?? 0),
-    totalTaxes:
-      Number(yearAggregate._sum.tpsAmount ?? 0) +
-      Number(yearAggregate._sum.tvqAmount ?? 0),
+  const declarations = rawDeclarations.map((d) => ({
+    id: d.id,
+    periodType: d.periodType,
+    periodLabel: d.periodLabel,
+    periodStart: d.periodStart.toISOString(),
+    periodEnd: d.periodEnd.toISOString(),
+    totalRevenueHt: Number(d.totalRevenueHt),
+    totalTps: Number(d.totalTps),
+    totalTvq: Number(d.totalTvq),
+    totalTaxes: Number(d.totalTaxes),
+    status: d.status,
+    notes: d.notes,
+    submittedAt: d.submittedAt?.toISOString() ?? null,
+    createdAt: d.createdAt.toISOString(),
+  }));
+
+  const kpis = {
+    revenueHt: Number(invoiceAggs._sum.amountHt ?? 0),
+    tpsCollected: Number(invoiceAggs._sum.tpsAmount ?? 0),
+    tvqCollected: Number(invoiceAggs._sum.tvqAmount ?? 0),
+    totalTaxes: Number(invoiceAggs._sum.tpsAmount ?? 0) + Number(invoiceAggs._sum.tvqAmount ?? 0),
   };
 
-  return <TaxDeclarationsTable declarations={declarations} summary={summary} />;
+  return <TaxView declarations={declarations} kpis={kpis} />;
 }

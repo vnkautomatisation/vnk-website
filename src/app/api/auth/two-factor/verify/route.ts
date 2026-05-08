@@ -1,6 +1,6 @@
-// POST /api/auth/two-factor/verify — verifie le code TOTP et active la 2FA
+// POST /api/auth/two-factor/verify — verifie le code TOTP et active la 2FA (client OU admin)
 import { NextResponse } from "next/server";
-import { generateSecret, generateURI, verifySync } from "otplib";
+import { verifySync } from "otplib";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -9,7 +9,7 @@ const schema = z.object({ code: z.string().length(6) });
 
 export async function POST(req: Request) {
   const session = await auth();
-  if (!session?.user?.clientId) {
+  if (!session?.user) {
     return NextResponse.json({ error: "Non autorise" }, { status: 401 });
   }
 
@@ -19,30 +19,49 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Code invalide" }, { status: 400 });
   }
 
-  const client = await prisma.client.findUnique({
-    where: { id: session.user.clientId },
-    select: { twoFactorSecret: true, twoFactorEnabled: true },
-  });
+  const role = session.user.role;
+  let secret: string | null = null;
 
-  if (!client?.twoFactorSecret) {
-    return NextResponse.json({ error: "Configurez d'abord la 2FA" }, { status: 400 });
+  if (role === "admin" && session.user.adminId) {
+    const admin = await prisma.admin.findUnique({
+      where: { id: session.user.adminId },
+      select: { twoFactorSecret: true, twoFactorEnabled: true },
+    });
+    if (!admin?.twoFactorSecret) {
+      return NextResponse.json({ error: "Configurez d'abord la 2FA" }, { status: 400 });
+    }
+    secret = admin.twoFactorSecret;
+  } else if (role === "client" && session.user.clientId) {
+    const client = await prisma.client.findUnique({
+      where: { id: session.user.clientId },
+      select: { twoFactorSecret: true, twoFactorEnabled: true },
+    });
+    if (!client?.twoFactorSecret) {
+      return NextResponse.json({ error: "Configurez d'abord la 2FA" }, { status: 400 });
+    }
+    secret = client.twoFactorSecret;
+  } else {
+    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
   }
 
   // Verifier le code
-  const isValid = verifySync({
-    token: parsed.data.code,
-    secret: client.twoFactorSecret,
-  });
-
+  const isValid = verifySync({ token: parsed.data.code, secret });
   if (!isValid) {
     return NextResponse.json({ error: "Code incorrect" }, { status: 401 });
   }
 
   // Activer la 2FA
-  await prisma.client.update({
-    where: { id: session.user.clientId },
-    data: { twoFactorEnabled: true },
-  });
+  if (role === "admin") {
+    await prisma.admin.update({
+      where: { id: session.user.adminId! },
+      data: { twoFactorEnabled: true },
+    });
+  } else {
+    await prisma.client.update({
+      where: { id: session.user.clientId! },
+      data: { twoFactorEnabled: true },
+    });
+  }
 
   return NextResponse.json({ success: true });
 }
