@@ -190,6 +190,8 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
   const [alertsOnly, setAlertsOnly] = useState(false);
   const [busyClientId, setBusyClientId] = useState<number | null>(null);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [draggedClientId, setDraggedClientId] = useState<number | null>(null);
+  const [dragOverStep, setDragOverStep] = useState<Step | null>(null);
 
   // Filtres avances
   const [filterServiceTypes, setFilterServiceTypes] = useState<Set<string>>(new Set());
@@ -387,6 +389,92 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     setFilterDateTo("");
     setFilterAmountMin("");
     setFilterAmountMax("");
+  };
+
+  // Drag-drop entre colonnes — declenche la transition d'etat
+  const handleDrop = async (targetStep: Step) => {
+    setDragOverStep(null);
+    if (draggedClientId === null) return;
+    const c = clients.find((x) => x.id === draggedClientId);
+    setDraggedClientId(null);
+    if (!c) return;
+    const fromStep = getStep(c);
+    if (fromStep === targetStep) return;
+
+    // Transitions supportees
+    if (fromStep === "quote_pending" && targetStep === "contract_pending") {
+      const quote = c.quotes.find((q) => q.status === "pending");
+      if (!quote) { toast.error("Aucun devis en attente"); return; }
+      const ok = await confirm({
+        title: "Accepter le devis ?",
+        description: `Le devis ${quote.quoteNumber} sera accepte (passage Devis → Contrat).`,
+        confirmLabel: "Accepter",
+      });
+      if (!ok) return;
+      setBusyClientId(c.id);
+      try {
+        const res = await fetch(`/api/quotes/${quote.id}/accept`, { method: "POST" });
+        if (res.ok) { toast.success("Devis accepte"); router.refresh(); }
+        else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      } finally { setBusyClientId(null); }
+      return;
+    }
+
+    if (fromStep === "contract_pending" && targetStep === "invoice_unpaid") {
+      const contract = c.contracts.find((ct) => ct.status === "pending" || ct.status === "draft");
+      if (!contract) { toast.error("Aucun contrat en attente"); return; }
+      const ok = await confirm({
+        title: "Signer le contrat ?",
+        description: `Vous allez signer en admin le contrat ${contract.contractNumber} (passage Contrat → Paiement).`,
+        confirmLabel: "Signer",
+      });
+      if (!ok) return;
+      setBusyClientId(c.id);
+      try {
+        const res = await fetch(`/api/contracts/${contract.id}/sign`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ signatureData: "admin-signed-via-pipeline-dnd" }),
+        });
+        if (res.ok) { toast.success("Contrat signe"); router.refresh(); }
+        else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      } finally { setBusyClientId(null); }
+      return;
+    }
+
+    if (fromStep === "invoice_unpaid" && targetStep === "complete") {
+      const unpaid = c.invoices.find((i) => i.status === "unpaid" || i.status === "overdue");
+      if (!unpaid) { toast.error("Aucune facture impayee"); return; }
+      const ok = await confirm({
+        title: "Marquer payee ?",
+        description: `La facture ${unpaid.invoiceNumber} sera marquee comme payee (passage Paiement → Complete).`,
+        confirmLabel: "Marquer payee",
+      });
+      if (!ok) return;
+      setBusyClientId(c.id);
+      try {
+        const res = await fetch(`/api/invoices/${unpaid.id}/mark-paid`, { method: "POST" });
+        if (res.ok) { toast.success("Facture marquee payee"); router.refresh(); }
+        else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      } finally { setBusyClientId(null); }
+      return;
+    }
+
+    toast.info("Transition non supportee — utilisez le menu actions de la carte");
+  };
+
+  // Step suivant qui est une transition valide depuis le step actuel (highlight visuel)
+  const isValidDropTarget = (clientId: number | null, targetStep: Step): boolean => {
+    if (clientId === null) return false;
+    const c = clients.find((x) => x.id === clientId);
+    if (!c) return false;
+    const fromStep = getStep(c);
+    if (fromStep === targetStep) return false;
+    return (
+      (fromStep === "quote_pending" && targetStep === "contract_pending") ||
+      (fromStep === "contract_pending" && targetStep === "invoice_unpaid") ||
+      (fromStep === "invoice_unpaid" && targetStep === "complete")
+    );
   };
 
   // Export CSV des clients filtres avec leur etape pipeline
@@ -590,8 +678,34 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
           const colTotal = items.reduce((s, c) => s + getClientStageValue(c, col.id), 0);
           const isVisible = col.id === mobileColumn; // affiche sur mobile
 
+          const isDropTarget = isValidDropTarget(draggedClientId, col.id);
+          const isOver = dragOverStep === col.id && isDropTarget;
+
           return (
-            <div key={col.id} className={cn("space-y-2", !isVisible && "hidden lg:block")}>
+            <div
+              key={col.id}
+              className={cn(
+                "space-y-2 rounded-lg transition-all",
+                !isVisible && "hidden lg:block",
+                isDropTarget && "ring-2 ring-primary/30 ring-offset-2",
+                isOver && "ring-2 ring-primary bg-primary/5"
+              )}
+              onDragOver={(e) => {
+                if (!isDropTarget) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (dragOverStep !== col.id) setDragOverStep(col.id);
+              }}
+              onDragLeave={(e) => {
+                // Seulement si on quitte vraiment la colonne (pas un enfant)
+                if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                if (dragOverStep === col.id) setDragOverStep(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleDrop(col.id);
+              }}
+            >
               {/* Column header */}
               <div className={cn("rounded-lg border p-3 space-y-2", col.header)}>
                 <div className="flex items-center justify-between gap-2">
@@ -648,14 +762,25 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                     const busy = busyClientId === c.id;
                     const openPanel = () => openEntity("client", c.id);
 
+                    const isDragged = draggedClientId === c.id;
                     return (
                       <Card
                         key={c.id}
+                        draggable={!busy}
+                        onDragStart={(e) => {
+                          setDraggedClientId(c.id);
+                          e.dataTransfer.effectAllowed = "move";
+                        }}
+                        onDragEnd={() => {
+                          setDraggedClientId(null);
+                          setDragOverStep(null);
+                        }}
                         className={cn(
-                          "vnk-card-hover transition-shadow overflow-hidden",
+                          "vnk-card-hover transition-shadow overflow-hidden cursor-grab active:cursor-grabbing",
                           isOverdue && "border-red-400 ring-1 ring-red-200",
                           alert && !isOverdue && "border-amber-300",
-                          busy && "opacity-60 pointer-events-none"
+                          busy && "opacity-60 pointer-events-none",
+                          isDragged && "opacity-40 scale-95"
                         )}
                       >
                         <div className={cn("h-1 w-full", col.stripe)} />
