@@ -32,6 +32,7 @@ import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -76,6 +77,7 @@ export function InvoicesView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { confirm, ConfirmModal } = useConfirm();
+  const { open: openEntity } = useEntityPanels();
   const [view, setView] = useViewMode("invoices", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -197,7 +199,7 @@ export function InvoicesView({
   const getActions = useCallback((inv: Invoice) => {
     const editable = inv.status !== "paid";
     return [
-      { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+      { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("invoice", inv.id) },
       ...((inv.status === "unpaid" || inv.status === "overdue") ? [{ label: "Marquer payee", icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => handleMarkPaid(inv.id, inv.invoiceNumber) }] : []),
       ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(inv) }] : []),
       ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteInvoice(inv), separator: true, variant: "destructive" as const }] : []),

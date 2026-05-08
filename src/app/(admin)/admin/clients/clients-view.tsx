@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatCard } from "@/components/admin/stat-card";
-import { ClientDetailPanel } from "@/components/admin/client-detail-panel";
+import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { CreateModal } from "@/components/admin/create-modal";
 import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
@@ -61,8 +61,7 @@ export function ClientsView({
   const [searchQuery, setSearchQuery] = useState("");
 
   // Modales
-  const [cdpClientId, setCdpClientId] = useState<number | null>(null);
-  const [cdpOpen, setCdpOpen] = useState(false);
+  const { open: openEntity } = useEntityPanels();
   const [createOpen, setCreateOpen] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
   const [deleteClient, setDeleteClient] = useState<Client | null>(null);
@@ -146,7 +145,7 @@ export function ClientsView({
 
   // Actions menu pour EntityCard
   const getActions = useCallback((c: Client) => [
-    { label: "Voir le detail", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => { setCdpClientId(c.id); setCdpOpen(true); } },
+    { label: "Voir le detail", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", c.id) },
     { label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(c) },
     { label: "Archiver", icon: <Archive className="h-3.5 w-3.5" />, onClick: () => setDeleteClient(c), separator: true, variant: "destructive" as const },
   ], []);
@@ -154,7 +153,7 @@ export function ClientsView({
   // ── Colonnes DataTable ────────────────────────────────
   const columns: Column<Client>[] = [
     { key: "client", header: "Client", accessor: (r) => (
-      <button onClick={() => { setCdpClientId(r.id); setCdpOpen(true); }} className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity">
+      <button onClick={() => openEntity("client", r.id)} className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity">
         <Avatar className="h-9 w-9"><AvatarFallback className="vnk-gradient text-white text-xs">{initials(r.fullName)}</AvatarFallback></Avatar>
         <div><div className="font-medium text-sm">{r.fullName}</div><div className="text-xs text-muted-foreground">{r.email}</div></div>
       </button>
@@ -220,7 +219,7 @@ export function ClientsView({
                 { label: "Factures", value: c.invoiceCount },
               ]}
               actions={getActions(c)}
-              onClick={() => { setCdpClientId(c.id); setCdpOpen(true); }}
+              onClick={() => openEntity("client", c.id)}
               footer={
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <span>{c.city ?? "—"}</span>
@@ -237,9 +236,6 @@ export function ClientsView({
         /* Vue liste */
         <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="clients" storageKey="admin-clients" />
       )}
-
-      {/* CDP */}
-      <ClientDetailPanel clientId={cdpClientId} open={cdpOpen} onOpenChange={setCdpOpen} />
 
       {/* Modale creation */}
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau client" description="Ajoutez un nouveau client" icon={UserPlus} accent="bg-blue-500" submitLabel="Creer le client" onSubmit={handleCreate}>

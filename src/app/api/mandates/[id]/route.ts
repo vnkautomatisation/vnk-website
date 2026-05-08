@@ -33,10 +33,12 @@ export async function GET(
   const mandate = await prisma.mandate.findUnique({
     where: { id: Number(id) },
     include: {
-      client: { select: { fullName: true, companyName: true, email: true } },
-      invoices: { select: { id: true, invoiceNumber: true, status: true, amountTtc: true } },
-      documents: { select: { id: true, title: true, fileType: true, createdAt: true } },
-      logs: { orderBy: { createdAt: "desc" }, take: 20 },
+      client: { select: { id: true, fullName: true, companyName: true, email: true } },
+      quotes: { select: { id: true, quoteNumber: true, title: true, status: true, amountTtc: true, expiryDate: true }, orderBy: { createdAt: "desc" } },
+      contracts: { select: { id: true, contractNumber: true, title: true, status: true, amountTtc: true, signedAt: true }, orderBy: { createdAt: "desc" } },
+      invoices: { select: { id: true, invoiceNumber: true, status: true, amountTtc: true, dueDate: true }, orderBy: { createdAt: "desc" } },
+      documents: { select: { id: true, title: true, fileType: true, category: true, createdAt: true }, orderBy: { createdAt: "desc" } },
+      logs: { orderBy: { createdAt: "desc" }, take: 30 },
     },
   });
 

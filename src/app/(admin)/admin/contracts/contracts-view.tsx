@@ -33,6 +33,7 @@ import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -72,6 +73,7 @@ export function ContractsView({
 }) {
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
+  const { open: openEntity } = useEntityPanels();
   const [view, setView] = useViewMode("contracts", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -183,7 +185,7 @@ export function ContractsView({
   const getActions = useCallback((c: Contract) => {
     const editable = !c.clientSignatureData && !c.signedAt;
     return [
-      { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+      { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("contract", c.id) },
       ...(c.status === "pending" && !c.adminSignatureData ? [{
         label: "Signer",
         icon: <PenTool className="h-3.5 w-3.5" />,

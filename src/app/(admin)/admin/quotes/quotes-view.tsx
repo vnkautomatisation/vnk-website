@@ -30,6 +30,7 @@ import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -72,6 +73,7 @@ export function QuotesView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { confirm, ConfirmModal } = useConfirm();
+  const { open: openEntity } = useEntityPanels();
   const [view, setView] = useViewMode("quotes", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -198,7 +200,7 @@ export function QuotesView({
   const getActions = useCallback((q: Quote) => {
     const editable = q.status !== "accepted";
     return [
-      { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+      { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("quote", q.id) },
       ...(q.status === "pending" ? [{ label: "Accepter", icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => handleAccept(q.id, q.quoteNumber) }] : []),
       ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(q) }] : []),
       ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteQuote(q), separator: true, variant: "destructive" as const }] : []),

@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminTopbar } from "@/components/admin/admin-topbar";
 import { CommandPalette } from "@/components/admin/command-palette";
+import { EntityPanelsRoot } from "@/components/admin/entity-panels-host";
 
 const getAdmin = cache(async (adminId: number) =>
   prisma.admin.findUnique({
@@ -61,25 +62,27 @@ export default async function AdminLayout({
   ]);
 
   return (
-    <div className="min-h-screen bg-muted/40">
-      <CommandPalette />
+    <EntityPanelsRoot>
+      <div className="min-h-screen bg-muted/40">
+        <CommandPalette />
 
-      {/* Topbar pleine largeur — toujours en haut */}
-      <AdminTopbar
-        adminName={admin?.fullName ?? admin?.email ?? "Admin"}
-        adminEmail={admin?.email ?? ""}
-        overdueCount={overdueCount}
-      />
+        {/* Topbar pleine largeur — toujours en haut */}
+        <AdminTopbar
+          adminName={admin?.fullName ?? admin?.email ?? "Admin"}
+          adminEmail={admin?.email ?? ""}
+          overdueCount={overdueCount}
+        />
 
-      {/* Sidebar — sous le topbar */}
-      <AdminSidebar counts={sidebarCounts} />
+        {/* Sidebar — sous le topbar */}
+        <AdminSidebar counts={sidebarCounts} />
 
-      {/* Contenu principal — sous le topbar, a droite du sidebar */}
-      <main className="lg:pl-[240px]">
-        <div className="p-4 sm:p-5 lg:p-6">
-          {children}
-        </div>
-      </main>
-    </div>
+        {/* Contenu principal — sous le topbar, a droite du sidebar */}
+        <main className="lg:pl-[240px]">
+          <div className="p-4 sm:p-5 lg:p-6">
+            {children}
+          </div>
+        </main>
+      </div>
+    </EntityPanelsRoot>
   );
 }

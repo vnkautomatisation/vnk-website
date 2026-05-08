@@ -30,6 +30,7 @@ import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatDate } from "@/lib/utils";
@@ -82,6 +83,7 @@ export function MandatesView({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { open: openEntity } = useEntityPanels();
   const [view, setView] = useViewMode("mandates", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -223,7 +225,7 @@ export function MandatesView({
 
   // Actions menu pour EntityCard
   const getActions = useCallback((m: Mandate) => [
-    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("mandate", m.id) },
     { label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(m) },
     { label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteMandate(m), separator: true, variant: "destructive" as const },
   ], []);

@@ -43,8 +43,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { StatCard } from "@/components/admin/stat-card";
-import { ClientDetailPanel } from "@/components/admin/client-detail-panel";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 
 type ClientData = {
@@ -184,9 +184,9 @@ function timeAgo(iso: string): string {
 export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]; events?: EventData[] }) {
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
+  const { open: openEntity } = useEntityPanels();
   const [searchQuery, setSearchQuery] = useState("");
   const [alertsOnly, setAlertsOnly] = useState(false);
-  const [panelClientId, setPanelClientId] = useState<number | null>(null);
   const [busyClientId, setBusyClientId] = useState<number | null>(null);
   const [activityOpen, setActivityOpen] = useState(false);
 
@@ -341,7 +341,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
 
   const getCardActions = (c: ClientData, step: Step) => {
     const actions: Array<{ label: string; icon: React.ReactNode; onClick: () => void; separator?: boolean }> = [
-      { label: "Voir le client", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => setPanelClientId(c.id) },
+      { label: "Voir le client", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", c.id) },
     ];
     if (step === "prospect") {
       actions.push(
@@ -599,7 +599,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                     const alert = hasAlert(c);
                     const actions = getCardActions(c, col.id);
                     const busy = busyClientId === c.id;
-                    const openPanel = () => setPanelClientId(c.id);
+                    const openPanel = () => openEntity("client", c.id);
 
                     return (
                       <Card
@@ -710,13 +710,6 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
         })}
       </div>
 
-      {/* Detail panel */}
-      <ClientDetailPanel
-        clientId={panelClientId}
-        open={panelClientId !== null}
-        onOpenChange={(o) => { if (!o) setPanelClientId(null); }}
-      />
-
       {/* Activite recente — slide-out */}
       <Sheet open={activityOpen} onOpenChange={setActivityOpen}>
         <SheetContent className="w-full sm:max-w-md overflow-y-auto">
@@ -735,7 +728,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                 <button
                   key={e.id}
                   type="button"
-                  onClick={() => { setPanelClientId(e.clientId); setActivityOpen(false); }}
+                  onClick={() => { openEntity("client", e.clientId); setActivityOpen(false); }}
                   className="w-full p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow flex items-start gap-3 text-left"
                 >
                   <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0", colorCls)}>
