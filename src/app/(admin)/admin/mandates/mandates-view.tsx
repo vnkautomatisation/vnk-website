@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -9,6 +9,9 @@ import {
   CheckCircle2,
   Plus,
   Search,
+  Eye,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +26,10 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EditModal } from "@/components/admin/edit-modal";
+import { EntityCard } from "@/components/admin/entity-card";
+import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatDate } from "@/lib/utils";
@@ -74,9 +81,23 @@ export function MandatesView({
   counts: { active: number; pending: number; completed: number; total: number };
 }) {
   const router = useRouter();
+  const [view, setView] = useViewMode("mandates", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+
+  // Edit modal
+  const [editMandate, setEditMandate] = useState<Mandate | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editService, setEditService] = useState("");
+  const [editStatus, setEditStatus] = useState("");
+  const [editProgress, setEditProgress] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
+
+  // Delete
+  const [deleteMandate, setDeleteMandate] = useState<Mandate | null>(null);
 
   // ── Creation form ────────────────────────────────────
   const [newClientId, setNewClientId] = useState<string>("");
@@ -93,6 +114,17 @@ export function MandatesView({
     setNewDesc("");
     setNewStart("");
     setNewEnd("");
+  };
+
+  const openEdit = (m: Mandate) => {
+    setEditMandate(m);
+    setEditTitle(m.title);
+    setEditService(m.serviceType ?? "");
+    setEditStatus(m.status);
+    setEditProgress(String(m.progress));
+    setEditDesc(m.description ?? "");
+    setEditStart(m.startDate ? m.startDate.slice(0, 10) : "");
+    setEditEnd(m.endDate ? m.endDate.slice(0, 10) : "");
   };
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
@@ -124,6 +156,35 @@ export function MandatesView({
     }
   };
 
+  const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!editMandate || !editTitle.trim()) return { success: false, error: "Titre requis" };
+    try {
+      const res = await fetch(`/api/mandates/${editMandate.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          serviceType: editService || undefined,
+          status: editStatus,
+          progress: Number(editProgress),
+          description: editDesc.trim() || undefined,
+          startDate: editStart || undefined,
+          endDate: editEnd || undefined,
+        }),
+      });
+      if (res.ok) { router.refresh(); return { success: true }; }
+      const data = await res.json();
+      return { success: false, error: data.error || "Erreur" };
+    } catch { return { success: false, error: "Erreur reseau" }; }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteMandate) return;
+    const res = await fetch(`/api/mandates/${deleteMandate.id}`, { method: "DELETE" });
+    if (res.ok) { toast.success("Mandat supprime"); setDeleteMandate(null); router.refresh(); }
+    else { toast.error("Erreur lors de la suppression"); }
+  };
+
   // ── Filtrage ──────────────────────────────────────────
   const filtered = useMemo(() => {
     let result = mandates;
@@ -146,6 +207,13 @@ export function MandatesView({
     }
     return result;
   }, [mandates, statusFilter, searchQuery]);
+
+  // Actions menu pour EntityCard
+  const getActions = useCallback((m: Mandate) => [
+    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+    { label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(m) },
+    { label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteMandate(m), separator: true, variant: "destructive" as const },
+  ], []);
 
   // ── Colonnes ──────────────────────────────────────────
   const columns: Column<Mandate>[] = [
@@ -171,7 +239,7 @@ export function MandatesView({
     {
       key: "service",
       header: "Service",
-      accessor: (r) => r.serviceType ? SERVICE_TYPES.find((s) => s.value === r.serviceType)?.label ?? r.serviceType : "\u2014",
+      accessor: (r) => r.serviceType ? SERVICE_TYPES.find((s) => s.value === r.serviceType)?.label ?? r.serviceType : "—",
       hiddenOnMobile: true,
     },
     {
@@ -197,13 +265,13 @@ export function MandatesView({
     {
       key: "start",
       header: "Debut",
-      accessor: (r) => r.startDate ? formatDate(new Date(r.startDate)) : "\u2014",
+      accessor: (r) => r.startDate ? formatDate(new Date(r.startDate)) : "—",
       hiddenOnMobile: true,
     },
     {
       key: "end",
       header: "Fin est.",
-      accessor: (r) => r.endDate ? formatDate(new Date(r.endDate)) : "\u2014",
+      accessor: (r) => r.endDate ? formatDate(new Date(r.endDate)) : "—",
       hiddenOnMobile: true,
     },
   ];
@@ -262,17 +330,54 @@ export function MandatesView({
             </button>
           ))}
         </div>
+        <ViewToggle storageKey="mandates" defaultView="list" onChange={setView} />
       </div>
 
-      {/* ── Table ─────────────────────────────────────────── */}
-      <DataTable
-        data={filtered}
-        columns={columns}
-        getRowId={(r) => r.id}
-        searchPlaceholder="Rechercher..."
-        exportFilename="mandats"
-        storageKey="admin-mandates"
-      />
+      {/* Vue grille */}
+      {view === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((m) => (
+            <EntityCard
+              key={m.id}
+              title={m.title}
+              subtitle={m.clientName}
+              avatarName={m.clientName}
+              badges={[
+                { label: m.status === "active" || m.status === "in_progress" ? "En cours" : m.status === "completed" ? "Complete" : m.status === "pending" ? "En attente" : m.status, variant: m.status === "active" || m.status === "in_progress" ? "secondary" : "outline" },
+                ...(m.serviceType ? [{ label: SERVICE_TYPES.find((s) => s.value === m.serviceType)?.label ?? m.serviceType, variant: "outline" as const }] : []),
+              ]}
+              stats={[
+                { label: "Progression", value: `${m.progress}%` },
+              ]}
+              actions={getActions(m)}
+              footer={
+                <div className="space-y-1.5">
+                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                    <div className="h-full bg-primary transition-all" style={{ width: `${m.progress}%` }} />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>{m.startDate ? formatDate(new Date(m.startDate)) : "Pas de debut"}</span>
+                    <span>{m.endDate ? formatDate(new Date(m.endDate)) : "Pas de fin"}</span>
+                  </div>
+                </div>
+              }
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucun mandat trouve</div>
+          )}
+        </div>
+      ) : (
+        /* Vue liste */
+        <DataTable
+          data={filtered}
+          columns={columns}
+          getRowId={(r) => r.id}
+          searchPlaceholder="Rechercher..."
+          exportFilename="mandats"
+          storageKey="admin-mandates"
+        />
+      )}
 
       {/* ── Modale creation ───────────────────────────────── */}
       <CreateModal
@@ -330,6 +435,78 @@ export function MandatesView({
           </div>
         </div>
       </CreateModal>
+
+      {/* ── Modale edition ────────────────────────────────── */}
+      <EditModal
+        open={!!editMandate}
+        onOpenChange={(o) => { if (!o) setEditMandate(null); }}
+        title="Modifier le mandat"
+        description={editMandate?.clientName}
+        icon={Pencil}
+        accent="bg-amber-500"
+        onSubmit={handleEdit}
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Titre *</Label>
+            <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Type de service</Label>
+              <Select value={editService} onValueChange={setEditService}>
+                <SelectTrigger><SelectValue placeholder="Selectionner" /></SelectTrigger>
+                <SelectContent>
+                  {SERVICE_TYPES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Statut</Label>
+              <Select value={editStatus} onValueChange={setEditStatus}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">En attente</SelectItem>
+                  <SelectItem value="active">Actif</SelectItem>
+                  <SelectItem value="in_progress">En cours</SelectItem>
+                  <SelectItem value="completed">Complete</SelectItem>
+                  <SelectItem value="paused">En pause</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Progression ({editProgress}%)</Label>
+            <Input type="number" min="0" max="100" value={editProgress} onChange={(e) => setEditProgress(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={3} />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Date debut</Label>
+              <Input type="date" value={editStart} onChange={(e) => setEditStart(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Date fin estimee</Label>
+              <Input type="date" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} />
+            </div>
+          </div>
+        </div>
+      </EditModal>
+
+      {/* Confirmation suppression */}
+      <ConfirmDialog
+        open={!!deleteMandate}
+        onOpenChange={(o) => { if (!o) setDeleteMandate(null); }}
+        title="Supprimer ce mandat ?"
+        description={`Le mandat "${deleteMandate?.title}" sera supprime. Cette action est irreversible.`}
+        confirmLabel="Supprimer"
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

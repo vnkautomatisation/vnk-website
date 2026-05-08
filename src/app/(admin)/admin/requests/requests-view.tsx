@@ -1,15 +1,17 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   Inbox,
   Search,
   Sparkles,
   Loader2,
   CheckCircle2,
-  BarChart3,
+  Eye,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/admin/stat-card";
+import { EntityCard } from "@/components/admin/entity-card";
+import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatDate } from "@/lib/utils";
@@ -44,6 +46,12 @@ const URGENCY_COLORS: Record<string, string> = {
   critical: "bg-red-100 text-red-700",
 };
 
+const URGENCY_LABELS: Record<string, string> = {
+  normal: "Normal",
+  urgent: "Urgent",
+  critical: "Critique",
+};
+
 export function RequestsView({
   requests,
   kpis,
@@ -51,6 +59,7 @@ export function RequestsView({
   requests: Request[];
   kpis: { total: number; newCount: number; inProgress: number; converted: number };
 }) {
+  const [view, setView] = useViewMode("requests", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -69,6 +78,11 @@ export function RequestsView({
     return result;
   }, [requests, statusFilter, searchQuery]);
 
+  // Actions menu pour EntityCard (lecture seule)
+  const getActions = useCallback((r: Request) => [
+    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+  ], []);
+
   const columns: Column<Request>[] = [
     {
       key: "client",
@@ -86,7 +100,7 @@ export function RequestsView({
     {
       key: "service",
       header: "Service",
-      accessor: (r) => <span className="text-xs">{r.serviceType ?? "\u2014"}</span>,
+      accessor: (r) => <span className="text-xs">{r.serviceType ?? "—"}</span>,
       hiddenOnMobile: true,
     },
     {
@@ -94,7 +108,7 @@ export function RequestsView({
       header: "Urgence",
       accessor: (r) => (
         <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium capitalize", URGENCY_COLORS[r.urgency] ?? "bg-gray-100 text-gray-700")}>
-          {r.urgency}
+          {URGENCY_LABELS[r.urgency] ?? r.urgency}
         </span>
       ),
       sortable: true,
@@ -151,9 +165,39 @@ export function RequestsView({
             </button>
           ))}
         </div>
+        <ViewToggle storageKey="requests" defaultView="list" onChange={setView} />
       </div>
 
-      <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="demandes" storageKey="admin-requests" />
+      {/* Vue grille */}
+      {view === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((r) => (
+            <EntityCard
+              key={r.id}
+              title={r.title}
+              subtitle={r.clientName}
+              avatarName={r.clientName}
+              alert={r.urgency === "critical"}
+              badges={[
+                { label: r.status === "new" ? "Nouvelle" : r.status === "in_progress" ? "En traitement" : r.status === "converted" ? "Convertie" : r.status === "closed" ? "Fermee" : r.status, variant: r.status === "new" ? "secondary" : r.status === "converted" ? "secondary" : "outline" },
+                { label: URGENCY_LABELS[r.urgency] ?? r.urgency, variant: r.urgency === "critical" ? "destructive" : r.urgency === "urgent" ? "destructive" : "outline" },
+              ]}
+              actions={getActions(r)}
+              footer={
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>{r.serviceType ?? "Aucun service"}</span>
+                  <span>{formatDate(new Date(r.createdAt))}</span>
+                </div>
+              }
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucune demande trouvee</div>
+          )}
+        </div>
+      ) : (
+        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="demandes" storageKey="admin-requests" />
+      )}
     </div>
   );
 }

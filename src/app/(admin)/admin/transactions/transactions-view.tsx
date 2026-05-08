@@ -1,14 +1,17 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   CreditCard,
   Search,
   DollarSign,
   RotateCcw,
   Hash,
+  Eye,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/admin/stat-card";
+import { EntityCard } from "@/components/admin/entity-card";
+import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -45,6 +48,7 @@ export function TransactionsView({
   payments: Payment[];
   kpis: { totalPaid: number; totalRefunded: number; count: number };
 }) {
+  const [view, setView] = useViewMode("transactions", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -63,6 +67,11 @@ export function TransactionsView({
     }
     return result;
   }, [payments, statusFilter, searchQuery]);
+
+  // Actions menu pour EntityCard (lecture seule)
+  const getActions = useCallback((p: Payment) => [
+    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+  ], []);
 
   const columns: Column<Payment>[] = [
     {
@@ -99,7 +108,7 @@ export function TransactionsView({
     {
       key: "method",
       header: "Methode",
-      accessor: (r) => <span className="text-xs capitalize">{r.paymentMethod ?? "\u2014"}</span>,
+      accessor: (r) => <span className="text-xs capitalize">{r.paymentMethod ?? "—"}</span>,
       hiddenOnMobile: true,
     },
     { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
@@ -108,7 +117,7 @@ export function TransactionsView({
       header: "Stripe ID",
       accessor: (r) => r.stripePaymentIntentId ? (
         <span className="font-mono text-xs text-muted-foreground truncate max-w-[120px] block">{r.stripePaymentIntentId}</span>
-      ) : "\u2014",
+      ) : "—",
       hiddenOnMobile: true,
     },
   ];
@@ -148,9 +157,41 @@ export function TransactionsView({
             </button>
           ))}
         </div>
+        <ViewToggle storageKey="transactions" defaultView="list" onChange={setView} />
       </div>
 
-      <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="transactions" storageKey="admin-transactions" />
+      {/* Vue grille */}
+      {view === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((p) => (
+            <EntityCard
+              key={p.id}
+              title={p.clientName}
+              subtitle={p.invoiceNumber}
+              avatarName={p.clientName}
+              badges={[
+                { label: p.status === "succeeded" || p.status === "paid" ? "Payee" : p.status === "refunded" ? "Remboursee" : p.status, variant: p.status === "succeeded" || p.status === "paid" ? "secondary" : p.status === "refunded" ? "destructive" : "outline" },
+                ...(p.paymentMethod ? [{ label: p.paymentMethod, variant: "outline" as const }] : []),
+              ]}
+              stats={[
+                { label: "Montant", value: formatCurrency(p.amount) },
+              ]}
+              actions={getActions(p)}
+              footer={
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>{formatDate(new Date(p.paidAt ?? p.createdAt))}</span>
+                  <span className="truncate max-w-[50%]">{p.stripePaymentIntentId ?? "—"}</span>
+                </div>
+              }
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucune transaction trouvee</div>
+          )}
+        </div>
+      ) : (
+        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="transactions" storageKey="admin-transactions" />
+      )}
     </div>
   );
 }

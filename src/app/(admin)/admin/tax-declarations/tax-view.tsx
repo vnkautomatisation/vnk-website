@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   FileBarChart,
@@ -8,6 +8,7 @@ import {
   DollarSign,
   Receipt,
   TrendingUp,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,8 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EntityCard } from "@/components/admin/entity-card";
+import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -55,6 +58,7 @@ export function TaxView({
   kpis: { revenueHt: number; tpsCollected: number; tvqCollected: number; totalTaxes: number };
 }) {
   const router = useRouter();
+  const [view, setView] = useViewMode("tax-declarations", "list");
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -110,6 +114,11 @@ export function TaxView({
     );
   }, [declarations, searchQuery]);
 
+  // Actions menu pour EntityCard
+  const getActions = useCallback((d: TaxDeclaration) => [
+    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+  ], []);
+
   const columns: Column<TaxDeclaration>[] = [
     { key: "period", header: "Periode", accessor: (r) => r.periodLabel, sortable: true, sortBy: (r) => r.periodLabel },
     {
@@ -148,7 +157,7 @@ export function TaxView({
     {
       key: "submitted",
       header: "Soumise le",
-      accessor: (r) => r.submittedAt ? formatDate(new Date(r.submittedAt)) : "\u2014",
+      accessor: (r) => r.submittedAt ? formatDate(new Date(r.submittedAt)) : "—",
       hiddenOnMobile: true,
     },
   ];
@@ -181,9 +190,41 @@ export function TaxView({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Periode, type..." className="pl-9" />
         </div>
+        <ViewToggle storageKey="tax-declarations" defaultView="list" onChange={setView} />
       </div>
 
-      <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="declarations-fiscales" storageKey="admin-tax-declarations" />
+      {/* Vue grille */}
+      {view === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((d) => (
+            <EntityCard
+              key={d.id}
+              title={d.periodLabel}
+              subtitle={TYPE_OPTIONS.find((t) => t.value === d.periodType)?.label ?? d.periodType.replace(/_/g, " ")}
+              icon={<FileBarChart className="h-5 w-5 text-muted-foreground" />}
+              badges={[
+                { label: d.status === "draft" ? "Brouillon" : d.status === "submitted" ? "Soumise" : d.status === "confirmed" ? "Confirmee" : d.status, variant: d.status === "confirmed" ? "secondary" : "outline" },
+              ]}
+              stats={[
+                { label: "Revenu HT", value: formatCurrency(d.totalRevenueHt) },
+                { label: "Total taxes", value: formatCurrency(d.totalTaxes) },
+              ]}
+              actions={getActions(d)}
+              footer={
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>TPS: {formatCurrency(d.totalTps)}</span>
+                  <span>TVQ: {formatCurrency(d.totalTvq)}</span>
+                </div>
+              }
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucune declaration trouvee</div>
+          )}
+        </div>
+      ) : (
+        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="declarations-fiscales" storageKey="admin-tax-declarations" />
+      )}
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouvelle declaration" icon={FileBarChart} accent="bg-amber-500" submitLabel="Creer la declaration" onSubmit={handleCreate}>
         <div className="space-y-4">

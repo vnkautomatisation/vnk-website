@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   FileText,
@@ -9,7 +9,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Download,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EntityCard } from "@/components/admin/entity-card";
+import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -64,6 +66,7 @@ export function QuotesView({
   clients: ClientOption[];
 }) {
   const router = useRouter();
+  const [view, setView] = useViewMode("quotes", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -98,10 +101,6 @@ export function QuotesView({
   };
 
   // Actions
-  const handleDownloadPdf = async (id: number) => {
-    window.open(`/api/quotes/${id}/pdf`, "_blank");
-  };
-
   const handleAccept = async (id: number, num: string) => {
     if (!confirm(`Accepter le devis ${num} ? Un contrat sera genere automatiquement.`)) return;
     const res = await fetch(`/api/quotes/${id}/accept`, { method: "POST" });
@@ -129,6 +128,12 @@ export function QuotesView({
     return result;
   }, [quotes, statusFilter, searchQuery]);
 
+  // Actions menu pour EntityCard
+  const getActions = useCallback((q: Quote) => [
+    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+    ...(q.status === "pending" ? [{ label: "Accepter", icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => handleAccept(q.id, q.quoteNumber) }] : []),
+  ], []);
+
   const columns: Column<Quote>[] = [
     { key: "number", header: "Numero", accessor: (r) => <span className="font-mono text-xs">{r.quoteNumber}</span>, sortable: true, sortBy: (r) => r.quoteNumber },
     { key: "client", header: "Client", accessor: (r) => (<div><div className="font-medium text-sm">{r.clientName}</div>{r.companyName && <div className="text-xs text-muted-foreground">{r.companyName}</div>}</div>), sortable: true, sortBy: (r) => r.clientName },
@@ -136,13 +141,10 @@ export function QuotesView({
     { key: "ht", header: "HT", accessor: (r) => formatCurrency(r.amountHt), sortable: true, sortBy: (r) => r.amountHt, hiddenOnMobile: true },
     { key: "ttc", header: "TTC", accessor: (r) => <span className="font-semibold">{formatCurrency(r.amountTtc)}</span>, sortable: true, sortBy: (r) => r.amountTtc },
     { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
-    { key: "expiry", header: "Expiration", accessor: (r) => r.expiryDate ? formatDate(new Date(r.expiryDate)) : "\u2014", hiddenOnMobile: true },
+    { key: "expiry", header: "Expiration", accessor: (r) => r.expiryDate ? formatDate(new Date(r.expiryDate)) : "—", hiddenOnMobile: true },
     {
       key: "actions", header: "", accessor: (r) => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={() => handleDownloadPdf(r.id)} title="PDF">
-            <Download className="h-3.5 w-3.5" />
-          </Button>
           {r.status === "pending" && (
             <Button variant="ghost" size="sm" onClick={() => handleAccept(r.id, r.quoteNumber)} title="Accepter" className="text-emerald-600">
               <CheckCircle2 className="h-3.5 w-3.5" />
@@ -182,9 +184,40 @@ export function QuotesView({
             </button>
           ))}
         </div>
+        <ViewToggle storageKey="quotes" defaultView="list" onChange={setView} />
       </div>
 
-      <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="devis" storageKey="admin-quotes" />
+      {/* Vue grille */}
+      {view === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((q) => (
+            <EntityCard
+              key={q.id}
+              title={q.title}
+              subtitle={`${q.quoteNumber} — ${q.clientName}`}
+              avatarName={q.clientName}
+              badges={[
+                { label: q.status === "pending" ? "En attente" : q.status === "accepted" ? "Accepte" : q.status === "declined" ? "Refuse" : q.status === "expired" ? "Expire" : q.status, variant: q.status === "accepted" ? "secondary" : "outline" },
+              ]}
+              stats={[
+                { label: "TTC", value: formatCurrency(q.amountTtc) },
+              ]}
+              actions={getActions(q)}
+              footer={
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>{formatCurrency(q.amountHt)} HT</span>
+                  <span>{q.expiryDate ? `Expire le ${formatDate(new Date(q.expiryDate))}` : "Pas d'expiration"}</span>
+                </div>
+              }
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucun devis trouve</div>
+          )}
+        </div>
+      ) : (
+        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="devis" storageKey="admin-quotes" />
+      )}
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau devis" icon={FileText} accent="bg-blue-500" submitLabel="Creer le devis" onSubmit={handleCreate}>
         <div className="space-y-4">

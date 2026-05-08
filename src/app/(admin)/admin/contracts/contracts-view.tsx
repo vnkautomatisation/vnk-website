@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -8,10 +8,10 @@ import {
   Search,
   Clock,
   CheckCircle2,
-  Download,
   PenTool,
   UserCheck,
   ShieldCheck,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EntityCard } from "@/components/admin/entity-card";
+import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -64,6 +66,7 @@ export function ContractsView({
   clients: ClientOption[];
 }) {
   const router = useRouter();
+  const [view, setView] = useViewMode("contracts", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -111,11 +114,30 @@ export function ContractsView({
     return result;
   }, [contracts, statusFilter, searchQuery]);
 
+  // Actions menu pour EntityCard
+  const getActions = useCallback((c: Contract) => [
+    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+    ...(c.status === "pending" && !c.adminSignatureData ? [{
+      label: "Signer",
+      icon: <PenTool className="h-3.5 w-3.5" />,
+      onClick: async () => {
+        if (!confirm("Signer ce contrat en tant qu'admin ?")) return;
+        const res = await fetch(`/api/contracts/${c.id}/sign`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ signatureData: "admin-signed-via-dashboard" }),
+        });
+        if (res.ok) { toast.success("Contrat signe"); router.refresh(); }
+        else { const d = await res.json(); toast.error(d.error); }
+      },
+    }] : []),
+  ], [router]);
+
   const columns: Column<Contract>[] = [
     { key: "number", header: "Numero", accessor: (r) => <span className="font-mono text-xs">{r.contractNumber}</span>, sortable: true, sortBy: (r) => r.contractNumber },
     { key: "client", header: "Client", accessor: (r) => (<div><div className="font-medium text-sm">{r.clientName}</div>{r.companyName && <div className="text-xs text-muted-foreground">{r.companyName}</div>}</div>), sortable: true, sortBy: (r) => r.clientName },
     { key: "title", header: "Titre", accessor: (r) => r.title, sortable: true, sortBy: (r) => r.title, hiddenOnMobile: true },
-    { key: "amount", header: "Montant", accessor: (r) => r.amountTtc ? formatCurrency(r.amountTtc) : "\u2014", sortable: true, sortBy: (r) => r.amountTtc ?? 0, hiddenOnMobile: true },
+    { key: "amount", header: "Montant", accessor: (r) => r.amountTtc ? formatCurrency(r.amountTtc) : "—", sortable: true, sortBy: (r) => r.amountTtc ?? 0, hiddenOnMobile: true },
     { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
     {
       key: "signatures", header: "Signatures", accessor: (r) => (
@@ -133,9 +155,6 @@ export function ContractsView({
     {
       key: "actions", header: "", accessor: (r) => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={() => window.open(`/api/contracts/${r.id}/pdf`, "_blank")} title="PDF">
-            <Download className="h-3.5 w-3.5" />
-          </Button>
           {r.status === "pending" && !r.adminSignatureData && (
             <Button variant="ghost" size="sm" title="Signer" className="text-blue-600"
               onClick={async () => {
@@ -186,9 +205,47 @@ export function ContractsView({
             </button>
           ))}
         </div>
+        <ViewToggle storageKey="contracts" defaultView="list" onChange={setView} />
       </div>
 
-      <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="contrats" storageKey="admin-contracts" />
+      {/* Vue grille */}
+      {view === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((c) => (
+            <EntityCard
+              key={c.id}
+              title={c.title}
+              subtitle={`${c.contractNumber} — ${c.clientName}`}
+              avatarName={c.clientName}
+              badges={[
+                { label: c.status === "pending" ? "En attente" : c.status === "draft" ? "Brouillon" : c.status === "signed" ? "Signe" : c.status === "expired" ? "Expire" : c.status, variant: c.status === "signed" ? "secondary" : "outline" },
+              ]}
+              stats={[
+                { label: "Montant", value: c.amountTtc ? formatCurrency(c.amountTtc) : "—" },
+              ]}
+              actions={getActions(c)}
+              footer={
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(c.clientSignatureData ? "text-emerald-600" : "")}>
+                      <UserCheck className="h-3 w-3 inline" /> Client
+                    </span>
+                    <span className={cn(c.adminSignatureData ? "text-emerald-600" : "")}>
+                      <ShieldCheck className="h-3 w-3 inline" /> Admin
+                    </span>
+                  </div>
+                  <span>{formatDate(new Date(c.createdAt))}</span>
+                </div>
+              }
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucun contrat trouve</div>
+          )}
+        </div>
+      ) : (
+        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="contrats" storageKey="admin-contracts" />
+      )}
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau contrat" icon={FileSignature} accent="bg-indigo-500" submitLabel="Creer le contrat" onSubmit={handleCreate}>
         <div className="space-y-4">

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   FolderOpen,
@@ -10,7 +10,6 @@ import {
   Eye,
   EyeOff,
   Calendar,
-  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,8 +24,9 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EntityCard } from "@/components/admin/entity-card";
+import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { DataTable, type Column } from "@/components/data-table/data-table";
-import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatDate } from "@/lib/utils";
 
 type Doc = {
@@ -79,6 +79,7 @@ export function DocumentsView({
   kpis: { total: number; thisMonth: number; unread: number; uniqueClients: number };
 }) {
   const router = useRouter();
+  const [view, setView] = useViewMode("documents", "list");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -140,6 +141,11 @@ export function DocumentsView({
     return result;
   }, [documents, categoryFilter, searchQuery]);
 
+  // Actions menu pour EntityCard
+  const getActions = useCallback((d: Doc) => [
+    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+  ], []);
+
   const columns: Column<Doc>[] = [
     {
       key: "client",
@@ -165,7 +171,7 @@ export function DocumentsView({
     {
       key: "mandate",
       header: "Mandat",
-      accessor: (r) => r.mandateTitle ?? "\u2014",
+      accessor: (r) => r.mandateTitle ?? "—",
       hiddenOnMobile: true,
     },
     {
@@ -185,15 +191,6 @@ export function DocumentsView({
       sortable: true,
       sortBy: (r) => r.createdAt,
       hiddenOnMobile: true,
-    },
-    {
-      key: "actions",
-      header: "",
-      accessor: (r) => (
-        <Button variant="ghost" size="sm" onClick={() => window.open(`/api/documents/${r.id}`, "_blank")} title="Telecharger">
-          <Download className="h-3.5 w-3.5" />
-        </Button>
-      ),
     },
   ];
 
@@ -239,9 +236,38 @@ export function DocumentsView({
             </button>
           ))}
         </div>
+        <ViewToggle storageKey="documents" defaultView="list" onChange={setView} />
       </div>
 
-      <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="documents" storageKey="admin-documents" />
+      {/* Vue grille */}
+      {view === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((d) => (
+            <EntityCard
+              key={d.id}
+              title={d.title}
+              subtitle={d.clientName}
+              icon={<FileText className="h-5 w-5 text-muted-foreground" />}
+              badges={[
+                { label: (d.category ?? "autre").replace(/_/g, " "), variant: "outline" },
+                ...(!d.isRead ? [{ label: "Non lu", variant: "destructive" as const }] : []),
+              ]}
+              actions={getActions(d)}
+              footer={
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>{d.fileType ?? "Fichier"}</span>
+                  <span>{formatDate(new Date(d.createdAt))}</span>
+                </div>
+              }
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucun document trouve</div>
+          )}
+        </div>
+      ) : (
+        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="documents" storageKey="admin-documents" />
+      )}
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau document" icon={FolderOpen} accent="bg-blue-500" submitLabel="Creer le document" onSubmit={handleCreate}>
         <div className="space-y-4">
@@ -252,7 +278,7 @@ export function DocumentsView({
               <SelectContent>
                 {clients.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>
-                    {c.fullName}{c.companyName ? ` \u2014 ${c.companyName}` : ""}
+                    {c.fullName}{c.companyName ? ` — ${c.companyName}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>

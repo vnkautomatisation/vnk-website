@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -10,8 +10,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   DollarSign,
-  Download,
   CreditCard,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EntityCard } from "@/components/admin/entity-card";
+import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -68,6 +70,7 @@ export function InvoicesView({
   kpis: { unpaidTotal: number; overdueTotal: number; paidThisMonth: number; overdueCount: number };
 }) {
   const router = useRouter();
+  const [view, setView] = useViewMode("invoices", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -109,10 +112,6 @@ export function InvoicesView({
     else { const d = await res.json(); toast.error(d.error || "Erreur"); }
   };
 
-  const handleDownloadPdf = (id: number) => {
-    window.open(`/api/invoices/${id}/pdf`, "_blank");
-  };
-
   // ── Filtrage ──────────────────────────────────────────
   const filtered = useMemo(() => {
     let result = invoices;
@@ -128,6 +127,12 @@ export function InvoicesView({
     return result;
   }, [invoices, statusFilter, searchQuery]);
 
+  // Actions menu pour EntityCard
+  const getActions = useCallback((inv: Invoice) => [
+    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+    ...((inv.status === "unpaid" || inv.status === "overdue") ? [{ label: "Marquer payee", icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => handleMarkPaid(inv.id, inv.invoiceNumber) }] : []),
+  ], []);
+
   const columns: Column<Invoice>[] = [
     { key: "number", header: "Numero", accessor: (r) => <span className="font-mono text-xs">{r.invoiceNumber}</span>, sortable: true, sortBy: (r) => r.invoiceNumber },
     { key: "client", header: "Client", accessor: (r) => (<div><div className="font-medium text-sm">{r.clientName}</div>{r.companyName && <div className="text-xs text-muted-foreground">{r.companyName}</div>}</div>), sortable: true, sortBy: (r) => r.clientName },
@@ -135,14 +140,11 @@ export function InvoicesView({
     { key: "ht", header: "HT", accessor: (r) => formatCurrency(r.amountHt), sortable: true, sortBy: (r) => r.amountHt, hiddenOnMobile: true },
     { key: "ttc", header: "TTC", accessor: (r) => <span className="font-semibold">{formatCurrency(r.amountTtc)}</span>, sortable: true, sortBy: (r) => r.amountTtc },
     { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
-    { key: "due", header: "Echeance", accessor: (r) => r.dueDate ? formatDate(new Date(r.dueDate)) : "\u2014", hiddenOnMobile: true },
-    { key: "paid", header: "Paye le", accessor: (r) => r.paidAt ? formatDate(new Date(r.paidAt)) : "\u2014", hiddenOnMobile: true },
+    { key: "due", header: "Echeance", accessor: (r) => r.dueDate ? formatDate(new Date(r.dueDate)) : "—", hiddenOnMobile: true },
+    { key: "paid", header: "Paye le", accessor: (r) => r.paidAt ? formatDate(new Date(r.paidAt)) : "—", hiddenOnMobile: true },
     {
       key: "actions", header: "", accessor: (r) => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={() => handleDownloadPdf(r.id)} title="PDF">
-            <Download className="h-3.5 w-3.5" />
-          </Button>
           {(r.status === "unpaid" || r.status === "overdue") && (
             <Button variant="ghost" size="sm" onClick={() => handleMarkPaid(r.id, r.invoiceNumber)} title="Marquer payee" className="text-emerald-600">
               <CreditCard className="h-3.5 w-3.5" />
@@ -182,9 +184,41 @@ export function InvoicesView({
             </button>
           ))}
         </div>
+        <ViewToggle storageKey="invoices" defaultView="list" onChange={setView} />
       </div>
 
-      <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="factures" storageKey="admin-invoices" />
+      {/* Vue grille */}
+      {view === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((inv) => (
+            <EntityCard
+              key={inv.id}
+              title={inv.title}
+              subtitle={`${inv.invoiceNumber} — ${inv.clientName}`}
+              avatarName={inv.clientName}
+              alert={inv.status === "overdue"}
+              badges={[
+                { label: inv.status === "unpaid" ? "Non payee" : inv.status === "overdue" ? "En retard" : inv.status === "paid" ? "Payee" : inv.status === "cancelled" ? "Annulee" : inv.status, variant: inv.status === "paid" ? "secondary" : inv.status === "overdue" ? "destructive" : "outline" },
+              ]}
+              stats={[
+                { label: "TTC", value: formatCurrency(inv.amountTtc) },
+              ]}
+              actions={getActions(inv)}
+              footer={
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>{formatCurrency(inv.amountHt)} HT</span>
+                  <span>{inv.dueDate ? `Echeance ${formatDate(new Date(inv.dueDate))}` : "Pas d'echeance"}</span>
+                </div>
+              }
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucune facture trouvee</div>
+          )}
+        </div>
+      ) : (
+        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="factures" storageKey="admin-invoices" />
+      )}
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouvelle facture" icon={Receipt} accent="bg-amber-500" submitLabel="Creer la facture" onSubmit={handleCreate}>
         <div className="space-y-4">

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
@@ -7,7 +7,7 @@ import {
   Search,
   ShieldAlert,
   CheckCircle2,
-  BarChart3,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EntityCard } from "@/components/admin/entity-card";
+import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatDate } from "@/lib/utils";
@@ -74,6 +76,7 @@ export function DisputesView({
   kpis: { total: number; open: number; resolved: number };
 }) {
   const router = useRouter();
+  const [view, setView] = useViewMode("disputes", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -131,6 +134,11 @@ export function DisputesView({
     return result;
   }, [disputes, statusFilter, searchQuery]);
 
+  // Actions menu pour EntityCard
+  const getActions = useCallback((d: Dispute) => [
+    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+  ], []);
+
   const columns: Column<Dispute>[] = [
     {
       key: "client",
@@ -168,7 +176,7 @@ export function DisputesView({
     {
       key: "resolvedAt",
       header: "Resolu le",
-      accessor: (r) => r.resolvedAt ? formatDate(new Date(r.resolvedAt)) : "\u2014",
+      accessor: (r) => r.resolvedAt ? formatDate(new Date(r.resolvedAt)) : "—",
       hiddenOnMobile: true,
     },
   ];
@@ -214,9 +222,39 @@ export function DisputesView({
             </button>
           ))}
         </div>
+        <ViewToggle storageKey="disputes" defaultView="list" onChange={setView} />
       </div>
 
-      <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="litiges" storageKey="admin-disputes" />
+      {/* Vue grille */}
+      {view === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((d) => (
+            <EntityCard
+              key={d.id}
+              title={d.title}
+              subtitle={d.clientName}
+              avatarName={d.clientName}
+              alert={d.priority === "high"}
+              badges={[
+                { label: d.status === "open" ? "Ouvert" : d.status === "in_progress" ? "En cours" : d.status === "resolved" ? "Resolu" : d.status === "closed" ? "Ferme" : d.status, variant: d.status === "resolved" ? "secondary" : d.status === "open" ? "destructive" : "outline" },
+                { label: PRIORITY_LABELS[d.priority] ?? d.priority, variant: d.priority === "high" ? "destructive" : "outline" },
+              ]}
+              actions={getActions(d)}
+              footer={
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>Ouvert le {formatDate(new Date(d.openedAt))}</span>
+                  <span>{d.resolvedAt ? `Resolu le ${formatDate(new Date(d.resolvedAt))}` : "Non resolu"}</span>
+                </div>
+              }
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucun litige trouve</div>
+          )}
+        </div>
+      ) : (
+        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="litiges" storageKey="admin-disputes" />
+      )}
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau litige" icon={AlertCircle} accent="bg-red-500" submitLabel="Creer le litige" onSubmit={handleCreate}>
         <div className="space-y-4">
@@ -227,7 +265,7 @@ export function DisputesView({
               <SelectContent>
                 {clients.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>
-                    {c.fullName}{c.companyName ? ` \u2014 ${c.companyName}` : ""}
+                    {c.fullName}{c.companyName ? ` — ${c.companyName}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>

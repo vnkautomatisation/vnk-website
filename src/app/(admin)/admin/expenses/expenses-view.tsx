@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Wallet,
@@ -7,6 +7,7 @@ import {
   Search,
   DollarSign,
   Receipt,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,8 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EntityCard } from "@/components/admin/entity-card";
+import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -58,6 +61,7 @@ export function ExpensesView({
   kpis: { total: number; tps: number; tvq: number };
 }) {
   const router = useRouter();
+  const [view, setView] = useViewMode("expenses", "list");
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -123,6 +127,11 @@ export function ExpensesView({
     );
   }, [expenses, searchQuery]);
 
+  // Actions menu pour EntityCard
+  const getActions = useCallback((e: Expense) => [
+    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+  ], []);
+
   const columns: Column<Expense>[] = [
     {
       key: "date",
@@ -143,7 +152,7 @@ export function ExpensesView({
     {
       key: "vendor",
       header: "Fournisseur",
-      accessor: (r) => r.vendor ?? "\u2014",
+      accessor: (r) => r.vendor ?? "—",
       hiddenOnMobile: true,
     },
     {
@@ -194,9 +203,40 @@ export function ExpensesView({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Description, categorie, fournisseur..." className="pl-9" />
         </div>
+        <ViewToggle storageKey="expenses" defaultView="list" onChange={setView} />
       </div>
 
-      <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="depenses" storageKey="admin-expenses" />
+      {/* Vue grille */}
+      {view === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((e) => (
+            <EntityCard
+              key={e.id}
+              title={e.title}
+              subtitle={e.vendor ?? "Aucun fournisseur"}
+              icon={<Wallet className="h-5 w-5 text-muted-foreground" />}
+              badges={[
+                { label: EXPENSE_CATEGORIES.find((c) => c.value === e.category)?.label ?? e.category.replace(/_/g, " "), variant: "outline" },
+              ]}
+              stats={[
+                { label: "Montant HT", value: formatCurrency(e.amount) },
+              ]}
+              actions={getActions(e)}
+              footer={
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>{formatDate(new Date(e.expenseDate))}</span>
+                  <span>TPS: {formatCurrency(e.tpsPaid)} / TVQ: {formatCurrency(e.tvqPaid)}</span>
+                </div>
+              }
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucune depense trouvee</div>
+          )}
+        </div>
+      ) : (
+        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="depenses" storageKey="admin-expenses" />
+      )}
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouvelle depense" icon={Wallet} accent="bg-red-500" submitLabel="Creer la depense" onSubmit={handleCreate}>
         <div className="space-y-4">

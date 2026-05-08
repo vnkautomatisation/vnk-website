@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   RotateCcw,
@@ -7,6 +7,7 @@ import {
   Search,
   Clock,
   CheckCircle2,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,8 @@ import {
 } from "@/components/ui/select";
 import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
+import { EntityCard } from "@/components/admin/entity-card";
+import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -67,6 +70,7 @@ export function RefundsView({
   kpis: { total: number; pending: number; processed: number };
 }) {
   const router = useRouter();
+  const [view, setView] = useViewMode("refunds", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -128,6 +132,11 @@ export function RefundsView({
     return result;
   }, [refunds, statusFilter, searchQuery]);
 
+  // Actions menu pour EntityCard
+  const getActions = useCallback((r: Refund) => [
+    { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => {} },
+  ], []);
+
   const columns: Column<Refund>[] = [
     {
       key: "number",
@@ -151,7 +160,7 @@ export function RefundsView({
     {
       key: "invoice",
       header: "Facture liee",
-      accessor: (r) => r.invoiceNumber ? <span className="font-mono text-xs">{r.invoiceNumber}</span> : "\u2014",
+      accessor: (r) => r.invoiceNumber ? <span className="font-mono text-xs">{r.invoiceNumber}</span> : "—",
       hiddenOnMobile: true,
     },
     { key: "reason", header: "Raison", accessor: (r) => <span className="text-sm">{r.reason}</span>, hiddenOnMobile: true },
@@ -214,9 +223,40 @@ export function RefundsView({
             </button>
           ))}
         </div>
+        <ViewToggle storageKey="refunds" defaultView="list" onChange={setView} />
       </div>
 
-      <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="remboursements" storageKey="admin-refunds" />
+      {/* Vue grille */}
+      {view === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((r) => (
+            <EntityCard
+              key={r.id}
+              title={r.refundNumber}
+              subtitle={r.clientName}
+              avatarName={r.clientName}
+              badges={[
+                { label: r.status === "pending" ? "En attente" : r.status === "processed" ? "Traite" : r.status === "confirmed" ? "Confirme" : r.status, variant: r.status === "confirmed" ? "secondary" : r.status === "pending" ? "destructive" : "outline" },
+              ]}
+              stats={[
+                { label: "Montant TTC", value: formatCurrency(r.totalAmount) },
+              ]}
+              actions={getActions(r)}
+              footer={
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span className="truncate max-w-[60%]">{r.reason}</span>
+                  <span>{formatDate(new Date(r.createdAt))}</span>
+                </div>
+              }
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucun remboursement trouve</div>
+          )}
+        </div>
+      ) : (
+        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="remboursements" storageKey="admin-refunds" />
+      )}
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau remboursement" icon={RotateCcw} accent="bg-amber-500" submitLabel="Creer le remboursement" onSubmit={handleCreate}>
         <div className="space-y-4">
@@ -227,7 +267,7 @@ export function RefundsView({
               <SelectContent>
                 {clients.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>
-                    {c.fullName}{c.companyName ? ` \u2014 ${c.companyName}` : ""}
+                    {c.fullName}{c.companyName ? ` — ${c.companyName}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
