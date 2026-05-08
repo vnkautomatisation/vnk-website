@@ -1,5 +1,6 @@
 // GET /api/mandates/[id] — detail mandat
 // PATCH /api/mandates/[id] — mettre a jour (statut, progression, notes, etc.)
+// DELETE /api/mandates/[id] — supprimer si aucun enfant lie
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
@@ -89,4 +90,46 @@ export async function PATCH(
   });
 
   return NextResponse.json({ success: true, mandate: updated });
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const mandateId = Number(id);
+
+  const counts = await prisma.mandate.findUnique({
+    where: { id: mandateId },
+    select: {
+      _count: { select: { invoices: true, contracts: true, quotes: true, documents: true } },
+    },
+  });
+  if (!counts) {
+    return NextResponse.json({ error: "Mandat introuvable" }, { status: 404 });
+  }
+  const total =
+    counts._count.invoices + counts._count.contracts + counts._count.quotes + counts._count.documents;
+  if (total > 0) {
+    return NextResponse.json(
+      { error: "Mandat lie a des factures/contrats/devis/documents — impossible de supprimer" },
+      { status: 409 }
+    );
+  }
+
+  await prisma.mandate.delete({ where: { id: mandateId } });
+
+  await logAudit({
+    adminId: session.user.adminId,
+    action: "delete",
+    entityType: "mandates",
+    entityId: mandateId,
+  });
+
+  return NextResponse.json({ success: true });
 }

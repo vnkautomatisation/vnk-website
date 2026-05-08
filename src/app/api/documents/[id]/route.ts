@@ -1,9 +1,11 @@
 // GET /api/documents/[id] — sert le fichier document
-// Pour les URLs internes (/api/...), proxy le contenu directement.
-// Pour les URLs externes, redirect.
+// PATCH /api/documents/[id] — mettre a jour metadonnees (titre, description, categorie)
+// DELETE /api/documents/[id] — supprimer
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAudit } from "@/lib/audit";
 import { headers } from "next/headers";
 
 export async function GET(
@@ -70,4 +72,75 @@ export async function GET(
 
   // Pour les URLs externes, redirect
   return NextResponse.redirect(doc.fileUrl);
+}
+
+const updateSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
+  fileType: z.string().nullable().optional(),
+}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnee a mettre a jour" });
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  }
+  const { id } = await params;
+  const docId = Number(id);
+
+  const existing = await prisma.document.findUnique({ where: { id: docId } });
+  if (!existing) {
+    return NextResponse.json({ error: "Document introuvable" }, { status: 404 });
+  }
+
+  const body = await req.json();
+  const parsed = updateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+  }
+
+  const updated = await prisma.document.update({ where: { id: docId }, data: parsed.data });
+
+  await logAudit({
+    adminId: session.user.adminId,
+    action: "update",
+    entityType: "documents",
+    entityId: docId,
+    changes: parsed.data,
+  });
+
+  return NextResponse.json({ success: true, document: updated });
+}
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  }
+  const { id } = await params;
+  const docId = Number(id);
+
+  const existing = await prisma.document.findUnique({ where: { id: docId } });
+  if (!existing) {
+    return NextResponse.json({ error: "Document introuvable" }, { status: 404 });
+  }
+
+  await prisma.document.delete({ where: { id: docId } });
+
+  await logAudit({
+    adminId: session.user.adminId,
+    action: "delete",
+    entityType: "documents",
+    entityId: docId,
+  });
+
+  return NextResponse.json({ success: true });
 }
