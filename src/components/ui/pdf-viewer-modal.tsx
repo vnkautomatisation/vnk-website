@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, Download, Loader2, FileText, AlertCircle, ZoomIn, ZoomOut } from "lucide-react";
+import { createPortal } from "react-dom";
+import { X, Download, Loader2, FileText, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Props = {
@@ -32,7 +33,6 @@ export function PdfViewerModal({
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(100);
 
   useEffect(() => {
     if (!open) {
@@ -64,6 +64,7 @@ export function PdfViewerModal({
       });
 
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, pdfUrl, refreshKey]);
 
   useEffect(() => {
@@ -85,21 +86,35 @@ export function PdfViewerModal({
     a.click();
   }, [blobUrl, downloadName, documentNumber]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
-    <div className="fixed inset-0 bottom-14 lg:bottom-0 z-[9999]" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-[#0a1628]" onClick={onClose} />
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 pointer-events-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pdf-viewer-title"
+    >
+      {/* Backdrop flou cliquable */}
+      <div
+        className="absolute inset-0 bg-[#0a1628]/60 backdrop-blur-md"
+        onClick={onClose}
+        aria-hidden="true"
+      />
 
-      <div className="relative z-10 flex flex-col h-full">
-        {/* Header compact */}
-        <div className="flex items-center justify-between px-3 sm:px-6 h-12 sm:h-14 bg-[#0F2D52] text-white shrink-0">
+      {/* Modale taille PDF (ratio Letter ~ 8.5/11), centree */}
+      <div
+        className="relative z-10 flex flex-col w-full max-w-[min(900px,92vw)] h-full max-h-[92vh] bg-white rounded-xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header navy compact */}
+        <div className="flex items-center justify-between px-3 sm:px-5 h-12 sm:h-14 bg-[#0F2D52] text-white shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
               <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </div>
             <div className="min-w-0">
-              <h2 className="font-semibold text-xs sm:text-base truncate">{title}</h2>
+              <h2 id="pdf-viewer-title" className="font-semibold text-xs sm:text-sm truncate">{title}</h2>
               <div className="flex items-center gap-2 text-[9px] sm:text-[11px] text-white/60">
                 {documentNumber && <span className="font-mono">{documentNumber}</span>}
                 {documentNumber && date && <span>·</span>}
@@ -108,35 +123,25 @@ export function PdfViewerModal({
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            {/* Zoom controls */}
-            <button onClick={() => setZoom((z) => Math.max(50, z - 25))} className="h-7 w-7 sm:h-8 sm:w-8 rounded-md hover:bg-white/10 flex items-center justify-center" aria-label="Zoom arriere">
-              <ZoomOut className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </button>
-            <span className="text-[10px] sm:text-xs font-mono w-8 text-center">{zoom}%</span>
-            <button onClick={() => setZoom((z) => Math.min(200, z + 25))} className="h-7 w-7 sm:h-8 sm:w-8 rounded-md hover:bg-white/10 flex items-center justify-center" aria-label="Zoom avant">
-              <ZoomIn className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </button>
-            <button
-              onClick={onClose}
-              className="h-7 w-7 sm:h-8 sm:w-8 rounded-md hover:bg-white/10 flex items-center justify-center ml-1"
-              aria-label="Fermer"
-            >
-              <X className="h-4 w-4 sm:h-5 sm:w-5" />
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="h-7 w-7 sm:h-8 sm:w-8 rounded-md hover:bg-white/10 flex items-center justify-center shrink-0"
+            aria-label="Fermer"
+          >
+            <X className="h-4 w-4 sm:h-5 sm:w-5" />
+          </button>
         </div>
 
-        {/* PDF body — zoomable */}
-        <div className="flex-1 bg-[#525659] relative overflow-auto">
+        {/* PDF body — viewer natif gere le zoom */}
+        <div className="flex-1 bg-[#525659] relative overflow-hidden">
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
               <Loader2 className="h-10 w-10 animate-spin text-white/40" />
-              <p className="text-sm text-white/50">Chargement...</p>
+              <p className="text-sm text-white/50">Chargement du document…</p>
             </div>
           )}
           {error && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center">
               <AlertCircle className="h-10 w-10 text-white/30" />
               <p className="text-sm text-white/50">{error}</p>
               <Button variant="outline" size="sm" onClick={onClose} className="text-white border-white/30 hover:bg-white/10">
@@ -146,34 +151,29 @@ export function PdfViewerModal({
           )}
           {blobUrl && (
             <iframe
-              src={blobUrl}
-              className="border-0 origin-top-left"
-              style={{ width: `${zoom}%`, height: `${zoom}%`, minWidth: "100%", minHeight: "100%" }}
+              src={`${blobUrl}#view=FitH&toolbar=1&navpanes=0`}
+              className="absolute inset-0 w-full h-full border-0"
               title={title}
             />
           )}
         </div>
 
-        {/* Footer — Fermer a gauche, action ou Telecharger a droite */}
-        <div className="flex items-center justify-between px-3 sm:px-6 h-12 sm:h-16 bg-white border-t border-gray-200 shrink-0">
-          <Button variant="outline" size="sm" onClick={onClose}>
-            Fermer
-          </Button>
-          <div className="flex items-center gap-3">
-            {actions === undefined ? (
-              <Button
-                className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
-                size="sm"
-                onClick={handleDownload}
-                disabled={!blobUrl}
-              >
-                <Download className="h-4 w-4 mr-1.5" />
-                Telecharger
-              </Button>
-            ) : actions}
-          </div>
+        {/* Footer — wrap sur mobile si trop d'actions */}
+        <div className="flex flex-wrap items-center justify-end gap-2 px-3 sm:px-5 py-2 sm:py-0 sm:h-14 min-h-12 bg-white border-t border-gray-200 shrink-0">
+          {actions === undefined ? (
+            <Button
+              className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
+              size="sm"
+              onClick={handleDownload}
+              disabled={!blobUrl}
+            >
+              <Download className="h-4 w-4 mr-1.5" />
+              Telecharger
+            </Button>
+          ) : actions}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

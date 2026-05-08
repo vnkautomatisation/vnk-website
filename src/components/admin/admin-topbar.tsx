@@ -55,17 +55,17 @@ export function AdminTopbar({
 
   return (
     <header className="sticky top-0 z-30 bg-[#0F2D52]/95 backdrop-blur-md shadow-lg">
-      <div className="h-[64px] px-4 sm:px-6 flex items-center justify-between">
-        {/* Logo — identique au portail */}
+      <div className="h-[64px] pl-14 pr-4 sm:px-6 flex items-center justify-between">
+        {/* Logo — identique au portail (pl-14 mobile pour laisser place au hamburger fixed) */}
         <NextLink href="/admin" className="flex items-center gap-3 group shrink-0">
-          <div className="h-10 w-10 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
-            <span className="text-white font-bold text-sm">VNK</span>
+          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
+            <span className="text-white font-bold text-[10px] sm:text-sm">VNK</span>
           </div>
-          <div className="hidden sm:block">
-            <div className="text-sm font-bold leading-tight text-white">
+          <div className="block min-w-0">
+            <div className="text-xs sm:text-sm font-bold leading-tight text-white truncate">
               Automatisation Inc.
             </div>
-            <div className="text-[9px] text-white/60 tracking-[0.15em] font-medium">
+            <div className="text-[8px] sm:text-[9px] text-white/60 tracking-[0.12em] sm:tracking-[0.15em] font-medium truncate">
               VALUE · NETWORK · KNOWLEDGE
             </div>
           </div>
@@ -85,7 +85,7 @@ export function AdminTopbar({
             variant="ghost"
             size="icon"
             onClick={() => window.location.reload()}
-            className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10"
+            className="hidden sm:flex h-9 w-9 text-white/70 hover:text-white hover:bg-white/10"
             title={t("refresh")}
           >
             <RefreshCw className="h-4 w-4" />
@@ -106,7 +106,7 @@ export function AdminTopbar({
             type="button"
             onClick={toggleLocale}
             disabled={pending}
-            className="h-8 px-2.5 rounded-md border border-white/20 text-xs font-bold tracking-wider text-white hover:bg-white/10 transition-colors disabled:opacity-50"
+            className="hidden sm:inline-flex h-8 px-2.5 rounded-md border border-white/20 text-xs font-bold tracking-wider text-white hover:bg-white/10 transition-colors disabled:opacity-50 items-center"
           >
             {otherLabel}
           </button>

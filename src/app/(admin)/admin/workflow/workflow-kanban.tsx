@@ -309,27 +309,31 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
                       const actions = getCardActions(c, col.id);
                       const busy = busyClientId === c.id;
 
+                      const openPanel = () => setPanelClientId(c.id);
                       return (
                         <Card
                           key={c.id}
                           className={cn(
-                            "vnk-card-hover cursor-pointer transition-shadow overflow-hidden",
+                            "vnk-card-hover transition-shadow overflow-hidden",
                             isOverdue && "border-red-400 ring-1 ring-red-200",
                             alert && !isOverdue && "border-amber-300",
                             busy && "opacity-60 pointer-events-none"
                           )}
-                          onClick={() => setPanelClientId(c.id)}
                         >
                           {/* Accent stripe selon etape */}
                           <div className={cn("h-1 w-full", col.stripe)} />
                           <CardContent className="p-3">
                             <div className="flex items-start justify-between gap-1">
-                              <div className="min-w-0 flex-1">
+                              <button
+                                type="button"
+                                className="min-w-0 flex-1 text-left bg-transparent border-0 p-0 m-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
+                                onClick={openPanel}
+                              >
                                 <div className="font-semibold text-sm truncate">{c.fullName}</div>
                                 {c.companyName && (
                                   <div className="text-[10px] text-muted-foreground truncate">{c.companyName}</div>
                                 )}
-                              </div>
+                              </button>
                               <div className="flex items-center gap-1 shrink-0">
                                 {c.unreadMessages > 0 && (
                                   <MessageSquare className="h-3 w-3 text-blue-500" />
@@ -337,69 +341,76 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
                                 {isOverdue && (
                                   <AlertTriangle className="h-3 w-3 text-red-500" />
                                 )}
-                                <div onClick={(e) => e.stopPropagation()}>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <button className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted transition-colors">
-                                        <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-                                      </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-48">
-                                      {actions.map((action, i) => (
-                                        <div key={i}>
-                                          {i === 1 && <DropdownMenuSeparator />}
-                                          <DropdownMenuItem onSelect={() => action.onClick()}>
-                                            <span className="mr-2">{action.icon}</span>
-                                            {action.label}
-                                          </DropdownMenuItem>
-                                        </div>
-                                      ))}
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted transition-colors"
+                                    >
+                                      <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    {actions.map((action, i) => (
+                                      <div key={i}>
+                                        {i === 1 && <DropdownMenuSeparator />}
+                                        <DropdownMenuItem onSelect={() => action.onClick()}>
+                                          <span className="mr-2">{action.icon}</span>
+                                          {action.label}
+                                        </DropdownMenuItem>
+                                      </div>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                             </div>
 
-                            {/* Info contextuelle selon l'etape */}
-                            {latestMandate && col.id === "mandate_active" && (
-                              <div className="mt-2">
-                                <div className="text-[10px] text-muted-foreground truncate">{latestMandate.title}</div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <div className="h-1 flex-1 rounded-full bg-muted overflow-hidden">
-                                    <div className="h-full bg-primary" style={{ width: `${latestMandate.progress}%` }} />
+                            {/* Info contextuelle selon l'etape — cliquable */}
+                            <button
+                              type="button"
+                              className="w-full text-left bg-transparent border-0 p-0 m-0 cursor-pointer focus-visible:outline-none rounded-sm"
+                              onClick={openPanel}
+                            >
+                              {latestMandate && col.id === "mandate_active" && (
+                                <div className="mt-2">
+                                  <div className="text-[10px] text-muted-foreground truncate">{latestMandate.title}</div>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <div className="h-1 flex-1 rounded-full bg-muted overflow-hidden">
+                                      <div className="h-full bg-primary" style={{ width: `${latestMandate.progress}%` }} />
+                                    </div>
+                                    <span className="text-[10px] text-muted-foreground">{latestMandate.progress}%</span>
                                   </div>
-                                  <span className="text-[10px] text-muted-foreground">{latestMandate.progress}%</span>
                                 </div>
-                              </div>
-                            )}
+                              )}
 
-                            {c.quotes[0] && col.id === "quote_pending" && (
-                              <div className="mt-2 text-[10px]">
-                                <span className="text-muted-foreground">{c.quotes[0].quoteNumber}</span>
-                                <span className="font-semibold ml-2">{formatCurrency(c.quotes[0].amountTtc)}</span>
-                              </div>
-                            )}
+                              {c.quotes[0] && col.id === "quote_pending" && (
+                                <div className="mt-2 text-[10px]">
+                                  <span className="text-muted-foreground">{c.quotes[0].quoteNumber}</span>
+                                  <span className="font-semibold ml-2">{formatCurrency(c.quotes[0].amountTtc)}</span>
+                                </div>
+                              )}
 
-                            {c.contracts[0] && col.id === "contract_pending" && (
-                              <div className="mt-2 text-[10px] text-muted-foreground">
-                                {c.contracts[0].contractNumber}
-                              </div>
-                            )}
+                              {c.contracts[0] && col.id === "contract_pending" && (
+                                <div className="mt-2 text-[10px] text-muted-foreground">
+                                  {c.contracts[0].contractNumber}
+                                </div>
+                              )}
 
-                            {unpaid > 0 && (col.id === "invoice_unpaid") && (
-                              <div className="mt-2 flex items-center gap-1">
-                                <Clock className="h-3 w-3 text-red-500" />
-                                <span className={cn("text-xs font-semibold", isOverdue ? "text-red-600" : "text-amber-600")}>
-                                  {formatCurrency(unpaid)}
-                                </span>
-                              </div>
-                            )}
+                              {unpaid > 0 && (col.id === "invoice_unpaid") && (
+                                <div className="mt-2 flex items-center gap-1">
+                                  <Clock className="h-3 w-3 text-red-500" />
+                                  <span className={cn("text-xs font-semibold", isOverdue ? "text-red-600" : "text-amber-600")}>
+                                    {formatCurrency(unpaid)}
+                                  </span>
+                                </div>
+                              )}
 
-                            {col.id === "complete" && c.invoices.length > 0 && (
-                              <div className="mt-2 text-[10px] text-emerald-600 font-medium">
-                                {formatCurrency(c.invoices.reduce((s, i) => s + i.amountTtc, 0))} total
-                              </div>
-                            )}
+                              {col.id === "complete" && c.invoices.length > 0 && (
+                                <div className="mt-2 text-[10px] text-emerald-600 font-medium">
+                                  {formatCurrency(c.invoices.reduce((s, i) => s + i.amountTtc, 0))} total
+                                </div>
+                              )}
+                            </button>
                           </CardContent>
                         </Card>
                       );

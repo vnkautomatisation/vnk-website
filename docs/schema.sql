@@ -44,6 +44,7 @@ CREATE TABLE "clients" (
     "city" TEXT,
     "province" TEXT DEFAULT 'QC',
     "postal_code" TEXT,
+    "country" TEXT DEFAULT 'CA',
     "sector" TEXT,
     "technologies" TEXT,
     "internal_notes" TEXT,

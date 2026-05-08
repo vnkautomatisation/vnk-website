@@ -65,6 +65,7 @@ model Client {
   city           String?
   province       String?   @default("QC")
   postalCode     String?   @map("postal_code")
+  country        String?   @default("CA")
   sector         String?
   technologies   String?
   internalNotes  String?   @map("internal_notes")
