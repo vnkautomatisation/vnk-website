@@ -1,6 +1,6 @@
 "use client";
-import { useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Receipt,
@@ -73,6 +73,7 @@ export function InvoicesView({
   kpis: { unpaidTotal: number; overdueTotal: number; paidThisMonth: number; overdueCount: number };
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [view, setView] = useViewMode("invoices", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,6 +94,18 @@ export function InvoicesView({
   const [newAmount, setNewAmount] = useState("");
 
   const resetForm = () => { setNewClientId(""); setNewTitle(""); setNewDesc(""); setNewAmount(""); };
+
+  // Auto-ouvrir creation depuis ?newFor=<id>
+  useEffect(() => {
+    const newFor = searchParams.get("newFor");
+    if (newFor && clients.some((c) => String(c.id) === newFor)) {
+      setNewClientId(newFor);
+      setCreateOpen(true);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("newFor");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [searchParams, clients]);
 
   const openEdit = (i: Invoice) => {
     setEditInvoice(i);

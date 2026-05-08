@@ -1,5 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Workflow,
   UserPlus,
@@ -12,12 +14,25 @@ import {
   AlertTriangle,
   MessageSquare,
   Clock,
+  MoreHorizontal,
+  Plus,
+  PenTool,
+  Send,
+  Eye,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { StatCard } from "@/components/admin/stat-card";
+import { ClientDetailPanel } from "@/components/admin/client-detail-panel";
 import { cn, formatCurrency } from "@/lib/utils";
 
 type ClientData = {
@@ -67,8 +82,11 @@ function hasAlert(c: ClientData): boolean {
 }
 
 export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [alertsOnly, setAlertsOnly] = useState(false);
+  const [panelClientId, setPanelClientId] = useState<number | null>(null);
+  const [busyClientId, setBusyClientId] = useState<number | null>(null);
 
   const filtered = useMemo(() => {
     let result = clients;
@@ -99,6 +117,92 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
   const overdueTotal = clients.flatMap((c) => c.invoices)
     .filter((i) => i.status === "overdue")
     .reduce((s, i) => s + i.amountTtc, 0);
+
+  // Actions API
+  const acceptQuote = async (clientId: number, quoteId: number, num: string) => {
+    if (!confirm(`Accepter le devis ${num} ? Un contrat sera genere automatiquement.`)) return;
+    setBusyClientId(clientId);
+    try {
+      const res = await fetch(`/api/quotes/${quoteId}/accept`, { method: "POST" });
+      if (res.ok) { toast.success("Devis accepte, contrat genere"); router.refresh(); }
+      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    } finally { setBusyClientId(null); }
+  };
+
+  const signContract = async (clientId: number, contractId: number) => {
+    if (!confirm("Signer ce contrat en tant qu'admin ?")) return;
+    setBusyClientId(clientId);
+    try {
+      const res = await fetch(`/api/contracts/${contractId}/sign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signatureData: "admin-signed-via-pipeline" }),
+      });
+      if (res.ok) { toast.success("Contrat signe"); router.refresh(); }
+      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    } finally { setBusyClientId(null); }
+  };
+
+  const markInvoicePaid = async (clientId: number, invoiceId: number, num: string) => {
+    if (!confirm(`Marquer la facture ${num} comme payee ?`)) return;
+    setBusyClientId(clientId);
+    try {
+      const res = await fetch(`/api/invoices/${invoiceId}/mark-paid`, { method: "POST" });
+      if (res.ok) { toast.success("Facture marquee comme payee"); router.refresh(); }
+      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    } finally { setBusyClientId(null); }
+  };
+
+  // Actions contextuelles selon la colonne
+  const getCardActions = (c: ClientData, step: Step) => {
+    const actions: Array<{ label: string; icon: React.ReactNode; onClick: () => void; separator?: boolean; destructive?: boolean }> = [
+      { label: "Voir le client", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => setPanelClientId(c.id) },
+    ];
+
+    if (step === "prospect") {
+      actions.push(
+        { label: "Creer un mandat", icon: <Plus className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/mandates?newFor=${c.id}`) },
+        { label: "Envoyer un message", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) },
+      );
+    } else if (step === "mandate_active") {
+      actions.push(
+        { label: "Creer un devis", icon: <Plus className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/quotes?newFor=${c.id}`) },
+        { label: "Envoyer un message", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) },
+      );
+    } else if (step === "quote_pending") {
+      const pendingQuote = c.quotes.find((q) => q.status === "pending");
+      if (pendingQuote) {
+        actions.push({
+          label: "Marquer accepte",
+          icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+          onClick: () => acceptQuote(c.id, pendingQuote.id, pendingQuote.quoteNumber),
+        });
+      }
+      actions.push({ label: "Relancer client", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) });
+    } else if (step === "contract_pending") {
+      const pendingContract = c.contracts.find((ct) => ct.status === "pending" || ct.status === "draft");
+      if (pendingContract) {
+        actions.push({
+          label: "Signer admin",
+          icon: <PenTool className="h-3.5 w-3.5" />,
+          onClick: () => signContract(c.id, pendingContract.id),
+        });
+      }
+      actions.push({ label: "Relancer client", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) });
+    } else if (step === "invoice_unpaid") {
+      const unpaid = c.invoices.find((i) => i.status === "unpaid" || i.status === "overdue");
+      if (unpaid) {
+        actions.push({
+          label: "Marquer payee",
+          icon: <CreditCard className="h-3.5 w-3.5" />,
+          onClick: () => markInvoicePaid(c.id, unpaid.id, unpaid.invoiceNumber),
+        });
+      }
+      actions.push({ label: "Envoyer relance", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) });
+    }
+
+    return actions;
+  };
 
   return (
     <div className="space-y-6">
@@ -152,7 +256,6 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
       <div className="overflow-x-auto pb-4">
         <div className="grid grid-cols-6 gap-3 min-w-[1200px]">
           {COLUMNS.map((col) => {
-            const Icon = col.icon;
             const items = columns[col.id];
             return (
               <div key={col.id} className="space-y-2">
@@ -177,16 +280,23 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
                       const isOverdue = c.invoices.some((i) => i.status === "overdue");
                       const latestMandate = c.mandates[0];
                       const alert = hasAlert(c);
+                      const actions = getCardActions(c, col.id);
+                      const busy = busyClientId === c.id;
 
                       return (
-                        <Card key={c.id} className={cn(
-                          "vnk-card-hover cursor-pointer",
-                          isOverdue && "border-red-300",
-                          alert && !isOverdue && "border-amber-300"
-                        )}>
+                        <Card
+                          key={c.id}
+                          className={cn(
+                            "vnk-card-hover cursor-pointer transition-shadow",
+                            isOverdue && "border-red-300",
+                            alert && !isOverdue && "border-amber-300",
+                            busy && "opacity-60 pointer-events-none"
+                          )}
+                          onClick={() => setPanelClientId(c.id)}
+                        >
                           <CardContent className="p-3">
                             <div className="flex items-start justify-between gap-1">
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <div className="font-semibold text-sm truncate">{c.fullName}</div>
                                 {c.companyName && (
                                   <div className="text-[10px] text-muted-foreground truncate">{c.companyName}</div>
@@ -199,6 +309,24 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
                                 {isOverdue && (
                                   <AlertTriangle className="h-3 w-3 text-red-500" />
                                 )}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                    <button className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted transition-colors">
+                                      <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
+                                    {actions.map((action, i) => (
+                                      <div key={i}>
+                                        {i === 1 && <DropdownMenuSeparator />}
+                                        <DropdownMenuItem onClick={action.onClick}>
+                                          <span className="mr-2">{action.icon}</span>
+                                          {action.label}
+                                        </DropdownMenuItem>
+                                      </div>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                             </div>
 
@@ -253,6 +381,13 @@ export function WorkflowKanban({ clients }: { clients: ClientData[] }) {
           })}
         </div>
       </div>
+
+      {/* Detail panel */}
+      <ClientDetailPanel
+        clientId={panelClientId}
+        open={panelClientId !== null}
+        onOpenChange={(o) => { if (!o) setPanelClientId(null); }}
+      />
     </div>
   );
 }

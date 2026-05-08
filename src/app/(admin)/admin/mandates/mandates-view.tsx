@@ -1,6 +1,6 @@
 "use client";
-import { useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Briefcase,
@@ -81,6 +81,7 @@ export function MandatesView({
   counts: { active: number; pending: number; completed: number; total: number };
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [view, setView] = useViewMode("mandates", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -106,6 +107,18 @@ export function MandatesView({
   const [newDesc, setNewDesc] = useState("");
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
+
+  // Auto-ouvrir creation depuis ?newFor=<id>
+  useEffect(() => {
+    const newFor = searchParams.get("newFor");
+    if (newFor && clients.some((c) => String(c.id) === newFor)) {
+      setNewClientId(newFor);
+      setCreateOpen(true);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("newFor");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [searchParams, clients]);
 
   const resetForm = () => {
     setNewClientId("");

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   MessageSquare,
@@ -69,8 +69,23 @@ function formatMsgDate(iso: string): string {
 
 export function MessagesView({ conversations }: { conversations: Conversation[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  // Auto-selection conversation depuis ?clientId=<id>
+  useEffect(() => {
+    const cid = searchParams.get("clientId");
+    if (cid) {
+      const id = Number(cid);
+      if (conversations.some((c) => c.id === id)) {
+        setSelectedId(id);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("clientId");
+        window.history.replaceState({}, "", url.toString());
+      }
+    }
+  }, [searchParams, conversations]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [newMsg, setNewMsg] = useState("");

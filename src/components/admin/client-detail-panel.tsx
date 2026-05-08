@@ -1,6 +1,7 @@
 "use client";
 // Client Detail Panel — slide-out right
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Sheet,
   SheetContent,
@@ -20,10 +21,6 @@ import {
   MapPin,
   Building2,
   Plus,
-  FileText,
-  Receipt,
-  Briefcase,
-  FolderOpen,
   MessageSquare,
 } from "lucide-react";
 
@@ -143,10 +140,26 @@ export function ClientDetailPanel({
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2 pt-4">
-                  <Button size="sm" variant="outline"><Plus className="h-3 w-3" />Mandat</Button>
-                  <Button size="sm" variant="outline"><Plus className="h-3 w-3" />Devis</Button>
-                  <Button size="sm" variant="outline"><Plus className="h-3 w-3" />Facture</Button>
-                  <Button size="sm" variant="outline"><MessageSquare className="h-3 w-3" />Message</Button>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/admin/mandates?newFor=${client.id}`}>
+                      <Plus className="h-3 w-3" />Mandat
+                    </Link>
+                  </Button>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/admin/quotes?newFor=${client.id}`}>
+                      <Plus className="h-3 w-3" />Devis
+                    </Link>
+                  </Button>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/admin/invoices?newFor=${client.id}`}>
+                      <Plus className="h-3 w-3" />Facture
+                    </Link>
+                  </Button>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/admin/messages?clientId=${client.id}`}>
+                      <MessageSquare className="h-3 w-3" />Message
+                    </Link>
+                  </Button>
                 </div>
               </TabsContent>
 
