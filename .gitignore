@@ -66,6 +66,3 @@ $RECYCLE.BIN/
 # ─── Dumps DB ────────────────────────────────────────
 *.dump
 *.sql.gz
-
-# ─── Worktrees internes ──────────────────────────────
-.claude/
