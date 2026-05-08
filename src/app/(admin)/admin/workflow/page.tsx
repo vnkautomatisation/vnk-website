@@ -6,50 +6,76 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Pipeline workflow" };
 
 export default async function WorkflowPage() {
-  const rawClients = await prisma.client.findMany({
-    where: { isActive: true, archived: false },
-    include: {
-      mandates: {
-        select: { id: true, status: true, title: true, progress: true, serviceType: true, endDate: true },
-        orderBy: { createdAt: "desc" },
+  const [rawClients, rawEvents] = await Promise.all([
+    prisma.client.findMany({
+      where: { isActive: true, archived: false },
+      include: {
+        mandates: {
+          select: { id: true, status: true, title: true, progress: true, serviceType: true, endDate: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        },
+        quotes: {
+          select: { id: true, status: true, quoteNumber: true, title: true, amountTtc: true, expiryDate: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        },
+        contracts: {
+          select: { id: true, status: true, contractNumber: true, title: true, amountTtc: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        },
+        invoices: {
+          select: { id: true, status: true, invoiceNumber: true, amountTtc: true, dueDate: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        },
+        _count: { select: { messages: { where: { isRead: false, sender: "client" } } } },
       },
-      quotes: {
-        select: { id: true, status: true, quoteNumber: true, title: true, amountTtc: true, expiryDate: true },
-        orderBy: { createdAt: "desc" },
-      },
-      contracts: {
-        select: { id: true, status: true, contractNumber: true, title: true },
-        orderBy: { createdAt: "desc" },
-      },
-      invoices: {
-        select: { id: true, status: true, invoiceNumber: true, amountTtc: true, dueDate: true },
-        orderBy: { createdAt: "desc" },
-      },
-      _count: { select: { messages: { where: { isRead: false, sender: "client" } } } },
-    },
-  });
+    }),
+    prisma.workflowEvent.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 15,
+      include: { client: { select: { fullName: true, companyName: true } } },
+    }),
+  ]);
 
   const clients = rawClients.map((c) => ({
     id: c.id,
     fullName: c.fullName,
     companyName: c.companyName,
     unreadMessages: c._count.messages,
+    createdAt: c.createdAt.toISOString(),
     mandates: c.mandates.map((m) => ({
       ...m,
       endDate: m.endDate?.toISOString() ?? null,
+      createdAt: m.createdAt.toISOString(),
     })),
     quotes: c.quotes.map((q) => ({
       ...q,
       amountTtc: Number(q.amountTtc),
       expiryDate: q.expiryDate?.toISOString() ?? null,
+      createdAt: q.createdAt.toISOString(),
     })),
-    contracts: c.contracts,
+    contracts: c.contracts.map((ct) => ({
+      ...ct,
+      amountTtc: ct.amountTtc != null ? Number(ct.amountTtc) : null,
+      createdAt: ct.createdAt.toISOString(),
+    })),
     invoices: c.invoices.map((i) => ({
       ...i,
       amountTtc: Number(i.amountTtc),
       dueDate: i.dueDate?.toISOString() ?? null,
+      createdAt: i.createdAt.toISOString(),
     })),
   }));
 
-  return <WorkflowKanban clients={clients} />;
+  const events = rawEvents.map((e) => ({
+    id: e.id,
+    eventType: e.eventType,
+    eventLabel: e.eventLabel,
+    triggeredBy: e.triggeredBy,
+    createdAt: e.createdAt.toISOString(),
+    clientId: e.clientId,
+    clientName: e.client?.fullName ?? "—",
+    clientCompany: e.client?.companyName ?? null,
+  }));
+
+  return <WorkflowKanban clients={clients} events={events} />;
 }
