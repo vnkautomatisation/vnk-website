@@ -9,6 +9,7 @@ import { logAudit } from "@/lib/audit";
 import { calculateTaxes } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { createWorkflowEvent } from "@/lib/workflow";
 
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -79,6 +80,18 @@ export async function PATCH(
   }
 
   const updated = await prisma.invoice.update({ where: { id: invoiceId }, data });
+
+  if (parsed.data.status && parsed.data.status !== existing.status) {
+    if (parsed.data.status === "overdue") {
+      await createWorkflowEvent({
+        clientId: updated.clientId,
+        invoiceId: updated.id,
+        eventType: "invoice_overdue",
+        eventLabel: `Facture ${updated.invoiceNumber} marquée en retard`,
+        triggeredBy: "admin",
+      });
+    }
+  }
 
   await logAudit({
     adminId: session.user.adminId,

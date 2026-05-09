@@ -64,10 +64,10 @@ export async function POST(
     data: {
       recipientType: "client",
       recipientId: quote.clientId,
-      type: "quote_sent",
+      type: "info",
       title: "Nouveau devis disponible",
-      message: `${quote.quoteNumber} — ${Number(quote.amountTtc).toFixed(2)} $ TTC`,
-      actionUrl: `/portail/devis`,
+      body: `${quote.quoteNumber} — ${Number(quote.amountTtc).toFixed(2)} $ TTC`,
+      link: `/portail/devis`,
     },
   });
 
