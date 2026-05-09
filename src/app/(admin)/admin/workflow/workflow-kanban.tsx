@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { StatCard } from "@/components/admin/stat-card";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
@@ -67,6 +67,10 @@ type EventData = {
   triggeredBy: string;
   createdAt: string;
   clientId: number;
+  mandateId: number | null;
+  quoteId: number | null;
+  contractId: number | null;
+  invoiceId: number | null;
   clientName: string;
   clientCompany: string | null;
 };
@@ -90,6 +94,7 @@ const COLUMNS: Array<{
   { id: "complete", label: "Complete", icon: CheckCircle2, header: "bg-emerald-100 border-emerald-300", stripe: "bg-emerald-500", iconColor: "text-emerald-600" },
 ];
 
+// Etape "principale" du client — utilisee pour CSV, filtres et tri par defaut
 function getStep(c: ClientData): Step {
   if (c.mandates.length === 0) return "prospect";
   if (c.invoices.some((i) => i.status === "unpaid" || i.status === "overdue")) return "invoice_unpaid";
@@ -97,6 +102,23 @@ function getStep(c: ClientData): Step {
   if (c.quotes.some((q) => q.status === "pending")) return "quote_pending";
   if (c.mandates.length > 0 && c.invoices.length > 0 && c.invoices.every((i) => i.status === "paid")) return "complete";
   return "mandate_active";
+}
+
+// Toutes les etapes ou le client est present (un client peut etre dans plusieurs colonnes)
+function getSteps(c: ClientData): Set<Step> {
+  const steps = new Set<Step>();
+  if (c.mandates.length === 0) {
+    steps.add("prospect");
+    return steps;
+  }
+  if (c.mandates.some((m) => m.status !== "completed")) steps.add("mandate_active");
+  if (c.quotes.some((q) => q.status === "pending")) steps.add("quote_pending");
+  if (c.contracts.some((ct) => ct.status === "pending" || ct.status === "draft")) steps.add("contract_pending");
+  if (c.invoices.some((i) => i.status === "unpaid" || i.status === "overdue")) steps.add("invoice_unpaid");
+  if (c.invoices.some((i) => i.status === "paid")) steps.add("complete");
+  // Filet de securite : client avec mandats sans aucun autre etat
+  if (steps.size === 0) steps.add("mandate_active");
+  return steps;
 }
 
 function hasAlert(c: ClientData): boolean {
@@ -114,7 +136,8 @@ function getClientStageValue(c: ClientData, step: Step): number {
     case "prospect":
       return 0;
     case "mandate_active":
-      return c.quotes.filter((q) => q.status === "pending").reduce((s, q) => s + q.amountTtc, 0);
+      // Mandat actif = travail en cours, pas de $ direct (suivi sur quote/invoice)
+      return 0;
     case "quote_pending":
       return c.quotes.filter((q) => q.status === "pending").reduce((s, q) => s + q.amountTtc, 0);
     case "contract_pending":
@@ -191,6 +214,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
   const [busyClientId, setBusyClientId] = useState<number | null>(null);
   const [activityOpen, setActivityOpen] = useState(false);
   const [draggedClientId, setDraggedClientId] = useState<number | null>(null);
+  const [draggedFromStep, setDraggedFromStep] = useState<Step | null>(null);
   const [dragOverStep, setDragOverStep] = useState<Step | null>(null);
 
   // Filtres avances
@@ -254,7 +278,12 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
       prospect: [], mandate_active: [], quote_pending: [],
       contract_pending: [], invoice_unpaid: [], complete: [],
     };
-    for (const c of filtered) grouped[getStep(c)].push(c);
+    // Un client peut apparaitre dans plusieurs colonnes selon ses entites
+    for (const c of filtered) {
+      for (const step of getSteps(c)) {
+        grouped[step].push(c);
+      }
+    }
     // Tri per colonne
     for (const step of Object.keys(grouped) as Step[]) {
       const mode = sortMode[step];
@@ -274,7 +303,12 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
   const overdueTotal = clients.flatMap((c) => c.invoices)
     .filter((i) => i.status === "overdue")
     .reduce((s, i) => s + i.amountTtc, 0);
-  const pipelineForecast = filtered.reduce((s, c) => s + getClientStageValue(c, getStep(c)), 0);
+  // Forecast = somme des valeurs sur toutes les etapes ou le client est present
+  const pipelineForecast = filtered.reduce((sum, c) => {
+    let total = 0;
+    for (const step of getSteps(c)) total += getClientStageValue(c, step);
+    return sum + total;
+  }, 0);
 
   // Stats conversion
   const totals = useMemo(() => {
@@ -394,14 +428,37 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
   // Drag-drop entre colonnes — declenche la transition d'etat
   const handleDrop = async (targetStep: Step) => {
     setDragOverStep(null);
-    if (draggedClientId === null) return;
+    if (draggedClientId === null || draggedFromStep === null) return;
     const c = clients.find((x) => x.id === draggedClientId);
+    const fromStep = draggedFromStep;
     setDraggedClientId(null);
+    setDraggedFromStep(null);
     if (!c) return;
-    const fromStep = getStep(c);
     if (fromStep === targetStep) return;
 
     // Transitions supportees
+    if (fromStep === "prospect" && targetStep === "mandate_active") {
+      const ok = await confirm({
+        title: "Creer un mandat ?",
+        description: `Vous allez ouvrir la creation d'un nouveau mandat pour ${c.fullName} (passage Prospect → Mandat).`,
+        confirmLabel: "Continuer",
+      });
+      if (!ok) return;
+      router.push(`/admin/mandates?newFor=${c.id}`);
+      return;
+    }
+
+    if (fromStep === "mandate_active" && targetStep === "quote_pending") {
+      const ok = await confirm({
+        title: "Creer un devis ?",
+        description: `Vous allez ouvrir la creation d'un nouveau devis pour ${c.fullName} (passage Mandat → Devis).`,
+        confirmLabel: "Continuer",
+      });
+      if (!ok) return;
+      router.push(`/admin/quotes?newFor=${c.id}`);
+      return;
+    }
+
     if (fromStep === "quote_pending" && targetStep === "contract_pending") {
       const quote = c.quotes.find((q) => q.status === "pending");
       if (!quote) { toast.error("Aucun devis en attente"); return; }
@@ -463,14 +520,13 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     toast.info("Transition non supportee — utilisez le menu actions de la carte");
   };
 
-  // Step suivant qui est une transition valide depuis le step actuel (highlight visuel)
-  const isValidDropTarget = (clientId: number | null, targetStep: Step): boolean => {
-    if (clientId === null) return false;
-    const c = clients.find((x) => x.id === clientId);
-    if (!c) return false;
-    const fromStep = getStep(c);
+  // Step suivant qui est une transition valide depuis le step source de la carte draggee
+  const isValidDropTarget = (clientId: number | null, fromStep: Step | null, targetStep: Step): boolean => {
+    if (clientId === null || fromStep === null) return false;
     if (fromStep === targetStep) return false;
     return (
+      (fromStep === "prospect" && targetStep === "mandate_active") ||
+      (fromStep === "mandate_active" && targetStep === "quote_pending") ||
       (fromStep === "quote_pending" && targetStep === "contract_pending") ||
       (fromStep === "contract_pending" && targetStep === "invoice_unpaid") ||
       (fromStep === "invoice_unpaid" && targetStep === "complete")
@@ -538,7 +594,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
           </Button>
           <Button variant="outline" size="sm" onClick={() => setActivityOpen(true)}>
             <Activity className="h-4 w-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">Activite</span>
+            <span className="hidden sm:inline">Activité</span>
             {events.length > 0 && <Badge variant="secondary" className="ml-1.5">{events.length}</Badge>}
           </Button>
         </div>
@@ -678,7 +734,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
           const colTotal = items.reduce((s, c) => s + getClientStageValue(c, col.id), 0);
           const isVisible = col.id === mobileColumn; // affiche sur mobile
 
-          const isDropTarget = isValidDropTarget(draggedClientId, col.id);
+          const isDropTarget = isValidDropTarget(draggedClientId, draggedFromStep, col.id);
           const isOver = dragOverStep === col.id && isDropTarget;
 
           return (
@@ -762,17 +818,19 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                     const busy = busyClientId === c.id;
                     const openPanel = () => openEntity("client", c.id);
 
-                    const isDragged = draggedClientId === c.id;
+                    const isDragged = draggedClientId === c.id && draggedFromStep === col.id;
                     return (
                       <Card
-                        key={c.id}
+                        key={`${c.id}-${col.id}`}
                         draggable={!busy}
                         onDragStart={(e) => {
                           setDraggedClientId(c.id);
+                          setDraggedFromStep(col.id);
                           e.dataTransfer.effectAllowed = "move";
                         }}
                         onDragEnd={() => {
                           setDraggedClientId(null);
+                          setDraggedFromStep(null);
                           setDragOverStep(null);
                         }}
                         className={cn(
@@ -780,7 +838,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                           isOverdue && "border-red-400 ring-1 ring-red-200",
                           alert && !isOverdue && "border-amber-300",
                           busy && "opacity-60 pointer-events-none",
-                          isDragged && "opacity-40 scale-95"
+                          isDragged && "opacity-0 pointer-events-none"
                         )}
                       >
                         <div className={cn("h-1 w-full", col.stripe)} />
@@ -887,8 +945,11 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
         <SheetContent className="w-full sm:max-w-md overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />Activite recente
+              <Activity className="h-5 w-5" />Activité récente
             </SheetTitle>
+            <SheetDescription>
+              Les {events.length} derniers événements du pipeline workflow.
+            </SheetDescription>
           </SheetHeader>
           <div className="mt-4 space-y-2">
             {events.length === 0 ? (
@@ -896,11 +957,18 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
             ) : events.map((e) => {
               const Icon = eventTypeIcon(e.eventType);
               const colorCls = eventTypeColor(e.eventType);
+              // Determine la cible la plus specifique de l'evenement
+              const target: { type: "invoice" | "contract" | "quote" | "mandate" | "client"; id: number } =
+                e.invoiceId ? { type: "invoice", id: e.invoiceId } :
+                e.contractId ? { type: "contract", id: e.contractId } :
+                e.quoteId ? { type: "quote", id: e.quoteId } :
+                e.mandateId ? { type: "mandate", id: e.mandateId } :
+                { type: "client", id: e.clientId };
               return (
                 <button
                   key={e.id}
                   type="button"
-                  onClick={() => { openEntity("client", e.clientId); setActivityOpen(false); }}
+                  onClick={() => { openEntity(target.type, target.id); setActivityOpen(false); }}
                   className="w-full p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow flex items-start gap-3 text-left"
                 >
                   <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0", colorCls)}>

@@ -195,11 +195,31 @@ export function ClientDetailPanel({
 
   useEffect(() => {
     if (!clientId || !open) return;
+    let cancelled = false;
     setLoading(true);
+    setClient(null); // Reset pour eviter d'afficher les donnees du client precedent
     fetch(`/api/clients/${clientId}`)
-      .then((r) => r.json())
-      .then((data) => setClient(data.client))
-      .finally(() => setLoading(false));
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        if (!data.client) {
+          toast.error("Client introuvable");
+          return;
+        }
+        setClient(data.client);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("Erreur chargement client:", err);
+        toast.error("Erreur chargement client");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [clientId, open]);
 
   const refresh = async () => {

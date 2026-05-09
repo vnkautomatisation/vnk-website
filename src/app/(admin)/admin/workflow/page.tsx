@@ -73,6 +73,10 @@ export default async function WorkflowPage() {
     triggeredBy: e.triggeredBy,
     createdAt: e.createdAt.toISOString(),
     clientId: e.clientId,
+    mandateId: e.mandateId,
+    quoteId: e.quoteId,
+    contractId: e.contractId,
+    invoiceId: e.invoiceId,
     clientName: e.client?.fullName ?? "—",
     clientCompany: e.client?.companyName ?? null,
   }));

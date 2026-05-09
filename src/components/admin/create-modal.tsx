@@ -67,9 +67,13 @@ export function CreateModal({
             )}
             <div>
               <DialogTitle>{title}</DialogTitle>
-              {description && (
+              {description ? (
                 <DialogDescription className="mt-0.5">
                   {description}
+                </DialogDescription>
+              ) : (
+                <DialogDescription className="sr-only">
+                  Formulaire de creation
                 </DialogDescription>
               )}
             </div>
