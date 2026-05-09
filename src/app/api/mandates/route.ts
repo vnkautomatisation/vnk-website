@@ -71,6 +71,16 @@ export async function POST(req: Request) {
     triggeredBy: "admin",
   });
 
+  // Premier log d'activite pour le mandate panel
+  await prisma.mandateLog.create({
+    data: {
+      mandateId: mandate.id,
+      action: "CREATED",
+      description: `Mandat créé pour ${parsed.data.title}`,
+      createdBy: "admin",
+    },
+  });
+
   await logAudit({
     adminId: session.user.adminId,
     action: "create",

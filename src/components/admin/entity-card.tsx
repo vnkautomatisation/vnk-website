@@ -55,10 +55,11 @@ export function EntityCard({
 }) {
   return (
     <Card
+      onClick={onClick}
       className={cn(
         "vnk-card-hover overflow-hidden",
         alert && "border-amber-300",
-        onClick && "cursor-pointer",
+        onClick && "cursor-pointer hover:border-[#0F2D52]/30",
         className
       )}
     >
@@ -81,7 +82,7 @@ export function EntityCard({
           )}
 
           {/* Title + subtitle */}
-          <div className="flex-1 min-w-0" onClick={onClick}>
+          <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold truncate">{title}</p>
             {subtitle && (
               <p className="text-xs text-muted-foreground truncate mt-0.5">{subtitle}</p>

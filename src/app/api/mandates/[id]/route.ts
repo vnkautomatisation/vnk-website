@@ -6,7 +6,17 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { createWorkflowEvent, type WorkflowEventType } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
+
+// Map statut -> workflow event + label francais pour mandate_log
+const STATUS_TO_EVENT: Record<string, { eventType: WorkflowEventType; logAction: string; label: string }> = {
+  in_progress: { eventType: "mandate_started", logAction: "STARTED", label: "Démarré" },
+  active: { eventType: "mandate_started", logAction: "STARTED", label: "Activé" },
+  paused: { eventType: "mandate_paused", logAction: "PAUSED", label: "Mis en pause" },
+  completed: { eventType: "mandate_completed", logAction: "COMPLETED", label: "Complété" },
+  cancelled: { eventType: "mandate_cancelled", logAction: "CANCELLED", label: "Annulé" },
+};
 
 const updateSchema = z.object({
   status: z.string().optional(),
@@ -80,6 +90,68 @@ export async function PATCH(
     where: { id: mandateId },
     data,
   });
+
+  // Workflow events + mandate_logs sur changements significatifs
+  const statusChanged = parsed.data.status !== undefined && parsed.data.status !== existing.status;
+  const progressChanged = parsed.data.progress !== undefined && parsed.data.progress !== existing.progress;
+
+  if (statusChanged) {
+    const newStatus = parsed.data.status!;
+    const meta = STATUS_TO_EVENT[newStatus];
+    if (meta) {
+      await createWorkflowEvent({
+        clientId: updated.clientId,
+        mandateId: updated.id,
+        eventType: meta.eventType,
+        eventLabel: `Mandat ${updated.title} — ${meta.label.toLowerCase()}`,
+        triggeredBy: "admin",
+      });
+      await prisma.mandateLog.create({
+        data: {
+          mandateId: updated.id,
+          action: meta.logAction,
+          description: `Statut : ${existing.status} → ${newStatus}`,
+          createdBy: "admin",
+        },
+      });
+    }
+  }
+
+  if (progressChanged) {
+    await prisma.mandateLog.create({
+      data: {
+        mandateId: updated.id,
+        action: "PROGRESS_UPDATE",
+        description: `Progression : ${existing.progress}% → ${updated.progress}%`,
+        createdBy: "admin",
+      },
+    });
+    // Workflow event seulement si changement majeur (>= 10% ou completed)
+    if (Math.abs(updated.progress - existing.progress) >= 10) {
+      await createWorkflowEvent({
+        clientId: updated.clientId,
+        mandateId: updated.id,
+        eventType: "mandate_progress_update",
+        eventLabel: `Mandat ${updated.title} — progression ${updated.progress}%`,
+        triggeredBy: "admin",
+      });
+    }
+  }
+
+  // Mandate_log generique si autre changement (titre, description, dates, etc.)
+  if (!statusChanged && !progressChanged) {
+    const fieldsChanged = Object.keys(parsed.data).filter((k) => k !== "status" && k !== "progress");
+    if (fieldsChanged.length > 0) {
+      await prisma.mandateLog.create({
+        data: {
+          mandateId: updated.id,
+          action: "UPDATED",
+          description: `Champs modifiés : ${fieldsChanged.join(", ")}`,
+          createdBy: "admin",
+        },
+      });
+    }
+  }
 
   await logAudit({
     adminId: session.user.adminId,
