@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { createWorkflowEvent } from "@/lib/workflow";
 
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -68,6 +69,18 @@ export async function PATCH(
   if (typeof data.expiresAt === "string") data.expiresAt = new Date(data.expiresAt);
 
   const updated = await prisma.contract.update({ where: { id: contractId }, data });
+
+  if (parsed.data.status && parsed.data.status !== existing.status) {
+    if (parsed.data.status === "cancelled") {
+      await createWorkflowEvent({
+        clientId: updated.clientId,
+        contractId: updated.id,
+        eventType: "contract_cancelled",
+        eventLabel: `Contrat ${updated.contractNumber} annulé`,
+        triggeredBy: "admin",
+      });
+    }
+  }
 
   await logAudit({
     adminId: session.user.adminId,
