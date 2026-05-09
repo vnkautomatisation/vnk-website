@@ -815,7 +815,14 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                     const alert = hasAlert(c);
                     const actions = getCardActions(c, col.id);
                     const busy = busyClientId === c.id;
-                    const openPanel = () => openEntity("client", c.id);
+                    // Onglet du panel client a ouvrir selon la colonne de la carte
+                    const clientTab: "info" | "mandates" | "quotes" | "invoices" | "contracts" =
+                      col.id === "mandate_active" ? "mandates" :
+                      col.id === "quote_pending" ? "quotes" :
+                      col.id === "contract_pending" ? "contracts" :
+                      col.id === "invoice_unpaid" || col.id === "complete" ? "invoices" :
+                      "info";
+                    const openPanel = () => openEntity("client", c.id, { clientTab });
 
                     const isDragged = draggedClientId === c.id && draggedFromStep === col.id;
                     return (

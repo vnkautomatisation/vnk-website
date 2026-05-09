@@ -82,10 +82,12 @@ export function ClientDetailPanel({
   clientId,
   open,
   onOpenChange,
+  initialTab,
 }: {
   clientId: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialTab?: "info" | "mandates" | "quotes" | "invoices" | "contracts";
 }) {
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
@@ -93,6 +95,12 @@ export function ClientDetailPanel({
   const [client, setClient] = useState<ClientFull | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(initialTab ?? "info");
+
+  // Synchronise l'onglet quand on (re)ouvre le panel sur un autre client/section
+  useEffect(() => {
+    if (open) setActiveTab(initialTab ?? "info");
+  }, [open, clientId, initialTab]);
   const [pdfPreview, setPdfPreview] = useState<{
     url: string;
     title: string;
@@ -407,7 +415,7 @@ export function ClientDetailPanel({
 
             {/* Tabs scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
-              <Tabs defaultValue="info">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="info">Infos</TabsTrigger>
                   <TabsTrigger value="mandates">Mandats</TabsTrigger>

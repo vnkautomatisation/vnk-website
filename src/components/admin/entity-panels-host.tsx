@@ -21,6 +21,7 @@ function PanelsHost() {
         clientId={active?.type === "client" ? active.id : null}
         open={active?.type === "client"}
         onOpenChange={(o) => { if (!o) close(); }}
+        initialTab={active?.type === "client" ? active.clientTab : undefined}
       />
       <MandateDetailPanel
         mandateId={active?.type === "mandate" ? active.id : null}

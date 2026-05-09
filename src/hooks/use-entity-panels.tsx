@@ -2,12 +2,15 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 
 export type EntityType = "client" | "mandate" | "quote" | "invoice" | "contract";
+export type ClientTab = "info" | "mandates" | "quotes" | "invoices" | "contracts";
 
-type ActivePanel = { type: EntityType; id: number } | null;
+type ActivePanel = { type: EntityType; id: number; clientTab?: ClientTab } | null;
+
+type OpenOptions = { clientTab?: ClientTab };
 
 type EntityPanelsContextValue = {
   active: ActivePanel;
-  open: (type: EntityType, id: number) => void;
+  open: (type: EntityType, id: number, options?: OpenOptions) => void;
   close: () => void;
 };
 
@@ -20,15 +23,11 @@ const Context = createContext<EntityPanelsContextValue | null>(null);
  * Usage:
  *   const { open } = useEntityPanels();
  *   <button onClick={() => open("mandate", 42)}>Voir</button>
- *
- * Le Provider est wrappe dans le admin layout, il rend les 5 panneaux et controle leur visibilite.
- * Un seul panneau peut etre ouvert a la fois (cliquer sur une entite liee dans un panel ferme l'actuel
- * et ouvre le nouveau).
+ *   <button onClick={() => open("client", 7, { clientTab: "quotes" })}>Voir devis</button>
  */
 export function useEntityPanels(): EntityPanelsContextValue {
   const ctx = useContext(Context);
   if (!ctx) {
-    // Soft fallback: si pas dans Provider, ne fait rien
     return {
       active: null,
       open: () => { console.warn("useEntityPanels: aucun Provider trouve dans l'arbre"); },
@@ -43,7 +42,7 @@ export function EntityPanelsProvider({ children, panels }: { children: ReactNode
   return (
     <Context.Provider value={{
       active,
-      open: (type, id) => setActive({ type, id }),
+      open: (type, id, options) => setActive({ type, id, clientTab: options?.clientTab }),
       close: () => setActive(null),
     }}>
       {children}
