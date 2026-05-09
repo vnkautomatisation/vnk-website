@@ -310,15 +310,14 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     return sum + total;
   }, 0);
 
-  // Stats conversion
+  // Stats conversion — "paid" = clients ayant recu au moins un paiement (pas "tout paye")
   const totals = useMemo(() => {
-    const result = { prospect: 0, mandate: 0, quote: 0, contract: 0, paying: 0, complete: 0, total: clients.length };
+    const result = { prospect: 0, mandate: 0, quote: 0, contract: 0, paid: 0, total: clients.length };
     for (const c of clients) {
       if (c.mandates.length > 0) result.mandate++;
       if (c.quotes.length > 0) result.quote++;
       if (c.contracts.length > 0) result.contract++;
-      if (c.invoices.length > 0) result.paying++;
-      if (c.invoices.length > 0 && c.invoices.every((i) => i.status === "paid")) result.complete++;
+      if (c.invoices.some((i) => i.status === "paid")) result.paid++;
     }
     result.prospect = clients.length - result.mandate;
     return result;
@@ -621,7 +620,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
           <ConversionStat label="Prospect → Mandat" pct={conversion(totals.mandate, totals.total)} hint={`${totals.mandate}/${totals.total}`} />
           <ConversionStat label="Mandat → Devis" pct={conversion(totals.quote, totals.mandate)} hint={`${totals.quote}/${totals.mandate}`} />
           <ConversionStat label="Devis → Contrat" pct={conversion(totals.contract, totals.quote)} hint={`${totals.contract}/${totals.quote}`} />
-          <ConversionStat label="Contrat → Paye" pct={conversion(totals.complete, totals.contract)} hint={`${totals.complete}/${totals.contract}`} />
+          <ConversionStat label="Contrat → Paye" pct={conversion(totals.paid, totals.contract)} hint={`${totals.paid}/${totals.contract}`} />
         </div>
       </div>
 
