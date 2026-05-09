@@ -957,18 +957,28 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
             ) : events.map((e) => {
               const Icon = eventTypeIcon(e.eventType);
               const colorCls = eventTypeColor(e.eventType);
-              // Determine la cible la plus specifique de l'evenement
-              const target: { type: "invoice" | "contract" | "quote" | "mandate" | "client"; id: number } =
-                e.invoiceId ? { type: "invoice", id: e.invoiceId } :
-                e.contractId ? { type: "contract", id: e.contractId } :
-                e.quoteId ? { type: "quote", id: e.quoteId } :
-                e.mandateId ? { type: "mandate", id: e.mandateId } :
-                { type: "client", id: e.clientId };
+              // Routing intelligent : messages → page messages, rdv → calendrier, sinon panel entite
+              const handleClick = () => {
+                setActivityOpen(false);
+                if (e.eventType.startsWith("message_")) {
+                  router.push(`/admin/messages?clientId=${e.clientId}`);
+                  return;
+                }
+                if (e.eventType.startsWith("appointment_")) {
+                  router.push("/admin/calendar");
+                  return;
+                }
+                if (e.invoiceId) openEntity("invoice", e.invoiceId);
+                else if (e.contractId) openEntity("contract", e.contractId);
+                else if (e.quoteId) openEntity("quote", e.quoteId);
+                else if (e.mandateId) openEntity("mandate", e.mandateId);
+                else openEntity("client", e.clientId);
+              };
               return (
                 <button
                   key={e.id}
                   type="button"
-                  onClick={() => { openEntity(target.type, target.id); setActivityOpen(false); }}
+                  onClick={handleClick}
                   className="w-full p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow flex items-start gap-3 text-left"
                 >
                   <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0", colorCls)}>
