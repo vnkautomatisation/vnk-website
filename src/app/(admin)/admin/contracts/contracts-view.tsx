@@ -30,6 +30,7 @@ import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
 import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
+import { SignatureDialog } from "@/components/signature/signature-dialog";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useConfirm } from "@/hooks/use-confirm";
@@ -60,7 +61,7 @@ const STATUS_TABS: { key: StatusFilter; label: string }[] = [
   { key: "all", label: "Tous" },
   { key: "pending", label: "En attente" },
   { key: "draft", label: "Brouillon" },
-  { key: "signed", label: "Signes" },
+  { key: "signed", label: "Signés" },
   { key: "expired", label: "Expires" },
 ];
 
@@ -91,6 +92,7 @@ export function ContractsView({
   const [editStatus, setEditStatus] = useState("pending");
   const [editAmount, setEditAmount] = useState("");
   const [deleteContract, setDeleteContract] = useState<Contract | null>(null);
+  const [signingContract, setSigningContract] = useState<Contract | null>(null);
 
   const resetForm = () => { setNewClientId(""); setNewTitle(""); setNewContent(""); setNewStatus("pending"); };
 
@@ -164,21 +166,8 @@ export function ContractsView({
     return result;
   }, [contracts, statusFilter, searchQuery]);
 
-  const handleSign = async (id: number) => {
-    const ok = await confirm({
-      title: "Signer ce contrat ?",
-      description: "Vous allez apposer votre signature en tant qu'administrateur. Cette action sera enregistree.",
-      confirmLabel: "Signer",
-      variant: "default",
-    });
-    if (!ok) return;
-    const res = await fetch(`/api/contracts/${id}/sign`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ signatureData: "admin-signed-via-dashboard" }),
-    });
-    if (res.ok) { toast.success("Contrat signe"); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error); }
+  const handleSign = (c: Contract) => {
+    setSigningContract(c);
   };
 
   // Actions menu pour EntityCard
@@ -189,7 +178,7 @@ export function ContractsView({
       ...(c.status === "pending" && !c.adminSignatureData ? [{
         label: "Signer",
         icon: <PenTool className="h-3.5 w-3.5" />,
-        onClick: () => handleSign(c.id),
+        onClick: () => handleSign(c),
       }] : []),
       ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(c) }] : []),
       ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteContract(c), separator: true, variant: "destructive" as const }] : []),
@@ -198,7 +187,7 @@ export function ContractsView({
   }, [router]);
 
   const columns: Column<Contract>[] = [
-    { key: "number", header: "Numero", accessor: (r) => <span className="font-mono text-xs">{r.contractNumber}</span>, sortable: true, sortBy: (r) => r.contractNumber },
+    { key: "number", header: "Numéro", accessor: (r) => <span className="font-mono text-xs">{r.contractNumber}</span>, sortable: true, sortBy: (r) => r.contractNumber },
     { key: "client", header: "Client", accessor: (r) => (<div><div className="font-medium text-sm">{r.clientName}</div>{r.companyName && <div className="text-xs text-muted-foreground">{r.companyName}</div>}</div>), sortable: true, sortBy: (r) => r.clientName },
     { key: "title", header: "Titre", accessor: (r) => r.title, sortable: true, sortBy: (r) => r.title, hiddenOnMobile: true },
     { key: "amount", header: "Montant", accessor: (r) => r.amountTtc ? formatCurrency(r.amountTtc) : "—", sortable: true, sortBy: (r) => r.amountTtc ?? 0, hiddenOnMobile: true },
@@ -215,13 +204,13 @@ export function ContractsView({
         </div>
       ), hiddenOnMobile: true,
     },
-    { key: "created", header: "Cree le", accessor: (r) => formatDate(new Date(r.createdAt)), hiddenOnMobile: true },
+    { key: "created", header: "Créé le", accessor: (r) => formatDate(new Date(r.createdAt)), hiddenOnMobile: true },
     {
       key: "actions", header: "", accessor: (r) => (
         <div className="flex gap-1">
           {r.status === "pending" && !r.adminSignatureData && (
             <Button variant="ghost" size="sm" title="Signer" className="text-blue-600"
-              onClick={() => handleSign(r.id)}
+              onClick={() => handleSign(r)}
             >
               <PenTool className="h-3.5 w-3.5" />
             </Button>
@@ -236,7 +225,7 @@ export function ContractsView({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-3"><FileSignature className="h-6 w-6" />Contrats</h1>
-          <p className="text-muted-foreground text-sm mt-1">Gerer les contrats clients et leur signature</p>
+          <p className="text-muted-foreground text-sm mt-1">Gérer les contrats clients et leur signature</p>
         </div>
         <Button onClick={() => { resetForm(); setCreateOpen(true); }}><Plus className="h-4 w-4" />Nouveau contrat</Button>
       </div>
@@ -244,14 +233,14 @@ export function ContractsView({
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         <StatCard label="Total" value={contracts.length} icon={FileSignature} accent="bg-indigo-500" />
         <StatCard label="En attente" value={pendingCount} icon={Clock} accent="bg-amber-500" />
-        <StatCard label="Signes" value={signedCount} icon={CheckCircle2} accent="bg-emerald-500" />
+        <StatCard label="Signés" value={signedCount} icon={CheckCircle2} accent="bg-emerald-500" />
         <StatCard label="Ce mois" value={contracts.filter((c) => new Date(c.createdAt) >= new Date(new Date().getFullYear(), new Date().getMonth(), 1)).length} icon={Plus} accent="bg-blue-500" />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Numero, titre, client..." className="pl-9" />
+          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Numéro, titre, client..." className="pl-9" />
         </div>
         <div className="flex bg-muted rounded-lg p-0.5">
           {STATUS_TABS.map((tab) => (
@@ -273,7 +262,7 @@ export function ContractsView({
               subtitle={`${c.contractNumber} — ${c.clientName}`}
               avatarName={c.clientName}
               badges={[
-                { label: c.status === "pending" ? "En attente" : c.status === "draft" ? "Brouillon" : c.status === "signed" ? "Signe" : c.status === "expired" ? "Expire" : c.status, variant: c.status === "signed" ? "secondary" : "outline" },
+                { label: c.status === "pending" ? "En attente" : c.status === "draft" ? "Brouillon" : c.status === "signed" ? "Signé" : c.status === "expired" ? "Expiré" : c.status, variant: c.status === "signed" ? "secondary" : "outline" },
               ]}
               stats={[
                 { label: "Montant", value: c.amountTtc ? formatCurrency(c.amountTtc) : "—" },
@@ -329,7 +318,7 @@ export function ContractsView({
         onConfirm={handleDelete}
       />
 
-      <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau contrat" icon={FileSignature} accent="bg-indigo-500" submitLabel="Creer le contrat" onSubmit={handleCreate}>
+      <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau contrat" icon={FileSignature} accent="bg-indigo-500" submitLabel="Créer le contrat" onSubmit={handleCreate}>
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Client *</Label>
@@ -358,6 +347,17 @@ export function ContractsView({
           </div>
         </div>
       </CreateModal>
+
+      {signingContract && (
+        <SignatureDialog
+          contractId={signingContract.id}
+          contractNumber={signingContract.contractNumber}
+          contractTitle={signingContract.title}
+          contractAmount={signingContract.amountTtc ?? undefined}
+          open={true}
+          onOpenChange={(o) => { if (!o) setSigningContract(null); }}
+        />
+      )}
 
       {ConfirmModal}
     </div>

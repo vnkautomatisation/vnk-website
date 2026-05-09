@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createWorkflowEvent, onContractFullySigned } from "@/lib/workflow";
 import { logAudit } from "@/lib/audit";
+import { revalidateAdminViews } from "@/lib/revalidate";
 
 const schema = z.object({
   signatureData: z.string().min(10),
@@ -80,6 +81,8 @@ export async function POST(
     entityId: contract.id,
     changes: { action: "sign", role: session.user.role },
   });
+
+  revalidateAdminViews();
 
   return NextResponse.json({ success: true, fullySigned });
 }

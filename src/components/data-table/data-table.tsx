@@ -26,7 +26,8 @@ import { Card } from "@/components/ui/card";
 
 export type Column<T> = {
   key: string;
-  header: string;
+  /** String pour entete texte simple, ReactNode pour entete custom (ex : checkbox bulk select) */
+  header: string | ReactNode;
   accessor: (row: T) => ReactNode;
   sortable?: boolean;
   sortBy?: (row: T) => string | number | Date | null;

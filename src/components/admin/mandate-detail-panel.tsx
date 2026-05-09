@@ -63,7 +63,7 @@ export function MandateDetailPanel({
   useEffect(() => {
     if (!mandateId || !open) return;
     setLoading(true);
-    fetch(`/api/mandates/${mandateId}`)
+    fetch(`/api/mandates/${mandateId}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setMandate(data.mandate))
       .finally(() => setLoading(false));
@@ -71,7 +71,7 @@ export function MandateDetailPanel({
 
   const refresh = async () => {
     if (!mandateId) return;
-    const res = await fetch(`/api/mandates/${mandateId}`);
+    const res = await fetch(`/api/mandates/${mandateId}`, { cache: "no-store" });
     const data = await res.json();
     setMandate(data.mandate);
     router.refresh();
@@ -94,9 +94,9 @@ export function MandateDetailPanel({
   const markCompleted = async () => {
     if (!mandate) return;
     const ok = await confirm({
-      title: "Marquer comme termine ?",
-      description: `Le mandat "${mandate.title}" sera marque comme complete (100%, statut completed).`,
-      confirmLabel: "Marquer termine",
+      title: "Marquer comme terminé ?",
+      description: `Le mandat "${mandate.title}" sera marqué comme complété (100%, statut completed).`,
+      confirmLabel: "Marquer terminé",
     });
     if (!ok) return;
     setBusy(true);
@@ -106,7 +106,7 @@ export function MandateDetailPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "completed", progress: 100 }),
       });
-      if (res.ok) { toast.success("Mandat termine"); await refresh(); }
+      if (res.ok) { toast.success("Mandat terminé"); await refresh(); }
       else { const d = await res.json(); toast.error(d.error || "Erreur"); }
     } finally { setBusy(false); }
   };
@@ -256,7 +256,7 @@ export function MandateDetailPanel({
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground font-mono">{i.invoiceNumber}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {i.dueDate ? `Echeance ${formatDate(new Date(i.dueDate))}` : "—"}
+                        {i.dueDate ? `Échéance ${formatDate(new Date(i.dueDate))}` : "—"}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
@@ -292,7 +292,7 @@ export function MandateDetailPanel({
           {/* Activite */}
           <TabsContent value="logs" className="space-y-2 mt-4">
             {mandate.logs.length === 0 ? (
-              <PanelEmptyState text="Aucune activite enregistree" icon={ListChecks} />
+              <PanelEmptyState text="Aucune activité enregistrée" icon={ListChecks} />
             ) : (
               mandate.logs.map((l) => (
                 <div key={l.id} className="p-3 rounded-lg border-l-4 border-l-primary bg-card">

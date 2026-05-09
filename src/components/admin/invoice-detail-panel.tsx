@@ -51,7 +51,7 @@ export function InvoiceDetailPanel({
   useEffect(() => {
     if (!invoiceId || !open) return;
     setLoading(true);
-    fetch(`/api/invoices/${invoiceId}`)
+    fetch(`/api/invoices/${invoiceId}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setInvoice(data.invoice))
       .finally(() => setLoading(false));
@@ -59,7 +59,7 @@ export function InvoiceDetailPanel({
 
   const refresh = async () => {
     if (!invoiceId) return;
-    const res = await fetch(`/api/invoices/${invoiceId}`);
+    const res = await fetch(`/api/invoices/${invoiceId}`, { cache: "no-store" });
     const data = await res.json();
     setInvoice(data.invoice);
     router.refresh();
@@ -68,15 +68,15 @@ export function InvoiceDetailPanel({
   const markPaid = async () => {
     if (!invoice) return;
     const ok = await confirm({
-      title: "Marquer comme payee ?",
-      description: `La facture ${invoice.invoiceNumber} sera marquee comme payee.`,
-      confirmLabel: "Marquer payee",
+      title: "Marquer comme payée ?",
+      description: `La facture ${invoice.invoiceNumber} sera marquée comme payée.`,
+      confirmLabel: "Marquer payée",
     });
     if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/invoices/${invoice.id}/mark-paid`, { method: "POST" });
-      if (res.ok) { toast.success("Facture marquee payee"); await refresh(); }
+      if (res.ok) { toast.success("Facture marquée payée"); await refresh(); }
       else { const d = await res.json(); toast.error(d.error || "Erreur"); }
     } finally { setBusy(false); }
   };
@@ -111,7 +111,7 @@ export function InvoiceDetailPanel({
                 <Button size="sm" variant="secondary" disabled={busy}
                   className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur"
                   onClick={markPaid}>
-                  <CreditCard className="h-3 w-3" />Marquer payee
+                  <CreditCard className="h-3 w-3" />Marquer payée
                 </Button>
               )}
               <Button size="sm" variant="secondary" disabled={busy}
@@ -136,7 +136,7 @@ export function InvoiceDetailPanel({
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                   <div>
                     <p className="text-sm font-bold text-red-900">Paiement en retard</p>
-                    <p className="text-xs text-red-700">Echeance depuis le {invoice.dueDate ? formatDate(new Date(invoice.dueDate)) : "?"}</p>
+                    <p className="text-xs text-red-700">Échéance depuis le {invoice.dueDate ? formatDate(new Date(invoice.dueDate)) : "?"}</p>
                   </div>
                 </div>
               )}
@@ -153,7 +153,7 @@ export function InvoiceDetailPanel({
                 {invoice.dueDate && (
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />Echeance
+                      <Calendar className="h-3 w-3" />Échéance
                     </span>
                     <span className="text-sm">{formatDate(new Date(invoice.dueDate))}</span>
                   </div>

@@ -28,6 +28,7 @@ import {
 import { StatusBadge } from "@/components/admin/status-badge";
 import { EditModal } from "@/components/admin/edit-modal";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
+import { SignatureDialog } from "@/components/signature/signature-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -75,7 +76,16 @@ type ClientFull = {
   mandates: Array<{ id: number; title: string; status: string; progress: number }>;
   quotes: Array<{ id: number; quoteNumber: string; title: string; status: string; amountTtc: any; expiryDate: Date | null }>;
   invoices: Array<{ id: number; invoiceNumber: string; status: string; amountTtc: any; dueDate: Date | null }>;
-  contracts: Array<{ id: number; contractNumber: string; status: string }>;
+  contracts: Array<{
+    id: number;
+    contractNumber: string;
+    title: string;
+    status: string;
+    amountTtc: any;
+    adminSignatureData: string | null;
+    clientSignatureData: string | null;
+    signedAt: Date | string | null;
+  }>;
 };
 
 export function ClientDetailPanel({
@@ -111,6 +121,9 @@ export function ClientDetailPanel({
     status?: string;
     isAdminSigned?: boolean;
   } | null>(null);
+
+  // Signature dialog (canvas pro VNK, partage avec portail client)
+  const [signingContract, setSigningContract] = useState<{ id: number; number: string; title: string; amount: number | null } | null>(null);
 
   // Edition complete du client
   const [editOpen, setEditOpen] = useState(false);
@@ -165,7 +178,7 @@ export function ClientDetailPanel({
       if (res.ok) { await refresh(); return { success: true }; }
       const d = await res.json();
       return { success: false, error: d.error || "Erreur" };
-    } catch { return { success: false, error: "Erreur reseau" }; }
+    } catch { return { success: false, error: "Erreur réseau" }; }
   };
 
   // Marquer payee avec methode
@@ -177,8 +190,8 @@ export function ClientDetailPanel({
     { value: "interac", label: "Virement Interac" },
     { value: "bank_transfer", label: "Virement bancaire" },
     { value: "card", label: "Carte (Stripe)" },
-    { value: "check", label: "Cheque" },
-    { value: "cash", label: "Especes" },
+    { value: "check", label: "Chèque" },
+    { value: "cash", label: "Espèces" },
     { value: "other", label: "Autre" },
   ];
 
@@ -192,7 +205,7 @@ export function ClientDetailPanel({
         body: JSON.stringify({ paymentMethod: paidMethod }),
       });
       if (res.ok) {
-        toast.success(`Facture ${paidDialog.num} marquee payee`);
+        toast.success(`Facture ${paidDialog.num} marquée payée`);
         setPaidDialog(null);
         setPaidMethod("");
         setPaidNote("");
@@ -206,8 +219,14 @@ export function ClientDetailPanel({
     let cancelled = false;
     setLoading(true);
     setClient(null); // Reset pour eviter d'afficher les donnees du client precedent
-    fetch(`/api/clients/${clientId}`)
-      .then((r) => {
+    fetch(`/api/clients/${clientId}`, { cache: "no-store" })
+      .then(async (r) => {
+        if (r.status === 401) {
+          // Session admin expiree — redirect vers login
+          toast.error("Session expirée, reconnexion requise");
+          router.push("/admin/login");
+          throw new Error("UNAUTHORIZED");
+        }
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
       })
@@ -220,7 +239,7 @@ export function ClientDetailPanel({
         setClient(data.client);
       })
       .catch((err) => {
-        if (cancelled) return;
+        if (cancelled || err.message === "UNAUTHORIZED") return;
         console.error("Erreur chargement client:", err);
         toast.error("Erreur chargement client");
       })
@@ -232,7 +251,7 @@ export function ClientDetailPanel({
 
   const refresh = async () => {
     if (!clientId) return;
-    const res = await fetch(`/api/clients/${clientId}`);
+    const res = await fetch(`/api/clients/${clientId}`, { cache: "no-store" });
     const data = await res.json();
     setClient(data.client);
     router.refresh();
@@ -242,7 +261,7 @@ export function ClientDetailPanel({
     setPdfPreview(null); // ferme PDF pour eviter conflit z-index avec confirm
     const ok = await confirm({
       title: "Accepter ce devis ?",
-      description: `Le devis ${num} sera marque comme accepte et un contrat sera genere automatiquement.`,
+      description: `Le devis ${num} sera marqué comme accepté et un contrat sera généré automatiquement.`,
       confirmLabel: "Accepter",
       variant: "default",
     });
@@ -250,7 +269,7 @@ export function ClientDetailPanel({
     setBusy(true);
     try {
       const res = await fetch(`/api/quotes/${id}/accept`, { method: "POST" });
-      if (res.ok) { toast.success("Devis accepte"); await refresh(); }
+      if (res.ok) { toast.success("Devis accepté"); await refresh(); }
       else { const d = await res.json(); toast.error(d.error || "Erreur"); }
     } finally { setBusy(false); }
   };
@@ -274,7 +293,7 @@ export function ClientDetailPanel({
     const meta = labelMap[entityType];
     const ok = await confirm({
       title: `Envoyer au client ?`,
-      description: `Le ${meta.fr} ${entityNumber} sera ajoute dans la categorie "${meta.category}" du portail client + notification + message chat avec lien.`,
+      description: `Le ${meta.fr} ${entityNumber} sera ajouté dans la catégorie "${meta.category}" du portail client + notification + message chat avec lien.`,
       confirmLabel: "Envoyer",
       variant: "default",
     });
@@ -296,7 +315,7 @@ export function ClientDetailPanel({
       });
       if (!docRes.ok) {
         const d = await docRes.json();
-        toast.error(d.error || "Erreur creation document");
+        toast.error(d.error || "Erreur création document");
         return;
       }
       // 2) Message chat pour notifier
@@ -310,30 +329,22 @@ export function ClientDetailPanel({
           attachmentData: { entityType, entityId, entityNumber },
         }),
       });
-      toast.success(`Document ajoute au portail + notification envoyee a ${client.fullName}`);
+      toast.success(`Document ajouté au portail + notification envoyée à ${client.fullName}`);
       await refresh();
     } finally { setBusy(false); }
   };
 
-  const signContract = async (id: number) => {
+  const signContract = (id: number) => {
+    if (!client) return;
+    const ct = client.contracts.find((c) => c.id === id);
+    if (!ct) return;
     setPdfPreview(null); // ferme PDF pour eviter conflit z-index
-    const ok = await confirm({
-      title: "Signer ce contrat ?",
-      description: "Vous allez apposer votre signature en tant qu'administrateur. Cette action sera enregistree.",
-      confirmLabel: "Signer",
-      variant: "default",
+    setSigningContract({
+      id: ct.id,
+      number: ct.contractNumber,
+      title: ct.title || `Contrat ${ct.contractNumber}`,
+      amount: ct.amountTtc != null ? Number(ct.amountTtc) : null,
     });
-    if (!ok) return;
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/contracts/${id}/sign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signatureData: "admin-signed-via-panel" }),
-      });
-      if (res.ok) { toast.success("Contrat signe"); await refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
-    } finally { setBusy(false); }
   };
 
   return (
@@ -342,19 +353,19 @@ export function ClientDetailPanel({
       <SheetContent
         className="w-full sm:max-w-xl p-0 overflow-hidden flex flex-col [&>button]:text-white [&>button]:opacity-100 [&>button]:hover:bg-white/15 [&>button]:rounded-md [&>button]:p-1.5 [&>button]:top-5 [&>button]:right-5 [&>button]:transition-colors"
         onPointerDownOutside={(e) => {
-          // Empeche la fermeture du panel quand on clique sur la modale PDF / le dialog paiement
-          if (pdfPreview || paidDialog) e.preventDefault();
+          // Empeche la fermeture du panel quand on clique sur les modales empilees
+          if (pdfPreview || paidDialog || signingContract) e.preventDefault();
         }}
         onEscapeKeyDown={(e) => {
-          if (pdfPreview || paidDialog) e.preventDefault();
+          if (pdfPreview || paidDialog || signingContract) e.preventDefault();
         }}
       >
         {/* Title/Description toujours presents pour a11y Radix — le titre visible vit dans SheetHeader */}
         <SheetTitle className="sr-only">
-          {client?.fullName ?? "Detail client"}
+          {client?.fullName ?? "Détail client"}
         </SheetTitle>
         <SheetDescription className="sr-only">
-          {client ? `Informations detaillees pour ${client.fullName}` : "Chargement..."}
+          {client ? `Informations détaillées pour ${client.fullName}` : "Chargement..."}
         </SheetDescription>
 
         {loading || !client ? (
@@ -431,7 +442,7 @@ export function ClientDetailPanel({
                     </Button>
                   </div>
                   <InfoRow icon={Mail} label="Courriel" value={client.email} />
-                  <InfoRow icon={Phone} label="Telephone" value={client.phone ?? "—"} />
+                  <InfoRow icon={Phone} label="Téléphone" value={client.phone ?? "—"} />
                   <InfoRow icon={Building2} label="Entreprise" value={client.companyName ?? "—"} />
                   <InfoRow icon={Briefcase} label="Secteur" value={client.sector ?? "—"} />
                   <InfoRow
@@ -461,7 +472,7 @@ export function ClientDetailPanel({
 
                 <TabsContent value="mandates" className="space-y-2 mt-4">
                   {client.mandates.length === 0 ? (
-                    <EmptyState text="Aucun mandat" actionLabel="Creer un mandat" actionHref={`/admin/mandates?newFor=${client.id}`} />
+                    <EmptyState text="Aucun mandat" actionLabel="Créer un mandat" actionHref={`/admin/mandates?newFor=${client.id}`} />
                   ) : (
                     client.mandates.map((m) => (
                       <button
@@ -489,7 +500,7 @@ export function ClientDetailPanel({
 
                 <TabsContent value="quotes" className="space-y-2 mt-4">
                   {client.quotes.length === 0 ? (
-                    <EmptyState text="Aucun devis" actionLabel="Creer un devis" actionHref={`/admin/quotes?newFor=${client.id}`} />
+                    <EmptyState text="Aucun devis" actionLabel="Créer un devis" actionHref={`/admin/quotes?newFor=${client.id}`} />
                   ) : (
                     client.quotes.map((q) => (
                       <EntityRow
@@ -502,7 +513,7 @@ export function ClientDetailPanel({
                         onClick={() => openEntity("quote", q.id)}
                         actions={[
                           ...(q.status === "pending" ? [{
-                            label: "Marquer accepte",
+                            label: "Marquer accepté",
                             icon: <CheckCircle2 className="h-3.5 w-3.5" />,
                             onClick: () => acceptQuote(q.id, q.quoteNumber),
                           }] : []),
@@ -528,20 +539,20 @@ export function ClientDetailPanel({
 
                 <TabsContent value="invoices" className="space-y-2 mt-4">
                   {client.invoices.length === 0 ? (
-                    <EmptyState text="Aucune facture" actionLabel="Creer une facture" actionHref={`/admin/invoices?newFor=${client.id}`} />
+                    <EmptyState text="Aucune facture" actionLabel="Créer une facture" actionHref={`/admin/invoices?newFor=${client.id}`} />
                   ) : (
                     client.invoices.map((i) => (
                       <EntityRow
                         key={i.id}
                         ref1={i.invoiceNumber}
-                        secondary={i.dueDate ? `Echeance ${formatDate(i.dueDate)}` : undefined}
+                        secondary={i.dueDate ? `Échéance ${formatDate(i.dueDate)}` : undefined}
                         amount={Number(i.amountTtc)}
                         status={i.status}
                         alert={i.status === "overdue"}
                         onClick={() => openEntity("invoice", i.id)}
                         actions={[
                           ...(i.status === "unpaid" || i.status === "overdue" ? [{
-                            label: "Marquer payee",
+                            label: "Marquer payée",
                             icon: <CreditCard className="h-3.5 w-3.5" />,
                             onClick: () => markPaid(i.id, i.invoiceNumber),
                           }] : []),
@@ -574,35 +585,50 @@ export function ClientDetailPanel({
                   {client.contracts.length === 0 ? (
                     <EmptyState text="Aucun contrat" />
                   ) : (
-                    client.contracts.map((c) => (
-                      <EntityRow
-                        key={c.id}
-                        ref1={c.contractNumber}
-                        status={c.status}
-                        onClick={() => openEntity("contract", c.id)}
-                        actions={[
-                          ...(c.status === "pending" ? [{
-                            label: "Signer admin",
-                            icon: <PenTool className="h-3.5 w-3.5" />,
-                            onClick: () => signContract(c.id),
-                          }] : []),
-                          {
-                            label: "Voir PDF",
-                            icon: <ExternalLink className="h-3.5 w-3.5" />,
-                            onClick: () => setPdfPreview({
-                              url: `/api/contracts/${c.id}/pdf`,
-                              title: `Contrat ${c.contractNumber}`,
-                              documentNumber: c.contractNumber,
-                              downloadName: `contrat-${c.contractNumber}`,
-                              entityType: "contract",
-                              entityId: c.id,
-                              status: c.status,
-                            }),
-                          },
-                        ]}
-                        busy={busy}
-                      />
-                    ))
+                    client.contracts.map((c) => {
+                      const adminSigned = !!c.adminSignatureData;
+                      const clientSigned = !!c.clientSignatureData;
+                      const fullySigned = adminSigned && clientSigned;
+                      const sigStatus = fullySigned
+                        ? "Signé par les deux parties"
+                        : adminSigned && !clientSigned
+                          ? "Admin signé · attente client"
+                          : !adminSigned && clientSigned
+                            ? "Client signé · attente admin"
+                            : "En attente des deux signatures";
+                      const openContractPdf = () => setPdfPreview({
+                        url: `/api/contracts/${c.id}/pdf`,
+                        title: `Contrat ${c.contractNumber}`,
+                        documentNumber: c.contractNumber,
+                        downloadName: `contrat-${c.contractNumber}`,
+                        entityType: "contract",
+                        entityId: c.id,
+                        status: c.status,
+                        isAdminSigned: adminSigned,
+                      });
+                      return (
+                        <EntityRow
+                          key={c.id}
+                          ref1={c.contractNumber}
+                          secondary={sigStatus}
+                          status={c.status === "signed" ? "signed" : adminSigned ? "admin_signed" : clientSigned ? "client_signed" : "pending"}
+                          onClick={() => openEntity("contract", c.id)}
+                          actions={[
+                            ...(c.status === "pending" && !adminSigned ? [{
+                              label: "Signer admin",
+                              icon: <PenTool className="h-3.5 w-3.5" />,
+                              onClick: openContractPdf,
+                            }] : []),
+                            {
+                              label: "Voir PDF",
+                              icon: <ExternalLink className="h-3.5 w-3.5" />,
+                              onClick: openContractPdf,
+                            },
+                          ]}
+                          busy={busy}
+                        />
+                      );
+                    })
                   )}
                 </TabsContent>
               </Tabs>
@@ -635,14 +661,14 @@ export function ClientDetailPanel({
           {/* Body — sections groupees */}
           <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
             {/* Section: Identite */}
-            <FormSection title="Identite" icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>}>
+            <FormSection title="Identité" icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>}>
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">Nom complet *</Label>
                 <Input value={edFullName} onChange={(e) => setEdFullName(e.target.value)} />
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Telephone</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Téléphone</Label>
                   <Input value={edPhone} onChange={(e) => setEdPhone(e.target.value)} placeholder="418-000-0000" />
                 </div>
                 <div className="space-y-2">
@@ -652,7 +678,7 @@ export function ClientDetailPanel({
               </div>
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">Secteur</Label>
-                <Input value={edSector} onChange={(e) => setEdSector(e.target.value)} placeholder="Manufacturier, agroalimentaire, energie..." />
+                <Input value={edSector} onChange={(e) => setEdSector(e.target.value)} placeholder="Manufacturier, agroalimentaire, énergie..." />
               </div>
             </FormSection>
 
@@ -678,7 +704,7 @@ export function ClientDetailPanel({
                   Notes internes
                   <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] bg-amber-100 text-amber-700 font-semibold normal-case tracking-normal">Admin uniquement</span>
                 </Label>
-                <Textarea value={edNotes} onChange={(e) => setEdNotes(e.target.value)} rows={3} placeholder="Notes privees, jamais visibles par le client..." className="bg-amber-50/30" />
+                <Textarea value={edNotes} onChange={(e) => setEdNotes(e.target.value)} rows={3} placeholder="Notes privées, jamais visibles par le client..." className="bg-amber-50/30" />
               </div>
             </FormSection>
           </div>
@@ -695,7 +721,7 @@ export function ClientDetailPanel({
                 try {
                   const result = await handleSaveClient();
                   if (result.success) {
-                    toast.success("Client mis a jour");
+                    toast.success("Client mis à jour");
                     setEditOpen(false);
                   } else {
                     toast.error(result.error || "Erreur");
@@ -711,16 +737,16 @@ export function ClientDetailPanel({
       </Dialog>
     )}
 
-    {/* Dialog Marquer payee — choix methode */}
+    {/* Dialog Marquer payée — choix méthode */}
     <Dialog
       open={!!paidDialog}
       onOpenChange={(o) => { if (!o) { setPaidDialog(null); setPaidMethod(""); setPaidNote(""); } }}
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Marquer comme payee</DialogTitle>
+          <DialogTitle>Marquer comme payée</DialogTitle>
           <DialogDescription>
-            Facture {paidDialog?.num} — selectionnez la methode de paiement utilisee.
+            Facture {paidDialog?.num} — sélectionnez la méthode de paiement utilisée.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
@@ -750,7 +776,7 @@ export function ClientDetailPanel({
               value={paidNote}
               onChange={(e) => setPaidNote(e.target.value)}
               rows={2}
-              placeholder="N de transaction, reference..."
+              placeholder="N° de transaction, référence..."
             />
           </div>
         </div>
@@ -793,7 +819,7 @@ export function ClientDetailPanel({
               <Button key="accept" size="sm" variant="outline" disabled={busy}
                 className="h-8 px-2 text-[11px] sm:h-9 sm:px-3 sm:text-sm"
                 onClick={async () => { await acceptQuote(id, num); }}>
-                <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />Marquer accepte
+                <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />Marquer accepté
               </Button>
             );
           }
@@ -802,11 +828,11 @@ export function ClientDetailPanel({
               <Button key="paid" size="sm" variant="outline" disabled={busy}
                 className="h-8 px-2 text-[11px] sm:h-9 sm:px-3 sm:text-sm"
                 onClick={async () => { await markPaid(id, num); }}>
-                <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />Marquer payee
+                <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />Marquer payée
               </Button>
             );
           }
-          if (t === "contract" && status === "pending") {
+          if (t === "contract" && status === "pending" && !pdfPreview.isAdminSigned) {
             buttons.push(
               <Button key="sign" size="sm" variant="outline" disabled={busy}
                 className="h-8 px-2 text-[11px] sm:h-9 sm:px-3 sm:text-sm"
@@ -841,12 +867,28 @@ export function ClientDetailPanel({
                 a.target = "_blank";
                 a.click();
               }}>
-              <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />Telecharger
+              <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />Télécharger
             </Button>
           );
 
           return <>{buttons}</>;
         })()}
+      />
+    )}
+
+    {signingContract && (
+      <SignatureDialog
+        contractId={signingContract.id}
+        contractNumber={signingContract.number}
+        contractTitle={signingContract.title}
+        contractAmount={signingContract.amount ?? undefined}
+        open={true}
+        onOpenChange={(o) => {
+          if (!o) {
+            setSigningContract(null);
+            refresh();
+          }
+        }}
       />
     )}
     </>
@@ -873,11 +915,11 @@ const TECH_CATALOG: { category: string; items: string[] }[] = [
     items: ["FANUC", "ABB", "KUKA", "Yaskawa"],
   },
   {
-    category: "Reseaux & Protocoles",
+    category: "Réseaux & Protocoles",
     items: ["Profinet", "EtherNet/IP", "Modbus TCP", "OPC UA", "Profibus"],
   },
   {
-    category: "Acces distant",
+    category: "Accès distant",
     items: ["Secomea SiteManager", "TeamViewer", "AnyDesk", "VPN"],
   },
 ];
@@ -919,7 +961,7 @@ function TechPicker({ value, onChange }: { value: string; onChange: (v: string) 
       {/* Chips selectionnes + bouton ajouter */}
       <div className="flex flex-wrap gap-1.5 min-h-[34px] items-center p-2 rounded-md border bg-background">
         {selected.length === 0 && (
-          <span className="text-xs text-muted-foreground italic">Aucune technologie selectionnee</span>
+          <span className="text-xs text-muted-foreground italic">Aucune technologie sélectionnée</span>
         )}
         {selected.map((item) => {
           const isCustom = !allCatalog.has(item);
@@ -1010,7 +1052,7 @@ function TechPicker({ value, onChange }: { value: string; onChange: (v: string) 
                   value={customInput}
                   onChange={(e) => setCustomInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }}
-                  placeholder="Techno specifique..."
+                  placeholder="Techno spécifique..."
                   className="h-8 text-xs flex-1"
                 />
                 <Button type="button" variant="outline" size="sm" onClick={addCustom} disabled={!customInput.trim()} className="h-8 px-2 text-xs">
@@ -1042,10 +1084,10 @@ type CountryFormat = {
 };
 
 const CA_PROVINCES = [
-  { code: "QC", name: "Quebec" }, { code: "ON", name: "Ontario" }, { code: "BC", name: "Colombie-Britannique" },
+  { code: "QC", name: "Québec" }, { code: "ON", name: "Ontario" }, { code: "BC", name: "Colombie-Britannique" },
   { code: "AB", name: "Alberta" }, { code: "MB", name: "Manitoba" }, { code: "SK", name: "Saskatchewan" },
-  { code: "NS", name: "Nouvelle-Ecosse" }, { code: "NB", name: "Nouveau-Brunswick" }, { code: "NL", name: "Terre-Neuve-et-Labrador" },
-  { code: "PE", name: "Ile-du-Prince-Edouard" }, { code: "YT", name: "Yukon" }, { code: "NT", name: "Territoires du Nord-Ouest" }, { code: "NU", name: "Nunavut" },
+  { code: "NS", name: "Nouvelle-Écosse" }, { code: "NB", name: "Nouveau-Brunswick" }, { code: "NL", name: "Terre-Neuve-et-Labrador" },
+  { code: "PE", name: "Île-du-Prince-Édouard" }, { code: "YT", name: "Yukon" }, { code: "NT", name: "Territoires du Nord-Ouest" }, { code: "NU", name: "Nunavut" },
 ];
 
 const US_STATES = [

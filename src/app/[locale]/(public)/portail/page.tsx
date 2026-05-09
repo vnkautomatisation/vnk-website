@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 // Portail · Tableau de bord client — Design SaaS pro
 import { cache } from "react";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -59,7 +60,11 @@ const getDashboardData = cache(async (clientId: number) => {
 
 export default async function PortalDashboard() {
   const session = await auth();
-  const clientId = session!.user.clientId!;
+  // Si pas de session ou pas de clientId (ex : admin connecte au portail), redirect vers login
+  if (!session?.user?.clientId) {
+    redirect("/portail/login");
+  }
+  const clientId = session.user.clientId;
   const t = await getTranslations({ namespace: "portal.dashboard" });
 
   const { activeMandates, pendingQuotes, pendingInvoices, unreadDocs, totalMandates, totalContracts, overdueInvoices, recentEvents, client, nextAppointment } = await getDashboardData(clientId);

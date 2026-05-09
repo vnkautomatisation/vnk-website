@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { DetailPanelBase } from "@/components/admin/detail-panel-base";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
+import { SignatureDialog } from "@/components/signature/signature-dialog";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { useConfirm } from "@/hooks/use-confirm";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -47,11 +48,12 @@ export function ContractDetailPanel({
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [signOpen, setSignOpen] = useState(false);
 
   useEffect(() => {
     if (!contractId || !open) return;
     setLoading(true);
-    fetch(`/api/contracts/${contractId}`)
+    fetch(`/api/contracts/${contractId}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setContract(data.contract))
       .finally(() => setLoading(false));
@@ -59,30 +61,15 @@ export function ContractDetailPanel({
 
   const refresh = async () => {
     if (!contractId) return;
-    const res = await fetch(`/api/contracts/${contractId}`);
+    const res = await fetch(`/api/contracts/${contractId}`, { cache: "no-store" });
     const data = await res.json();
     setContract(data.contract);
     router.refresh();
   };
 
-  const sign = async () => {
+  const sign = () => {
     if (!contract) return;
-    const ok = await confirm({
-      title: "Signer ce contrat ?",
-      description: "Vous allez apposer votre signature en tant qu'administrateur.",
-      confirmLabel: "Signer",
-    });
-    if (!ok) return;
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/contracts/${contract.id}/sign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signatureData: "admin-signed-via-panel" }),
-      });
-      if (res.ok) { toast.success("Contrat signe"); await refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
-    } finally { setBusy(false); }
+    setSignOpen(true);
   };
 
   return (
@@ -197,6 +184,22 @@ export function ContractDetailPanel({
           downloadName={`contrat-${contract.contractNumber}`}
         />
       )}
+
+      {contract && signOpen && (
+        <SignatureDialog
+          contractId={contract.id}
+          contractNumber={contract.contractNumber}
+          contractTitle={contract.title}
+          contractAmount={contract.amountTtc != null ? Number(contract.amountTtc) : undefined}
+          open={true}
+          onOpenChange={(o) => {
+            if (!o) {
+              setSignOpen(false);
+              refresh();
+            }
+          }}
+        />
+      )}
     </>
   );
 }
@@ -211,7 +214,7 @@ function SigCard({ label, icon: Icon, signed, date, meta }: { label: string; ico
         <div className="flex-1">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
           <p className={cn("text-sm font-bold", signed ? "text-emerald-700" : "text-muted-foreground")}>
-            {signed ? `Signe le ${date ? formatDate(new Date(date)) : "?"}` : "Non signe"}
+            {signed ? `Signé le ${date ? formatDate(new Date(date)) : "?"}` : "Non signé"}
           </p>
           {meta && <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">{meta}</p>}
         </div>

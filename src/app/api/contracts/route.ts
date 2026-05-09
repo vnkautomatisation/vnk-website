@@ -8,6 +8,7 @@ import { logAudit } from "@/lib/audit";
 import { createWorkflowEvent } from "@/lib/workflow";
 import { generateDocumentNumber } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
+import { revalidateAdminViews } from "@/lib/revalidate";
 
 const createSchema = z.object({
   clientId: z.number().int().positive(),
@@ -83,6 +84,8 @@ export async function POST(req: Request) {
     entityType: "contracts",
     entityId: contract.id,
   });
+
+  revalidateAdminViews();
 
   return NextResponse.json({ success: true, contract });
 }

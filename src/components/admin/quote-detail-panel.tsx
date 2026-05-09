@@ -50,7 +50,7 @@ export function QuoteDetailPanel({
   useEffect(() => {
     if (!quoteId || !open) return;
     setLoading(true);
-    fetch(`/api/quotes/${quoteId}`)
+    fetch(`/api/quotes/${quoteId}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setQuote(data.quote))
       .finally(() => setLoading(false));
@@ -58,7 +58,7 @@ export function QuoteDetailPanel({
 
   const refresh = async () => {
     if (!quoteId) return;
-    const res = await fetch(`/api/quotes/${quoteId}`);
+    const res = await fetch(`/api/quotes/${quoteId}`, { cache: "no-store" });
     const data = await res.json();
     setQuote(data.quote);
     router.refresh();
@@ -68,14 +68,14 @@ export function QuoteDetailPanel({
     if (!quote) return;
     const ok = await confirm({
       title: "Accepter ce devis ?",
-      description: `Le devis ${quote.quoteNumber} sera marque comme accepte et un contrat sera genere.`,
+      description: `Le devis ${quote.quoteNumber} sera marqué comme accepté et un contrat sera généré.`,
       confirmLabel: "Accepter",
     });
     if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/quotes/${quote.id}/accept`, { method: "POST" });
-      if (res.ok) { toast.success("Devis accepte"); await refresh(); }
+      if (res.ok) { toast.success("Devis accepté"); await refresh(); }
       else { const d = await res.json(); toast.error(d.error || "Erreur"); }
     } finally { setBusy(false); }
   };

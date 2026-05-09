@@ -43,7 +43,7 @@ export function EditModal({
     startTransition(async () => {
       const result = await onSubmit();
       if (result.success) {
-        toast.success("Modifications enregistrees");
+        toast.success("Modifications enregistrées");
         onOpenChange(false);
       } else {
         toast.error(result.error || "Une erreur est survenue");

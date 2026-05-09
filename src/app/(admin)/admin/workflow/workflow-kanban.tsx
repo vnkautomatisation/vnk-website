@@ -44,6 +44,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { StatCard } from "@/components/admin/stat-card";
+import { SignatureDialog } from "@/components/signature/signature-dialog";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -56,7 +57,7 @@ type ClientData = {
   createdAt: string;
   mandates: Array<{ id: number; status: string; title: string; progress: number; serviceType: string | null; endDate: string | null; createdAt: string }>;
   quotes: Array<{ id: number; status: string; quoteNumber: string; title: string; amountTtc: number; expiryDate: string | null; createdAt: string }>;
-  contracts: Array<{ id: number; status: string; contractNumber: string; title: string; amountTtc: number | null; createdAt: string }>;
+  contracts: Array<{ id: number; status: string; contractNumber: string; title: string; amountTtc: number | null; createdAt: string; adminSigned: boolean; clientSigned: boolean }>;
   invoices: Array<{ id: number; status: string; invoiceNumber: string; amountTtc: number; dueDate: string | null; createdAt: string }>;
 };
 
@@ -88,10 +89,10 @@ const COLUMNS: Array<{
 }> = [
   { id: "prospect", label: "Nouveau client", icon: UserPlus, header: "bg-slate-100 border-slate-300", stripe: "bg-slate-400", iconColor: "text-slate-600" },
   { id: "mandate_active", label: "Mandat en cours", icon: Briefcase, header: "bg-blue-100 border-blue-300", stripe: "bg-blue-500", iconColor: "text-blue-600" },
-  { id: "quote_pending", label: "Devis envoye", icon: FileText, header: "bg-amber-100 border-amber-300", stripe: "bg-amber-500", iconColor: "text-amber-600" },
-  { id: "contract_pending", label: "Contrat a signer", icon: FileSignature, header: "bg-violet-100 border-violet-300", stripe: "bg-violet-500", iconColor: "text-violet-600" },
+  { id: "quote_pending", label: "Devis envoyé", icon: FileText, header: "bg-amber-100 border-amber-300", stripe: "bg-amber-500", iconColor: "text-amber-600" },
+  { id: "contract_pending", label: "Contrat à signer", icon: FileSignature, header: "bg-violet-100 border-violet-300", stripe: "bg-violet-500", iconColor: "text-violet-600" },
   { id: "invoice_unpaid", label: "Paiement en attente", icon: CreditCard, header: "bg-red-100 border-red-300", stripe: "bg-red-500", iconColor: "text-red-600" },
-  { id: "complete", label: "Complete", icon: CheckCircle2, header: "bg-emerald-100 border-emerald-300", stripe: "bg-emerald-500", iconColor: "text-emerald-600" },
+  { id: "complete", label: "Complété", icon: CheckCircle2, header: "bg-emerald-100 border-emerald-300", stripe: "bg-emerald-500", iconColor: "text-emerald-600" },
 ];
 
 // Etape "principale" du client — utilisee pour CSV, filtres et tri par defaut
@@ -105,6 +106,7 @@ function getStep(c: ClientData): Step {
 }
 
 // Toutes les etapes ou le client est present (un client peut etre dans plusieurs colonnes)
+// Logique : un client apparait dans une colonne des qu'il a atteint cette etape, peu importe le statut
 function getSteps(c: ClientData): Set<Step> {
   const steps = new Set<Step>();
   if (c.mandates.length === 0) {
@@ -112,8 +114,8 @@ function getSteps(c: ClientData): Set<Step> {
     return steps;
   }
   if (c.mandates.some((m) => m.status !== "completed")) steps.add("mandate_active");
-  if (c.quotes.some((q) => q.status === "pending")) steps.add("quote_pending");
-  if (c.contracts.some((ct) => ct.status === "pending" || ct.status === "draft")) steps.add("contract_pending");
+  if (c.quotes.length > 0) steps.add("quote_pending");
+  if (c.contracts.length > 0) steps.add("contract_pending");
   if (c.invoices.some((i) => i.status === "unpaid" || i.status === "overdue")) steps.add("invoice_unpaid");
   if (c.invoices.some((i) => i.status === "paid")) steps.add("complete");
   // Filet de securite : client avec mandats sans aucun autre etat
@@ -196,7 +198,7 @@ function timeAgo(iso: string): string {
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "A l'instant";
+  if (min < 1) return "À l'instant";
   if (min < 60) return `${min}min`;
   const h = Math.floor(min / 60);
   if (h < 24) return `${h}h`;
@@ -216,6 +218,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
   const [draggedClientId, setDraggedClientId] = useState<number | null>(null);
   const [draggedFromStep, setDraggedFromStep] = useState<Step | null>(null);
   const [dragOverStep, setDragOverStep] = useState<Step | null>(null);
+  const [signingContract, setSigningContract] = useState<{ id: number; number: string; title: string; amount: number | null } | null>(null);
 
   // Filtres avances
   const [filterServiceTypes, setFilterServiceTypes] = useState<Set<string>>(new Set());
@@ -300,13 +303,17 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
 
   // KPIs
   const alertCount = clients.filter(hasAlert).length;
+  // Impaye total = unpaid + overdue (tout ce qui n'a pas encore ete paye)
   const overdueTotal = clients.flatMap((c) => c.invoices)
-    .filter((i) => i.status === "overdue")
+    .filter((i) => i.status === "unpaid" || i.status === "overdue")
     .reduce((s, i) => s + i.amountTtc, 0);
-  // Forecast = somme des valeurs sur toutes les etapes ou le client est present
+  // Forecast = revenu projete (en cours) — exclut les factures deja payees
   const pipelineForecast = filtered.reduce((sum, c) => {
     let total = 0;
-    for (const step of getSteps(c)) total += getClientStageValue(c, step);
+    for (const step of getSteps(c)) {
+      if (step === "complete") continue; // deja encaisse, pas du forecast
+      total += getClientStageValue(c, step);
+    }
     return sum + total;
   }, 0);
 
@@ -329,48 +336,40 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
   const acceptQuote = async (clientId: number, quoteId: number, num: string) => {
     const ok = await confirm({
       title: "Accepter ce devis ?",
-      description: `Le devis ${num} sera marque comme accepte et un contrat sera genere automatiquement.`,
+      description: `Le devis ${num} sera marqué comme accepté et un contrat sera généré automatiquement.`,
       confirmLabel: "Accepter",
     });
     if (!ok) return;
     setBusyClientId(clientId);
     try {
       const res = await fetch(`/api/quotes/${quoteId}/accept`, { method: "POST" });
-      if (res.ok) { toast.success("Devis accepte, contrat genere"); router.refresh(); }
+      if (res.ok) { toast.success("Devis accepté, contrat généré"); router.refresh(); }
       else { const d = await res.json(); toast.error(d.error || "Erreur"); }
     } finally { setBusyClientId(null); }
   };
 
-  const signContract = async (clientId: number, contractId: number) => {
-    const ok = await confirm({
-      title: "Signer ce contrat ?",
-      description: "Vous allez apposer votre signature en tant qu'administrateur.",
-      confirmLabel: "Signer",
+  const signContract = (c: ClientData) => {
+    const contract = c.contracts.find((ct) => (ct.status === "pending" || ct.status === "draft") && !ct.adminSigned);
+    if (!contract) { toast.error("Aucun contrat à signer"); return; }
+    setSigningContract({
+      id: contract.id,
+      number: contract.contractNumber,
+      title: contract.title,
+      amount: contract.amountTtc ?? null,
     });
-    if (!ok) return;
-    setBusyClientId(clientId);
-    try {
-      const res = await fetch(`/api/contracts/${contractId}/sign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signatureData: "admin-signed-via-pipeline" }),
-      });
-      if (res.ok) { toast.success("Contrat signe"); router.refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
-    } finally { setBusyClientId(null); }
   };
 
   const markInvoicePaid = async (clientId: number, invoiceId: number, num: string) => {
     const ok = await confirm({
-      title: "Marquer comme payee ?",
-      description: `La facture ${num} sera marquee comme payee.`,
-      confirmLabel: "Marquer payee",
+      title: "Marquer comme payée ?",
+      description: `La facture ${num} sera marquée comme payée.`,
+      confirmLabel: "Marquer payée",
     });
     if (!ok) return;
     setBusyClientId(clientId);
     try {
       const res = await fetch(`/api/invoices/${invoiceId}/mark-paid`, { method: "POST" });
-      if (res.ok) { toast.success("Facture marquee comme payee"); router.refresh(); }
+      if (res.ok) { toast.success("Facture marquée comme payée"); router.refresh(); }
       else { const d = await res.json(); toast.error(d.error || "Erreur"); }
     } finally { setBusyClientId(null); }
   };
@@ -381,30 +380,30 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     ];
     if (step === "prospect") {
       actions.push(
-        { label: "Creer un mandat", icon: <Plus className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/mandates?newFor=${c.id}`) },
+        { label: "Créer un mandat", icon: <Plus className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/mandates?newFor=${c.id}`) },
         { label: "Envoyer un message", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) },
       );
     } else if (step === "mandate_active") {
       actions.push(
-        { label: "Creer un devis", icon: <Plus className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/quotes?newFor=${c.id}`) },
+        { label: "Créer un devis", icon: <Plus className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/quotes?newFor=${c.id}`) },
         { label: "Envoyer un message", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) },
       );
     } else if (step === "quote_pending") {
       const pendingQuote = c.quotes.find((q) => q.status === "pending");
       if (pendingQuote) {
-        actions.push({ label: "Marquer accepte", icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => acceptQuote(c.id, pendingQuote.id, pendingQuote.quoteNumber) });
+        actions.push({ label: "Marquer accepté", icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => acceptQuote(c.id, pendingQuote.id, pendingQuote.quoteNumber) });
       }
       actions.push({ label: "Relancer client", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) });
     } else if (step === "contract_pending") {
-      const pendingContract = c.contracts.find((ct) => ct.status === "pending" || ct.status === "draft");
+      const pendingContract = c.contracts.find((ct) => (ct.status === "pending" || ct.status === "draft") && !ct.adminSigned);
       if (pendingContract) {
-        actions.push({ label: "Signer admin", icon: <PenTool className="h-3.5 w-3.5" />, onClick: () => signContract(c.id, pendingContract.id) });
+        actions.push({ label: "Signer admin", icon: <PenTool className="h-3.5 w-3.5" />, onClick: () => signContract(c) });
       }
       actions.push({ label: "Relancer client", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) });
     } else if (step === "invoice_unpaid") {
       const unpaid = c.invoices.find((i) => i.status === "unpaid" || i.status === "overdue");
       if (unpaid) {
-        actions.push({ label: "Marquer payee", icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => markInvoicePaid(c.id, unpaid.id, unpaid.invoiceNumber) });
+        actions.push({ label: "Marquer payée", icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => markInvoicePaid(c.id, unpaid.id, unpaid.invoiceNumber) });
       }
       actions.push({ label: "Envoyer relance", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) });
     }
@@ -438,8 +437,8 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     // Transitions supportees
     if (fromStep === "prospect" && targetStep === "mandate_active") {
       const ok = await confirm({
-        title: "Creer un mandat ?",
-        description: `Vous allez ouvrir la creation d'un nouveau mandat pour ${c.fullName} (passage Prospect → Mandat).`,
+        title: "Créer un mandat ?",
+        description: `Vous allez ouvrir la création d'un nouveau mandat pour ${c.fullName} (passage Prospect → Mandat).`,
         confirmLabel: "Continuer",
       });
       if (!ok) return;
@@ -449,8 +448,8 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
 
     if (fromStep === "mandate_active" && targetStep === "quote_pending") {
       const ok = await confirm({
-        title: "Creer un devis ?",
-        description: `Vous allez ouvrir la creation d'un nouveau devis pour ${c.fullName} (passage Mandat → Devis).`,
+        title: "Créer un devis ?",
+        description: `Vous allez ouvrir la création d'un nouveau devis pour ${c.fullName} (passage Mandat → Devis).`,
         confirmLabel: "Continuer",
       });
       if (!ok) return;
@@ -463,60 +462,50 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
       if (!quote) { toast.error("Aucun devis en attente"); return; }
       const ok = await confirm({
         title: "Accepter le devis ?",
-        description: `Le devis ${quote.quoteNumber} sera accepte (passage Devis → Contrat).`,
+        description: `Le devis ${quote.quoteNumber} sera accepté (passage Devis → Contrat).`,
         confirmLabel: "Accepter",
       });
       if (!ok) return;
       setBusyClientId(c.id);
       try {
         const res = await fetch(`/api/quotes/${quote.id}/accept`, { method: "POST" });
-        if (res.ok) { toast.success("Devis accepte"); router.refresh(); }
+        if (res.ok) { toast.success("Devis accepté"); router.refresh(); }
         else { const d = await res.json(); toast.error(d.error || "Erreur"); }
       } finally { setBusyClientId(null); }
       return;
     }
 
     if (fromStep === "contract_pending" && targetStep === "invoice_unpaid") {
-      const contract = c.contracts.find((ct) => ct.status === "pending" || ct.status === "draft");
-      if (!contract) { toast.error("Aucun contrat en attente"); return; }
-      const ok = await confirm({
-        title: "Signer le contrat ?",
-        description: `Vous allez signer en admin le contrat ${contract.contractNumber} (passage Contrat → Paiement).`,
-        confirmLabel: "Signer",
+      const contract = c.contracts.find((ct) => (ct.status === "pending" || ct.status === "draft") && !ct.adminSigned);
+      if (!contract) { toast.error("Aucun contrat à signer"); return; }
+      setSigningContract({
+        id: contract.id,
+        number: contract.contractNumber,
+        title: contract.title,
+        amount: contract.amountTtc ?? null,
       });
-      if (!ok) return;
-      setBusyClientId(c.id);
-      try {
-        const res = await fetch(`/api/contracts/${contract.id}/sign`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ signatureData: "admin-signed-via-pipeline-dnd" }),
-        });
-        if (res.ok) { toast.success("Contrat signe"); router.refresh(); }
-        else { const d = await res.json(); toast.error(d.error || "Erreur"); }
-      } finally { setBusyClientId(null); }
       return;
     }
 
     if (fromStep === "invoice_unpaid" && targetStep === "complete") {
       const unpaid = c.invoices.find((i) => i.status === "unpaid" || i.status === "overdue");
-      if (!unpaid) { toast.error("Aucune facture impayee"); return; }
+      if (!unpaid) { toast.error("Aucune facture impayée"); return; }
       const ok = await confirm({
-        title: "Marquer payee ?",
-        description: `La facture ${unpaid.invoiceNumber} sera marquee comme payee (passage Paiement → Complete).`,
-        confirmLabel: "Marquer payee",
+        title: "Marquer payée ?",
+        description: `La facture ${unpaid.invoiceNumber} sera marquée comme payée (passage Paiement → Complété).`,
+        confirmLabel: "Marquer payée",
       });
       if (!ok) return;
       setBusyClientId(c.id);
       try {
         const res = await fetch(`/api/invoices/${unpaid.id}/mark-paid`, { method: "POST" });
-        if (res.ok) { toast.success("Facture marquee payee"); router.refresh(); }
+        if (res.ok) { toast.success("Facture marquée payée"); router.refresh(); }
         else { const d = await res.json(); toast.error(d.error || "Erreur"); }
       } finally { setBusyClientId(null); }
       return;
     }
 
-    toast.info("Transition non supportee — utilisez le menu actions de la carte");
+    toast.info("Transition non supportée — utilisez le menu actions de la carte");
   };
 
   // Step suivant qui est une transition valide depuis le step source de la carte draggee
@@ -537,12 +526,12 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     const stepLabels: Record<Step, string> = {
       prospect: "Nouveau client",
       mandate_active: "Mandat en cours",
-      quote_pending: "Devis envoye",
-      contract_pending: "Contrat a signer",
+      quote_pending: "Devis envoyé",
+      contract_pending: "Contrat à signer",
       invoice_unpaid: "Paiement en attente",
-      complete: "Complete",
+      complete: "Complété",
     };
-    const headers = ["Client", "Entreprise", "Etape", "Montant pipeline (CAD)", "Mandats", "Devis", "Contrats", "Factures", "Impaye (CAD)", "Alerte", "Messages non lus", "Derniere activite"];
+    const headers = ["Client", "Entreprise", "Étape", "Montant pipeline (CAD)", "Mandats", "Devis", "Contrats", "Factures", "Impayé (CAD)", "Alerte", "Messages non lus", "Dernière activité"];
     const rows = filtered.map((c) => {
       const step = getStep(c);
       const unpaid = c.invoices.filter((i) => i.status === "unpaid" || i.status === "overdue").reduce((s, i) => s + i.amountTtc, 0);
@@ -610,7 +599,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
           deltaLabel={filtered.length < clients.length ? `Filtre: ${filtered.length}/${clients.length}` : undefined}
         />
         <StatCard label="Alertes" value={alertCount} icon={AlertTriangle} accent="bg-red-500" />
-        <StatCard label="Impaye total" value={formatCurrency(overdueTotal)} icon={CreditCard} accent="bg-amber-500" />
+        <StatCard label="Impayé total" value={formatCurrency(overdueTotal)} icon={CreditCard} accent="bg-amber-500" />
       </div>
 
       {/* Stats conversion */}
@@ -620,7 +609,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
           <ConversionStat label="Prospect → Mandat" pct={conversion(totals.mandate, totals.total)} hint={`${totals.mandate}/${totals.total}`} />
           <ConversionStat label="Mandat → Devis" pct={conversion(totals.quote, totals.mandate)} hint={`${totals.quote}/${totals.mandate}`} />
           <ConversionStat label="Devis → Contrat" pct={conversion(totals.contract, totals.quote)} hint={`${totals.contract}/${totals.quote}`} />
-          <ConversionStat label="Contrat → Paye" pct={conversion(totals.paid, totals.contract)} hint={`${totals.paid}/${totals.contract}`} />
+          <ConversionStat label="Contrat → Payé" pct={conversion(totals.paid, totals.contract)} hint={`${totals.paid}/${totals.contract}`} />
         </div>
       </div>
 
@@ -677,7 +666,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
             )}
             {/* Periode */}
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Periode (derniere activite)</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Période (dernière activité)</p>
               <div className="grid grid-cols-2 gap-2">
                 <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="h-8 text-xs" />
                 <Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="h-8 text-xs" />
@@ -782,9 +771,9 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                           value={sortMode[col.id]}
                           onValueChange={(v) => setSortMode({ ...sortMode, [col.id]: v as SortMode })}
                         >
-                          <DropdownMenuRadioItem value="date_desc" className="text-xs">Plus recent</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="date_desc" className="text-xs">Plus récent</DropdownMenuRadioItem>
                           <DropdownMenuRadioItem value="date_asc" className="text-xs">Plus ancien</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="amount_desc" className="text-xs">Montant decroissant</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="amount_desc" className="text-xs">Montant décroissant</DropdownMenuRadioItem>
                           <DropdownMenuRadioItem value="name_asc" className="text-xs">Nom A→Z</DropdownMenuRadioItem>
                         </DropdownMenuRadioGroup>
                       </DropdownMenuContent>
@@ -904,21 +893,31 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                               </div>
                             )}
 
-                            {c.quotes[0] && col.id === "quote_pending" && (
-                              <div className="mt-2 text-[10px]">
-                                <span className="text-muted-foreground">{c.quotes[0].quoteNumber}</span>
-                                <span className="font-semibold ml-2">{formatCurrency(c.quotes[0].amountTtc)}</span>
-                              </div>
-                            )}
+                            {c.quotes.length > 0 && col.id === "quote_pending" && (() => {
+                              const totalQuotes = c.quotes.reduce((s, q) => s + q.amountTtc, 0);
+                              return (
+                                <div className="mt-2 text-[10px] flex items-center justify-between gap-2">
+                                  <span className="text-muted-foreground truncate">
+                                    {c.quotes.length === 1 ? c.quotes[0].quoteNumber : `${c.quotes.length} devis`}
+                                  </span>
+                                  <span className="font-semibold shrink-0">{formatCurrency(totalQuotes)}</span>
+                                </div>
+                              );
+                            })()}
 
-                            {c.contracts[0] && col.id === "contract_pending" && (
-                              <div className="mt-2 text-[10px] text-muted-foreground">
-                                {c.contracts[0].contractNumber}
-                                {c.contracts[0].amountTtc != null && (
-                                  <span className="font-semibold ml-2 text-foreground">{formatCurrency(c.contracts[0].amountTtc)}</span>
-                                )}
-                              </div>
-                            )}
+                            {c.contracts.length > 0 && col.id === "contract_pending" && (() => {
+                              const totalContracts = c.contracts.reduce((s, ct) => s + (ct.amountTtc ?? 0), 0);
+                              return (
+                                <div className="mt-2 text-[10px] flex items-center justify-between gap-2">
+                                  <span className="text-muted-foreground truncate">
+                                    {c.contracts.length === 1 ? c.contracts[0].contractNumber : `${c.contracts.length} contrats`}
+                                  </span>
+                                  {totalContracts > 0 && (
+                                    <span className="font-semibold shrink-0">{formatCurrency(totalContracts)}</span>
+                                  )}
+                                </div>
+                              );
+                            })()}
 
                             {unpaid > 0 && col.id === "invoice_unpaid" && (
                               <div className="mt-2 flex items-center gap-1">
@@ -929,9 +928,9 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                               </div>
                             )}
 
-                            {col.id === "complete" && c.invoices.length > 0 && (
+                            {col.id === "complete" && c.invoices.some((i) => i.status === "paid") && (
                               <div className="mt-2 text-[10px] text-emerald-600 font-medium">
-                                {formatCurrency(c.invoices.reduce((s, i) => s + i.amountTtc, 0))} total
+                                {formatCurrency(c.invoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.amountTtc, 0))} encaissé
                               </div>
                             )}
                           </button>
@@ -959,7 +958,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
           </SheetHeader>
           <div className="mt-4 space-y-2">
             {events.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Aucun evenement</p>
+              <p className="text-sm text-muted-foreground text-center py-8">Aucun événement</p>
             ) : events.map((e) => {
               const Icon = eventTypeIcon(e.eventType);
               const colorCls = eventTypeColor(e.eventType);
@@ -1005,6 +1004,17 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
       </Sheet>
 
       {ConfirmModal}
+
+      {signingContract && (
+        <SignatureDialog
+          contractId={signingContract.id}
+          contractNumber={signingContract.number}
+          contractTitle={signingContract.title}
+          contractAmount={signingContract.amount ?? undefined}
+          open={true}
+          onOpenChange={(o) => { if (!o) setSigningContract(null); }}
+        />
+      )}
     </div>
   );
 }

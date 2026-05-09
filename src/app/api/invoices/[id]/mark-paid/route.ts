@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { markInvoicePaid } from "@/lib/workflow";
 import { logAudit } from "@/lib/audit";
+import { revalidateAdminViews } from "@/lib/revalidate";
 
 const schema = z.object({
   paymentMethod: z.string().default("manual"),
@@ -35,6 +36,8 @@ export async function POST(
       entityId: invoice.id,
       changes: { status: "paid" },
     });
+
+    revalidateAdminViews();
 
     return NextResponse.json({ success: true, invoice });
   } catch (err) {

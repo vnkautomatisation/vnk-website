@@ -104,7 +104,8 @@ export function PdfViewerModal({
 
       {/* Modale taille PDF (ratio Letter ~ 8.5/11), centree */}
       <div
-        className="relative z-10 flex flex-col w-full max-w-[min(900px,92vw)] h-full max-h-[92vh] bg-white rounded-xl shadow-2xl overflow-hidden"
+        className="relative z-10 flex flex-col w-full bg-white rounded-xl shadow-2xl overflow-hidden"
+        style={{ maxWidth: "min(900px, 92vw)", maxHeight: "92vh", height: "100%" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header navy compact */}
@@ -168,7 +169,7 @@ export function PdfViewerModal({
               disabled={!blobUrl}
             >
               <Download className="h-4 w-4 mr-1.5" />
-              Telecharger
+              Télécharger
             </Button>
           ) : actions}
         </div>

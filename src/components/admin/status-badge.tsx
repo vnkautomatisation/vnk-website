@@ -21,6 +21,8 @@ const STATUS_MAP: Record<string, { label: string; variant: StatusVariant }> = {
   draft: { label: "Brouillon", variant: "secondary" },
   sent: { label: "Envoyé", variant: "info" },
   signed: { label: "Signé", variant: "success" },
+  admin_signed: { label: "Admin signé", variant: "info" },
+  client_signed: { label: "Client signé", variant: "info" },
   // Invoice
   unpaid: { label: "Non payée", variant: "warning" },
   paid: { label: "Payée", variant: "success" },

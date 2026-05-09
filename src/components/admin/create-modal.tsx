@@ -21,7 +21,7 @@ export function CreateModal({
   icon: Icon,
   accent = "bg-blue-500",
   children,
-  submitLabel = "Creer",
+  submitLabel = "Créer",
   onSubmit,
   className,
 }: {
@@ -42,7 +42,7 @@ export function CreateModal({
     startTransition(async () => {
       const result = await onSubmit();
       if (result.success) {
-        toast.success(`${title} effectue avec succes`);
+        toast.success(`${title} effectué avec succès`);
         onOpenChange(false);
       } else {
         toast.error(result.error || "Une erreur est survenue");
@@ -73,7 +73,7 @@ export function CreateModal({
                 </DialogDescription>
               ) : (
                 <DialogDescription className="sr-only">
-                  Formulaire de creation
+                  Formulaire de création
                 </DialogDescription>
               )}
             </div>

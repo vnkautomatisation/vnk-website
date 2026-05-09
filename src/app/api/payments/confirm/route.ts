@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { markInvoicePaid } from "@/lib/workflow";
+import { revalidateAdminViews } from "@/lib/revalidate";
 
 const schema = z.object({
   invoiceId: z.number().int().positive(),
@@ -39,6 +40,8 @@ export async function POST(req: Request) {
   }
 
   await markInvoicePaid(invoice.id, "stripe", parsed.data.paymentIntentId);
+
+  revalidateAdminViews();
 
   return NextResponse.json({ success: true });
 }

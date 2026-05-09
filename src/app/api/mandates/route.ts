@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { createWorkflowEvent } from "@/lib/workflow";
+import { revalidateAdminViews } from "@/lib/revalidate";
 
 const createSchema = z.object({
   clientId: z.number().int().positive(),
@@ -76,6 +77,8 @@ export async function POST(req: Request) {
     entityType: "mandates",
     entityId: mandate.id,
   });
+
+  revalidateAdminViews();
 
   return NextResponse.json({ success: true, mandate });
 }

@@ -3,23 +3,37 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { revalidateAdminViews } from "@/lib/revalidate";
 
 const createClientSchema = z.object({
   fullName: z.string().min(1).max(255),
   email: z.string().email(),
-  password: z.string().min(12),
+  // Password optionnel : si non fourni, on en genere un aleatoire et on le retourne a l'admin
+  password: z.string().min(12).optional(),
   companyName: z.string().max(255).optional(),
   phone: z.string().max(50).optional(),
   address: z.string().optional(),
   city: z.string().max(100).optional(),
   province: z.string().max(50).optional(),
   postalCode: z.string().max(20).optional(),
+  country: z.string().max(10).optional(),
   sector: z.string().max(100).optional(),
   technologies: z.string().optional(),
+  internalNotes: z.string().optional(),
 });
+
+// Genere un mot de passe aleatoire de 16 caracteres lisibles (pas de 0/O/1/l)
+function generatePassword(): string {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  const bytes = randomBytes(16);
+  let pw = "";
+  for (let i = 0; i < 16; i++) pw += chars[bytes[i] % chars.length];
+  return pw;
+}
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -76,7 +90,10 @@ export async function POST(req: Request) {
     );
   }
 
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  // Si pas de password fourni, on en genere un et on le retourne a l'admin
+  const generatedPassword = parsed.data.password ? null : generatePassword();
+  const finalPassword = parsed.data.password ?? generatedPassword!;
+  const passwordHash = await bcrypt.hash(finalPassword, 12);
   const { password, ...rest } = parsed.data;
 
   const client = await prisma.client.create({
@@ -100,5 +117,12 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json({ success: true, client });
+  revalidateAdminViews();
+
+  return NextResponse.json({
+    success: true,
+    client,
+    // generatedPassword n'est expose qu'une seule fois ici, pour que l'admin puisse le partager
+    ...(generatedPassword ? { generatedPassword } : {}),
+  });
 }

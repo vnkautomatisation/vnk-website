@@ -6,6 +6,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { revalidateAdminViews } from "@/lib/revalidate";
 
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -76,6 +77,8 @@ export async function PATCH(
     changes: parsed.data,
   });
 
+  revalidateAdminViews();
+
   return NextResponse.json({ success: true, contract: updated });
 }
 
@@ -112,6 +115,8 @@ export async function DELETE(
     entityType: "contracts",
     entityId: contractId,
   });
+
+  revalidateAdminViews();
 
   return NextResponse.json({ success: true });
 }

@@ -51,7 +51,7 @@ export function DetailPanelBase({
       >
         {/* Title/Description toujours presents pour a11y Radix */}
         <SheetTitle className="sr-only">{title}</SheetTitle>
-        <SheetDescription className="sr-only">{subtitle ?? "Detail"}</SheetDescription>
+        <SheetDescription className="sr-only">{subtitle ?? "Détail"}</SheetDescription>
 
         {loading ? (
           <div className="h-full flex items-center justify-center text-muted-foreground">

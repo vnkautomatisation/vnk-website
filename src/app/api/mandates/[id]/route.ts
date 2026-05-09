@@ -6,6 +6,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { revalidateAdminViews } from "@/lib/revalidate";
 
 const updateSchema = z.object({
   status: z.string().optional(),
@@ -91,6 +92,8 @@ export async function PATCH(
     },
   });
 
+  revalidateAdminViews();
+
   return NextResponse.json({ success: true, mandate: updated });
 }
 
@@ -132,6 +135,8 @@ export async function DELETE(
     entityType: "mandates",
     entityId: mandateId,
   });
+
+  revalidateAdminViews();
 
   return NextResponse.json({ success: true });
 }

@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { calculateTaxes } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
+import { revalidateAdminViews } from "@/lib/revalidate";
 
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -87,6 +88,8 @@ export async function PATCH(
     changes: parsed.data,
   });
 
+  revalidateAdminViews();
+
   return NextResponse.json({ success: true, invoice: updated });
 }
 
@@ -123,6 +126,8 @@ export async function DELETE(
     entityType: "invoices",
     entityId: invoiceId,
   });
+
+  revalidateAdminViews();
 
   return NextResponse.json({ success: true });
 }

@@ -1,8 +1,9 @@
 "use client";
 // ═══════════════════════════════════════════════════════════
 // Canvas de signature VNK — 3 modes : Dessiner, Initiales, Importer
+// Look papier signature, stroke lisse, haute resolution adaptative
 // ═══════════════════════════════════════════════════════════
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useLayoutEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Pen, Eraser, Check, Type, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,18 +12,16 @@ type SignMode = "draw" | "type" | "upload";
 
 export function SignatureCanvas({
   onSave,
-  width = 500,
-  height = 200,
+  height = 220,
   disabled = false,
   legalText,
 }: {
   onSave: (dataUrl: string) => void | Promise<void>;
-  width?: number;
   height?: number;
   disabled?: boolean;
-  /** Texte legal sous le canvas. Par defaut: "conditions du document" */
   legalText?: string;
 }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [mode, setMode] = useState<SignMode>("draw");
   const [isDrawing, setIsDrawing] = useState(false);
@@ -30,30 +29,51 @@ export function SignatureCanvas({
   const [saving, setSaving] = useState(false);
   const [initials, setInitials] = useState("");
   const [uploadedImg, setUploadedImg] = useState<string | null>(null);
+  const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: height });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Midpoint smoothing : on garde les 2 derniers points pour calculer la courbe
+  const p0Ref = useRef<{ x: number; y: number } | null>(null);
+  const p1Ref = useRef<{ x: number; y: number } | null>(null);
 
-  // ── Init canvas ─────────────────────────────────────
+  // ── Taille adaptative au container ─────────────────
+  useLayoutEffect(() => {
+    if (!wrapRef.current) return;
+    const update = () => {
+      const w = wrapRef.current?.clientWidth ?? 0;
+      if (w > 0) setSize({ w, h: height });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(wrapRef.current);
+    return () => ro.disconnect();
+  }, [height]);
+
+  // ── Init canvas haute resolution ───────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || size.w === 0) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    // Force minimum 2x resolution pour eviter la pixelisation
-    const dpr = Math.max(2, window.devicePixelRatio || 2);
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = "100%";
-    canvas.style.height = `${height}px`;
+    // Super-sampling 8x : haute resolution + downscale CSS = bilinear filtering du browser = anti-aliasing premium
+    const dpr = Math.max(8, (window.devicePixelRatio || 1) * 4);
+    canvas.width = size.w * dpr;
+    canvas.height = size.h * dpr;
+    canvas.style.width = `${size.w}px`;
+    canvas.style.height = `${size.h}px`;
     ctx.scale(dpr, dpr);
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2;
     ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    ctx.lineJoin = "round";
     ctx.strokeStyle = "#0F2D52";
-  }, [width, height]);
+    // Re-render contenu si on avait des initiales
+    if (mode === "type" && initials) renderInitials(initials);
+    if (mode === "upload" && uploadedImg) renderImage(uploadedImg);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [size]);
 
-  // ── Draw mode ───────────────────────────────────────
+  // ── Tracage avec courbes bezier (smooth) ───────────
   const getPos = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
@@ -67,9 +87,14 @@ export function SignatureCanvas({
     e.preventDefault();
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
-    const { x, y } = getPos(e);
+    const pos = getPos(e);
+    // Point de depart : petit dot pour marquer le debut du trace
     ctx.beginPath();
-    ctx.moveTo(x, y);
+    ctx.arc(pos.x, pos.y, ctx.lineWidth / 2, 0, Math.PI * 2);
+    ctx.fillStyle = ctx.strokeStyle as string;
+    ctx.fill();
+    p0Ref.current = pos;
+    p1Ref.current = pos;
     setIsDrawing(true);
   };
 
@@ -77,14 +102,38 @@ export function SignatureCanvas({
     if (!isDrawing || disabled) return;
     e.preventDefault();
     const ctx = canvasRef.current?.getContext("2d");
-    if (!ctx) return;
-    const { x, y } = getPos(e);
-    ctx.lineTo(x, y);
+    const p0 = p0Ref.current;
+    const p1 = p1Ref.current;
+    if (!ctx || !p0 || !p1) return;
+    const p2 = getPos(e);
+    // Midpoint smoothing : courbe de mid(p0,p1) a mid(p1,p2) avec p1 comme controle
+    const c1 = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
+    const c2 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    ctx.beginPath();
+    ctx.moveTo(c1.x, c1.y);
+    ctx.quadraticCurveTo(p1.x, p1.y, c2.x, c2.y);
     ctx.stroke();
+    p0Ref.current = p1;
+    p1Ref.current = p2;
     setHasContent(true);
   };
 
-  const stopDrawing = () => setIsDrawing(false);
+  const stopDrawing = () => {
+    // Termine le trace en allant jusqu'au dernier point
+    const ctx = canvasRef.current?.getContext("2d");
+    const p0 = p0Ref.current;
+    const p1 = p1Ref.current;
+    if (ctx && p0 && p1 && (p0.x !== p1.x || p0.y !== p1.y)) {
+      const c1 = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
+      ctx.beginPath();
+      ctx.moveTo(c1.x, c1.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.stroke();
+    }
+    setIsDrawing(false);
+    p0Ref.current = null;
+    p1Ref.current = null;
+  };
 
   // ── Clear ───────────────────────────────────────────
   const clear = () => {
@@ -98,47 +147,45 @@ export function SignatureCanvas({
     setUploadedImg(null);
   };
 
-  // ── Render initials on canvas ────────────────────────
+  // ── Render initials ──────────────────────────────────
   const renderInitials = useCallback((text: string) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || size.w === 0) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!text.trim()) { setHasContent(false); return; }
+    // Taille adaptative selon longueur
+    const fontSize = text.length <= 3 ? 72 : text.length <= 4 ? 60 : 52;
     ctx.save();
-    ctx.scale(1 / dpr, 1 / dpr);
-    ctx.font = `italic ${48 * dpr}px "Brush Script MT", "Segoe Script", "Dancing Script", cursive`;
+    ctx.font = `italic 700 ${fontSize}px "Brush Script MT", "Segoe Script", "Lucida Handwriting", cursive`;
     ctx.fillStyle = "#0F2D52";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(text.toUpperCase(), (width * dpr) / 2, (height * dpr) / 2);
+    ctx.fillText(text.toUpperCase(), size.w / 2, size.h / 2);
     ctx.restore();
     setHasContent(true);
-  }, [width, height]);
+  }, [size]);
 
-  // ── Render uploaded image on canvas ──────────────────
+  // ── Render uploaded image ────────────────────────────
   const renderImage = useCallback((src: string) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || size.w === 0) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
     const img = new Image();
     img.onload = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Fit image in canvas maintaining aspect ratio
-      const scale = Math.min((width * dpr) / img.width, (height * dpr) / img.height) * 0.8;
+      const scale = Math.min(size.w / img.width, size.h / img.height) * 0.85;
       const w = img.width * scale;
       const h = img.height * scale;
-      const x = (width * dpr - w) / 2;
-      const y = (height * dpr - h) / 2;
+      const x = (size.w - w) / 2;
+      const y = (size.h - h) / 2;
       ctx.drawImage(img, x, y, w, h);
       setHasContent(true);
     };
     img.src = src;
-  }, [width, height]);
+  }, [size]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -180,32 +227,43 @@ export function SignatureCanvas({
   const defaultLegal = legalText ?? "les conditions de ce document";
 
   return (
-    <div className="space-y-3">
-      {/* Mode tabs */}
-      <div className="flex bg-muted/50 rounded-lg p-1 gap-1">
+    <div className="space-y-4">
+      {/* Mode tabs — pill VNK */}
+      <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
         {modes.map((m) => {
           const Icon = m.icon;
+          const active = mode === m.key;
           return (
             <button
               key={m.key}
               type="button"
               onClick={() => switchMode(m.key)}
               className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-all",
-                mode === m.key
-                  ? "bg-white shadow-sm text-[#0F2D52]"
-                  : "text-muted-foreground hover:text-foreground"
+                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all",
+                active
+                  ? "bg-white shadow-md text-[#0F2D52] ring-1 ring-[#0F2D52]/10"
+                  : "text-slate-500 hover:text-slate-700 hover:bg-white/40"
               )}
             >
-              <Icon className="h-3.5 w-3.5" />
+              <Icon className="h-4 w-4" />
               {m.label}
             </button>
           );
         })}
       </div>
 
-      {/* Canvas area */}
-      <div className="relative rounded-xl border-2 border-dashed border-border bg-white overflow-hidden">
+      {/* Canvas area — papier signature avec ligne guide */}
+      <div
+        ref={wrapRef}
+        className="relative rounded-xl bg-gradient-to-b from-white to-slate-50/40 border border-slate-200 shadow-[inset_0_2px_8px_rgba(15,45,82,0.04),0_1px_0_rgba(255,255,255,0.8)] overflow-hidden"
+        style={{ height: size.h }}
+      >
+        {/* Ligne guide papier (X _____ ) */}
+        <div className="absolute left-6 right-6 bottom-12 flex items-center gap-3 pointer-events-none">
+          <span className="text-slate-300 text-xl font-serif select-none">×</span>
+          <div className="flex-1 border-b border-slate-200" />
+        </div>
+
         <canvas
           ref={canvasRef}
           onMouseDown={startDrawing}
@@ -216,23 +274,38 @@ export function SignatureCanvas({
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
           className={cn(
-            "block touch-none",
+            "block touch-none relative z-10",
             mode === "draw" ? "cursor-crosshair" : "cursor-default"
           )}
+          style={{ imageRendering: "auto", WebkitFontSmoothing: "antialiased" } as React.CSSProperties}
           aria-label="Zone de signature"
         />
 
-        {/* Placeholder texts */}
+        {/* Placeholder elegant (en dehors du canvas pour eviter rendu pixel) */}
         {!hasContent && mode === "draw" && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-sm text-muted-foreground/60">
-            <Pen className="h-4 w-4 mr-2" />
-            Signez ici avec la souris ou votre doigt
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span
+              className="text-2xl sm:text-3xl text-slate-300 italic font-light tracking-wide select-none"
+              style={{ fontFamily: '"Brush Script MT", "Segoe Script", cursive' }}
+            >
+              Votre signature
+            </span>
+            <span className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
+              <Pen className="h-3 w-3" />
+              Tracez avec la souris ou votre doigt
+            </span>
           </div>
         )}
-        {mode === "upload" && !uploadedImg && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-sm text-muted-foreground/60">
-            <Upload className="h-4 w-4 mr-2" />
-            Importez une image de votre signature
+        {!hasContent && mode === "upload" && !uploadedImg && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <Upload className="h-7 w-7 text-slate-300 mb-2" />
+            <span className="text-sm text-slate-400">Importez votre signature</span>
+            <span className="text-[11px] text-slate-400 mt-0.5">PNG, JPG ou WebP</span>
+          </div>
+        )}
+        {!hasContent && mode === "type" && !initials && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className="text-sm text-slate-400">Tapez vos initiales ci-dessous</span>
           </div>
         )}
       </div>
@@ -247,9 +320,9 @@ export function SignatureCanvas({
             setInitials(val);
             renderInitials(val);
           }}
-          placeholder="Tapez vos initiales (ex: YV)"
+          placeholder="Ex : YV"
           maxLength={5}
-          className="w-full h-11 px-4 rounded-lg border bg-background text-center text-lg font-semibold tracking-widest focus:ring-2 focus:ring-[#0F2D52]/30 focus:border-[#0F2D52] outline-none"
+          className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-white text-center text-xl font-bold tracking-[0.4em] uppercase text-[#0F2D52] focus:ring-2 focus:ring-[#0F2D52]/30 focus:border-[#0F2D52] outline-none transition-all"
           disabled={disabled}
         />
       )}
@@ -270,7 +343,7 @@ export function SignatureCanvas({
             size="sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled}
-            className="w-full"
+            className="w-full h-11"
           >
             <Upload className="h-4 w-4 mr-1.5" />
             {uploadedImg ? "Changer l'image" : "Choisir un fichier"}
@@ -279,9 +352,16 @@ export function SignatureCanvas({
       )}
 
       {/* Actions */}
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={clear} disabled={!hasContent || disabled}>
-          <Eraser className="h-4 w-4 mr-1" />
+      <div className="flex gap-2 items-center">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={clear}
+          disabled={!hasContent || disabled}
+          className="h-10"
+        >
+          <Eraser className="h-4 w-4 mr-1.5" />
           Effacer
         </Button>
         <Button
@@ -289,16 +369,17 @@ export function SignatureCanvas({
           size="sm"
           onClick={save}
           disabled={!hasContent || saving || disabled}
-          className="ml-auto bg-[#0F2D52] hover:bg-[#1a3a66]"
+          className="ml-auto h-10 px-5 bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md disabled:opacity-40"
         >
-          <Check className="h-4 w-4 mr-1" />
-          {saving ? "Enregistrement..." : "Signer"}
+          <Check className="h-4 w-4 mr-1.5" />
+          {saving ? "Enregistrement…" : "Signer"}
         </Button>
       </div>
 
-      <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
-        En signant, vous confirmez avoir lu et accepte {defaultLegal}.
-        Votre adresse IP est enregistree comme preuve legale.
+      <p className="text-[11px] text-slate-500 text-center leading-relaxed px-2">
+        En signant, vous confirmez avoir lu et accepté {defaultLegal}.
+        <br className="hidden sm:inline" />
+        Votre adresse IP est enregistrée comme preuve légale.
       </p>
     </div>
   );

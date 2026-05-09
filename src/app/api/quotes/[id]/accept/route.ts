@@ -5,6 +5,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { acceptQuote } from "@/lib/workflow";
+import { revalidateAdminViews } from "@/lib/revalidate";
 
 const bodySchema = z.object({
   signatureData: z.string().optional(), // base64 canvas
@@ -57,6 +58,8 @@ export async function POST(
     quoteId,
     session.user.role === "client" ? "client" : "admin"
   );
+
+  revalidateAdminViews();
 
   return NextResponse.json({
     success: true,

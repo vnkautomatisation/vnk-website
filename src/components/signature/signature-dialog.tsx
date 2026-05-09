@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { SignatureCanvas } from "./signature-canvas";
 import { Button } from "@/components/ui/button";
@@ -45,8 +47,8 @@ export function SignatureDialog({
       const data = await res.json();
       toast.success(
         data.fullySigned
-          ? "Contrat signe par les deux parties — facture generee"
-          : "Votre signature a ete enregistree"
+          ? "Contrat signé par les deux parties — facture générée"
+          : "Votre signature a été enregistrée"
       );
       onOpenChange(false);
       router.refresh();
@@ -60,6 +62,10 @@ export function SignatureDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl p-0 overflow-hidden">
+        <DialogTitle className="sr-only">Signer le contrat {contractNumber}</DialogTitle>
+        <DialogDescription className="sr-only">
+          Apposez votre signature pour le contrat {contractTitle}
+        </DialogDescription>
         {/* Header navy */}
         <div className="bg-[#0F2D52] px-6 py-5 text-white relative">
           <button

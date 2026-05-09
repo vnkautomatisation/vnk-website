@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, AddressElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
@@ -298,12 +299,12 @@ export function StripePaymentModal({
       .finally(() => setLoading(false));
   }, [open, invoice]);
 
-  if (!open || !invoice) return null;
+  if (!open || !invoice || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bottom-14 lg:bottom-0 z-[10000] flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-4xl mx-4 mb-4 sm:mb-0 bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-4xl mx-4 mb-4 sm:mb-0 bg-white rounded-2xl shadow-2xl overflow-hidden" style={{ maxHeight: "92vh", overflowY: "auto" }}>
         {/* Header */}
         <div className="bg-[#0F2D52] px-6 py-4 text-white relative flex items-center gap-4">
           <button onClick={onClose} className="absolute top-3 right-3 h-8 w-8 rounded-lg hover:bg-white/10 flex items-center justify-center">
@@ -341,6 +342,7 @@ export function StripePaymentModal({
           </Elements>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

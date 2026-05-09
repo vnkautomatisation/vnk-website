@@ -19,7 +19,7 @@ export default async function WorkflowPage() {
           orderBy: { createdAt: "desc" },
         },
         contracts: {
-          select: { id: true, status: true, contractNumber: true, title: true, amountTtc: true, createdAt: true },
+          select: { id: true, status: true, contractNumber: true, title: true, amountTtc: true, createdAt: true, adminSignatureData: true, clientSignatureData: true },
           orderBy: { createdAt: "desc" },
         },
         invoices: {
@@ -54,9 +54,14 @@ export default async function WorkflowPage() {
       createdAt: q.createdAt.toISOString(),
     })),
     contracts: c.contracts.map((ct) => ({
-      ...ct,
+      id: ct.id,
+      status: ct.status,
+      contractNumber: ct.contractNumber,
+      title: ct.title,
       amountTtc: ct.amountTtc != null ? Number(ct.amountTtc) : null,
       createdAt: ct.createdAt.toISOString(),
+      adminSigned: !!ct.adminSignatureData,
+      clientSigned: !!ct.clientSignatureData,
     })),
     invoices: c.invoices.map((i) => ({
       ...i,
