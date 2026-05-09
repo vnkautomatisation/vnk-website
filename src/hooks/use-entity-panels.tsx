@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useState, type ReactNode } from "react";
 
-export type EntityType = "client" | "mandate" | "quote" | "invoice" | "contract";
+export type EntityType = "client" | "mandate" | "quote" | "invoice" | "contract" | "request";
 export type ClientTab = "info" | "mandates" | "quotes" | "invoices" | "contracts";
 
 type ActivePanel = { type: EntityType; id: number; clientTab?: ClientTab } | null;

@@ -4,7 +4,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-// import { createWorkflowEvent } from "@/lib/workflow";
+import { createWorkflowEvent } from "@/lib/workflow";
+import { revalidateAdminViews } from "@/lib/revalidate";
 
 const createSchema = z.object({
   serviceType: z.string().min(1),
@@ -72,6 +73,16 @@ export async function POST(req: Request) {
       budgetRange: parsed.data.budget || null,
     },
   });
+
+  await createWorkflowEvent({
+    clientId,
+    eventType: "project_request_received",
+    eventLabel: `Nouvelle demande — ${title}`,
+    triggeredBy: session.user.role,
+    metadata: { requestId: request.id, urgency: parsed.data.urgencyLevel },
+  });
+
+  revalidateAdminViews();
 
   return NextResponse.json({ success: true, request });
 }
