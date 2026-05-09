@@ -263,17 +263,9 @@ export function InvoicesView({
       confirmLabel: "Envoyer rappel",
     });
     if (!ok) return;
-    const res = await fetch(`/api/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clientId: inv.clientId,
-        content: `Rappel de paiement : facture ${inv.invoiceNumber} de ${formatCurrency(inv.amountTtc)} ${inv.dueDate ? `due le ${formatDate(new Date(inv.dueDate))}` : ""}. Merci de procéder au règlement via votre portail.`,
-        channel: "chat",
-      }),
-    });
-    if (res.ok) toast.success("Rappel envoyé");
-    else toast.error("Erreur lors de l'envoi du rappel");
+    const res = await fetch(`/api/invoices/${inv.id}/remind`, { method: "POST" });
+    if (res.ok) { toast.success("Rappel envoyé"); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
   };
 
   // Bulk
