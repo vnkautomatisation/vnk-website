@@ -5,6 +5,7 @@ import { QuoteDetailPanel } from "@/components/admin/quote-detail-panel";
 import { InvoiceDetailPanel } from "@/components/admin/invoice-detail-panel";
 import { ContractDetailPanel } from "@/components/admin/contract-detail-panel";
 import { RequestDetailPanel } from "@/components/admin/request-detail-panel";
+import { AppointmentDetailPanel } from "@/components/admin/appointment-detail-panel";
 import { useEntityPanels, EntityPanelsProvider } from "@/hooks/use-entity-panels";
 
 /**
@@ -47,6 +48,11 @@ function PanelsHost() {
       <RequestDetailPanel
         requestId={active?.type === "request" ? active.id : null}
         open={active?.type === "request"}
+        onOpenChange={(o) => { if (!o) close(); }}
+      />
+      <AppointmentDetailPanel
+        appointmentId={active?.type === "appointment" ? active.id : null}
+        open={active?.type === "appointment"}
         onOpenChange={(o) => { if (!o) close(); }}
       />
     </>

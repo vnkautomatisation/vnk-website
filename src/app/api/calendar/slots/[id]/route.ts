@@ -1,8 +1,20 @@
-// PATCH /api/calendar/slots/[id] — modifier/bloquer un creneau
-// DELETE /api/calendar/slots/[id] — supprimer un creneau
+// PATCH /api/calendar/slots/[id] — modifier/bloquer un creneau (admin)
+// DELETE /api/calendar/slots/[id] — supprimer un creneau (admin)
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAudit } from "@/lib/audit";
+import { revalidateAdminViews } from "@/lib/revalidate";
+
+const updateSchema = z.object({
+  slotDate: z.string().optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  durationMin: z.number().int().positive().optional(),
+  status: z.enum(["available", "blocked", "booked"]).optional(),
+  notes: z.string().nullable().optional(),
+}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnée à mettre à jour" });
 
 export async function PATCH(
   req: NextRequest,
@@ -10,16 +22,40 @@ export async function PATCH(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const { id } = await params;
+  const slotId = Number(id);
+
+  const existing = await prisma.availabilitySlot.findUnique({ where: { id: slotId } });
+  if (!existing) {
+    return NextResponse.json({ error: "Créneau introuvable" }, { status: 404 });
+  }
+
   const body = await req.json();
+  const parsed = updateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+  }
+
+  const data: Record<string, unknown> = { ...parsed.data };
+  if (data.slotDate) data.slotDate = new Date(data.slotDate as string);
 
   const slot = await prisma.availabilitySlot.update({
-    where: { id: Number(id) },
-    data: body,
+    where: { id: slotId },
+    data,
   });
+
+  await logAudit({
+    adminId: session.user.adminId,
+    action: "update",
+    entityType: "availability_slots",
+    entityId: slotId,
+    changes: parsed.data,
+  });
+
+  revalidateAdminViews();
 
   return NextResponse.json({ success: true, slot });
 }
@@ -30,11 +66,33 @@ export async function DELETE(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const { id } = await params;
-  await prisma.availabilitySlot.delete({ where: { id: Number(id) } });
+  const slotId = Number(id);
+
+  // Refuse si slot booked et lie a un appointment confirme
+  const linkedAppt = await prisma.appointment.findFirst({
+    where: { slotId, status: "confirmed" },
+  });
+  if (linkedAppt) {
+    return NextResponse.json(
+      { error: "Créneau lié à un rendez-vous confirmé — annule le rendez-vous d'abord" },
+      { status: 409 }
+    );
+  }
+
+  await prisma.availabilitySlot.delete({ where: { id: slotId } });
+
+  await logAudit({
+    adminId: session.user.adminId,
+    action: "delete",
+    entityType: "availability_slots",
+    entityId: slotId,
+  });
+
+  revalidateAdminViews();
 
   return NextResponse.json({ success: true });
 }

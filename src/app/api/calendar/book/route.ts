@@ -1,9 +1,12 @@
-// POST /api/calendar/book — réserver un créneau (client authentifié)
+// POST /api/calendar/book — réserver un créneau (client authentifié via portail)
+// → Le slot passe à "booked", l'appointment à "confirmed", workflow event + notification admin
+// → L'envoi email sera ajouté quand l'infra mail sera prête
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createWorkflowEvent } from "@/lib/workflow";
+import { revalidateAdminViews } from "@/lib/revalidate";
 
 const bookSchema = z.object({
   slotId: z.number().int().positive(),
@@ -24,7 +27,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Données invalides" }, { status: 400 });
   }
 
-  // Vérifier que le slot est bien disponible + réserver
   const slot = await prisma.availabilitySlot.findUnique({
     where: { id: parsed.data.slotId },
   });
@@ -39,7 +41,7 @@ export async function POST(req: Request) {
     where: { id: session.user.clientId! },
   });
 
-  // Transaction : créer appointment + bloquer slot
+  // Transaction : creer appointment confirmé + bloquer slot
   const [appointment] = await prisma.$transaction([
     prisma.appointment.create({
       data: {
@@ -55,7 +57,7 @@ export async function POST(req: Request) {
         subject: parsed.data.subject,
         notesClient: parsed.data.notesClient,
         meetingType: parsed.data.meetingType,
-        status: "pending",
+        status: "confirmed", // auto-confirme la reservation cote portail
       },
     }),
     prisma.availabilitySlot.update({
@@ -67,9 +69,30 @@ export async function POST(req: Request) {
   await createWorkflowEvent({
     clientId: client.id,
     eventType: "appointment_booked",
-    eventLabel: `RDV réservé — ${slot.slotDate.toLocaleDateString("fr-CA")} ${slot.startTime}`,
+    eventLabel: `RDV réservé par ${client.fullName} — ${slot.slotDate.toLocaleDateString("fr-CA")} ${slot.startTime}`,
     triggeredBy: "client",
+    metadata: { appointmentId: appointment.id, slotId: slot.id },
   });
+
+  // Notification in-app pour les admins (envoyee a tous les admins)
+  const admins = await prisma.admin.findMany({ select: { id: true } });
+  if (admins.length > 0) {
+    await prisma.notification.createMany({
+      data: admins.map((a) => ({
+        recipientType: "admin" as const,
+        recipientId: a.id,
+        type: "appointment_booked",
+        title: "Nouveau rendez-vous",
+        message: `${client.fullName} a réservé un RDV le ${slot.slotDate.toLocaleDateString("fr-CA")} à ${slot.startTime}`,
+        actionUrl: `/admin/calendar`,
+      })),
+    });
+  }
+
+  // TODO: envoyer email de confirmation au client + notification email admin
+  // (sera branche au volet emails)
+
+  revalidateAdminViews();
 
   return NextResponse.json({ success: true, appointment });
 }
