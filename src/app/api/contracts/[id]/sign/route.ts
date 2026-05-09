@@ -39,6 +39,23 @@ export async function POST(
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
+  // Bloquer signature si statut non signable
+  if (contract.status === "expired") {
+    return NextResponse.json({ error: "Ce contrat est expiré et ne peut plus être signé" }, { status: 409 });
+  }
+  if (contract.status === "cancelled") {
+    return NextResponse.json({ error: "Ce contrat a été annulé et ne peut plus être signé" }, { status: 409 });
+  }
+  if (contract.status === "signed" || (contract.adminSignatureData && contract.clientSignatureData)) {
+    return NextResponse.json({ error: "Ce contrat est déjà signé par les deux parties" }, { status: 409 });
+  }
+
+  // Auto-expiration si dépassement de la date d'expiration
+  if (contract.expiresAt && new Date(contract.expiresAt) < new Date()) {
+    await prisma.contract.update({ where: { id: contractId }, data: { status: "expired" } });
+    return NextResponse.json({ error: "Ce contrat est expiré et ne peut plus être signé" }, { status: 409 });
+  }
+
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "";
 
   // Mettre à jour selon le rôle
