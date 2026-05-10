@@ -74,23 +74,40 @@ type AccountantOption = { id: number; name: string };
 type TypeFilter = "all" | "charge" | "refund" | "chargeback" | "chargeback_fee" | "adjustment" | "topup";
 type ReconcileFilter = "all" | "reconciled" | "unreconciled" | "exported";
 
-const TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  charge: { label: "Encaissement", color: "bg-emerald-100 text-emerald-700" },
-  refund: { label: "Remboursement", color: "bg-amber-100 text-amber-700" },
-  chargeback: { label: "Rétrofacturation", color: "bg-red-100 text-red-700" },
-  chargeback_fee: { label: "Frais rétrofact.", color: "bg-rose-100 text-rose-700" },
-  adjustment: { label: "Ajustement", color: "bg-purple-100 text-purple-700" },
-  topup: { label: "Fonds ajoutés", color: "bg-blue-100 text-blue-700" },
+// Type = nature de la ligne (lecture seule). Determine automatiquement par Stripe ou a la creation.
+// Modifier le type fausserait les rapports comptables → pas editable depuis la UI.
+const TYPE_META: Record<string, { label: string; color: string; description: string }> = {
+  charge: {
+    label: "Encaissement",
+    color: "bg-emerald-100 text-emerald-700",
+    description: "Argent reçu d'un client (paiement entrant)",
+  },
+  refund: {
+    label: "Remboursement",
+    color: "bg-amber-100 text-amber-700",
+    description: "Argent retourné au client (sortie d'argent)",
+  },
+  chargeback: {
+    label: "Rétrofacturation",
+    color: "bg-red-100 text-red-700",
+    description: "Forçage par la banque/carte du client (chargeback)",
+  },
+  chargeback_fee: {
+    label: "Frais rétrofact.",
+    color: "bg-rose-100 text-rose-700",
+    description: "Frais facturés par Stripe lors d'une rétrofacturation",
+  },
+  adjustment: {
+    label: "Ajustement",
+    color: "bg-purple-100 text-purple-700",
+    description: "Correction manuelle dans Stripe ou comptable",
+  },
+  topup: {
+    label: "Fonds ajoutés",
+    color: "bg-blue-100 text-blue-700",
+    description: "Approvisionnement manuel du solde Stripe",
+  },
 };
-
-const TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: "charge", label: "Encaissement" },
-  { value: "refund", label: "Remboursement" },
-  { value: "chargeback", label: "Rétrofacturation" },
-  { value: "chargeback_fee", label: "Frais rétrofact." },
-  { value: "adjustment", label: "Ajustement" },
-  { value: "topup", label: "Fonds ajoutés" },
-];
 
 const METHOD_OPTIONS = ["stripe", "interac", "cheque", "virement", "comptant", "manual", "autre"];
 
@@ -444,18 +461,25 @@ export function PaymentsView({
     },
     {
       key: "type",
-      header: "Type",
-      accessor: (p) => (
-        <EditableSelectCell
-          value={p.type}
-          options={TYPE_OPTIONS}
-          onChange={(v) => patchPayment(p.id, { type: v })}
-          display={(v) => {
-            const meta = TYPE_LABELS[v] ?? { label: v, color: "bg-gray-100 text-gray-700" };
-            return <span className={cn("inline-flex px-2 py-0.5 rounded text-[10px] font-medium", meta.color)}>{meta.label}</span>;
-          }}
-        />
+      header: (
+        <span
+          className="inline-flex items-center gap-1"
+          title="Nature de la ligne (déterminée automatiquement par Stripe ou à la création). Lecture seule pour préserver l'intégrité des rapports comptables."
+        >
+          Type
+        </span>
       ),
+      accessor: (p) => {
+        const meta = TYPE_META[p.type] ?? { label: p.type, color: "bg-gray-100 text-gray-700", description: p.type };
+        return (
+          <span
+            className={cn("inline-flex px-2 py-0.5 rounded text-[10px] font-medium", meta.color)}
+            title={meta.description}
+          >
+            {meta.label}
+          </span>
+        );
+      },
     },
     {
       key: "client",
