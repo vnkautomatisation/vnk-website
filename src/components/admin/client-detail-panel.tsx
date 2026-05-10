@@ -491,8 +491,8 @@ export function ClientDetailPanel({
               </div>
             </SheetHeader>
 
-            {/* Tabs scrollable */}
-            <div className="flex-1 overflow-y-auto p-6">
+            {/* Tabs scrollable — scrollbar toujours visible */}
+            <div className="flex-1 overflow-y-scroll px-6 pt-0 pb-6 [scrollbar-gutter:stable]">
               <ClientTabs
                 client={client}
                 busy={busy}
@@ -1241,6 +1241,7 @@ function ClientTabs({
     <Tabs value={tab} onValueChange={setTab}>
       <TabsList className={cn(
         "h-auto gap-1 bg-muted p-1 w-full flex overflow-x-auto sm:grid sm:overflow-visible",
+        "sticky top-0 z-20 mt-0 mb-3 shadow-sm",
         tabsCount === 4 ? "sm:grid-cols-4" : tabsCount === 5 ? "sm:grid-cols-5" : "sm:grid-cols-6",
       )}>
         <TabsTrigger value="identite" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Identité</TabsTrigger>
