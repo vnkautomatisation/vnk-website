@@ -1239,18 +1239,20 @@ function ClientTabs({
 
   return (
     <Tabs value={tab} onValueChange={setTab}>
-      <TabsList className={cn(
-        "h-auto gap-1 bg-muted p-1 w-full flex overflow-x-auto sm:grid sm:overflow-visible",
-        "sticky top-0 z-20 mt-0 mb-3 shadow-sm",
-        tabsCount === 4 ? "sm:grid-cols-4" : tabsCount === 5 ? "sm:grid-cols-5" : "sm:grid-cols-6",
-      )}>
-        <TabsTrigger value="identite" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Identité</TabsTrigger>
-        <TabsTrigger value="finance" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Finance</TabsTrigger>
-        <TabsTrigger value="activite" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Activité</TabsTrigger>
-        <TabsTrigger value="documents" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Documents</TabsTrigger>
-        {hasLegalData && <TabsTrigger value="legal" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Légal</TabsTrigger>}
-        {hasTeamMembers && <TabsTrigger value="equipe" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Équipe</TabsTrigger>}
-      </TabsList>
+      {/* Bande sticky pleine largeur — couvre les gouttieres du parent px-6 */}
+      <div className="sticky top-0 z-20 -mx-6 px-6 pt-4 pb-2 bg-background border-b border-border/40">
+        <TabsList className={cn(
+          "h-auto gap-1 bg-muted p-1 w-full flex overflow-x-auto sm:grid sm:overflow-visible shadow-sm",
+          tabsCount === 4 ? "sm:grid-cols-4" : tabsCount === 5 ? "sm:grid-cols-5" : "sm:grid-cols-6",
+        )}>
+          <TabsTrigger value="identite" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Identité</TabsTrigger>
+          <TabsTrigger value="finance" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Finance</TabsTrigger>
+          <TabsTrigger value="activite" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Activité</TabsTrigger>
+          <TabsTrigger value="documents" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Documents</TabsTrigger>
+          {hasLegalData && <TabsTrigger value="legal" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Légal</TabsTrigger>}
+          {hasTeamMembers && <TabsTrigger value="equipe" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Équipe</TabsTrigger>}
+        </TabsList>
+      </div>
 
       {/* Identité — fusionne courriel + contact + adresse + business */}
       <TabsContent value="identite" className="space-y-3 mt-4">
@@ -1298,11 +1300,14 @@ function ClientTabs({
       </TabsContent>
 
       {/* Finance */}
-      <TabsContent value="finance" className="space-y-3 mt-4">
-        <div className="grid grid-cols-3 gap-2">
-          <FinanceBox label="Total dépensé" value={formatCurrency(totalSpent || totalInvoicesAmount)} accent="text-emerald-600" />
-          <FinanceBox label="Solde ouvert" value={formatCurrency(openBalance || unpaidAmount)} accent={openBalance > 0 || unpaidAmount > 0 ? "text-amber-600" : "text-muted-foreground"} />
-          <FinanceBox label="LTV" value={formatCurrency(totalSpent || totalInvoicesAmount)} accent="text-[#0F2D52]" />
+      <TabsContent value="finance" className="space-y-3 mt-0">
+        {/* KPIs sticky sous les onglets */}
+        <div className="sticky top-[3.6rem] z-10 -mx-6 px-6 pt-3 pb-3 bg-background border-b border-border/40 mb-3">
+          <div className="grid grid-cols-3 gap-2">
+            <FinanceBox label="Total dépensé" value={formatCurrency(totalSpent || totalInvoicesAmount)} accent="text-emerald-600" />
+            <FinanceBox label="Solde ouvert" value={formatCurrency(openBalance || unpaidAmount)} accent={openBalance > 0 || unpaidAmount > 0 ? "text-amber-600" : "text-muted-foreground"} />
+            <FinanceBox label="LTV" value={formatCurrency(totalSpent || totalInvoicesAmount)} accent="text-[#0F2D52]" />
+          </div>
         </div>
 
         {client.mandates.length > 0 && (

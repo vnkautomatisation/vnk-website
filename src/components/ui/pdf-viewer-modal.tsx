@@ -90,7 +90,7 @@ export function PdfViewerModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-6 pointer-events-auto"
+      className="fixed inset-0 z-[10005] flex items-center justify-center p-2 sm:p-6 pointer-events-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="pdf-viewer-title"

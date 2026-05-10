@@ -61,7 +61,7 @@ export function SignatureDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-xl p-0 overflow-hidden z-[10015]">
         <DialogTitle className="sr-only">Signer le contrat {contractNumber}</DialogTitle>
         <DialogDescription className="sr-only">
           Apposez votre signature pour le contrat {contractTitle}
