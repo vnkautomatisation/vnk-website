@@ -24,6 +24,7 @@ import {
   generateDisputesPdf,
   generateAuditPdf,
   generatePaymentsPdf,
+  generateFicheClientPdf,
 } from "@/lib/services/pdf-export";
 
 type AttachmentJson = {
@@ -106,7 +107,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     `Dernière connexion : ${client.lastLogin?.toISOString().slice(0, 10) ?? "—"}`,
     ``,
     `─── CONTENU DU DOSSIER ─────────────────────────────`,
-    `01-identite-fiche-client.json     Profil complet (toutes données du client)`,
+    `01-fiche-client.pdf               Synthèse exécutive du dossier (à lire en premier)`,
+    `01-identite-fiche-client.json     Snapshot brut de toutes les données du client`,
     `02-devis/                         ${client.quotes.length} devis (PDF)`,
     `03-contrats/                      ${client.contracts.length} contrats (PDF)`,
     `04-factures/                      ${client.invoices.length} factures (PDF)`,
@@ -152,6 +154,55 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     internalNotes: client.internalNotes,
   };
   zip.file(`${folderBase}/01-identite-fiche-client.json`, JSON.stringify(identitySnapshot, null, 2));
+
+  // PDF synthese executive en tete du dossier
+  try {
+    const totalSpentTtc = Number(client.totalSpentTtc ?? 0)
+      || client.invoices.filter((i) => i.status === "paid").reduce((s, i) => s + Number(i.amountTtc), 0);
+    const openBalanceTtc = Number(client.openBalanceTtc ?? 0)
+      || client.invoices.filter((i) => i.status === "unpaid" || i.status === "overdue").reduce((s, i) => s + Number(i.amountTtc), 0);
+
+    const recentInvoices = [...client.invoices]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, 5)
+      .map((i) => ({
+        invoiceNumber: i.invoiceNumber, title: i.title,
+        amountTtc: Number(i.amountTtc), status: i.status, createdAt: i.createdAt,
+      }));
+    const recentContracts = [...client.contracts]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, 5)
+      .map((c) => ({
+        contractNumber: c.contractNumber, title: c.title,
+        status: c.status, signedAt: c.signedAt,
+      }));
+    const activeDisputes = client.disputes
+      .filter((d) => d.status !== "resolved" && d.status !== "closed")
+      .map((d) => ({
+        title: d.title, status: d.status, openedAt: d.openedAt,
+        amountDisputed: d.amountDisputed != null ? Number(d.amountDisputed) : null,
+      }));
+
+    const pdfBuf = await generateFicheClientPdf({
+      client: {
+        fullName: client.fullName, email: client.email, phone: client.phone,
+        companyName: client.companyName, address: client.address, city: client.city,
+        province: client.province, postalCode: client.postalCode,
+        sector: client.sector, technologies: client.technologies,
+        createdAt: client.createdAt, lastLogin: client.lastLogin,
+        internalNotes: client.internalNotes,
+      },
+      totals: {
+        mandates: client.mandates.length, quotes: client.quotes.length,
+        contracts: client.contracts.length, invoices: client.invoices.length,
+        documents: client.documents.length, messages: client.messages.length,
+        appointments: client.appointments.length, disputes: client.disputes.length,
+        totalSpentTtc, openBalanceTtc,
+      },
+      recentInvoices, recentContracts, activeDisputes,
+    });
+    zip.file(`${folderBase}/01-fiche-client.pdf`, new Uint8Array(pdfBuf));
+  } catch (e) { console.error("PDF fiche-client err:", e); }
 
   // ─── 02 Devis ──────────────────────────────────────────
   for (const q of client.quotes) {
@@ -384,8 +435,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   zip.file(`${folderBase}/09-litiges.csv`, csvFromRows(disputesRows));
 
   try {
+    // Map invoice id -> number pour reference croisee
+    const invoiceMap = new Map(client.invoices.map((i) => [i.id, i.invoiceNumber]));
+
     const pdfBuf = await generateDisputesPdf({
-      client: { fullName: client.fullName, email: client.email },
+      client: {
+        fullName: client.fullName, email: client.email, phone: client.phone,
+        companyName: client.companyName, address: client.address, city: client.city,
+        province: client.province, postalCode: client.postalCode,
+      },
       disputes: client.disputes.map((d) => ({
         openedAt: d.openedAt,
         type: d.type,
@@ -407,6 +465,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         lawFirmInvolved: d.lawFirmInvolved,
         caseNumber: d.caseNumber,
         tribunal: d.tribunal,
+        invoiceId: d.invoiceId,
+        invoiceNumber: d.invoiceId ? invoiceMap.get(d.invoiceId) ?? null : null,
       })),
     });
     zip.file(`${folderBase}/09-litiges.pdf`, new Uint8Array(pdfBuf));
