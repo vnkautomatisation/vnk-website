@@ -15,7 +15,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { DataTable, type Column } from "@/components/data-table/data-table";
-import { StatusBadge } from "@/components/admin/status-badge";
 import { PaymentDetailDialog } from "@/app/(admin)/admin/transactions/payment-detail-dialog";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -75,6 +74,34 @@ type Kpis = {
 type AccountantOption = { id: number; name: string };
 type TypeFilter = "all" | "charge" | "refund" | "chargeback" | "chargeback_fee" | "adjustment" | "topup";
 type ReconcileFilter = "all" | "reconciled" | "unreconciled" | "exported";
+
+// Types ENTRANTS (argent arrive chez nous) — eligibles a reconciliation banque
+const INBOUND_TYPES = new Set(["charge", "topup"]);
+
+// Adapte le libelle du statut selon le type. Un "Frais retrofact." complete = mauvaise nouvelle (perte).
+function getStatusDisplay(type: string, status: string): { label: string; cls: string } {
+  const isSuccess = ["succeeded", "complete", "completed", "paid"].includes(status);
+  if (isSuccess) {
+    switch (type) {
+      case "refund":         return { label: "Remboursé émis", cls: "bg-amber-100 text-amber-800 border-amber-200" };
+      case "chargeback":     return { label: "Chargeback subi", cls: "bg-red-100 text-red-800 border-red-200" };
+      case "chargeback_fee": return { label: "Frais prélevé", cls: "bg-red-100 text-red-800 border-red-200" };
+      case "adjustment":     return { label: "Ajustement", cls: "bg-purple-100 text-purple-800 border-purple-200" };
+      case "topup":          return { label: "Fonds ajoutés", cls: "bg-blue-100 text-blue-800 border-blue-200" };
+      case "charge":
+      default:               return { label: "Complété", cls: "bg-emerald-100 text-emerald-800 border-emerald-200" };
+    }
+  }
+  // Status non-success : libelle generique
+  const fallback: Record<string, { label: string; cls: string }> = {
+    pending: { label: "En attente", cls: "bg-amber-100 text-amber-800 border-amber-200" },
+    failed: { label: "Échoué", cls: "bg-red-100 text-red-800 border-red-200" },
+    canceled: { label: "Annulé", cls: "bg-gray-100 text-gray-700 border-gray-200" },
+    processing: { label: "En traitement", cls: "bg-blue-100 text-blue-800 border-blue-200" },
+    refunded: { label: "Remboursé", cls: "bg-gray-100 text-gray-700 border-gray-200" },
+  };
+  return fallback[status] ?? { label: status, cls: "bg-gray-100 text-gray-700 border-gray-200" };
+}
 
 // Type = nature de la ligne (lecture seule). Determine automatiquement par Stripe ou a la creation.
 // Modifier le type fausserait les rapports comptables → pas editable depuis la UI.
@@ -561,47 +588,57 @@ export function PaymentsView({
     {
       key: "status",
       header: "Statut",
-      accessor: (p) => (
-        <div className="space-y-0.5">
-          <StatusBadge status={p.status} />
-          {p.refundedStatus === "full" && (
-            <span
-              title={`Cette vente a été entièrement remboursée (${p.refundedAmount.toFixed(2)} ${p.currency})`}
-              className="inline-flex items-center gap-1 text-[9px] text-red-700 bg-red-50 px-1.5 py-0.5 rounded"
-            >
-              <RotateCcw className="h-2.5 w-2.5" />
-              Remboursé total
+      accessor: (p) => {
+        const display = getStatusDisplay(p.type, p.status);
+        const isInbound = INBOUND_TYPES.has(p.type);
+        return (
+          <div className="space-y-0.5">
+            <span className={cn(
+              "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border",
+              display.cls,
+            )}>
+              {display.label}
             </span>
-          )}
-          {p.refundedStatus === "partial" && (
-            <span
-              title={`Cette vente a été partiellement remboursée (${p.refundedAmount.toFixed(2)} / ${Math.abs(p.amount).toFixed(2)} ${p.currency})`}
-              className="inline-flex items-center gap-1 text-[9px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded"
-            >
-              <RotateCcw className="h-2.5 w-2.5" />
-              Remboursé partiel
-            </span>
-          )}
-          {p.reconciledAt && (
-            <span
-              title={`Confirmé reçu en banque le ${formatDate(new Date(p.reconciledAt))} — vérification que le paiement a bien été crédité (utile pour audit comptable)`}
-              className="inline-flex items-center gap-1 text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded"
-            >
-              <CheckCircle2 className="h-2.5 w-2.5" />
-              Confirmé reçu
-            </span>
-          )}
-          {p.exportedAt && (
-            <span
-              title={`Déjà exporté vers la comptabilité (${p.exportFormat ?? "format inconnu"}) le ${formatDate(new Date(p.exportedAt))}`}
-              className="inline-flex items-center gap-1 text-[9px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded"
-            >
-              <FolderInput className="h-2.5 w-2.5" />
-              Exporté
-            </span>
-          )}
-        </div>
-      ),
+            {p.refundedStatus === "full" && (
+              <span
+                title={`Cette vente a été entièrement remboursée (${p.refundedAmount.toFixed(2)} ${p.currency})`}
+                className="inline-flex items-center gap-1 text-[9px] text-red-700 bg-red-50 px-1.5 py-0.5 rounded"
+              >
+                <RotateCcw className="h-2.5 w-2.5" />
+                Remboursé total
+              </span>
+            )}
+            {p.refundedStatus === "partial" && (
+              <span
+                title={`Cette vente a été partiellement remboursée (${p.refundedAmount.toFixed(2)} / ${Math.abs(p.amount).toFixed(2)} ${p.currency})`}
+                className="inline-flex items-center gap-1 text-[9px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded"
+              >
+                <RotateCcw className="h-2.5 w-2.5" />
+                Remboursé partiel
+              </span>
+            )}
+            {/* "Confirme recu" uniquement pour les types entrants (vente / fonds ajoutes) */}
+            {isInbound && p.reconciledAt && (
+              <span
+                title={`Confirmé reçu en banque le ${formatDate(new Date(p.reconciledAt))} — vérification que le paiement a bien été crédité (utile pour audit comptable)`}
+                className="inline-flex items-center gap-1 text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded"
+              >
+                <CheckCircle2 className="h-2.5 w-2.5" />
+                Confirmé reçu
+              </span>
+            )}
+            {p.exportedAt && (
+              <span
+                title={`Déjà exporté vers la comptabilité (${p.exportFormat ?? "format inconnu"}) le ${formatDate(new Date(p.exportedAt))}`}
+                className="inline-flex items-center gap-1 text-[9px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded"
+              >
+                <FolderInput className="h-2.5 w-2.5" />
+                Exporté
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "actions",

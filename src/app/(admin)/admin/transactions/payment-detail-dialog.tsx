@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   CreditCard,
@@ -185,8 +184,8 @@ export function PaymentDetailDialog({
   const [editCategory, setEditCategory] = useState("");
   const [editNotes, setEditNotes] = useState("");
 
-  // Édition du type (Popover)
-  const [typePopoverOpen, setTypePopoverOpen] = useState(false);
+  // Édition du type inline (Select visible)
+  const [editingType, setEditingType] = useState(false);
   const [pendingType, setPendingType] = useState<string>("");
   const [savingType, setSavingType] = useState(false);
 
@@ -259,7 +258,7 @@ export function PaymentDetailDialog({
         throw new Error(err.error || "Erreur");
       }
       toast.success("Type modifié — vérifiez l'impact sur vos rapports comptables");
-      setTypePopoverOpen(false);
+      setEditingType(false);
       await reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erreur");
@@ -333,6 +332,8 @@ export function PaymentDetailDialog({
   const hasFees = p?.processingFee != null;
   const hasCard = !!p?.cardBrand;
   const isReconciled = !!p?.reconciledAt;
+  // Types ENTRANTS : argent recu chez nous (eligibles pour confirmation banque + creation remboursement)
+  const isInbound = p?.type === "charge" || p?.type === "topup";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -347,33 +348,24 @@ export function PaymentDetailDialog({
           <DialogDescription className="text-white/70 text-xs inline-flex items-center flex-wrap gap-1.5">
             {p && (
               <>
-                <Popover
-                  open={typePopoverOpen}
-                  onOpenChange={(o) => {
-                    setTypePopoverOpen(o);
-                    if (o) setPendingType(p.type ?? "charge");
-                  }}
-                >
-                  <PopoverTrigger asChild>
+                {!editingType ? (
+                  <>
+                    <span>{p.type ? TYPE_LABELS[p.type] ?? p.type : "Paiement"}</span>
                     <button
-                      className="underline decoration-dotted underline-offset-2 hover:text-white inline-flex items-center gap-1 cursor-pointer"
-                      title="Cliquer pour modifier le type (rare — utiliser uniquement pour corriger une catégorisation erronée)"
+                      onClick={() => { setPendingType(p.type ?? "charge"); setEditingType(true); }}
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white/80 text-[10px]"
+                      title="Modifier le type (rare — pour corriger une catégorisation erronée)"
                     >
-                      {p.type ? TYPE_LABELS[p.type] ?? p.type : "Paiement"}
-                      <Edit3 className="h-2.5 w-2.5 opacity-70" />
+                      <Edit3 className="h-2.5 w-2.5" />
+                      Modifier
                     </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[280px] p-3 space-y-3" align="start">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                        Modifier le type de transaction
-                      </Label>
-                      <p className="text-[10px] text-amber-700 bg-amber-50 px-2 py-1 rounded">
-                        Attention : modifier le type modifie les rapports comptables (TPS, exports QB/Sage, KPI).
-                      </p>
-                    </div>
+                    {p.paymentMethod && <span>· {METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod}</span>}
+                    <span>· {isStripe ? "Stripe" : "Manuel"}</span>
+                  </>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 w-full mt-1 bg-white/10 rounded p-1.5">
                     <Select value={pendingType} onValueChange={setPendingType}>
-                      <SelectTrigger className="h-8 text-xs">
+                      <SelectTrigger className="h-7 text-xs w-[160px] bg-white text-foreground border-0">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -382,23 +374,25 @@ export function PaymentDetailDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                    <div className="flex justify-end gap-2">
-                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setTypePopoverOpen(false)}>
-                        Annuler
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="h-7 text-xs"
-                        disabled={savingType || pendingType === p.type}
-                        onClick={saveType}
-                      >
-                        {savingType ? "Enregistrement…" : "Confirmer"}
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-                {p.paymentMethod && <span>· {METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod}</span>}
-                <span>· {isStripe ? "Stripe" : "Manuel"}</span>
+                    <Button
+                      size="sm"
+                      className="h-7 text-[10px] px-2 bg-white text-[#0F2D52] hover:bg-white/90"
+                      disabled={savingType || pendingType === p.type}
+                      onClick={saveType}
+                    >
+                      {savingType ? "…" : "Enregistrer"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-[10px] px-2 text-white/80 hover:bg-white/20"
+                      onClick={() => setEditingType(false)}
+                    >
+                      Annuler
+                    </Button>
+                    <span className="text-[10px] text-amber-200">⚠ Impact comptable</span>
+                  </span>
+                )}
               </>
             )}
           </DialogDescription>
@@ -584,29 +578,38 @@ export function PaymentDetailDialog({
                   )
                 }
               >
-                <div className="px-3 py-2 flex items-center justify-between gap-2">
-                  <span className="text-xs text-muted-foreground">Confirmation banque</span>
-                  <button
-                    onClick={toggleReconciled}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium transition-colors",
-                      isReconciled
-                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                        : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                {/* Confirmation banque : pertinent uniquement pour types ENTRANTS (vente / fonds ajoutes) */}
+                {isInbound ? (
+                  <>
+                    <div className="px-3 py-2 flex items-center justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Confirmation banque</span>
+                      <button
+                        onClick={toggleReconciled}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium transition-colors",
+                          isReconciled
+                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                            : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                        )}
+                        title={isReconciled
+                          ? "Cliquer pour retirer la confirmation"
+                          : "Cliquer pour marquer ce paiement comme confirmé reçu en banque"}
+                      >
+                        {isReconciled ? (
+                          <><CheckCircle2 className="h-3 w-3" /> Confirmé reçu</>
+                        ) : (
+                          <><Clock className="h-3 w-3" /> À vérifier</>
+                        )}
+                      </button>
+                    </div>
+                    {p.reconciledAt && p.reconciledBy && (
+                      <Row label="Confirmé par" value={`${p.reconciledBy} · ${formatDate(new Date(p.reconciledAt))}`} />
                     )}
-                    title={isReconciled
-                      ? "Cliquer pour retirer la confirmation"
-                      : "Cliquer pour marquer ce paiement comme confirmé reçu en banque"}
-                  >
-                    {isReconciled ? (
-                      <><CheckCircle2 className="h-3 w-3" /> Confirmé reçu</>
-                    ) : (
-                      <><Clock className="h-3 w-3" /> À vérifier</>
-                    )}
-                  </button>
-                </div>
-                {p.reconciledAt && p.reconciledBy && (
-                  <Row label="Confirmé par" value={`${p.reconciledBy} · ${formatDate(new Date(p.reconciledAt))}`} />
+                  </>
+                ) : (
+                  <div className="px-3 py-2 text-[10px] text-muted-foreground italic">
+                    Pas de réconciliation banque pour ce type ({TYPE_LABELS[p.type ?? "charge"] ?? p.type}) — il s&apos;agit d&apos;une sortie d&apos;argent ou d&apos;un frais, pas d&apos;un encaissement à vérifier.
+                  </div>
                 )}
                 {editingAccounting ? (
                   <>
@@ -783,7 +786,7 @@ export function PaymentDetailDialog({
                     Voir la facture
                   </Button>
                 )}
-                {canRefundViaStripe && data.refunds.length === 0 && p.invoice && (
+                {isInbound && canRefundViaStripe && data.refunds.length === 0 && p.invoice && (
                   <Button
                     variant="outline"
                     size="sm"
