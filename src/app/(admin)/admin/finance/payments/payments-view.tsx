@@ -75,7 +75,7 @@ type TypeFilter = "all" | "charge" | "refund" | "chargeback" | "chargeback_fee" 
 type ReconcileFilter = "all" | "reconciled" | "unreconciled" | "exported";
 
 const TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  charge: { label: "Crédit", color: "bg-emerald-100 text-emerald-700" },
+  charge: { label: "Encaissement", color: "bg-emerald-100 text-emerald-700" },
   refund: { label: "Remboursement", color: "bg-amber-100 text-amber-700" },
   chargeback: { label: "Rétrofacturation", color: "bg-red-100 text-red-700" },
   chargeback_fee: { label: "Frais rétrofact.", color: "bg-rose-100 text-rose-700" },
@@ -84,7 +84,7 @@ const TYPE_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 const TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: "charge", label: "Crédit" },
+  { value: "charge", label: "Encaissement" },
   { value: "refund", label: "Remboursement" },
   { value: "chargeback", label: "Rétrofacturation" },
   { value: "chargeback_fee", label: "Frais rétrofact." },
@@ -106,7 +106,7 @@ const METHOD_LABELS: Record<string, string> = {
 
 const TYPE_TABS: { key: TypeFilter; label: string }[] = [
   { key: "all", label: "Tous" },
-  { key: "charge", label: "Crédits" },
+  { key: "charge", label: "Encaissements" },
   { key: "refund", label: "Remboursements" },
   { key: "chargeback", label: "Rétrofacturations" },
   { key: "chargeback_fee", label: "Frais rétrofact." },

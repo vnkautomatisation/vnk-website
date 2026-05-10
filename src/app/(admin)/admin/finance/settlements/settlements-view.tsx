@@ -38,7 +38,7 @@ type Kpis = {
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  charge: "Crédit",
+  charge: "Encaissement",
   refund: "Remboursement",
   chargeback: "Rétrofacturation",
   chargeback_fee: "Frais rétrofact.",
@@ -188,7 +188,7 @@ export function SettlementsView({ rows, kpis, dateRange }: { rows: Row[]; kpis: 
         </div>
         <div className="rounded-lg border bg-card p-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="inline-flex items-center gap-1"><TrendingUp className="h-3 w-3 text-emerald-500" /> Crédits</span>
+            <span className="inline-flex items-center gap-1"><TrendingUp className="h-3 w-3 text-emerald-500" /> Encaissements</span>
             <span className="font-semibold tabular-nums">{kpis.chargeCount}</span>
           </div>
           <div className="flex items-center justify-between text-xs mt-1">
