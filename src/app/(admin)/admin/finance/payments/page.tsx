@@ -47,9 +47,11 @@ export default async function PaymentsPage() {
   // Listes pour filtres
   const methodSet = new Set<string>();
   const statusSet = new Set<string>();
+  const countrySet = new Set<string>();
   payments.forEach((p) => {
     if (p.paymentMethod) methodSet.add(p.paymentMethod);
     if (p.status) statusSet.add(p.status);
+    if (p.client?.country) countrySet.add(p.client.country);
   });
 
   const data = payments.map((p) => ({
@@ -99,6 +101,7 @@ export default async function PaymentsPage() {
       accountants={accountants.map((a) => ({ id: a.id, name: a.fullName ?? a.email }))}
       methodList={Array.from(methodSet).sort()}
       statusList={Array.from(statusSet).sort()}
+      countryList={Array.from(countrySet).sort()}
       kpis={{
         total: data.length,
         totalNet,

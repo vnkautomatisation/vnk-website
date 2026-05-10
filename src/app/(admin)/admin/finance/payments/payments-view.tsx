@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   CreditCard, Search, Filter, TrendingUp, RotateCcw, AlertTriangle, Coins, ArrowUpRight, ExternalLink,
-  Download, CheckSquare, Square, X, MoreHorizontal, CheckCircle2, Clock, Receipt as ReceiptIcon, FileText, Eye, UserCheck, FolderInput,
+  Download, CheckSquare, Square, X, MoreHorizontal, CheckCircle2, Clock, Receipt as ReceiptIcon, FileText, Eye, FolderInput,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { PaymentDetailDialog } from "@/app/(admin)/admin/transactions/payment-detail-dialog";
@@ -82,6 +83,27 @@ const TYPE_LABELS: Record<string, { label: string; color: string }> = {
   topup: { label: "Fonds ajoutés", color: "bg-blue-100 text-blue-700" },
 };
 
+const TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: "charge", label: "Crédit" },
+  { value: "refund", label: "Remboursement" },
+  { value: "chargeback", label: "Rétrofacturation" },
+  { value: "chargeback_fee", label: "Frais rétrofact." },
+  { value: "adjustment", label: "Ajustement" },
+  { value: "topup", label: "Fonds ajoutés" },
+];
+
+const METHOD_OPTIONS = ["stripe", "interac", "cheque", "virement", "comptant", "manual", "autre"];
+
+const METHOD_LABELS: Record<string, string> = {
+  stripe: "Carte (Stripe)",
+  interac: "Interac",
+  cheque: "Chèque",
+  virement: "Virement bancaire",
+  comptant: "Comptant",
+  manual: "Manuel",
+  autre: "Autre",
+};
+
 const TYPE_TABS: { key: TypeFilter; label: string }[] = [
   { key: "all", label: "Tous" },
   { key: "charge", label: "Crédits" },
@@ -97,22 +119,83 @@ const CARD_BRAND_LABELS: Record<string, string> = {
   discover: "Discover", diners: "Diners", jcb: "JCB", unionpay: "UnionPay",
 };
 
-// SVG circle flag minimaliste — couleur emblématique par pays. Évite les emojis dans la UI.
-function CountryFlag({ code }: { code: string | null }) {
-  const country = (code ?? "CA").toUpperCase();
-  // Couleur dominante du drapeau par code ISO
+const COUNTRY_NAMES: Record<string, string> = {
+  CA: "Canada", US: "États-Unis", FR: "France", DE: "Allemagne", GB: "Royaume-Uni",
+  IT: "Italie", ES: "Espagne", BE: "Belgique", CH: "Suisse", LU: "Luxembourg",
+  CI: "Côte d'Ivoire", SN: "Sénégal", CM: "Cameroun", MA: "Maroc", TN: "Tunisie",
+  BJ: "Bénin", TG: "Togo", BF: "Burkina Faso",
+};
+
+// SVG circle flag minimaliste, baseline-aligned avec le texte
+function CountryFlag({ code, size = 10 }: { code: string | null; size?: number }) {
+  if (!code) return null;
+  const country = code.toUpperCase();
+  // Couleur dominante adoucie (moins saturée que le drapeau brut)
   const COLORS: Record<string, string> = {
-    CA: "#FF0000", US: "#3C3B6E", FR: "#0055A4", GB: "#012169", DE: "#000000",
-    IT: "#008C45", ES: "#AA151B", BE: "#000000", CH: "#FF0000", LU: "#00A1DE",
-    CI: "#FF8200", SN: "#00853F", CM: "#007A5E", MA: "#C1272D", TN: "#E70013",
-    BJ: "#008751", TG: "#006A4E", BF: "#EF2B2D",
+    CA: "#DC2626", US: "#1E40AF", FR: "#1E40AF", GB: "#1E40AF", DE: "#374151",
+    IT: "#16A34A", ES: "#DC2626", BE: "#374151", CH: "#DC2626", LU: "#3B82F6",
+    CI: "#F59E0B", SN: "#16A34A", CM: "#16A34A", MA: "#DC2626", TN: "#DC2626",
+    BJ: "#16A34A", TG: "#16A34A", BF: "#DC2626",
   };
-  const fill = COLORS[country] ?? "#64748B";
+  const fill = COLORS[country] ?? "#94A3B8";
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" className="inline-block shrink-0" aria-label={country}>
-      <circle cx="7" cy="7" r="6.5" fill={fill} stroke="#fff" strokeWidth="0.5" />
-      <text x="7" y="9.5" textAnchor="middle" fontSize="5" fontWeight="700" fill="#fff" fontFamily="sans-serif">{country}</text>
-    </svg>
+    <span
+      title={COUNTRY_NAMES[country] ?? country}
+      className="inline-block rounded-full align-middle shrink-0"
+      style={{ width: size, height: size, backgroundColor: fill }}
+    />
+  );
+}
+
+// Cellule éditable inline (clic → select)
+function EditableSelectCell({
+  value,
+  options,
+  onChange,
+  display,
+}: {
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => Promise<void> | void;
+  display: (v: string) => React.ReactNode;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  if (!editing) {
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+        className="text-left hover:ring-1 hover:ring-[#0F2D52]/40 rounded px-1 py-0.5 -mx-1 -my-0.5"
+        title="Cliquer pour modifier"
+      >
+        {display(value)}
+      </button>
+    );
+  }
+
+  return (
+    <div onClick={(e) => e.stopPropagation()}>
+      <Select
+        value={value}
+        onValueChange={async (v) => {
+          if (v === value) { setEditing(false); return; }
+          setBusy(true);
+          try { await onChange(v); } finally { setBusy(false); setEditing(false); }
+        }}
+        open
+        onOpenChange={(o) => !o && setEditing(false)}
+      >
+        <SelectTrigger className="h-7 w-[140px] text-xs" disabled={busy}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
@@ -121,12 +204,14 @@ export function PaymentsView({
   accountants,
   methodList,
   statusList,
+  countryList,
   kpis,
 }: {
   payments: Payment[];
   accountants: AccountantOption[];
   methodList: string[];
   statusList: string[];
+  countryList: string[];
   kpis: Kpis;
 }) {
   const router = useRouter();
@@ -143,15 +228,17 @@ export function PaymentsView({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [methodFilter, setMethodFilter] = useState<string>("all");
   const [reconcileFilter, setReconcileFilter] = useState<ReconcileFilter>("all");
+  const [countryFilter, setCountryFilter] = useState<string>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const advancedActive = (dateFrom ? 1 : 0) + (dateTo ? 1 : 0)
     + (statusFilter !== "all" ? 1 : 0) + (methodFilter !== "all" ? 1 : 0)
-    + (reconcileFilter !== "all" ? 1 : 0);
+    + (reconcileFilter !== "all" ? 1 : 0) + (countryFilter !== "all" ? 1 : 0);
 
   const clearAdvanced = () => {
     setDateFrom(""); setDateTo("");
     setStatusFilter("all"); setMethodFilter("all"); setReconcileFilter("all");
+    setCountryFilter("all");
   };
 
   // Bulk selection
@@ -161,10 +248,31 @@ export function PaymentsView({
   const [assignAccountantId, setAssignAccountantId] = useState<string>("");
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [categoryValue, setCategoryValue] = useState("");
-  const [exportConfirmOpen, setExportConfirmOpen] = useState<null | string>(null);
 
   // Détail paiement (modal réutilisé)
   const [detailPaymentId, setDetailPaymentId] = useState<number | null>(null);
+
+  // Modal preview PDF (facture / reçu)
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; downloadName?: string } | null>(null);
+
+  // Patch d'un paiement (type / méthode)
+  const patchPayment = async (id: number, data: Record<string, unknown>) => {
+    try {
+      const res = await fetch(`/api/payments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Erreur");
+      }
+      toast.success("Paiement modifié");
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur");
+    }
+  };
 
   // Sticky scroll
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -189,6 +297,7 @@ export function PaymentsView({
     if (currencyFilter !== "all") result = result.filter((p) => p.currency === currencyFilter);
     if (statusFilter !== "all") result = result.filter((p) => p.status === statusFilter);
     if (methodFilter !== "all") result = result.filter((p) => p.paymentMethod === methodFilter);
+    if (countryFilter !== "all") result = result.filter((p) => (p.country ?? "CA") === countryFilter);
     if (reconcileFilter === "reconciled") result = result.filter((p) => !!p.reconciledAt);
     else if (reconcileFilter === "unreconciled") result = result.filter((p) => !p.reconciledAt);
     else if (reconcileFilter === "exported") result = result.filter((p) => !!p.exportedAt);
@@ -212,7 +321,7 @@ export function PaymentsView({
       );
     }
     return result;
-  }, [payments, typeFilter, currencyFilter, statusFilter, methodFilter, reconcileFilter, dateFrom, dateTo, searchQuery]);
+  }, [payments, typeFilter, currencyFilter, statusFilter, methodFilter, countryFilter, reconcileFilter, dateFrom, dateTo, searchQuery]);
 
   const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
   const someFilteredSelected = filtered.some((p) => selectedIds.has(p.id));
@@ -237,6 +346,7 @@ export function PaymentsView({
     [payments, selectedIds],
   );
   const selectedTotal = selectedItems.reduce((s, p) => s + Number(p.amountCad ?? p.amount), 0);
+  const hasMultipleAdmins = accountants.length > 1; // n'affiche dialog assignation que si pertinent
 
   // Bulk actions
   const callBulk = async (body: Record<string, unknown>, successMsg: string) => {
@@ -262,8 +372,8 @@ export function PaymentsView({
     }
   };
 
-  const bulkReconcile = () => callBulk({ action: "reconcile" }, "Réconciliés");
-  const bulkUnreconcile = () => callBulk({ action: "unreconcile" }, "Dé-réconciliés");
+  const bulkReconcile = () => callBulk({ action: "reconcile" }, "Confirmés reçus");
+  const bulkUnreconcile = () => callBulk({ action: "unreconcile" }, "Confirmations retirées");
   const bulkMarkExported = (fmt: string) => callBulk({ action: "mark_exported", exportFormat: fmt }, `Marqués exportés (${fmt})`);
   const bulkAssign = () => {
     if (!assignAccountantId) return;
@@ -278,7 +388,7 @@ export function PaymentsView({
     setCategoryValue("");
   };
 
-  // Export comptable (sélection ou tous filtrés)
+  // Export comptable
   const handleExport = async (format: "csv" | "quickbooks" | "sage" | "acomba") => {
     const ids = selectedIds.size > 0 ? Array.from(selectedIds) : filtered.map((p) => p.id);
     if (ids.length === 0) {
@@ -335,10 +445,17 @@ export function PaymentsView({
     {
       key: "type",
       header: "Type",
-      accessor: (p) => {
-        const meta = TYPE_LABELS[p.type] ?? { label: p.type, color: "bg-gray-100 text-gray-700" };
-        return <span className={cn("inline-flex px-2 py-0.5 rounded text-[10px] font-medium", meta.color)}>{meta.label}</span>;
-      },
+      accessor: (p) => (
+        <EditableSelectCell
+          value={p.type}
+          options={TYPE_OPTIONS}
+          onChange={(v) => patchPayment(p.id, { type: v })}
+          display={(v) => {
+            const meta = TYPE_LABELS[v] ?? { label: v, color: "bg-gray-100 text-gray-700" };
+            return <span className={cn("inline-flex px-2 py-0.5 rounded text-[10px] font-medium", meta.color)}>{meta.label}</span>;
+          }}
+        />
+      ),
     },
     {
       key: "client",
@@ -348,11 +465,11 @@ export function PaymentsView({
           onClick={(e) => { e.stopPropagation(); p.clientId && openEntity("client", p.clientId); }}
           className="text-left hover:underline"
         >
-          <div className="font-medium text-sm flex items-center gap-1.5">
+          <div className="font-medium text-sm inline-flex items-center gap-2">
             <CountryFlag code={p.country} />
-            {p.clientName}
+            <span>{p.clientName}</span>
           </div>
-          {p.companyName && <div className="text-[10px] text-muted-foreground">{p.companyName}</div>}
+          {p.companyName && <div className="text-[10px] text-muted-foreground pl-[18px]">{p.companyName}</div>}
         </button>
       ),
       sortable: true, sortBy: (p) => p.clientName,
@@ -361,15 +478,18 @@ export function PaymentsView({
       key: "card",
       header: "Carte / méthode",
       accessor: (p) => p.cardBrand ? (
-        <div>
+        <div className="inline-flex items-center gap-1.5">
           <span className="text-xs font-medium">{CARD_BRAND_LABELS[p.cardBrand] ?? p.cardBrand}</span>
-          {p.cardLast4 && <span className="text-xs text-muted-foreground"> ···{p.cardLast4}</span>}
-          {p.cardCountry && (
-            <span className="ml-1.5 inline-flex items-center"><CountryFlag code={p.cardCountry} /></span>
-          )}
+          {p.cardLast4 && <span className="text-xs text-muted-foreground">···{p.cardLast4}</span>}
+          {p.cardCountry && <CountryFlag code={p.cardCountry} />}
         </div>
       ) : (
-        <span className="text-xs text-muted-foreground">{p.paymentMethod ?? "—"}</span>
+        <EditableSelectCell
+          value={p.paymentMethod ?? "manual"}
+          options={METHOD_OPTIONS.map((m) => ({ value: m, label: METHOD_LABELS[m] ?? m }))}
+          onChange={(v) => patchPayment(p.id, { paymentMethod: v })}
+          display={(v) => <span className="text-xs">{METHOD_LABELS[v] ?? v}</span>}
+        />
       ),
       hiddenOnMobile: true,
     },
@@ -419,13 +539,19 @@ export function PaymentsView({
         <div className="space-y-0.5">
           <StatusBadge status={p.status} />
           {p.reconciledAt && (
-            <span className="inline-flex items-center gap-1 text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+            <span
+              title={`Confirmé reçu en banque le ${formatDate(new Date(p.reconciledAt))} — vérification que le paiement a bien été crédité (utile pour audit comptable)`}
+              className="inline-flex items-center gap-1 text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded"
+            >
               <CheckCircle2 className="h-2.5 w-2.5" />
-              Réconcilié
+              Confirmé reçu
             </span>
           )}
           {p.exportedAt && (
-            <span className="inline-flex items-center gap-1 text-[9px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+            <span
+              title={`Déjà exporté vers la comptabilité (${p.exportFormat ?? "format inconnu"}) le ${formatDate(new Date(p.exportedAt))}`}
+              className="inline-flex items-center gap-1 text-[9px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded"
+            >
               <FolderInput className="h-2.5 w-2.5" />
               Exporté
             </span>
@@ -441,39 +567,41 @@ export function PaymentsView({
           <button
             onClick={() => setDetailPaymentId(p.id)}
             className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-            title="Voir détail"
+            title="Voir détail du paiement"
           >
             <Eye className="h-3.5 w-3.5" />
           </button>
-          {p.invoiceId && (
-            <a
-              href={`/api/invoices/${p.invoiceId}/pdf`}
-              target="_blank"
-              rel="noreferrer"
+          {p.invoiceId && p.invoiceNumber && (
+            <button
+              onClick={() => setPdfPreview({
+                url: `/api/invoices/${p.invoiceId}/pdf`,
+                title: `Facture ${p.invoiceNumber}`,
+                downloadName: `facture-${p.invoiceNumber}`,
+              })}
               className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              title="Voir facture PDF"
+              title="Prévisualiser la facture (PDF)"
             >
               <ReceiptIcon className="h-3.5 w-3.5" />
-            </a>
+            </button>
           )}
+          <button
+            onClick={() => setPdfPreview({
+              url: `/api/payments/${p.id}/receipt`,
+              title: `Reçu paiement #${p.id}`,
+              downloadName: `recu-${p.id}`,
+            })}
+            className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            title="Prévisualiser le reçu VNK (PDF)"
+          >
+            <FileText className="h-3.5 w-3.5" />
+          </button>
           {p.stripeReceiptUrl && (
             <a
               href={p.stripeReceiptUrl}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              title="Reçu Stripe officiel"
-            >
-              <FileText className="h-3.5 w-3.5" />
-            </a>
-          )}
-          {p.stripePaymentIntentId && (
-            <a
-              href={`https://dashboard.stripe.com/payments/${p.stripePaymentIntentId}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              title="Ouvrir dans Stripe Dashboard"
+              title="Ouvrir reçu Stripe officiel"
             >
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
@@ -534,7 +662,7 @@ export function PaymentsView({
         </div>
       </div>
 
-      {/* KPIs par type + réconciliation */}
+      {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="rounded-lg border bg-card p-3">
           <div className="flex items-center justify-between mb-1">
@@ -568,19 +696,18 @@ export function PaymentsView({
           <p className="text-lg font-bold text-[#0F2D52] tabular-nums">{formatCurrency(kpis.totalNet)}</p>
           <p className="text-[10px] text-muted-foreground">après {formatCurrency(kpis.totalFees)} de frais</p>
         </div>
-        <div className="rounded-lg border bg-card p-3">
+        <div className="rounded-lg border bg-card p-3" title="Paiements vérifiés comme reçus en banque (utile pour audit comptable)">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Réconciliés</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Confirmés reçus</span>
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
           </div>
           <p className="text-lg font-bold text-[#0F2D52] tabular-nums">{kpis.reconciledCount}/{kpis.total}</p>
           <p className="text-[10px] text-muted-foreground">
-            {kpis.unreconciledCount > 0 ? `${kpis.unreconciledCount} à rapprocher` : "Tout est rapproché"}
+            {kpis.unreconciledCount > 0 ? `${kpis.unreconciledCount} à vérifier` : "Tout est vérifié"}
           </p>
         </div>
       </div>
 
-      {/* Sentinel */}
       <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
 
       {/* Sticky compact bar */}
@@ -600,7 +727,7 @@ export function PaymentsView({
             <span className="text-muted-foreground">Crédits : <span className="font-semibold text-emerald-600">{formatCurrency(kpis.byType.charge?.total ?? 0)}</span></span>
             <span className="text-muted-foreground">Remb. : <span className="font-semibold text-amber-600">{formatCurrency(Math.abs(kpis.byType.refund?.total ?? 0))}</span></span>
             <span className="text-muted-foreground">Net : <span className="font-semibold">{formatCurrency(kpis.totalNet)}</span></span>
-            <span className="text-muted-foreground">Réconcil. : <span className="font-semibold text-emerald-600">{kpis.reconciledCount}/{kpis.total}</span></span>
+            <span className="text-muted-foreground">Confirmés : <span className="font-semibold text-emerald-600">{kpis.reconciledCount}/{kpis.total}</span></span>
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2">
@@ -645,13 +772,30 @@ export function PaymentsView({
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[320px] p-3 space-y-3" align="end">
+            <PopoverContent className="w-[340px] p-3 space-y-3" align="end">
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Période de paiement</Label>
                 <div className="grid grid-cols-2 gap-2">
                   <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-8 text-xs" />
                   <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-8 text-xs" />
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Pays du client</Label>
+                <Select value={countryFilter} onValueChange={setCountryFilter}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tous" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les pays</SelectItem>
+                    {countryList.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        <span className="inline-flex items-center gap-2">
+                          <CountryFlag code={c} size={10} />
+                          {COUNTRY_NAMES[c] ?? c}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Statut</Label>
@@ -669,12 +813,17 @@ export function PaymentsView({
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tous" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Toutes méthodes</SelectItem>
-                    {methodList.map((m) => <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>)}
+                    {methodList.map((m) => <SelectItem key={m} value={m} className="capitalize">{METHOD_LABELS[m] ?? m}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Réconciliation</Label>
+                <Label
+                  className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold"
+                  title="Confirmation que le paiement est bien arrivé en banque (vérification comptable manuelle)"
+                >
+                  Confirmation banque
+                </Label>
                 <div className="grid grid-cols-2 gap-1">
                   {(["all", "reconciled", "unreconciled", "exported"] as ReconcileFilter[]).map((k) => (
                     <button
@@ -687,7 +836,7 @@ export function PaymentsView({
                           : "bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
                       )}
                     >
-                      {k === "all" ? "Tous" : k === "reconciled" ? "Réconciliés" : k === "unreconciled" ? "À rapprocher" : "Déjà exportés"}
+                      {k === "all" ? "Tous" : k === "reconciled" ? "Confirmés reçus" : k === "unreconciled" ? "À vérifier" : "Déjà exportés"}
                     </button>
                   ))}
                 </div>
@@ -705,7 +854,7 @@ export function PaymentsView({
         </div>
       </div>
 
-      {/* Bulk action bar — sticky sous la toolbar quand sélection active */}
+      {/* Bulk action bar */}
       {selectedIds.size > 0 && (
         <div className="sticky top-[112px] z-[19] bg-[#0F2D52] text-white rounded-lg p-2.5 flex items-center gap-2 flex-wrap shadow-lg">
           <CheckSquare className="h-4 w-4 shrink-0" />
@@ -714,16 +863,18 @@ export function PaymentsView({
             <span className="text-white/70 ml-2 font-normal">— {formatCurrency(selectedTotal)}</span>
           </span>
           <div className="flex-1" />
-          <Button size="sm" variant="secondary" className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 h-7 text-xs" onClick={bulkReconcile} disabled={busy}>
-            <CheckCircle2 className="h-3 w-3 mr-1" />Réconcilier
+          <Button size="sm" variant="secondary" className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 h-7 text-xs" onClick={bulkReconcile} disabled={busy} title="Marquer comme confirmé reçu en banque">
+            <CheckCircle2 className="h-3 w-3 mr-1" />Confirmer reçus
           </Button>
           <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs" onClick={bulkUnreconcile} disabled={busy}>
-            <Clock className="h-3 w-3 mr-1" />Dé-réconcilier
+            <Clock className="h-3 w-3 mr-1" />Retirer confirmation
           </Button>
-          <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs" onClick={() => setAssignDialogOpen(true)} disabled={busy}>
-            <UserCheck className="h-3 w-3 mr-1" />Comptable
-          </Button>
-          <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs" onClick={() => setCategoryDialogOpen(true)} disabled={busy}>
+          {hasMultipleAdmins && (
+            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs" onClick={() => setAssignDialogOpen(true)} disabled={busy} title="Assigner à un comptable interne pour suivi">
+              <FolderInput className="h-3 w-3 mr-1" />Comptable
+            </Button>
+          )}
+          <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs" onClick={() => setCategoryDialogOpen(true)} disabled={busy} title="Catégorie comptable pour export (services_recurrents, acompte...)">
             <FolderInput className="h-3 w-3 mr-1" />Catégorie
           </Button>
           <DropdownMenu>
@@ -756,25 +907,37 @@ export function PaymentsView({
         onRowClick={(p) => setDetailPaymentId(p.id)}
       />
 
-      {/* Modal détail paiement (réutilisé depuis /admin/transactions) */}
+      {/* Modal détail paiement */}
       <PaymentDetailDialog
         paymentId={detailPaymentId}
         open={detailPaymentId !== null}
         onOpenChange={(o) => { if (!o) setDetailPaymentId(null); }}
       />
 
-      {/* Dialog : assigner comptable */}
+      {/* Modal prévisualisation PDF (facture ou reçu) */}
+      {pdfPreview && (
+        <PdfViewerModal
+          open={!!pdfPreview}
+          onClose={() => setPdfPreview(null)}
+          pdfUrl={pdfPreview.url}
+          title={pdfPreview.title}
+          downloadName={pdfPreview.downloadName}
+        />
+      )}
+
+      {/* Dialog assigner comptable (seulement si plusieurs admins actifs) */}
       <ConfirmDialog
         open={assignDialogOpen}
         onOpenChange={setAssignDialogOpen}
         title="Assigner un comptable"
-        description={`Assigner les ${selectedIds.size} paiement(s) sélectionné(s) à un comptable interne (pour suivi).`}
+        description={`Assigner les ${selectedIds.size} paiement(s) sélectionné(s) à un membre de l'équipe pour suivi comptable.`}
         confirmLabel="Assigner"
+        variant="default"
         onConfirm={bulkAssign}
         disableConfirm={!assignAccountantId}
       >
         <div className="space-y-2 pt-2">
-          <Label>Comptable</Label>
+          <Label>Comptable interne</Label>
           <Select value={assignAccountantId} onValueChange={setAssignAccountantId}>
             <SelectTrigger><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
             <SelectContent>
@@ -786,13 +949,14 @@ export function PaymentsView({
         </div>
       </ConfirmDialog>
 
-      {/* Dialog : appliquer catégorie comptable */}
+      {/* Dialog catégorie comptable */}
       <ConfirmDialog
         open={categoryDialogOpen}
         onOpenChange={setCategoryDialogOpen}
         title="Catégorie comptable"
-        description={`Appliquer une catégorie sur ${selectedIds.size} paiement(s) (ex: services_recurrents, acompte, solde…)`}
+        description={`Appliquer une catégorie comptable sur ${selectedIds.size} paiement(s) — utile pour les exports vers QuickBooks/Sage/Acomba.`}
         confirmLabel="Appliquer"
+        variant="default"
         onConfirm={bulkSetCategory}
         disableConfirm={!categoryValue.trim()}
       >
@@ -814,18 +978,6 @@ export function PaymentsView({
           </datalist>
         </div>
       </ConfirmDialog>
-
-      {/* Dialog : confirm export massif (si > 100) */}
-      {exportConfirmOpen && (
-        <ConfirmDialog
-          open={!!exportConfirmOpen}
-          onOpenChange={(o) => { if (!o) setExportConfirmOpen(null); }}
-          title="Export massif"
-          description={`Exporter ${filtered.length} entrées au format ${exportConfirmOpen.toUpperCase()} ?`}
-          confirmLabel="Exporter"
-          onConfirm={() => { handleExport(exportConfirmOpen as "csv" | "quickbooks" | "sage" | "acomba"); setExportConfirmOpen(null); }}
-        />
-      )}
     </div>
   );
 }

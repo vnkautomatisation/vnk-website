@@ -40,6 +40,14 @@ const STATUS_MAP: Record<string, { label: string; variant: StatusVariant }> = {
   // Refund
   processed: { label: "Traité", variant: "success" },
   failed: { label: "Échoué", variant: "destructive" },
+  // Payment Stripe (status interne moteur Stripe)
+  succeeded: { label: "Complété", variant: "success" },
+  complete: { label: "Complété", variant: "success" },
+  requires_action: { label: "Action requise", variant: "warning" },
+  requires_payment_method: { label: "Méthode requise", variant: "warning" },
+  requires_confirmation: { label: "À confirmer", variant: "warning" },
+  processing: { label: "En traitement", variant: "info" },
+  canceled: { label: "Annulé", variant: "secondary" },
   // Request
   new: { label: "Nouvelle", variant: "info" },
   converted: { label: "Convertie", variant: "success" },
