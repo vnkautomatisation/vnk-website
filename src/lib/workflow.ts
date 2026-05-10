@@ -143,11 +143,12 @@ export async function acceptQuote(quoteId: number, triggeredBy = "client") {
   });
 
   // 5. Workflow events
+  const acceptedBy = triggeredBy === "client" ? (quote.client?.fullName ?? "client") : triggeredBy;
   await createWorkflowEvent({
     clientId: quote.clientId,
     quoteId: quote.id,
     eventType: "quote_accepted",
-    eventLabel: `Devis ${quote.quoteNumber} accepté`,
+    eventLabel: `Devis ${quote.quoteNumber} accepté par ${acceptedBy}`,
     triggeredBy,
   });
   await createWorkflowEvent({

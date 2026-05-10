@@ -31,7 +31,10 @@ export async function POST(
     return NextResponse.json({ error: "Signature manquante" }, { status: 400 });
   }
 
-  const contract = await prisma.contract.findUnique({ where: { id: contractId } });
+  const contract = await prisma.contract.findUnique({
+    where: { id: contractId },
+    include: { client: { select: { fullName: true, email: true } } },
+  });
   if (!contract) {
     return NextResponse.json({ error: "Contrat introuvable" }, { status: 404 });
   }
@@ -75,11 +78,15 @@ export async function POST(
           },
   });
 
+  const signerName = session.user.role === "admin"
+    ? (session.user.email ?? "admin")
+    : (contract.client?.fullName ?? "client");
+
   await createWorkflowEvent({
     clientId: contract.clientId,
     contractId: contract.id,
     eventType: session.user.role === "admin" ? "contract_signed_admin" : "contract_signed_client",
-    eventLabel: `Contrat ${contract.contractNumber} signé par ${session.user.role === "admin" ? "admin" : "client"}`,
+    eventLabel: `Contrat ${contract.contractNumber} signé par ${signerName}`,
     triggeredBy: session.user.role,
   });
 
@@ -90,7 +97,7 @@ export async function POST(
     entityType: "contract",
     entityId: contract.id,
     clientId: contract.clientId,
-    signedBy: session.user.role === "admin" ? (session.user.email ?? "admin") : "client",
+    signedBy: signerName,
     signatureHash,
   }).catch((e) => console.error("signature event log failed", e));
 

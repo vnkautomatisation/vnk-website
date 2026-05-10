@@ -19,6 +19,14 @@ type Client = {
   postalCode?: string | null;
 };
 
+export type DocLang = "fr" | "en";
+
+// Convertit la locale Prisma (fr-CA, en-CA, en, fr) en DocLang ("fr" | "en")
+export function localeToDocLang(locale: string | null | undefined): DocLang {
+  if (!locale) return "fr";
+  return locale.toLowerCase().startsWith("en") ? "en" : "fr";
+}
+
 type QuotePdfData = {
   quoteNumber: string;
   title: string;
@@ -39,6 +47,7 @@ type QuotePdfData = {
   clientSignatureData?: string | null;
   signedAt?: Date | null;
   acceptedAt?: Date | null;
+  lang?: DocLang;
 };
 
 type InvoicePdfData = {
@@ -57,6 +66,7 @@ type InvoicePdfData = {
   serviceType?: string | null;
   invoicePhase?: string | null;
   phaseNumber?: number | null;
+  lang?: DocLang;
 };
 
 type ContractPdfData = {
@@ -71,6 +81,7 @@ type ContractPdfData = {
   adminSignatureData?: string | null;
   adminSignedAt?: Date | null;
   signedAt?: Date | null;
+  lang?: DocLang;
 };
 
 function toSnakeClient(c: Client) {
@@ -139,7 +150,7 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<Buffer> {
   };
 
   return capturePdf((fakeRes) =>
-    PdfTemplates.generateQuotePDF(fakeRes, quote, toSnakeClient(data.client), [])
+    PdfTemplates.generateQuotePDF(fakeRes, quote, toSnakeClient(data.client), [], { lang: data.lang ?? "fr" })
   );
 }
 
@@ -162,7 +173,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
   };
 
   return capturePdf((fakeRes) =>
-    PdfTemplates.generateInvoicePDF(fakeRes, invoice, toSnakeClient(data.client))
+    PdfTemplates.generateInvoicePDF(fakeRes, invoice, toSnakeClient(data.client), { lang: data.lang ?? "fr" })
   );
 }
 
@@ -181,6 +192,6 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
   };
 
   return capturePdf((fakeRes) =>
-    PdfTemplates.generateContractPDF(fakeRes, contract, toSnakeClient(data.client), null)
+    PdfTemplates.generateContractPDF(fakeRes, contract, toSnakeClient(data.client), null, { lang: data.lang ?? "fr" })
   );
 }

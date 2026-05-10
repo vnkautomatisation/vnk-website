@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { generateInvoicePdf } from "@/lib/services/pdf";
+import { generateInvoicePdf, localeToDocLang } from "@/lib/services/pdf";
 
 export async function GET(
   _req: Request,
@@ -51,6 +51,7 @@ export async function GET(
     serviceType: invoice.serviceType,
     invoicePhase: invoice.invoicePhase,
     phaseNumber: invoice.phaseNumber,
+    lang: localeToDocLang(invoice.client.locale),
   });
 
   return new Response(new Uint8Array(pdf), {

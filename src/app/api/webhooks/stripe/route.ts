@@ -1,7 +1,7 @@
 // POST /api/webhooks/stripe — Stripe webhook (signature HMAC vérifiée)
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { markInvoicePaid } from "@/lib/workflow";
+import { markInvoicePaid, createWorkflowEvent } from "@/lib/workflow";
 import { getSetting } from "@/lib/settings";
 import { logOrderEvent } from "@/lib/request-context";
 
@@ -102,20 +102,105 @@ export async function POST(req: Request) {
       }
 
       case "charge.dispute.created":
-      case "charge.dispute.updated": {
+      case "charge.dispute.updated":
+      case "charge.dispute.closed": {
         const dispute = event.data.object;
-        const invoiceId = dispute.charge_metadata?.invoice_id ?? null;
+        const isCreated = event.type === "charge.dispute.created";
+        const isClosed = event.type === "charge.dispute.closed";
+        // Stripe payload : metadata sur la charge (pas charge_metadata)
+        const invoiceId = dispute.metadata?.invoice_id
+          ?? dispute.charge_metadata?.invoice_id
+          ?? null;
         let clientId: number | null = null;
         if (invoiceId) {
-          const inv = await prisma.invoice.findUnique({ where: { id: Number(invoiceId) }, select: { clientId: true } });
+          const inv = await prisma.invoice.findUnique({
+            where: { id: Number(invoiceId) },
+            select: { clientId: true },
+          });
           clientId = inv?.clientId ?? null;
         }
+
+        const amountDisputed = dispute.amount ? dispute.amount / 100 : 0;
+        const currency = (dispute.currency || "cad").toUpperCase();
+        const evidenceDueBy = dispute.evidence_details?.due_by
+          ? new Date(dispute.evidence_details.due_by * 1000)
+          : null;
+        // Stripe outcome: won | lost | warning_under_review | warning_closed | needs_response | etc.
+        const stripeStatus: string = dispute.status ?? "needs_response";
+        const isResolved = ["won", "lost", "warning_closed"].includes(stripeStatus);
+
+        // Auto-cree ou met a jour le Dispute en base
+        if (clientId) {
+          const existing = await prisma.dispute.findFirst({
+            where: { stripeDisputeId: dispute.id },
+          });
+
+          if (existing) {
+            await prisma.dispute.update({
+              where: { id: existing.id },
+              data: {
+                status: isResolved ? "resolved" : "open",
+                stripeReason: dispute.reason ?? existing.stripeReason,
+                outcome: isResolved ? stripeStatus : existing.outcome,
+                amountDisputed,
+                currency,
+                evidenceDueBy: evidenceDueBy ?? existing.evidenceDueBy,
+                cardBrand: dispute.payment_method_details?.card?.brand ?? existing.cardBrand,
+                resolvedAt: isResolved ? new Date() : existing.resolvedAt,
+              },
+            });
+          } else if (isCreated) {
+            const created = await prisma.dispute.create({
+              data: {
+                clientId,
+                invoiceId: invoiceId ? Number(invoiceId) : null,
+                stripeDisputeId: dispute.id,
+                stripeReason: dispute.reason ?? null,
+                title: `Chargeback Stripe — ${dispute.reason ?? "raison inconnue"}`,
+                description: `Litige ouvert automatiquement par Stripe le ${new Date().toLocaleDateString("fr-CA")}. Référence Stripe : ${dispute.id}.`,
+                type: "chargeback",
+                status: "open",
+                priority: "urgent",
+                amountDisputed,
+                currency,
+                evidenceDueBy,
+                cardBrand: dispute.payment_method_details?.card?.brand ?? null,
+              },
+            });
+            await createWorkflowEvent({
+              clientId,
+              eventType: "dispute_opened",
+              eventLabel: `Chargeback Stripe ouvert : ${dispute.reason ?? "raison inconnue"} — ${amountDisputed.toFixed(2)} ${currency}`,
+              triggeredBy: "stripe_webhook",
+              metadata: { disputeId: created.id, stripeDisputeId: dispute.id, source: "stripe_webhook" },
+            }).catch(() => {});
+            // Notification admin
+            await prisma.notification.create({
+              data: {
+                recipientType: "admin",
+                recipientId: 0,
+                type: "warning",
+                title: "Chargeback Stripe reçu",
+                body: `${amountDisputed.toFixed(2)} ${currency} — ${dispute.reason ?? "raison inconnue"}`,
+                link: `/admin/disputes`,
+              },
+            }).catch(() => {});
+          }
+        }
+
+        // Toujours logger l'event (immuable)
         await logOrderEvent({
           req, clientId,
-          type: event.type === "charge.dispute.created" ? "dispute_opened" : "dispute_updated",
-          amount: dispute.amount ? dispute.amount / 100 : undefined,
-          currency: dispute.currency?.toUpperCase(),
-          metadata: { stripeDisputeId: dispute.id, reason: dispute.reason, status: dispute.status, evidenceDueBy: dispute.evidence_details?.due_by },
+          type: isCreated ? "dispute_opened" : "dispute_updated",
+          amount: amountDisputed || undefined,
+          currency,
+          metadata: {
+            stripeDisputeId: dispute.id,
+            reason: dispute.reason,
+            status: stripeStatus,
+            evidenceDueBy: dispute.evidence_details?.due_by,
+            isClosed,
+          },
         }).catch(() => {});
         break;
       }

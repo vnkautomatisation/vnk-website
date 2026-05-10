@@ -52,7 +52,7 @@ export async function POST(
   await createWorkflowEvent({
     clientId: doc.clientId,
     eventType: "message_from_admin",
-    eventLabel: `Document ${doc.title} envoyé au client`,
+    eventLabel: `Document ${doc.title} envoyé à ${doc.client?.fullName ?? "client"}`,
     triggeredBy: "admin",
     metadata: { documentId: doc.id, action: "sent_to_client" },
   });

@@ -25,6 +25,8 @@ import {
   generateAuditPdf,
   generatePaymentsPdf,
   generateFicheClientPdf,
+  getDict,
+  type ExportLang,
 } from "@/lib/services/pdf-export";
 
 type AttachmentJson = {
@@ -61,7 +63,7 @@ function dataUrlToBuffer(dataUrl: string): { buf: Buffer; mime: string } | null 
   return { mime: match[1], buf: Buffer.from(match[2], "base64") };
 }
 
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -70,6 +72,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const clientId = Number(id);
   if (!clientId) return NextResponse.json({ error: "ID invalide" }, { status: 400 });
+
+  // Locale d'export (?lang=fr|en)
+  const url = new URL(req.url);
+  const langParam = url.searchParams.get("lang");
+  const lang: ExportLang = langParam === "en" ? "en" : "fr";
+  const t = getDict(lang);
 
   const client = await prisma.client.findUnique({
     where: { id: clientId },
@@ -94,34 +102,67 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const folderBase = `dossier-${safeFileName(client.fullName)}-${today}`;
 
   // ─── 00 README ─────────────────────────────────────────
+  const isEn = lang === "en";
+  const labels = isEn
+    ? { client: "Client", company: "Company", email: "Email", phone: "Phone",
+        address: "Address", sector: "Sector", created: "Account created",
+        lastLogin: "Last login",
+        ficheLine: "Executive summary of the file (read first)",
+        identityLine: "Raw snapshot of all client data",
+        quotesLine: (n: number) => `${n} quote(s) (PDF)`,
+        contractsLine: (n: number) => `${n} contract(s) (PDF)`,
+        invoicesLine: (n: number) => `${n} invoice(s) (PDF)`,
+        paymentsLine: (n: number, r: number) => `${n} payments + ${r} refunds`,
+        documentsLine: (n: number) => `${n} shared documents`,
+        messagesLine: (n: number) => `${n} messages (chat + email, PDF with bubbles + images)`,
+        apptsLine: (n: number) => `${n} appointments`,
+        disputesLine: (n: number) => `${n} disputes (with internal notes + legal details)`,
+        auditLine: "Full unified timeline (login, payment, signature, consent, email, audit, workflow)",
+        attachLine: "Files exchanged via chat" }
+    : { client: "Client", company: "Entreprise", email: "Courriel", phone: "Téléphone",
+        address: "Adresse", sector: "Secteur", created: "Compte créé",
+        lastLogin: "Dernière connexion",
+        ficheLine: "Synthèse exécutive du dossier (à lire en premier)",
+        identityLine: "Snapshot brut de toutes les données du client",
+        quotesLine: (n: number) => `${n} devis (PDF)`,
+        contractsLine: (n: number) => `${n} contrats (PDF)`,
+        invoicesLine: (n: number) => `${n} factures (PDF)`,
+        paymentsLine: (n: number, r: number) => `${n} paiements + ${r} remboursements`,
+        documentsLine: (n: number) => `${n} documents partagés`,
+        messagesLine: (n: number) => `${n} messages (chat + email, PDF avec bulles + images)`,
+        apptsLine: (n: number) => `${n} rendez-vous`,
+        disputesLine: (n: number) => `${n} litiges (avec notes internes + détails juridiques)`,
+        auditLine: "Timeline complète unifiée (login, paiement, signature, consentement, email, audit, workflow)",
+        attachLine: "Fichiers échangés via le chat" };
+
   const readme = [
-    `Dossier client complet — VNK Automatisation`,
+    t.readmeTitle,
     ``,
-    `Client : ${client.fullName}`,
-    `Entreprise : ${client.companyName ?? "—"}`,
-    `Courriel : ${client.email}`,
-    `Téléphone : ${client.phone ?? "—"}`,
-    `Adresse : ${[client.address, client.city, client.province, client.postalCode].filter(Boolean).join(", ") || "—"}`,
-    `Secteur : ${client.sector ?? "—"}`,
-    `Compte créé : ${client.createdAt.toISOString().slice(0, 10)}`,
-    `Dernière connexion : ${client.lastLogin?.toISOString().slice(0, 10) ?? "—"}`,
+    `${labels.client} : ${client.fullName}`,
+    `${labels.company} : ${client.companyName ?? "—"}`,
+    `${labels.email} : ${client.email}`,
+    `${labels.phone} : ${client.phone ?? "—"}`,
+    `${labels.address} : ${[client.address, client.city, client.province, client.postalCode].filter(Boolean).join(", ") || "—"}`,
+    `${labels.sector} : ${client.sector ?? "—"}`,
+    `${labels.created} : ${client.createdAt.toISOString().slice(0, 10)}`,
+    `${labels.lastLogin} : ${client.lastLogin?.toISOString().slice(0, 10) ?? "—"}`,
     ``,
-    `─── CONTENU DU DOSSIER ─────────────────────────────`,
-    `01-fiche-client.pdf               Synthèse exécutive du dossier (à lire en premier)`,
-    `01-identite-fiche-client.json     Snapshot brut de toutes les données du client`,
-    `02-devis/                         ${client.quotes.length} devis (PDF)`,
-    `03-contrats/                      ${client.contracts.length} contrats (PDF)`,
-    `04-factures/                      ${client.invoices.length} factures (PDF)`,
-    `05-paiements.pdf + .csv           ${client.payments.length} paiements + ${client.refunds.length} remboursements`,
-    `06-documents/                     ${client.documents.length} documents partagés`,
-    `07-conversation.pdf + .csv        ${client.messages.length} messages (chat + email, PDF avec bulles + images)`,
-    `08-rendez-vous.pdf + .csv         ${client.appointments.length} rendez-vous`,
-    `09-litiges.pdf + .csv             ${client.disputes.length} litiges (avec notes internes + détails juridiques)`,
-    `10-audit-events.pdf + .csv        Timeline complète unifiée (login, paiement, signature, consentement, email, audit, workflow)`,
-    `11-pieces-jointes-messages/       Fichiers échangés via le chat`,
+    `─── ${t.readmeContent} ─────────────────────────────`,
+    `01-fiche-client.pdf               ${labels.ficheLine}`,
+    `01-identite-fiche-client.json     ${labels.identityLine}`,
+    `02-devis/                         ${labels.quotesLine(client.quotes.length)}`,
+    `03-contrats/                      ${labels.contractsLine(client.contracts.length)}`,
+    `04-factures/                      ${labels.invoicesLine(client.invoices.length)}`,
+    `05-paiements.pdf + .csv           ${labels.paymentsLine(client.payments.length, client.refunds.length)}`,
+    `06-documents/                     ${labels.documentsLine(client.documents.length)}`,
+    `07-conversation.pdf + .csv        ${labels.messagesLine(client.messages.length)}`,
+    `08-rendez-vous.pdf + .csv         ${labels.apptsLine(client.appointments.length)}`,
+    `09-litiges.pdf + .csv             ${labels.disputesLine(client.disputes.length)}`,
+    `10-audit-events.pdf + .csv        ${labels.auditLine}`,
+    `11-pieces-jointes-messages/       ${labels.attachLine}`,
     ``,
-    `Exporté le : ${new Date().toISOString()}`,
-    `Exporté par : ${session.user.email ?? "admin"}`,
+    `${t.readmeExportedOn} : ${new Date().toISOString()}`,
+    `${t.readmeExportedBy} : ${session.user.email ?? "admin"}`,
   ].join("\n");
   zip.file(`${folderBase}/00-README.txt`, readme);
 
@@ -200,6 +241,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         totalSpentTtc, openBalanceTtc,
       },
       recentInvoices, recentContracts, activeDisputes,
+      lang,
     });
     zip.file(`${folderBase}/01-fiche-client.pdf`, new Uint8Array(pdfBuf));
   } catch (e) { console.error("PDF fiche-client err:", e); }
@@ -229,6 +271,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         clientSignatureData: q.clientSignatureData,
         signedAt: q.signedAt,
         acceptedAt: q.acceptedAt,
+        lang,
       });
       zip.file(`${folderBase}/02-devis/${safeFileName(q.quoteNumber)}.pdf`, new Uint8Array(pdf));
     } catch (e) { console.error("PDF devis err:", e); }
@@ -257,6 +300,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         adminSignatureData: c.adminSignatureData,
         adminSignedAt: c.adminSignedAt,
         signedAt: c.signedAt,
+        lang,
       });
       zip.file(`${folderBase}/03-contrats/${safeFileName(c.contractNumber)}.pdf`, new Uint8Array(pdf));
     } catch (e) { console.error("PDF contrat err:", e); }
@@ -289,20 +333,24 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         serviceType: i.serviceType,
         invoicePhase: i.invoicePhase,
         phaseNumber: i.phaseNumber,
+        lang,
       });
       zip.file(`${folderBase}/04-factures/${safeFileName(i.invoiceNumber)}.pdf`, new Uint8Array(pdf));
     } catch (e) { console.error("PDF facture err:", e); }
   }
 
   // ─── 05 Paiements + remboursements ─────────────────────
+  const payTypeLabel = isEn ? "Payment" : "Paiement";
+  const refundTypeLabel = isEn ? "Refund" : "Remboursement";
+  const invoiceIdLabel = isEn ? "Invoice ID" : "Facture ID";
   const paiementsRows: (string | number | Date | null | undefined)[][] = [
-    ["Type", "Date", "Montant", "Devise", "Méthode", "Statut", "Référence Stripe", "Description"],
+    t.csvPayments,
     ...client.payments.map((p) => [
-      "Paiement", p.paidAt ?? p.createdAt, Number(p.amount), p.currency, p.paymentMethod ?? "—",
-      p.status, p.stripePaymentIntentId ?? "—", `Facture ID ${p.invoiceId ?? "—"}`,
+      payTypeLabel, p.paidAt ?? p.createdAt, Number(p.amount), p.currency, p.paymentMethod ?? "—",
+      p.status, p.stripePaymentIntentId ?? "—", `${invoiceIdLabel} ${p.invoiceId ?? "—"}`,
     ]),
     ...client.refunds.map((r) => [
-      "Remboursement", r.processedAt ?? r.createdAt, -Number(r.amount), "CAD", "Stripe",
+      refundTypeLabel, r.processedAt ?? r.createdAt, -Number(r.amount), "CAD", "Stripe",
       r.status, r.stripeRefundId ?? "—", r.reason ?? "—",
     ]),
   ];
@@ -336,6 +384,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const pdfBuf = await generatePaymentsPdf({
       client: { fullName: client.fullName, email: client.email },
       rows: paymentsPdfRows,
+      lang,
     });
     zip.file(`${folderBase}/05-paiements.pdf`, new Uint8Array(pdfBuf));
   } catch (e) { console.error("PDF paiements err:", e); }
@@ -355,17 +404,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   // ─── 07 Conversation ───────────────────────────────────
+  const yesLabel = isEn ? "Yes" : "Oui";
+  const noLabel = isEn ? "No" : "Non";
   const convRows: (string | number | Date | null | undefined)[][] = [
-    ["Date", "Heure", "Auteur", "Canal", "Note interne", "Contenu", "Pièces jointes"],
+    t.csvConversation,
     ...client.messages.filter((m) => !m.deletedAt).map((m) => {
       const atts = (m.attachmentsData as AttachmentJson[] | null) ?? (m.attachmentData ? [m.attachmentData as AttachmentJson] : []);
       const attNames = atts.map((a) => a?.name ?? "?").join(" | ");
       return [
         m.createdAt.toISOString().slice(0, 10),
         m.createdAt.toISOString().slice(11, 16),
-        m.sender === "vnk" ? "VNK (admin)" : "Client",
+        m.sender === "vnk" ? "VNK (admin)" : (client.fullName ?? "Client"),
         m.channel,
-        m.isInternalNote ? "Oui" : "Non",
+        m.isInternalNote ? yesLabel : noLabel,
         m.content ?? "",
         attNames,
       ];
@@ -392,13 +443,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const pdfBuf = await generateConversationPdf({
       client: { fullName: client.fullName, email: client.email, companyName: client.companyName },
       messages: convMessages,
+      lang,
     });
     zip.file(`${folderBase}/07-conversation.pdf`, new Uint8Array(pdfBuf));
   } catch (e) { console.error("PDF conversation err:", e); }
 
   // ─── 08 Rendez-vous ────────────────────────────────────
   const rdvRows: (string | number | Date | null | undefined)[][] = [
-    ["Date", "Début", "Fin", "Sujet", "Statut", "Type rencontre", "Notes admin"],
+    t.csvAppointments,
     ...client.appointments.map((a) => [
       a.appointmentDate, a.startTime, a.endTime, a.subject ?? "", a.status,
       a.meetingType, a.notesAdmin ?? "",
@@ -418,13 +470,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         meetingType: a.meetingType,
         notesAdmin: a.notesAdmin,
       })),
+      lang,
     });
     zip.file(`${folderBase}/08-rendez-vous.pdf`, new Uint8Array(pdfBuf));
   } catch (e) { console.error("PDF rdv err:", e); }
 
   // ─── 09 Litiges ────────────────────────────────────────
   const disputesRows: (string | number | Date | null | undefined)[][] = [
-    ["Ouvert", "Type", "Titre", "Statut", "Priorité", "Montant", "Stripe ID", "Raison Stripe", "Outcome", "Assigné", "Résolu", "Résolution"],
+    t.csvDisputes,
     ...client.disputes.map((d) => [
       d.openedAt, d.type, d.title, d.status, d.priority,
       d.amountDisputed != null ? Number(d.amountDisputed) : "",
@@ -468,6 +521,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         invoiceId: d.invoiceId,
         invoiceNumber: d.invoiceId ? invoiceMap.get(d.invoiceId) ?? null : null,
       })),
+      lang,
     });
     zip.file(`${folderBase}/09-litiges.pdf`, new Uint8Array(pdfBuf));
   } catch (e) { console.error("PDF litiges err:", e); }
@@ -482,10 +536,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   ]);
 
   type UnifiedEvt = { createdAt: Date; source: string; type: string; label: string; ipAddress: string | null; userAgent: string | null; metadata?: unknown };
+  // Substitue retroactivement "par (le )?client" -> nom client dans les vieux labels
+  const humanizeWfLabel = (label: string | null): string => {
+    const fallback = label ?? "";
+    if (!fallback) return "";
+    return fallback
+      .replace(/\bpar le client\b/gi, `par ${client.fullName}`)
+      .replace(/\bau client\b/gi, `à ${client.fullName}`)
+      .replace(/\bdu client\b/gi, `de ${client.fullName}`)
+      .replace(/\bpar client\b/gi, `par ${client.fullName}`);
+  };
   const unified: UnifiedEvt[] = [
     ...client.workflowEvents.map((w) => ({
       createdAt: w.createdAt, source: "workflow", type: w.eventType,
-      label: w.eventLabel ?? w.eventType, ipAddress: null, userAgent: null,
+      label: humanizeWfLabel(w.eventLabel) || w.eventType, ipAddress: null, userAgent: null,
       metadata: w.metadata as unknown,
     })),
     ...logins.map((l) => ({
@@ -521,7 +585,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   const auditRows: (string | number | Date | null | undefined)[][] = [
-    ["Date", "Source", "Type", "Label", "IP", "User-Agent"],
+    t.csvAudit,
     ...unified.map((u) => [u.createdAt, u.source, u.type, u.label, u.ipAddress ?? "", u.userAgent ?? ""]),
   ];
   zip.file(`${folderBase}/10-audit-events.csv`, csvFromRows(auditRows));
@@ -530,6 +594,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const pdfBuf = await generateAuditPdf({
       client: { fullName: client.fullName, email: client.email },
       events: unified,
+      lang,
     });
     zip.file(`${folderBase}/10-audit-events.pdf`, new Uint8Array(pdfBuf));
   } catch (e) { console.error("PDF audit err:", e); }

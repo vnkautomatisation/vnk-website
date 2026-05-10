@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { generateQuotePdf } from "@/lib/services/pdf";
+import { generateQuotePdf, localeToDocLang } from "@/lib/services/pdf";
 
 export async function GET(
   _req: Request,
@@ -49,6 +49,7 @@ export async function GET(
     clientSignatureData: quote.clientSignatureData,
     signedAt: quote.signedAt,
     acceptedAt: quote.acceptedAt,
+    lang: localeToDocLang(quote.client.locale),
   });
 
   return new Response(new Uint8Array(pdf), {

@@ -363,13 +363,23 @@ export function ClientsView({
       { label: "Voir le détail", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", c.id) },
     ];
     actions.push({
-      label: "Télécharger dossier ZIP",
+      label: "Dossier ZIP (FR)",
       icon: <Download className="h-3.5 w-3.5" />,
       onClick: () => {
         const a = document.createElement("a");
-        a.href = `/api/clients/${c.id}/export-zip`;
+        a.href = `/api/clients/${c.id}/export-zip?lang=fr`;
         a.click();
-        toast.success("Préparation du dossier ZIP…");
+        toast.success("Préparation du dossier ZIP (FR)…");
+      },
+    });
+    actions.push({
+      label: "Dossier ZIP (EN)",
+      icon: <Download className="h-3.5 w-3.5" />,
+      onClick: () => {
+        const a = document.createElement("a");
+        a.href = `/api/clients/${c.id}/export-zip?lang=en`;
+        a.click();
+        toast.success("Generating ZIP (EN)…");
       },
     });
     if (!c.archived) {

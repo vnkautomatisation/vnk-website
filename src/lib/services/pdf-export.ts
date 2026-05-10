@@ -5,10 +5,12 @@ import { PassThrough } from "stream";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PDFDocument = require("pdfkit");
 
+// Couleurs alignees avec le logo officiel VNK (vnk-logo-horizontal-light.svg)
 const C = {
-  navy: "#0F2D52",
+  brand: "#1B4F8A",       // bleu primaire VNK (text + stroke logo)
+  brandBg: "#EBF2FA",      // fond hexagone version light
+  navy: "#0F2D52",         // navy header (matche pdf-templates contrats/factures)
   navyDeep: "#0A1F3A",
-  blue: "#1B4F8A",
   blueLight: "#DBEAFE",
   blueLighter: "#EFF6FF",
   green: "#16A34A",
@@ -24,7 +26,7 @@ const C = {
   text: "#0F172A",
   white: "#FFFFFF",
   bubbleClient: "#F1F5F9",
-  bubbleVnk: "#0F2D52",
+  bubbleVnk: "#1B4F8A",
   internal: "#FEF3C7",
 };
 
@@ -36,6 +38,213 @@ const COMPANY = {
   phone: "(819) 290-8686",
   site: "vnk-website-production.up.railway.app",
 };
+
+// ─────────────────────────────────────────────────────────
+// I18N — traductions des textes structurels
+// ─────────────────────────────────────────────────────────
+export type ExportLang = "fr" | "en";
+
+type Dict = {
+  // Conversation PDF
+  convTitle: string;
+  convIntro: (clientName: string, email: string) => string;
+  convEmpty: string;
+  convInternalNote: string;
+  // Appointments PDF
+  apptTitle: string;
+  apptIntro: (clientName: string, n: number) => string;
+  apptEmpty: string;
+  // Disputes PDF
+  dispTitle: string;
+  dispIntro: (clientName: string, n: number) => string;
+  dispEmpty: string;
+  dispDescription: string;
+  dispInternalNotes: string;
+  dispFields: Record<string, string>;
+  dispMetaOpened: (date: string) => string;
+  dispMetaInvoice: (n: string) => string;
+  dispMetaAssigned: (a: string) => string;
+  // Audit PDF
+  auditTitle: string;
+  auditIntro: (clientName: string, n: number) => string;
+  auditEmpty: string;
+  // Payments PDF
+  payTitle: string;
+  payIntro: (clientName: string, n: number) => string;
+  payEmpty: string;
+  payTotalIn: string;
+  payTotalOut: string;
+  payNet: string;
+  payDetail: string;
+  payCols: { type: string; date: string; amount: string; method: string; status: string; description: string };
+  // Fiche client PDF
+  ficheTitle: string;
+  ficheIntro: (clientName: string) => string;
+  ficheClient: string;
+  ficheContact: string;
+  ficheKpi: { mandates: string; quotes: string; contracts: string; invoices: string };
+  ficheTotalSpent: string;
+  ficheOpenBalance: string;
+  ficheBusinessProfile: string;
+  ficheSector: string;
+  ficheTechnologies: string;
+  ficheRecentInvoices: string;
+  ficheRecentContracts: string;
+  ficheActiveDisputes: string;
+  ficheInternalNotes: string;
+  ficheSigned: (date: string) => string;
+  // CSV / README
+  readmeTitle: string;
+  readmeContent: string;
+  readmeExportedOn: string;
+  readmeExportedBy: string;
+  csvPayments: string[];
+  csvAppointments: string[];
+  csvDisputes: string[];
+  csvAudit: string[];
+  csvConversation: string[];
+  // Common
+  noSubject: string;
+  paid: string;
+  unpaid: string;
+  overdue: string;
+  pending: string;
+};
+
+const T: Record<ExportLang, Dict> = {
+  fr: {
+    convTitle: "Conversation complète",
+    convIntro: (n, e) => `Trace officielle de tous les échanges (chat + email) avec ${n} (${e}). Bulles à gauche : messages du client. Bulles à droite (navy) : réponses de VNK. Bandeau ambré : notes internes admin (non visibles par le client). Pièces jointes images embarquées; autres fichiers listés par nom.`,
+    convEmpty: "Aucun message échangé.",
+    convInternalNote: "Note interne",
+    apptTitle: "Rendez-vous",
+    apptIntro: (n, c) => `Liste complète des ${c} rendez-vous planifiés ou tenus avec ${n} : date, durée, sujet, type de rencontre, statut et notes internes admin.`,
+    apptEmpty: "Aucun rendez-vous.",
+    dispTitle: "Litiges et différends",
+    dispIntro: (n, c) => `Dossier juridique complet des ${c} litiges avec ${n}. Chargebacks Stripe, plaintes, escalades (cabinet, dossier, tribunal). Références croisées vers facture/contrat. Notes internes confidentielles en jaune. Document à conserver pour traçabilité légale.`,
+    dispEmpty: "Aucun litige enregistré.",
+    dispDescription: "DESCRIPTION",
+    dispInternalNotes: "NOTES INTERNES — CONFIDENTIEL",
+    dispFields: {
+      type: "Type", category: "Catégorie", amountDisputed: "Montant contesté",
+      stripeId: "Stripe ID", stripeReason: "Raison Stripe", outcome: "Résultat",
+      evidenceDueBy: "Échéance preuve", lawFirm: "Cabinet juridique",
+      caseNumber: "N° de dossier", tribunal: "Tribunal", resolution: "Résolution",
+      resolvedAt: "Résolu le",
+    },
+    dispMetaOpened: (d) => `Ouvert ${d}`,
+    dispMetaInvoice: (n) => `Facture ${n}`,
+    dispMetaAssigned: (a) => `Assigné à ${a}`,
+    auditTitle: "Timeline d'événements (audit complet)",
+    auditIntro: (n, c) => `Trace immuable des ${c} actions impliquant ${n} : connexions, paiements, signatures, consentements, emails, actions admin et événements workflow. Utilisé pour audit légal, conformité GDPR, et investigation forensique. Chaque ligne inclut IP et User-Agent quand disponibles.`,
+    auditEmpty: "Aucun événement enregistré.",
+    payTitle: "Relevé de paiements",
+    payIntro: (n, c) => `Totaux financiers et détail chronologique des ${c} transactions (paiements encaissés et remboursements émis) avec ${n}. Source : Stripe. Document à conserver pour réconciliation comptable.`,
+    payEmpty: "Aucune transaction.",
+    payTotalIn: "Total encaissé",
+    payTotalOut: "Total remboursé",
+    payNet: "Net",
+    payDetail: "Détail des transactions",
+    payCols: { type: "Type", date: "Date", amount: "Montant", method: "Méthode", status: "Statut", description: "Description" },
+    ficheTitle: "Fiche client (synthèse)",
+    ficheIntro: (n) => `Vue d'ensemble exécutive du dossier de ${n} : identité, totaux financiers, derniers documents émis et litiges en cours. Document de tête du dossier ZIP — sert d'index visuel pour comprendre la relation client en un coup d'œil.`,
+    ficheClient: "CLIENT",
+    ficheContact: "CONTACT",
+    ficheKpi: { mandates: "Mandats", quotes: "Devis", contracts: "Contrats", invoices: "Factures" },
+    ficheTotalSpent: "Total dépensé",
+    ficheOpenBalance: "Solde ouvert",
+    ficheBusinessProfile: "Profil business",
+    ficheSector: "Secteur",
+    ficheTechnologies: "Technologies",
+    ficheRecentInvoices: "Dernières factures",
+    ficheRecentContracts: "Derniers contrats",
+    ficheActiveDisputes: "Litiges en cours",
+    ficheInternalNotes: "NOTES INTERNES",
+    ficheSigned: (d) => `SIGNÉ ${d}`,
+    readmeTitle: "Dossier client complet — VNK Automatisation",
+    readmeContent: "CONTENU DU DOSSIER",
+    readmeExportedOn: "Exporté le",
+    readmeExportedBy: "Exporté par",
+    csvPayments: ["Type", "Date", "Montant", "Devise", "Méthode", "Statut", "Référence Stripe", "Description"],
+    csvAppointments: ["Date", "Début", "Fin", "Sujet", "Statut", "Type rencontre", "Notes admin"],
+    csvDisputes: ["Ouvert", "Type", "Titre", "Statut", "Priorité", "Montant", "Stripe ID", "Raison Stripe", "Outcome", "Assigné", "Résolu", "Résolution"],
+    csvAudit: ["Date", "Source", "Type", "Label", "IP", "User-Agent"],
+    csvConversation: ["Date", "Heure", "Auteur", "Canal", "Note interne", "Contenu", "Pièces jointes"],
+    noSubject: "(sans sujet)",
+    paid: "PAYÉ",
+    unpaid: "IMPAYÉ",
+    overdue: "EN RETARD",
+    pending: "EN ATTENTE",
+  },
+  en: {
+    convTitle: "Full conversation",
+    convIntro: (n, e) => `Official record of all exchanges (chat + email) with ${n} (${e}). Bubbles on the left: client messages. Bubbles on the right (navy): VNK replies. Amber banner: internal admin notes (not visible to the client). Image attachments embedded; other files listed by name.`,
+    convEmpty: "No messages exchanged.",
+    convInternalNote: "Internal note",
+    apptTitle: "Appointments",
+    apptIntro: (n, c) => `Complete list of the ${c} appointments scheduled or held with ${n}: date, duration, subject, meeting type, status and internal admin notes.`,
+    apptEmpty: "No appointments.",
+    dispTitle: "Disputes and claims",
+    dispIntro: (n, c) => `Complete legal file of the ${c} disputes with ${n}. Stripe chargebacks, complaints, legal escalations (law firm, case file, court). Cross-references to invoice/contract. Confidential internal notes in yellow. Document to retain for legal traceability.`,
+    dispEmpty: "No disputes recorded.",
+    dispDescription: "DESCRIPTION",
+    dispInternalNotes: "INTERNAL NOTES — CONFIDENTIAL",
+    dispFields: {
+      type: "Type", category: "Category", amountDisputed: "Disputed amount",
+      stripeId: "Stripe ID", stripeReason: "Stripe reason", outcome: "Outcome",
+      evidenceDueBy: "Evidence due", lawFirm: "Law firm",
+      caseNumber: "Case number", tribunal: "Court", resolution: "Resolution",
+      resolvedAt: "Resolved on",
+    },
+    dispMetaOpened: (d) => `Opened ${d}`,
+    dispMetaInvoice: (n) => `Invoice ${n}`,
+    dispMetaAssigned: (a) => `Assigned to ${a}`,
+    auditTitle: "Event timeline (full audit)",
+    auditIntro: (n, c) => `Immutable record of ${c} actions involving ${n}: logins, payments, signatures, consents, emails, admin actions and workflow events. Used for legal audit, GDPR compliance and forensic investigation. Each line includes IP and User-Agent when available.`,
+    auditEmpty: "No events recorded.",
+    payTitle: "Payment statement",
+    payIntro: (n, c) => `Financial totals and chronological detail of the ${c} transactions (payments received and refunds issued) with ${n}. Source: Stripe. Document to retain for accounting reconciliation.`,
+    payEmpty: "No transactions.",
+    payTotalIn: "Total received",
+    payTotalOut: "Total refunded",
+    payNet: "Net",
+    payDetail: "Transaction details",
+    payCols: { type: "Type", date: "Date", amount: "Amount", method: "Method", status: "Status", description: "Description" },
+    ficheTitle: "Client overview",
+    ficheIntro: (n) => `Executive overview of the file for ${n}: identity, financial totals, latest documents issued and ongoing disputes. Front document of the ZIP file — visual index to understand the client relationship at a glance.`,
+    ficheClient: "CLIENT",
+    ficheContact: "CONTACT",
+    ficheKpi: { mandates: "Mandates", quotes: "Quotes", contracts: "Contracts", invoices: "Invoices" },
+    ficheTotalSpent: "Total spent",
+    ficheOpenBalance: "Open balance",
+    ficheBusinessProfile: "Business profile",
+    ficheSector: "Sector",
+    ficheTechnologies: "Technologies",
+    ficheRecentInvoices: "Recent invoices",
+    ficheRecentContracts: "Recent contracts",
+    ficheActiveDisputes: "Ongoing disputes",
+    ficheInternalNotes: "INTERNAL NOTES",
+    ficheSigned: (d) => `SIGNED ${d}`,
+    readmeTitle: "Complete client file — VNK Automatisation",
+    readmeContent: "FOLDER CONTENTS",
+    readmeExportedOn: "Exported on",
+    readmeExportedBy: "Exported by",
+    csvPayments: ["Type", "Date", "Amount", "Currency", "Method", "Status", "Stripe reference", "Description"],
+    csvAppointments: ["Date", "Start", "End", "Subject", "Status", "Meeting type", "Admin notes"],
+    csvDisputes: ["Opened", "Type", "Title", "Status", "Priority", "Amount", "Stripe ID", "Stripe reason", "Outcome", "Assigned", "Resolved", "Resolution"],
+    csvAudit: ["Date", "Source", "Type", "Label", "IP", "User-Agent"],
+    csvConversation: ["Date", "Time", "Author", "Channel", "Internal note", "Content", "Attachments"],
+    noSubject: "(no subject)",
+    paid: "PAID",
+    unpaid: "UNPAID",
+    overdue: "OVERDUE",
+    pending: "PENDING",
+  },
+};
+
+export function getDict(lang: ExportLang | undefined): Dict {
+  return T[lang === "en" ? "en" : "fr"];
+}
 
 const HEADER_H = 72;          // hauteur de l'entete (compactee)
 const FOOTER_RESERVED = 30;   // espace reserve en bas pour pied de page
@@ -91,51 +300,104 @@ function sanitize(s: string | null | undefined): string {
     .replace(/[\uD800-\uDFFF]/g, "");
 }
 
-// Header VNK : carre VNK + nom + tagline (matche le logo officiel)
+// Dessine l'hexagone VNK (matche vnk-logo-horizontal-dark.svg, points 50,6 90,28 90,72 50,94 10,72 10,28)
+// Sur fond navy : fill blanc 12% opacite + stroke blanc 80% opacite + texte blanc
+function drawHexagonLogo(doc: CapturedDoc, cx: number, cy: number, size: number) {
+  const s = size / 88;
+  const hw = 40 * s;
+  const dy1 = 22 * s;
+  const dy2 = 44 * s;
+  doc.save();
+  doc.lineWidth(2);
+
+  // Fill semi-transparent
+  doc.fillOpacity(0.12);
+  doc.polygon(
+    [cx, cy - dy2],
+    [cx + hw, cy - dy1],
+    [cx + hw, cy + dy1],
+    [cx, cy + dy2],
+    [cx - hw, cy + dy1],
+    [cx - hw, cy - dy1],
+  );
+  doc.fillColor(C.white).fill();
+
+  // Stroke semi-transparent (a 0.85 opacite)
+  doc.fillOpacity(1).strokeOpacity(0.85);
+  doc.polygon(
+    [cx, cy - dy2],
+    [cx + hw, cy - dy1],
+    [cx + hw, cy + dy1],
+    [cx, cy + dy2],
+    [cx - hw, cy + dy1],
+    [cx - hw, cy - dy1],
+  );
+  doc.strokeColor(C.white).stroke();
+
+  // Texte VNK : centré sur l'hexagone, blanc plein
+  doc.strokeOpacity(1).fillOpacity(1);
+  doc.fillColor(C.white).font("Helvetica-Bold").fontSize(size * 0.27)
+    .text("VNK", cx - hw, cy - size * 0.10,
+      { width: hw * 2, align: "center", lineBreak: false, characterSpacing: 1.2 });
+  doc.restore();
+}
+
+// Header VNK : hexagone + nom + tagline (matche le logo officiel du site)
 function drawHeader(doc: CapturedDoc, title: string, subtitle: string, intro?: string) {
   const w = doc.page.width;
   doc.save();
   // Bande navy
   doc.rect(0, 0, w, HEADER_H).fill(C.navy);
-  // Accent bleu fin
-  doc.rect(0, HEADER_H - 2, w, 2).fill(C.blue);
+  // Accent bleu fin (filet en bas)
+  doc.rect(0, HEADER_H - 2, w, 2).fill(C.brand);
 
-  // Carre "VNK" : fond navy plus fonce + bordure blanche
-  const logoX = 35, logoY = 16, logoSize = 40;
-  doc.roundedRect(logoX, logoY, logoSize, logoSize, 4)
-    .fillAndStroke(C.navyDeep, C.white);
-  doc.fillColor(C.white).font("Helvetica-Bold").fontSize(15)
-    .text("VNK", logoX, logoY + 11, { width: logoSize, align: "center", lineBreak: false });
+  // Hexagone VNK
+  const hexCx = 52, hexCy = HEADER_H / 2, hexSize = 46;
+  drawHexagonLogo(doc, hexCx, hexCy, hexSize);
 
   // Bloc nom + tagline a droite du logo
-  const textX = logoX + logoSize + 12;
-  doc.fillColor(C.white).font("Helvetica-Bold").fontSize(14)
-    .text(COMPANY.shortName, textX, 19, { lineBreak: false });
-  doc.fillColor(C.blueLight).font("Helvetica-Bold").fontSize(7.5)
-    .text(COMPANY.tagline, textX, 39, { lineBreak: false, characterSpacing: 0.5 });
+  const textX = hexCx + (hexSize / 88) * 40 + 14;  // bord droit hexagone + 14
+  doc.fillColor(C.white).font("Helvetica-Bold").fontSize(15)
+    .text(COMPANY.shortName, textX, hexCy - 12, { lineBreak: false });
 
-  // Bloc titre PDF (centre-droite)
-  doc.fillColor(C.white).font("Helvetica-Bold").fontSize(11)
-    .text(title, 0, 22, { width: w - 35, align: "right", lineBreak: false });
-  doc.fillColor(C.blueLight).font("Helvetica").fontSize(8)
-    .text(subtitle, 0, 38, { width: w - 35, align: "right", lineBreak: false });
-  doc.fillColor(C.blueLight).fontSize(7.5)
+  // Tagline : fillOpacity 0.6
+  doc.save();
+  doc.fillOpacity(0.65);
+  doc.fillColor(C.white).font("Helvetica").fontSize(7.5)
+    .text(COMPANY.tagline, textX, hexCy + 8, { lineBreak: false, characterSpacing: 2.2 });
+  doc.restore();
+
+  // Bloc titre PDF (droite)
+  doc.fillColor(C.white).font("Helvetica-Bold").fontSize(12)
+    .text(title, 0, 18, { width: w - 35, align: "right", lineBreak: false });
+  doc.save();
+  doc.fillOpacity(0.78);
+  doc.fillColor(C.white).font("Helvetica").fontSize(8.5)
+    .text(subtitle, 0, 37, { width: w - 35, align: "right", lineBreak: false });
+  doc.restore();
+  doc.save();
+  doc.fillOpacity(0.55);
+  // Date dans la locale active (titre et sous-titre transmis sont deja localises)
+  doc.fillColor(C.white).fontSize(7.5)
     .text(new Date().toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" }),
       0, 51, { width: w - 35, align: "right", lineBreak: false });
+  doc.restore();
 
   doc.restore();
   doc.fillColor(C.text).font("Helvetica");
-  doc.y = HEADER_H + 12;
+  doc.y = HEADER_H + 14;
 
-  // Bandeau intro explicatif compact
+  // Bandeau intro explicatif (filet a gauche, pas d'encadrement lourd)
   if (intro) {
-    const padX = 10, padY = 7;
-    const introHeight = doc.heightOfString(intro, { width: w - 100 - padX * 2 }) + padY * 2;
-    doc.roundedRect(50, doc.y, w - 100, introHeight, 4)
-      .fillAndStroke(C.blueLighter, C.blueLight);
+    const padX = 14, padY = 6;
+    const ix = 50;
+    const innerW = w - 100 - padX;
+    const introHeight = doc.heightOfString(intro, { width: innerW }) + padY * 2;
+    // Filet vertical bleu marque a gauche
+    doc.rect(ix, doc.y, 3, introHeight).fill(C.brand);
     doc.fillColor(C.grayDark).font("Helvetica").fontSize(8.5)
-      .text(intro, 50 + padX, doc.y + padY, { width: w - 100 - padX * 2 });
-    doc.y += introHeight + 10;
+      .text(intro, ix + padX, doc.y + padY, { width: innerW });
+    doc.y += introHeight + 14;
     doc.fillColor(C.text);
   }
 }
@@ -145,7 +407,8 @@ function drawClientBlock(doc: CapturedDoc, client: {
   fullName: string; email: string; phone?: string | null;
   companyName?: string | null; address?: string | null; city?: string | null;
   province?: string | null; postalCode?: string | null;
-}) {
+}, t?: Dict) {
+  const dict = t ?? getDict("fr");
   const w = doc.page.width - 100;
   const x = 50;
   const y = doc.y;
@@ -153,7 +416,7 @@ function drawClientBlock(doc: CapturedDoc, client: {
   doc.roundedRect(x, y, w, h, 4).fillAndStroke(C.grayLight, C.border);
 
   doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7)
-    .text("CLIENT", x + 12, y + 7, { lineBreak: false, characterSpacing: 0.6 });
+    .text(dict.ficheClient, x + 12, y + 7, { lineBreak: false, characterSpacing: 0.6 });
   doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(11)
     .text(sanitize(client.fullName), x + 12, y + 17, { width: w / 2 - 16, lineBreak: false, ellipsis: true });
   doc.fillColor(C.text).font("Helvetica").fontSize(8.5)
@@ -162,7 +425,7 @@ function drawClientBlock(doc: CapturedDoc, client: {
   // Colonne droite : contacts
   const cx = x + w / 2;
   doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7)
-    .text("CONTACT", cx + 12, y + 7, { lineBreak: false, characterSpacing: 0.6 });
+    .text(dict.ficheContact, cx + 12, y + 7, { lineBreak: false, characterSpacing: 0.6 });
   doc.fillColor(C.text).font("Helvetica").fontSize(8.5)
     .text(sanitize(client.email), cx + 12, y + 17, { width: w / 2 - 24, lineBreak: false, ellipsis: true });
   doc.text(sanitize(client.phone) || "—", cx + 12, y + 28, { width: w / 2 - 24, lineBreak: false });
@@ -170,7 +433,86 @@ function drawClientBlock(doc: CapturedDoc, client: {
   if (addr) {
     doc.fillColor(C.gray).fontSize(7.5).text(addr, cx + 12, y + 39, { width: w / 2 - 24, lineBreak: false, ellipsis: true });
   }
-  doc.y = y + h + 10;
+  doc.y = y + h + 14;
+}
+
+// Titre de section avec accent brand a gauche + ligne fine sous le titre
+function sectionTitle(doc: CapturedDoc, label: string, color = C.brand) {
+  ensureSpace(doc, 30);
+  doc.moveDown(0.6);
+  const y = doc.y;
+  // Filet vertical accent a gauche
+  doc.rect(50, y + 1, 3, 11).fill(color);
+  doc.fillColor(color).font("Helvetica-Bold").fontSize(9.5)
+    .text(label.toUpperCase(), 60, y, { lineBreak: false, characterSpacing: 0.8 });
+  // Ligne fine sous le titre
+  doc.strokeColor(C.border).lineWidth(0.5)
+    .moveTo(50, y + 16).lineTo(doc.page.width - 50, y + 16).stroke();
+  doc.y = y + 22;
+  doc.fillColor(C.text);
+}
+
+// Badge de statut : rond rect colore + texte blanc, retourne sa largeur
+function drawStatusBadge(doc: CapturedDoc, rightX: number, y: number, label: string, bgColor: string): number {
+  const padX = 6;
+  const h = 12;
+  doc.font("Helvetica-Bold").fontSize(6.5);
+  const textW = doc.widthOfString(label, { characterSpacing: 0.6 });
+  const w = textW + padX * 2;
+  doc.roundedRect(rightX - w, y, w, h, 6).fill(bgColor);
+  doc.fillColor(C.white).text(label, rightX - w, y + 3.5,
+    { width: w, align: "center", lineBreak: false, characterSpacing: 0.6 });
+  return w;
+}
+
+// Ligne d'item : numero + titre a gauche, montant + badge a droite
+// Hauteur = 28px. Optionnellement separateur en bas.
+function drawListItem(doc: CapturedDoc, opts: {
+  number: string;
+  title?: string | null;
+  amount?: string;
+  status?: { label: string; color: string };
+  zebra?: boolean;
+  divider?: boolean;
+}) {
+  const x = 50;
+  const w = doc.page.width - 100;
+  const ry = doc.y;
+  const rowH = 28;
+  ensureSpace(doc, rowH + 2);
+
+  if (opts.zebra) {
+    doc.rect(x, ry, w, rowH).fill(C.grayLight);
+  }
+
+  const rightW = opts.amount || opts.status ? 120 : 0;
+  const leftW = w - rightW - 10;
+
+  // Numero (bold)
+  doc.fillColor(C.text).font("Helvetica-Bold").fontSize(9)
+    .text(opts.number, x + 6, ry + 5, { width: leftW - 6, lineBreak: false });
+  // Titre / description (gris, 2e ligne)
+  if (opts.title) {
+    doc.fillColor(C.gray).font("Helvetica").fontSize(8)
+      .text(sanitize(opts.title), x + 6, ry + 16, { width: leftW - 6, lineBreak: false, ellipsis: true });
+  }
+
+  // Montant (bold) + badge a droite
+  if (opts.amount) {
+    doc.fillColor(C.text).font("Helvetica-Bold").fontSize(9.5)
+      .text(opts.amount, 0, ry + 5,
+        { width: doc.page.width - 50, align: "right", lineBreak: false });
+  }
+  if (opts.status) {
+    drawStatusBadge(doc, doc.page.width - 50, ry + 16, opts.status.label, opts.status.color);
+  }
+
+  if (opts.divider) {
+    doc.strokeColor(C.border).lineWidth(0.3)
+      .moveTo(x + 6, ry + rowH).lineTo(x + w - 6, ry + rowH).stroke();
+  }
+
+  doc.y = ry + rowH + 2;
 }
 
 // Footer applique a chaque page bufferisee, ecrit dans la zone "marge bottom: 0"
@@ -233,30 +575,32 @@ function dataUrlToBuf(dataUrl: string): { buf: Buffer; mime: string } | null {
 export async function generateConversationPdf(params: {
   client: { fullName: string; email: string; companyName?: string | null };
   messages: ConvMessage[];
+  lang?: ExportLang;
 }): Promise<Buffer> {
+  const t = getDict(params.lang);
   return capture((doc) => {
     drawHeader(
       doc,
-      "Conversation complète",
+      t.convTitle,
       sanitize(params.client.fullName),
-      `Trace officielle de tous les échanges (chat + email) avec ${sanitize(params.client.fullName)}` +
-        ` (${sanitize(params.client.email)}). Bulles à gauche : messages du client. Bulles à droite (navy) : réponses de VNK. Bandeau ambré : notes internes admin (non visibles par le client). Pièces jointes images embarquées; autres fichiers listés par nom.`,
+      t.convIntro(sanitize(params.client.fullName), sanitize(params.client.email)),
     );
 
     if (params.messages.length === 0) {
-      doc.fillColor(C.gray).fontSize(11).text("Aucun message échangé.", 50, doc.y, { align: "center", width: doc.page.width - 100 });
+      doc.fillColor(C.gray).fontSize(11).text(t.convEmpty, 50, doc.y, { align: "center", width: doc.page.width - 100 });
       return;
     }
 
     const maxBubbleW = 360;
     const padX = 9;
     const padY = 5;
+    const localeTag = params.lang === "en" ? "en-CA" : "fr-CA";
 
     let lastDate = "";
     for (const m of params.messages) {
       if (m.deletedAt) continue;
 
-      const dateStr = m.createdAt.toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+      const dateStr = m.createdAt.toLocaleDateString(localeTag, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
       if (dateStr !== lastDate) {
         ensureSpace(doc, 22);
         doc.moveDown(0.25);
@@ -272,9 +616,9 @@ export async function generateConversationPdf(params: {
       const labelColor = m.isInternalNote ? C.amber : C.gray;
 
       const senderLabel = m.isInternalNote
-        ? "Note interne"
+        ? t.convInternalNote
         : isVnk ? "VNK" : sanitize(params.client.fullName);
-      const timeStr = m.createdAt.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit", hour12: false });
+      const timeStr = m.createdAt.toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit", hour12: false });
 
       const channelLabel = m.channel === "email" ? "email" : "chat";
       const labelText = `${senderLabel} · ${timeStr}${m.editedAt ? " · mod." : ""} · ${channelLabel}`;
@@ -367,47 +711,54 @@ type AppointmentRow = {
 export async function generateAppointmentsPdf(params: {
   client: { fullName: string; email: string };
   appointments: AppointmentRow[];
+  lang?: ExportLang;
 }): Promise<Buffer> {
+  const t = getDict(params.lang);
+  const localeTag = params.lang === "en" ? "en-CA" : "fr-CA";
   return capture((doc) => {
     drawHeader(
       doc,
-      "Rendez-vous",
+      t.apptTitle,
       sanitize(params.client.fullName),
-      `Liste complète des ${params.appointments.length} rendez-vous planifiés ou tenus avec ${sanitize(params.client.fullName)} : date, durée, sujet, type de rencontre, statut et notes internes admin.`,
+      t.apptIntro(sanitize(params.client.fullName), params.appointments.length),
     );
 
     if (params.appointments.length === 0) {
-      doc.fillColor(C.gray).fontSize(11).text("Aucun rendez-vous.", 50, doc.y, { align: "center", width: doc.page.width - 100 });
+      doc.fillColor(C.gray).fontSize(11).text(t.apptEmpty, 50, doc.y, { align: "center", width: doc.page.width - 100 });
       return;
     }
 
     for (const a of params.appointments) {
       const hasNotes = !!a.notesAdmin;
-      const cardH = hasNotes ? 56 : 42;
-      ensureSpace(doc, cardH + 6);
+      const cardH = hasNotes ? 64 : 48;
+      ensureSpace(doc, cardH + 8);
       const x = 50;
       const w = doc.page.width - 100;
       const y = doc.y;
 
-      doc.roundedRect(x, y, w, cardH, 4).fillAndStroke(C.grayLight, C.border);
-      const statusColor = a.status === "completed" ? C.green : a.status === "cancelled" ? C.red : a.status === "scheduled" ? C.blue : C.amber;
+      doc.roundedRect(x, y, w, cardH, 5).fill(C.grayLight);
+      const statusColor = a.status === "completed" ? C.green : a.status === "cancelled" ? C.red : a.status === "scheduled" ? C.brand : C.amber;
       doc.rect(x, y, 3, cardH).fill(statusColor);
 
-      const dateStr = new Date(a.appointmentDate).toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+      const dateStr = new Date(a.appointmentDate).toLocaleDateString(localeTag, { day: "numeric", month: "short", year: "numeric" });
       const time = a.startTime ? `${a.startTime}${a.endTime ? `–${a.endTime}` : ""}` : "";
 
-      doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(10)
-        .text(sanitize(a.subject) || "(sans sujet)", x + 10, y + 7, { width: w - 20, lineBreak: false, ellipsis: true });
-      doc.fillColor(C.gray).font("Helvetica").fontSize(8)
+      // Sujet a gauche + badge statut a droite
+      doc.fillColor(C.text).font("Helvetica-Bold").fontSize(10.5)
+        .text(sanitize(a.subject) || t.noSubject, x + 12, y + 9, { width: w - 110, lineBreak: false, ellipsis: true });
+      drawStatusBadge(doc, doc.page.width - 50, y + 10, a.status.toUpperCase(), statusColor);
+
+      // Meta sur ligne 2
+      doc.fillColor(C.gray).font("Helvetica").fontSize(8.5)
         .text(
-          `${dateStr}${time ? `  ${time}` : ""}  ·  ${sanitize(a.meetingType) || "—"}  ·  ${a.status}`,
-          x + 10, y + 22, { width: w - 20, lineBreak: false, ellipsis: true },
+          `${dateStr}${time ? `  ·  ${time}` : ""}${a.meetingType ? `  ·  ${sanitize(a.meetingType)}` : ""}`,
+          x + 12, y + 26, { width: w - 24, lineBreak: false, ellipsis: true },
         );
       if (a.notesAdmin) {
-        doc.fillColor(C.text).fontSize(7.5)
-          .text(sanitize(a.notesAdmin), x + 10, y + 37, { width: w - 20, height: 14, ellipsis: true, lineBreak: false });
+        doc.fillColor(C.grayDark).fontSize(8)
+          .text(sanitize(a.notesAdmin), x + 12, y + 42, { width: w - 24, height: 16, ellipsis: true, lineBreak: false });
       }
-      doc.y = y + cardH + 4;
+      doc.y = y + cardH + 6;
     }
   });
 }
@@ -450,19 +801,22 @@ export async function generateDisputesPdf(params: {
     province?: string | null; postalCode?: string | null;
   };
   disputes: DisputeRow[];
+  lang?: ExportLang;
 }): Promise<Buffer> {
+  const t = getDict(params.lang);
+  const localeTag = params.lang === "en" ? "en-CA" : "fr-CA";
   return capture((doc) => {
     drawHeader(
       doc,
-      "Litiges et différends",
+      t.dispTitle,
       sanitize(params.client.fullName),
-      `Dossier juridique complet des ${params.disputes.length} litiges avec ${sanitize(params.client.fullName)}. Chargebacks Stripe, plaintes, escalades (cabinet, dossier, tribunal). Références croisées vers facture/contrat. Notes internes confidentielles en jaune. Document à conserver pour traçabilité légale.`,
+      t.dispIntro(sanitize(params.client.fullName), params.disputes.length),
     );
 
-    drawClientBlock(doc, params.client);
+    drawClientBlock(doc, params.client, t);
 
     if (params.disputes.length === 0) {
-      doc.fillColor(C.gray).fontSize(10).text("Aucun litige enregistré.", 50, doc.y, { align: "center", width: doc.page.width - 100 });
+      doc.fillColor(C.gray).fontSize(10).text(t.dispEmpty, 50, doc.y, { align: "center", width: doc.page.width - 100 });
       return;
     }
 
@@ -472,78 +826,93 @@ export async function generateDisputesPdf(params: {
       const w = doc.page.width - 100;
       const y = doc.y;
       const priorityColor = d.priority === "high" || d.priority === "urgent" ? C.red : d.priority === "medium" ? C.amber : C.gray;
+      const statusColor = d.resolvedAt ? C.green : d.status === "open" ? C.red : C.amber;
 
-      // Titre + meta
-      doc.rect(x, y, 3, 26).fill(priorityColor);
-      doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(11)
-        .text(sanitize(d.title), x + 10, y, { width: w - 20, lineBreak: false, ellipsis: true });
-      doc.fillColor(C.grayDark).font("Helvetica").fontSize(8)
+      // Titre + badges (statut + priorite)
+      doc.rect(x, y, 3, 16).fill(priorityColor);
+      doc.fillColor(C.text).font("Helvetica-Bold").fontSize(11)
+        .text(sanitize(d.title), x + 12, y, { width: w - 200, lineBreak: false, ellipsis: true });
+      // Badges en haut a droite
+      let badgeRight = doc.page.width - 50;
+      const wBadge = drawStatusBadge(doc, badgeRight, y + 1, d.status.toUpperCase(), statusColor);
+      badgeRight -= wBadge + 4;
+      if (d.priority) {
+        drawStatusBadge(doc, badgeRight, y + 1, d.priority.toUpperCase(), priorityColor);
+      }
+
+      // Meta info ligne 2
+      doc.fillColor(C.gray).font("Helvetica").fontSize(8)
         .text(
-          `Ouvert ${d.openedAt.toLocaleDateString("fr-CA")} · Statut ${d.status} · Priorité ${d.priority ?? "—"}` +
-          (d.invoiceNumber ? ` · Facture ${d.invoiceNumber}` : "") +
-          (d.contractNumber ? ` · Contrat ${d.contractNumber}` : ""),
-          x + 10, doc.y, { width: w - 20, lineBreak: false },
+          t.dispMetaOpened(d.openedAt.toLocaleDateString(localeTag)) +
+          (d.invoiceNumber ? `  ·  ${t.dispMetaInvoice(d.invoiceNumber)}` : "") +
+          (d.assignedTo ? `  ·  ${t.dispMetaAssigned(sanitize(d.assignedTo))}` : ""),
+          x + 12, y + 16, { width: w - 24, lineBreak: false, ellipsis: true },
         );
-      doc.moveDown(0.3);
+      doc.y = y + 32;
 
-      // 2 colonnes de champs
+      // Champs en 2 colonnes (label gris fin / valeur noir, plus aere)
       const fields: [string, string | null | undefined][] = [
-        ["Type", d.type],
-        ["Catégorie", d.category],
-        ["Montant contesté", d.amountDisputed != null ? `${d.amountDisputed.toFixed(2)} ${d.currency ?? "CAD"}` : null],
-        ["Stripe Dispute ID", d.stripeDisputeId],
-        ["Raison Stripe", d.stripeReason],
-        ["Résultat", d.outcome],
-        ["Échéance preuve", d.evidenceDueBy ? d.evidenceDueBy.toLocaleDateString("fr-CA") : null],
-        ["Assigné à", d.assignedTo],
-        ["Cabinet juridique", d.lawFirmInvolved],
-        ["N° de dossier", d.caseNumber],
-        ["Tribunal", d.tribunal],
-        ["Résolution", d.resolution],
-        ["Résolu le", d.resolvedAt ? d.resolvedAt.toLocaleDateString("fr-CA") : null],
+        [t.dispFields.type, d.type],
+        [t.dispFields.category, d.category],
+        [t.dispFields.amountDisputed, d.amountDisputed != null ? `${d.amountDisputed.toFixed(2)} ${d.currency ?? "CAD"}` : null],
+        [t.dispFields.stripeId, d.stripeDisputeId],
+        [t.dispFields.stripeReason, d.stripeReason],
+        [t.dispFields.outcome, d.outcome],
+        [t.dispFields.evidenceDueBy, d.evidenceDueBy ? d.evidenceDueBy.toLocaleDateString(localeTag) : null],
+        [t.dispFields.lawFirm, d.lawFirmInvolved],
+        [t.dispFields.caseNumber, d.caseNumber],
+        [t.dispFields.tribunal, d.tribunal],
+        [t.dispFields.resolution, d.resolution],
+        [t.dispFields.resolvedAt, d.resolvedAt ? d.resolvedAt.toLocaleDateString(localeTag) : null],
       ].filter(([, v]) => !!v) as [string, string][];
 
-      const colW = (w - 20) / 2;
-      const colH = Math.ceil(fields.length / 2) * 12;
-      ensureSpace(doc, colH + 8);
-      const fieldsY = doc.y;
-      doc.font("Helvetica").fontSize(8);
-      fields.forEach((f, i) => {
-        const fx = x + 10 + (i % 2) * colW;
-        const fy = fieldsY + Math.floor(i / 2) * 12;
-        doc.fillColor(C.gray).text(`${f[0]} :`, fx, fy, { continued: true, lineBreak: false });
-        doc.fillColor(C.text).text(`  ${sanitize(f[1])}`, { width: colW - doc.widthOfString(`${f[0]} :  `) - 8, lineBreak: false, ellipsis: true });
-      });
-      doc.y = fieldsY + colH + 4;
+      if (fields.length > 0) {
+        const colW = (w - 12) / 2;
+        const rowH = 14;
+        const colH = Math.ceil(fields.length / 2) * rowH;
+        ensureSpace(doc, colH + 6);
+        const fieldsY = doc.y;
+        doc.font("Helvetica").fontSize(8.5);
+        fields.forEach((f, i) => {
+          const fx = x + 6 + (i % 2) * colW;
+          const fy = fieldsY + Math.floor(i / 2) * rowH;
+          doc.fillColor(C.gray).text(f[0], fx, fy, { width: 90, lineBreak: false });
+          doc.fillColor(C.text).font("Helvetica-Bold")
+            .text(sanitize(f[1]), fx + 92, fy, { width: colW - 96, lineBreak: false, ellipsis: true });
+          doc.font("Helvetica");
+        });
+        doc.y = fieldsY + colH + 6;
+      }
 
       if (d.description) {
         const desc = sanitize(d.description);
-        const descH = doc.heightOfString(desc, { width: w - 20 });
-        ensureSpace(doc, descH + 18);
+        const descH = doc.heightOfString(desc, { width: w - 12 });
+        ensureSpace(doc, descH + 22);
         doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7)
-          .text("DESCRIPTION", x + 10, doc.y, { characterSpacing: 0.5 });
-        doc.fillColor(C.text).font("Helvetica").fontSize(8.5)
-          .text(desc, x + 10, doc.y + 1, { width: w - 20 });
+          .text(t.dispDescription, x + 6, doc.y, { characterSpacing: 0.6 });
+        doc.fillColor(C.text).font("Helvetica").fontSize(9)
+          .text(desc, x + 6, doc.y + 2, { width: w - 12 });
         doc.moveDown(0.3);
       }
 
       if (d.internalNotes) {
         const notesText = sanitize(d.internalNotes);
-        const notesH = doc.heightOfString(notesText, { width: w - 32 });
-        ensureSpace(doc, notesH + 22);
+        const notesH = doc.heightOfString(notesText, { width: w - 28 });
+        ensureSpace(doc, notesH + 28);
         const noteY = doc.y;
-        doc.roundedRect(x + 10, noteY, w - 20, notesH + 18, 3).fillAndStroke(C.amberLight, C.amber);
+        doc.roundedRect(x, noteY, w, notesH + 22, 4).fill(C.amberLight);
+        doc.rect(x, noteY, 3, notesH + 22).fill(C.amber);
         doc.fillColor(C.amber).font("Helvetica-Bold").fontSize(7)
-          .text("NOTES INTERNES (CONFIDENTIEL)", x + 16, noteY + 4, { characterSpacing: 0.5 });
+          .text(t.dispInternalNotes, x + 10, noteY + 6, { characterSpacing: 0.6 });
         doc.fillColor(C.text).font("Helvetica").fontSize(8.5)
-          .text(notesText, x + 16, noteY + 14, { width: w - 32 });
-        doc.y = noteY + notesH + 22;
+          .text(notesText, x + 10, noteY + 16, { width: w - 16 });
+        doc.y = noteY + notesH + 26;
       }
 
-      doc.moveDown(0.4);
+      doc.moveDown(0.6);
       doc.strokeColor(C.border).lineWidth(0.4)
         .moveTo(x, doc.y).lineTo(x + w, doc.y).stroke();
-      doc.moveDown(0.4);
+      doc.moveDown(0.6);
     }
   });
 }
@@ -564,56 +933,70 @@ type AuditRow = {
 export async function generateAuditPdf(params: {
   client: { fullName: string; email: string };
   events: AuditRow[];
+  lang?: ExportLang;
 }): Promise<Buffer> {
+  const t = getDict(params.lang);
+  const localeTag = params.lang === "en" ? "en-CA" : "fr-CA";
   return capture((doc) => {
     drawHeader(
       doc,
-      "Timeline d'événements (audit complet)",
+      t.auditTitle,
       sanitize(params.client.fullName),
-      `Trace immuable des ${params.events.length} actions impliquant ${sanitize(params.client.fullName)} : connexions, paiements, signatures, consentements, emails, actions admin et événements workflow. Utilisé pour audit légal, conformité GDPR, et investigation forensique. Chaque ligne inclut IP et User-Agent quand disponibles.`,
+      t.auditIntro(sanitize(params.client.fullName), params.events.length),
     );
 
     if (params.events.length === 0) {
-      doc.fillColor(C.gray).fontSize(11).text("Aucun événement enregistré.", 50, doc.y, { align: "center", width: doc.page.width - 100 });
+      doc.fillColor(C.gray).fontSize(11).text(t.auditEmpty, 50, doc.y, { align: "center", width: doc.page.width - 100 });
       return;
     }
 
     const sourceColor: Record<string, string> = {
-      login: C.blue, order: C.green, signature: C.navy, consent: C.amber,
-      email: C.gray, audit: C.red, workflow: C.blue,
+      login: C.brand, order: C.green, signature: C.navy, consent: C.amber,
+      email: C.gray, audit: C.red, workflow: C.brand,
     };
 
     let lastDate = "";
     for (const e of params.events) {
-      const dateStr = e.createdAt.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+      const dateStr = e.createdAt.toLocaleDateString(localeTag, { day: "numeric", month: "long", year: "numeric" });
       if (dateStr !== lastDate) {
-        ensureSpace(doc, 18);
-        doc.moveDown(0.2);
-        doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(8.5)
-          .text(dateStr.toUpperCase(), 50, doc.y, { characterSpacing: 0.5 });
+        ensureSpace(doc, 26);
+        doc.moveDown(0.5);
+        const dy = doc.y;
+        doc.rect(50, dy + 1, 3, 11).fill(C.brand);
+        doc.fillColor(C.brand).font("Helvetica-Bold").fontSize(9.5)
+          .text(dateStr.toUpperCase(), 60, dy, { characterSpacing: 0.8 });
         doc.strokeColor(C.border).lineWidth(0.4)
-          .moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
-        doc.moveDown(0.15);
+          .moveTo(50, dy + 16).lineTo(doc.page.width - 50, dy + 16).stroke();
+        doc.y = dy + 22;
         lastDate = dateStr;
       }
 
-      const hasMeta = !!(e.ipAddress || e.userAgent);
-      ensureSpace(doc, hasMeta ? 24 : 18);
+      const metaParts = [
+        e.ipAddress,
+        e.userAgent ? sanitize(e.userAgent).slice(0, 80) : null,
+      ].filter(Boolean) as string[];
+      const hasMeta = metaParts.length > 0;
+      const itemH = hasMeta ? 26 : 18;
+      ensureSpace(doc, itemH);
       const x = 50;
       const y = doc.y;
       const w = doc.page.width - 100;
       const dotColor = sourceColor[e.source] ?? C.gray;
 
-      doc.circle(x + 5, y + 5, 3).fill(dotColor);
-      doc.fillColor(C.text).font("Helvetica-Bold").fontSize(8.5)
-        .text(sanitize(e.label), x + 16, y, { width: w - 16, lineBreak: false, ellipsis: true });
-      doc.fillColor(C.gray).font("Helvetica").fontSize(7)
-        .text(
-          `${e.createdAt.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit", hour12: false })} · ${e.source}/${e.type}` +
-          (hasMeta ? ` · ${[e.ipAddress, e.userAgent ? sanitize(e.userAgent).slice(0, 80) : null].filter(Boolean).join(" · ")}` : ""),
-          x + 16, y + 10, { width: w - 16, lineBreak: false, ellipsis: true },
-        );
-      doc.y = y + (hasMeta ? 22 : 16);
+      doc.circle(x + 6, y + 6, 3.5).fill(dotColor);
+      doc.fillColor(C.text).font("Helvetica-Bold").fontSize(9)
+        .text(sanitize(e.label), x + 18, y, { width: w - 100, lineBreak: false, ellipsis: true });
+      // Heure a droite
+      doc.fillColor(C.gray).font("Helvetica").fontSize(8)
+        .text(e.createdAt.toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit", hour12: false }),
+          0, y + 1, { width: doc.page.width - 50, align: "right", lineBreak: false });
+      // IP/UA seulement si presents (plus de "workflow/xxx" technique)
+      if (hasMeta) {
+        doc.fillColor(C.gray).font("Helvetica").fontSize(7.5)
+          .text(metaParts.join("  ·  "),
+            x + 18, y + 12, { width: w - 18, lineBreak: false, ellipsis: true });
+      }
+      doc.y = y + itemH;
     }
   });
 }
@@ -635,92 +1018,116 @@ type PaymentRow = {
 export async function generatePaymentsPdf(params: {
   client: { fullName: string; email: string };
   rows: PaymentRow[];
+  lang?: ExportLang;
 }): Promise<Buffer> {
+  const t = getDict(params.lang);
+  const localeTag = params.lang === "en" ? "en-CA" : "fr-CA";
   return capture((doc) => {
     drawHeader(
       doc,
-      "Relevé de paiements",
+      t.payTitle,
       sanitize(params.client.fullName),
-      `Totaux financiers et détail chronologique des ${params.rows.length} transactions (paiements encaissés et remboursements émis) avec ${sanitize(params.client.fullName)}. Source : Stripe. Document à conserver pour réconciliation comptable.`,
+      t.payIntro(sanitize(params.client.fullName), params.rows.length),
     );
 
     const totalIn = params.rows.filter((r) => r.type === "Paiement" && r.status === "succeeded").reduce((s, r) => s + r.amount, 0);
     const totalOut = params.rows.filter((r) => r.type === "Remboursement").reduce((s, r) => s + r.amount, 0);
     const net = totalIn - totalOut;
 
-    // Sommaire — 3 cartes compactes
+    // Sommaire — 3 cartes (fond colore subtil, sans bordure)
     const sx = 50;
     const sw = (doc.page.width - 100) / 3 - 5;
     const sy = doc.y;
     [
-      { l: "Total encaissé", v: totalIn, c: C.green, bg: C.greenLight },
-      { l: "Total remboursé", v: totalOut, c: C.red, bg: C.redLight },
-      { l: "Net", v: net, c: C.navy, bg: C.blueLighter },
+      { l: t.payTotalIn, v: totalIn, c: C.green, bg: C.greenLight },
+      { l: t.payTotalOut, v: totalOut, c: C.red, bg: C.redLight },
+      { l: t.payNet, v: net, c: C.brand, bg: C.brandBg },
     ].forEach((s, i) => {
       const x = sx + i * (sw + 7);
-      doc.roundedRect(x, sy, sw, 42, 4).fillAndStroke(s.bg, C.border);
+      doc.roundedRect(x, sy, sw, 46, 6).fill(s.bg);
+      // Filet d'accent a gauche
+      doc.rect(x, sy, 3, 46).fill(s.c);
       doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7)
-        .text(s.l.toUpperCase(), x + 10, sy + 6, { width: sw - 20, lineBreak: false, characterSpacing: 0.4 });
-      doc.fillColor(s.c).font("Helvetica-Bold").fontSize(14)
-        .text(`${s.v.toFixed(2)} CAD`, x + 10, sy + 19, { width: sw - 20, lineBreak: false });
+        .text(s.l.toUpperCase(), x + 12, sy + 8, { width: sw - 22, lineBreak: false, characterSpacing: 0.5 });
+      doc.fillColor(s.c).font("Helvetica-Bold").fontSize(15)
+        .text(`${s.v.toFixed(2)} CAD`, x + 12, sy + 22, { width: sw - 22, lineBreak: false });
     });
-    doc.y = sy + 52;
+    doc.y = sy + 56;
 
     if (params.rows.length === 0) {
-      doc.fillColor(C.gray).fontSize(11).text("Aucune transaction.", 50, doc.y, { align: "center", width: doc.page.width - 100 });
+      doc.fillColor(C.gray).fontSize(11).text(t.payEmpty, 50, doc.y, { align: "center", width: doc.page.width - 100 });
       return;
     }
 
     // Tableau
+    sectionTitle(doc, t.payDetail);
     const tx = 50;
     const tw = doc.page.width - 100;
     const cols = [
-      { label: "Type", w: 75 },
-      { label: "Date", w: 80 },
-      { label: "Montant", w: 80 },
-      { label: "Méthode", w: 70 },
-      { label: "Statut", w: 65 },
-      { label: "Description", w: tw - 370 },
+      { label: t.payCols.type, w: 80 },
+      { label: t.payCols.date, w: 78 },
+      { label: t.payCols.amount, w: 92 },
+      { label: t.payCols.method, w: 70 },
+      { label: t.payCols.status, w: 70 },
+      { label: t.payCols.description, w: tw - 390 },
     ];
 
     const drawHead = () => {
       const hy = doc.y;
-      doc.rect(tx, hy, tw, 18).fill(C.navy);
-      let cx = tx + 6;
-      doc.fillColor(C.white).font("Helvetica-Bold").fontSize(7.5);
+      doc.rect(tx, hy, tw, 22).fill(C.navy);
+      let cx = tx + 8;
+      doc.fillColor(C.white).font("Helvetica-Bold").fontSize(8);
       cols.forEach((c) => {
-        doc.text(c.label.toUpperCase(), cx, hy + 6, { width: c.w - 6, lineBreak: false, characterSpacing: 0.4 });
+        doc.text(c.label.toUpperCase(), cx, hy + 7, { width: c.w - 8, lineBreak: false, characterSpacing: 0.6 });
         cx += c.w;
       });
-      doc.y = hy + 18;
+      doc.y = hy + 22;
     };
-    ensureSpace(doc, 26);
+    ensureSpace(doc, 30);
     drawHead();
 
     let alt = false;
+    const rowH = 22;
     for (const r of params.rows) {
-      ensureSpace(doc, 16);
+      ensureSpace(doc, rowH + 2);
       if (doc.y < HEADER_H) drawHead();
       const rowY = doc.y;
-      if (alt) doc.rect(tx, rowY, tw, 14).fill(C.grayLight);
+      if (alt) doc.rect(tx, rowY, tw, rowH).fill(C.grayLight);
       alt = !alt;
 
-      const cells = [
-        r.type,
-        r.date.toLocaleDateString("fr-CA"),
-        `${r.amount.toFixed(2)} ${r.currency}`,
-        r.method ?? "—",
-        r.status,
-        sanitize(r.description),
-      ];
-      let cx = tx + 6;
-      doc.fillColor(C.text).font("Helvetica").fontSize(7.5);
-      cells.forEach((v, i) => {
-        const col = cols[i];
-        doc.text(String(v), cx, rowY + 3, { width: col.w - 6, lineBreak: false, ellipsis: true });
-        cx += col.w;
-      });
-      doc.y = rowY + 14;
+      const statusColor = r.status === "succeeded" || r.status === "paid" ? C.green
+        : r.status === "failed" ? C.red : C.amber;
+      const isRefund = r.type === "Remboursement";
+      const typeLabel = isRefund
+        ? (params.lang === "en" ? "Refund" : "Remboursement")
+        : (params.lang === "en" ? "Payment" : "Paiement");
+
+      // Type avec couleur
+      doc.fillColor(isRefund ? C.red : C.green).font("Helvetica-Bold").fontSize(8)
+        .text(typeLabel, tx + 8, rowY + 7, { width: cols[0].w - 8, lineBreak: false });
+      // Date
+      doc.fillColor(C.text).font("Helvetica").fontSize(8.5)
+        .text(r.date.toLocaleDateString(localeTag), tx + cols[0].w + 8, rowY + 7,
+          { width: cols[1].w - 8, lineBreak: false });
+      // Montant
+      doc.fillColor(C.text).font("Helvetica-Bold").fontSize(9)
+        .text(`${isRefund ? "-" : ""}${r.amount.toFixed(2)} ${r.currency.toUpperCase()}`,
+          tx + cols[0].w + cols[1].w + 8, rowY + 7,
+          { width: cols[2].w - 8, lineBreak: false });
+      // Methode
+      doc.fillColor(C.text).font("Helvetica").fontSize(8)
+        .text(r.method ?? "—", tx + cols[0].w + cols[1].w + cols[2].w + 8, rowY + 7,
+          { width: cols[3].w - 8, lineBreak: false, ellipsis: true });
+      // Badge statut
+      drawStatusBadge(doc, tx + cols[0].w + cols[1].w + cols[2].w + cols[3].w + cols[4].w - 4,
+        rowY + 5, r.status.toUpperCase(), statusColor);
+      // Description
+      doc.fillColor(C.gray).font("Helvetica").fontSize(8)
+        .text(sanitize(r.description),
+          tx + cols[0].w + cols[1].w + cols[2].w + cols[3].w + cols[4].w + 8, rowY + 7,
+          { width: cols[5].w - 16, lineBreak: false, ellipsis: true });
+
+      doc.y = rowY + rowH;
     }
   });
 }
@@ -747,131 +1154,137 @@ type FicheClientData = {
   activeDisputes: { title: string; status: string; openedAt: Date; amountDisputed: number | null }[];
 };
 
-export async function generateFicheClientPdf(data: FicheClientData): Promise<Buffer> {
+export async function generateFicheClientPdf(data: FicheClientData & { lang?: ExportLang }): Promise<Buffer> {
+  const t = getDict(data.lang);
+  const localeTag = data.lang === "en" ? "en-CA" : "fr-CA";
   return capture((doc) => {
     drawHeader(
       doc,
-      "Fiche client (synthèse)",
+      t.ficheTitle,
       sanitize(data.client.fullName),
-      `Vue d'ensemble exécutive du dossier de ${sanitize(data.client.fullName)} : identité, totaux financiers, derniers documents émis et litiges en cours. Document de tête du dossier ZIP — sert d'index visuel pour comprendre la relation client en un coup d'œil.`,
+      t.ficheIntro(sanitize(data.client.fullName)),
     );
 
-    drawClientBlock(doc, data.client);
+    drawClientBlock(doc, data.client, t);
 
-    // ─── Bandeau totaux ────────────────────────────────────
+    // ─── KPI activite — 4 cartes ─────────────────────────
     const w = doc.page.width - 100;
     const sx = 50;
     const sy = doc.y;
-    const cardW = (w - 12) / 4;
+    const cardW = (w - 18) / 4;
     [
-      { l: "Mandats", v: String(data.totals.mandates), c: C.blue },
-      { l: "Devis", v: String(data.totals.quotes), c: C.amber },
-      { l: "Contrats", v: String(data.totals.contracts), c: C.navy },
-      { l: "Factures", v: String(data.totals.invoices), c: C.green },
+      { l: t.ficheKpi.mandates, v: String(data.totals.mandates), c: C.brand },
+      { l: t.ficheKpi.quotes, v: String(data.totals.quotes), c: C.amber },
+      { l: t.ficheKpi.contracts, v: String(data.totals.contracts), c: C.navy },
+      { l: t.ficheKpi.invoices, v: String(data.totals.invoices), c: C.green },
     ].forEach((s, i) => {
-      const x = sx + i * (cardW + 4);
-      doc.roundedRect(x, sy, cardW, 36, 4).fillAndStroke(C.grayLight, C.border);
-      doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7)
-        .text(s.l.toUpperCase(), x + 8, sy + 5, { width: cardW - 16, lineBreak: false, characterSpacing: 0.4 });
-      doc.fillColor(s.c).font("Helvetica-Bold").fontSize(16)
-        .text(s.v, x + 8, sy + 16, { width: cardW - 16, lineBreak: false });
+      const x = sx + i * (cardW + 6);
+      doc.roundedRect(x, sy, cardW, 46, 4).fill(C.grayLight);
+      doc.rect(x, sy, 3, 46).fill(s.c);
+      doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5)
+        .text(s.l.toUpperCase(), x + 10, sy + 9, { width: cardW - 20, lineBreak: false, characterSpacing: 0.6 });
+      doc.fillColor(s.c).font("Helvetica-Bold").fontSize(20)
+        .text(s.v, x + 10, sy + 21, { width: cardW - 20, lineBreak: false });
     });
-    doc.y = sy + 44;
+    doc.y = sy + 56;
 
-    // ─── Finance ──────────────────────────────────────────
+    // ─── Finance — 2 cartes ──────────────────────────────
     const fy = doc.y;
-    const fcardW = (w - 8) / 2;
+    const fcardW = (w - 10) / 2;
     [
-      { l: "Total dépensé", v: `${data.totals.totalSpentTtc.toFixed(2)} CAD`, c: C.green, bg: C.greenLight },
-      { l: "Solde ouvert", v: `${data.totals.openBalanceTtc.toFixed(2)} CAD`, c: data.totals.openBalanceTtc > 0 ? C.amber : C.gray, bg: data.totals.openBalanceTtc > 0 ? C.amberLight : C.grayLight },
+      { l: t.ficheTotalSpent, v: `${data.totals.totalSpentTtc.toFixed(2)} CAD`, c: C.green, bg: C.greenLight },
+      { l: t.ficheOpenBalance, v: `${data.totals.openBalanceTtc.toFixed(2)} CAD`,
+        c: data.totals.openBalanceTtc > 0 ? C.amber : C.gray,
+        bg: data.totals.openBalanceTtc > 0 ? C.amberLight : C.grayLight },
     ].forEach((s, i) => {
-      const x = sx + i * (fcardW + 8);
-      doc.roundedRect(x, fy, fcardW, 42, 4).fillAndStroke(s.bg, C.border);
-      doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7)
-        .text(s.l.toUpperCase(), x + 10, fy + 6, { width: fcardW - 20, lineBreak: false, characterSpacing: 0.4 });
-      doc.fillColor(s.c).font("Helvetica-Bold").fontSize(15)
-        .text(s.v, x + 10, fy + 19, { width: fcardW - 20, lineBreak: false });
+      const x = sx + i * (fcardW + 10);
+      doc.roundedRect(x, fy, fcardW, 54, 6).fill(s.bg);
+      doc.rect(x, fy, 3, 54).fill(s.c);
+      doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5)
+        .text(s.l.toUpperCase(), x + 14, fy + 10, { width: fcardW - 24, lineBreak: false, characterSpacing: 0.6 });
+      doc.fillColor(s.c).font("Helvetica-Bold").fontSize(18)
+        .text(s.v, x + 14, fy + 26, { width: fcardW - 24, lineBreak: false });
     });
-    doc.y = fy + 52;
+    doc.y = fy + 64;
 
     // ─── Profil business ──────────────────────────────────
     if (data.client.sector || data.client.technologies) {
-      doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(9)
-        .text("PROFIL BUSINESS", 50, doc.y, { characterSpacing: 0.5 });
-      doc.moveDown(0.2);
+      sectionTitle(doc, t.ficheBusinessProfile);
+      const labelW = 90;
       if (data.client.sector) {
-        doc.fillColor(C.gray).font("Helvetica").fontSize(8.5).text("Secteur : ", { continued: true });
-        doc.fillColor(C.text).text(sanitize(data.client.sector));
+        const ly = doc.y;
+        doc.fillColor(C.gray).font("Helvetica").fontSize(8.5)
+          .text(t.ficheSector, 50, ly, { width: labelW, lineBreak: false });
+        doc.fillColor(C.text)
+          .text(sanitize(data.client.sector), 50 + labelW, ly, { width: w - labelW, lineBreak: false, ellipsis: true });
+        doc.y = ly + 14;
       }
       if (data.client.technologies) {
-        doc.fillColor(C.gray).font("Helvetica").fontSize(8.5).text("Technologies : ", { continued: true });
-        doc.fillColor(C.text).text(sanitize(data.client.technologies), { width: w });
+        const ly = doc.y;
+        doc.fillColor(C.gray).font("Helvetica").fontSize(8.5)
+          .text(t.ficheTechnologies, 50, ly, { width: labelW, lineBreak: false });
+        doc.fillColor(C.text)
+          .text(sanitize(data.client.technologies), 50 + labelW, ly, { width: w - labelW });
+        doc.y = Math.max(doc.y, ly + 14);
       }
-      doc.moveDown(0.4);
     }
+
+    // Helper: traduit un statut en label
+    const translateStatus = (status: string): string => {
+      const s = status.toLowerCase();
+      if (s === "paid") return t.paid;
+      if (s === "unpaid") return t.unpaid;
+      if (s === "overdue") return t.overdue;
+      if (s === "pending") return t.pending;
+      return status.toUpperCase();
+    };
 
     // ─── Dernieres factures ───────────────────────────────
     if (data.recentInvoices.length > 0) {
-      ensureSpace(doc, 60);
-      doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(9)
-        .text("DERNIÈRES FACTURES", 50, doc.y, { characterSpacing: 0.5 });
-      doc.moveDown(0.2);
-      data.recentInvoices.slice(0, 5).forEach((i) => {
-        ensureSpace(doc, 16);
-        const ry = doc.y;
-        doc.fillColor(C.text).font("Helvetica-Bold").fontSize(8.5)
-          .text(i.invoiceNumber, 50, ry, { continued: true });
-        doc.font("Helvetica").fillColor(C.grayDark)
-          .text(`  ·  ${sanitize(i.title)}`, { width: w - 130, lineBreak: false, ellipsis: true });
-        doc.fillColor(C.text).font("Helvetica-Bold")
-          .text(`${i.amountTtc.toFixed(2)} CAD`, doc.page.width - 130, ry, { width: 80, align: "right", lineBreak: false });
-        doc.fillColor(i.status === "paid" ? C.green : i.status === "overdue" ? C.red : C.amber)
-          .fontSize(7).text(i.status.toUpperCase(), doc.page.width - 130, ry + 9, { width: 80, align: "right", lineBreak: false, characterSpacing: 0.4 });
-        doc.y = ry + 18;
+      sectionTitle(doc, t.ficheRecentInvoices);
+      const items = data.recentInvoices.slice(0, 5);
+      items.forEach((i, idx) => {
+        const statusBg = i.status === "paid" ? C.green : i.status === "overdue" ? C.red : C.amber;
+        drawListItem(doc, {
+          number: i.invoiceNumber,
+          title: i.title,
+          amount: `${i.amountTtc.toFixed(2)} CAD`,
+          status: { label: translateStatus(i.status), color: statusBg },
+          divider: idx < items.length - 1,
+        });
       });
     }
 
     // ─── Derniers contrats ────────────────────────────────
     if (data.recentContracts.length > 0) {
-      doc.moveDown(0.4);
-      ensureSpace(doc, 60);
-      doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(9)
-        .text("DERNIERS CONTRATS", 50, doc.y, { characterSpacing: 0.5 });
-      doc.moveDown(0.2);
-      data.recentContracts.slice(0, 5).forEach((c) => {
-        ensureSpace(doc, 14);
-        const ry = doc.y;
-        doc.fillColor(C.text).font("Helvetica-Bold").fontSize(8.5)
-          .text(c.contractNumber, 50, ry, { continued: true });
-        doc.font("Helvetica").fillColor(C.grayDark)
-          .text(`  ·  ${sanitize(c.title)}`, { width: w - 100, lineBreak: false, ellipsis: true });
-        doc.fillColor(c.signedAt ? C.green : C.gray).font("Helvetica-Bold").fontSize(7)
-          .text(c.signedAt ? `SIGNÉ ${c.signedAt.toLocaleDateString("fr-CA")}` : c.status.toUpperCase(),
-            doc.page.width - 130, ry + 1, { width: 80, align: "right", lineBreak: false, characterSpacing: 0.4 });
-        doc.y = ry + 14;
+      sectionTitle(doc, t.ficheRecentContracts);
+      const items = data.recentContracts.slice(0, 5);
+      items.forEach((c, idx) => {
+        const isSigned = !!c.signedAt;
+        const statusLabel = isSigned
+          ? t.ficheSigned(c.signedAt!.toLocaleDateString(localeTag))
+          : translateStatus(c.status);
+        const statusColor = isSigned ? C.green : c.status === "pending" ? C.amber : C.gray;
+        drawListItem(doc, {
+          number: c.contractNumber,
+          title: c.title,
+          status: { label: statusLabel, color: statusColor },
+          divider: idx < items.length - 1,
+        });
       });
     }
 
     // ─── Litiges actifs ───────────────────────────────────
     if (data.activeDisputes.length > 0) {
-      doc.moveDown(0.4);
-      ensureSpace(doc, 60);
-      doc.fillColor(C.red).font("Helvetica-Bold").fontSize(9)
-        .text("LITIGES EN COURS", 50, doc.y, { characterSpacing: 0.5 });
-      doc.moveDown(0.2);
-      data.activeDisputes.forEach((d) => {
-        ensureSpace(doc, 16);
-        const ry = doc.y;
-        doc.rect(50, ry, 3, 14).fill(C.red);
-        doc.fillColor(C.text).font("Helvetica-Bold").fontSize(8.5)
-          .text(sanitize(d.title), 58, ry, { width: w - 110, lineBreak: false, ellipsis: true });
-        doc.fillColor(C.gray).font("Helvetica").fontSize(7.5)
-          .text(`Ouvert ${d.openedAt.toLocaleDateString("fr-CA")} · ${d.status}`, 58, ry + 9, { width: w - 110, lineBreak: false });
-        if (d.amountDisputed != null) {
-          doc.fillColor(C.red).font("Helvetica-Bold").fontSize(8.5)
-            .text(`${d.amountDisputed.toFixed(2)} CAD`, doc.page.width - 130, ry + 1, { width: 80, align: "right", lineBreak: false });
-        }
-        doc.y = ry + 18;
+      sectionTitle(doc, t.ficheActiveDisputes, C.red);
+      data.activeDisputes.forEach((d, idx) => {
+        drawListItem(doc, {
+          number: sanitize(d.title),
+          title: `${t.dispMetaOpened(d.openedAt.toLocaleDateString(localeTag))}  ·  ${d.status}`,
+          amount: d.amountDisputed != null ? `${d.amountDisputed.toFixed(2)} CAD` : undefined,
+          status: { label: d.status.toUpperCase(), color: C.red },
+          divider: idx < data.activeDisputes.length - 1,
+        });
       });
     }
 
@@ -884,7 +1297,7 @@ export async function generateFicheClientPdf(data: FicheClientData): Promise<Buf
       const ny = doc.y;
       doc.roundedRect(50, ny, w, notesH + 22, 4).fillAndStroke(C.amberLight, C.amber);
       doc.fillColor(C.amber).font("Helvetica-Bold").fontSize(7)
-        .text("NOTES INTERNES", 60, ny + 6, { characterSpacing: 0.5 });
+        .text(t.ficheInternalNotes, 60, ny + 6, { characterSpacing: 0.5 });
       doc.fillColor(C.text).font("Helvetica").fontSize(8.5)
         .text(notesText, 60, ny + 16, { width: w - 24 });
       doc.y = ny + notesH + 26;

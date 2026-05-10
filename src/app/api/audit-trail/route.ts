@@ -153,11 +153,27 @@ export async function GET(req: Request) {
       if (clientIdFilter && auditClientId !== Number(clientIdFilter)) return;
 
       const typeFromChanges = ch && typeof ch.type === "string" ? ch.type : null;
+      const clientNameFromChanges = ch && typeof ch.clientName === "string" ? ch.clientName : null;
+      const titleFromChanges = ch && typeof ch.title === "string" ? ch.title : null;
+      // Construit un label lisible avec le nom du client / admin quand on l'a
+      const actor = a.admin?.email ?? clientNameFromChanges ?? (auditClientId ? clientMap.get(auditClientId) ?? null : null);
+      let prettyLabel: string;
+      if (typeFromChanges === "document_read_by_client") {
+        prettyLabel = `Document "${titleFromChanges ?? `#${a.entityId}`}" lu par ${clientNameFromChanges ?? "client"}`;
+      } else if (typeFromChanges === "password_changed") {
+        prettyLabel = `Mot de passe modifié${actor ? ` par ${actor}` : ""}`;
+      } else if (typeFromChanges === "2fa_enabled") {
+        prettyLabel = `2FA activée${actor ? ` par ${actor}` : ""}`;
+      } else if (typeFromChanges === "2fa_disabled") {
+        prettyLabel = `2FA désactivée${actor ? ` par ${actor}` : ""}`;
+      } else if (typeFromChanges) {
+        prettyLabel = `${typeFromChanges}${a.entityId ? ` #${a.entityId}` : ""}${actor ? ` par ${actor}` : ""}`;
+      } else {
+        prettyLabel = `${a.action} ${a.entityType}${a.entityId ? ` #${a.entityId}` : ""}${actor ? ` par ${actor}` : ""}`;
+      }
       events.push({
         id: `audit-${a.id}`, source: "audit", type: typeFromChanges ?? `${a.entityType}.${a.action}`,
-        label: typeFromChanges
-          ? `${typeFromChanges}${a.entityId ? ` #${a.entityId}` : ""}${a.admin?.email ? ` par ${a.admin.email}` : ""}`
-          : `${a.action} ${a.entityType}${a.entityId ? ` #${a.entityId}` : ""}`,
+        label: prettyLabel,
         clientId: auditClientId,
         clientName: auditClientId ? clientMap.get(auditClientId) ?? null : null,
         adminId: a.adminId, adminEmail: a.admin?.email ?? null,
@@ -173,9 +189,20 @@ export async function GET(req: Request) {
       where: { ...dateWhere, ...(clientIdFilter ? { clientId: Number(clientIdFilter) } : {}) },
       orderBy: { createdAt: "desc" }, take: limit,
     });
+    // Substitue retroactivement "par (le )?client" -> nom du client dans les vieux labels
+    const humanizeLabel = (label: string | null, clientId: number | null): string => {
+      if (!label) return "";
+      const name = clientId ? clientMap.get(clientId) : null;
+      if (!name) return label;
+      return label
+        .replace(/\bpar le client\b/gi, `par ${name}`)
+        .replace(/\bau client\b/gi, `à ${name}`)
+        .replace(/\bdu client\b/gi, `de ${name}`)
+        .replace(/\bpar client\b/gi, `par ${name}`);
+    };
     workflow.forEach((w) => events.push({
       id: `wf-${w.id}`, source: "workflow", type: w.eventType,
-      label: w.eventLabel ?? w.eventType,
+      label: humanizeLabel(w.eventLabel, w.clientId) || w.eventType,
       clientId: w.clientId, clientName: clientMap.get(w.clientId) ?? null,
       ipAddress: null, metadata: w.metadata as Record<string, unknown> | null,
       createdAt: w.createdAt.toISOString(),

@@ -17,7 +17,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { id } = await params;
   const docId = Number(id);
-  const doc = await prisma.document.findUnique({ where: { id: docId } });
+  const doc = await prisma.document.findUnique({
+    where: { id: docId },
+    include: { client: { select: { fullName: true } } },
+  });
   if (!doc) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
 
   if (session.user.role === "client" && doc.clientId !== session.user.clientId) {
@@ -42,7 +45,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       action: "view",
       entityType: "documents",
       entityId: doc.id,
-      changes: { type: "document_read_by_client", clientId: doc.clientId, title: doc.title },
+      changes: {
+        type: "document_read_by_client",
+        clientId: doc.clientId,
+        clientName: doc.client?.fullName ?? null,
+        title: doc.title,
+      },
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
     });

@@ -17,6 +17,7 @@ export async function PATCH(
   const { id } = await params;
   const doc = await prisma.document.findUnique({
     where: { id: Number(id) },
+    include: { client: { select: { fullName: true } } },
   });
 
   if (!doc) {
@@ -40,7 +41,12 @@ export async function PATCH(
       action: "view",
       entityType: "documents",
       entityId: doc.id,
-      changes: { type: "document_read_by_client", clientId: doc.clientId, title: doc.title },
+      changes: {
+        type: "document_read_by_client",
+        clientId: doc.clientId,
+        clientName: doc.client?.fullName ?? null,
+        title: doc.title,
+      },
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
     });

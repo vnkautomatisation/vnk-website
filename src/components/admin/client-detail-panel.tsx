@@ -474,20 +474,40 @@ export function ClientDetailPanel({
                     <MessageSquare className="h-3 w-3" />Message
                   </Link>
                 </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur"
-                  onClick={() => {
-                    const a = document.createElement("a");
-                    a.href = `/api/clients/${client.id}/export-zip`;
-                    a.click();
-                    toast.success("Préparation du dossier ZIP…");
-                  }}
-                  title="Télécharger l'intégralité du dossier client"
-                >
-                  <Archive className="h-3 w-3" />Dossier ZIP
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur"
+                      title="Télécharger l'intégralité du dossier client"
+                    >
+                      <Archive className="h-3 w-3" />Dossier ZIP
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const a = document.createElement("a");
+                        a.href = `/api/clients/${client.id}/export-zip?lang=fr`;
+                        a.click();
+                        toast.success("Préparation du dossier ZIP (FR)…");
+                      }}
+                    >
+                      Français
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const a = document.createElement("a");
+                        a.href = `/api/clients/${client.id}/export-zip?lang=en`;
+                        a.click();
+                        toast.success("Generating ZIP (EN)…");
+                      }}
+                    >
+                      English
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </SheetHeader>
 

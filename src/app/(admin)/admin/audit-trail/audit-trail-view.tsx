@@ -226,7 +226,6 @@ export function AuditTrailView({
                       <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{fmtRelative(e.createdAt)}</span>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground flex-wrap">
-                      <span className="font-mono uppercase">{e.source}.{e.type}</span>
                       {e.clientName && (
                         <button type="button" onClick={() => e.clientId && openEntity("client", e.clientId)}
                           className="inline-flex items-center gap-1 hover:text-[#0F2D52] hover:underline">

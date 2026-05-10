@@ -22,6 +22,7 @@ export async function POST(
 
   const appointment = await prisma.appointment.findUnique({
     where: { id: appointmentId },
+    include: { client: { select: { fullName: true } } },
   });
 
   if (!appointment) {
@@ -56,7 +57,7 @@ export async function POST(
   await createWorkflowEvent({
     clientId: appointment.clientId,
     eventType: "appointment_cancelled",
-    eventLabel: `Rendez-vous annulé par le client — ${appointment.subject || appointment.startTime}`,
+    eventLabel: `Rendez-vous annulé par ${appointment.client?.fullName ?? "client"} — ${appointment.subject || appointment.startTime}`,
     triggeredBy: "client",
     metadata: { appointmentId },
   });
