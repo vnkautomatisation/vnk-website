@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "./prisma";
 import { logAudit } from "./audit";
+import { logLoginEvent } from "./request-context";
 
 // ═══════════════════════════════════════════════════════════
 // TYPES AUGMENTATION
@@ -60,12 +61,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Courriel", type: "email" },
         password: { label: "Mot de passe", type: "password" },
       },
-      authorize: async (raw) => {
+      authorize: async (raw, req) => {
         const parsed = credentialsSchema.safeParse({
           ...raw,
           kind: "admin",
         });
+        const reqObj = req as Request | undefined;
+        const email = (raw as { email?: string })?.email ?? "";
         if (!parsed.success) {
+          if (reqObj && email) await logLoginEvent({ req: reqObj, email, type: "failed", reason: "invalid_payload" }).catch(() => {});
           return null;
         }
 
@@ -73,11 +77,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: parsed.data.email },
         });
         if (!admin || !admin.isActive) {
+          if (reqObj) await logLoginEvent({ req: reqObj, email: parsed.data.email, type: "failed", reason: !admin ? "unknown_email" : "account_inactive" }).catch(() => {});
           return null;
         }
 
         const valid = await bcrypt.compare(parsed.data.password, admin.passwordHash);
         if (!valid) {
+          if (reqObj) await logLoginEvent({ req: reqObj, adminId: admin.id, email: admin.email, type: "failed", reason: "wrong_password" }).catch(() => {});
           return null;
         }
 
@@ -93,6 +99,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           entityType: "admin",
           entityId: admin.id,
         });
+        if (reqObj) await logLoginEvent({ req: reqObj, adminId: admin.id, email: admin.email, type: "success" }).catch(() => {});
 
         return {
           id: `admin-${admin.id}`,
@@ -112,12 +119,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Mot de passe", type: "password" },
         twoFactorCode: { label: "Code 2FA", type: "text" },
       },
-      authorize: async (raw) => {
+      authorize: async (raw, req) => {
         const parsed = credentialsSchema.safeParse({
           ...raw,
           kind: "client",
         });
+        const reqObj = req as Request | undefined;
+        const emailRaw = (raw as { email?: string })?.email ?? "";
         if (!parsed.success) {
+          if (reqObj && emailRaw) await logLoginEvent({ req: reqObj, email: emailRaw, type: "failed", reason: "invalid_payload" }).catch(() => {});
           return null;
         }
 
@@ -125,27 +135,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: parsed.data.email },
         });
         if (!client || !client.isActive || client.archived) {
+          if (reqObj) await logLoginEvent({ req: reqObj, email: parsed.data.email, type: "failed", reason: !client ? "unknown_email" : client.archived ? "account_archived" : "account_inactive" }).catch(() => {});
           return null;
         }
 
         const valid = await bcrypt.compare(parsed.data.password, client.passwordHash);
         if (!valid) {
+          if (reqObj) await logLoginEvent({ req: reqObj, clientId: client.id, email: client.email, type: "failed", reason: "wrong_password" }).catch(() => {});
           return null;
         }
 
         // 2FA verification si active
         if (client.twoFactorEnabled && client.twoFactorSecret) {
           const code = parsed.data.twoFactorCode;
-          if (!code) return null; // 2FA requis mais pas fourni
+          if (!code) {
+            if (reqObj) await logLoginEvent({ req: reqObj, clientId: client.id, email: client.email, type: "2fa_challenge" }).catch(() => {});
+            return null;
+          }
           const { verifySync } = await import("otplib");
           const isValid = verifySync({ token: code, secret: client.twoFactorSecret });
-          if (!isValid) return null; // Code 2FA incorrect
+          if (!isValid) {
+            if (reqObj) await logLoginEvent({ req: reqObj, clientId: client.id, email: client.email, type: "2fa_failed" }).catch(() => {});
+            return null;
+          }
+          if (reqObj) await logLoginEvent({ req: reqObj, clientId: client.id, email: client.email, type: "2fa_success" }).catch(() => {});
         }
 
         await prisma.client.update({
           where: { id: client.id },
           data: { lastLogin: new Date() },
         });
+
+        if (reqObj) await logLoginEvent({ req: reqObj, clientId: client.id, email: client.email, type: "success" }).catch(() => {});
 
         return {
           id: `client-${client.id}`,

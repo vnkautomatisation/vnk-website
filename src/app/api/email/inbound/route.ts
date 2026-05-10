@@ -13,6 +13,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createWorkflowEvent } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { logEmailEvent, captureRequestContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -116,6 +117,18 @@ export async function POST(req: Request) {
     eventLabel: `Email entrant de ${client.fullName}`,
     triggeredBy: "email",
   });
+
+  const ctx = captureRequestContext(req);
+  await logEmailEvent({
+    clientId: client.id,
+    messageId: messageId ?? undefined,
+    type: "delivered",
+    email: fromEmail,
+    subject: subject || undefined,
+    ipAddress: ctx.ipAddress ?? undefined,
+    userAgent: ctx.userAgent ?? undefined,
+    metadata: { direction: "inbound", internalMessageId: msg.id },
+  }).catch(() => {});
 
   await prisma.notification.create({
     data: {

@@ -6,6 +6,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { acceptQuote } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { logSignatureEvent } from "@/lib/request-context";
+import crypto from "crypto";
 
 const bodySchema = z.object({
   signatureData: z.string().optional(), // base64 canvas
@@ -52,6 +54,16 @@ export async function POST(
         signedAt: new Date(),
       },
     });
+
+    const sigHash = crypto.createHash("sha256").update(parsed.data.signatureData).digest("hex");
+    await logSignatureEvent({
+      req,
+      entityType: "quote",
+      entityId: quoteId,
+      clientId: quote.clientId,
+      signedBy: session.user.role === "client" ? session.user.email ?? "client" : "admin",
+      signatureHash: sigHash,
+    }).catch(() => {});
   }
 
   const result = await acceptQuote(

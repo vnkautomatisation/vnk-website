@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { markInvoicePaid } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { logOrderEvent } from "@/lib/request-context";
 
 const schema = z.object({
   invoiceId: z.number().int().positive(),
@@ -40,6 +41,17 @@ export async function POST(req: Request) {
   }
 
   await markInvoicePaid(invoice.id, "stripe", parsed.data.paymentIntentId);
+
+  await logOrderEvent({
+    req,
+    clientId: invoice.clientId,
+    type: "paid",
+    amount: Number(invoice.amountTtc),
+    currency: invoice.currency,
+    stripeIntentId: parsed.data.paymentIntentId,
+    paymentMethod: "stripe",
+    invoiceId: invoice.id,
+  }).catch(() => {});
 
   revalidateAdminViews();
 

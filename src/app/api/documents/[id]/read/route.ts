@@ -2,9 +2,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { captureRequestContext } from "@/lib/request-context";
+import { logAudit } from "@/lib/audit";
 
 export async function PATCH(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
@@ -25,10 +27,24 @@ export async function PATCH(
     return NextResponse.json({ error: "Non autorise" }, { status: 403 });
   }
 
+  const wasUnread = !doc.isRead;
   await prisma.document.update({
     where: { id: Number(id) },
     data: { isRead: true },
   });
+
+  if (wasUnread && session.user.role === "client") {
+    const ctx = captureRequestContext(req);
+    await logAudit({
+      adminId: null,
+      action: "view",
+      entityType: "documents",
+      entityId: doc.id,
+      changes: { type: "document_read_by_client", clientId: doc.clientId, title: doc.title },
+      ipAddress: ctx.ipAddress,
+      userAgent: ctx.userAgent,
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

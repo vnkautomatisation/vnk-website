@@ -143,14 +143,29 @@ export async function GET(req: Request) {
       include: { admin: { select: { email: true } } },
       orderBy: { createdAt: "desc" }, take: limit,
     });
-    audits.forEach((a) => events.push({
-      id: `audit-${a.id}`, source: "audit", type: `${a.entityType}.${a.action}`,
-      label: `${a.action} ${a.entityType}${a.entityId ? ` #${a.entityId}` : ""}`,
-      clientId: null, adminId: a.adminId, adminEmail: a.admin?.email ?? null,
-      ipAddress: a.ipAddress, userAgent: a.userAgent,
-      metadata: a.changes as Record<string, unknown> | null,
-      createdAt: a.createdAt.toISOString(),
-    }));
+    audits.forEach((a) => {
+      // Extract clientId from changes if present (client-side audit logs)
+      const ch = a.changes as Record<string, unknown> | null;
+      const cidFromChanges = ch && typeof ch.clientId === "number" ? ch.clientId : null;
+      const auditClientId = cidFromChanges ?? (a.entityType === "clients" && a.entityId ? a.entityId : null);
+
+      // Si on filtre par clientId, ne garder que les audits qui matchent
+      if (clientIdFilter && auditClientId !== Number(clientIdFilter)) return;
+
+      const typeFromChanges = ch && typeof ch.type === "string" ? ch.type : null;
+      events.push({
+        id: `audit-${a.id}`, source: "audit", type: typeFromChanges ?? `${a.entityType}.${a.action}`,
+        label: typeFromChanges
+          ? `${typeFromChanges}${a.entityId ? ` #${a.entityId}` : ""}${a.admin?.email ? ` par ${a.admin.email}` : ""}`
+          : `${a.action} ${a.entityType}${a.entityId ? ` #${a.entityId}` : ""}`,
+        clientId: auditClientId,
+        clientName: auditClientId ? clientMap.get(auditClientId) ?? null : null,
+        adminId: a.adminId, adminEmail: a.admin?.email ?? null,
+        ipAddress: a.ipAddress, userAgent: a.userAgent,
+        metadata: ch,
+        createdAt: a.createdAt.toISOString(),
+      });
+    });
   }
 
   if (want("workflow")) {

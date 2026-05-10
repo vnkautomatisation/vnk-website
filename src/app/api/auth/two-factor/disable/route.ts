@@ -4,6 +4,8 @@ import { verifySync } from "otplib";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { captureRequestContext } from "@/lib/request-context";
+import { logAudit } from "@/lib/audit";
 
 const schema = z.object({ code: z.string().length(6) });
 
@@ -61,6 +63,17 @@ export async function POST(req: Request) {
       data: { twoFactorEnabled: false, twoFactorSecret: null },
     });
   }
+
+  const ctx = captureRequestContext(req);
+  await logAudit({
+    adminId: role === "admin" ? session.user.adminId ?? null : null,
+    action: "update",
+    entityType: role === "admin" ? "admin" : "clients",
+    entityId: role === "admin" ? session.user.adminId! : session.user.clientId!,
+    changes: { type: "2fa_disabled" },
+    ipAddress: ctx.ipAddress,
+    userAgent: ctx.userAgent,
+  });
 
   return NextResponse.json({ success: true });
 }

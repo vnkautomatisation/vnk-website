@@ -9,6 +9,7 @@ export type AuditAction =
   | "login"
   | "logout"
   | "export"
+  | "view"
   | "settings_update"
   | "impersonate"
   | "password_reset"

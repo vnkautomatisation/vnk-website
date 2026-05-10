@@ -4,6 +4,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { captureRequestContext } from "@/lib/request-context";
+import { logAudit } from "@/lib/audit";
 
 const schema = z.object({
   currentPassword: z.string().min(1, "Mot de passe actuel requis"),
@@ -81,6 +83,17 @@ export async function POST(request: NextRequest) {
         data: { passwordHash: newHash },
       });
     }
+
+    const ctx = captureRequestContext(request);
+    await logAudit({
+      adminId: role === "admin" ? entityId : null,
+      action: "update",
+      entityType: role === "admin" ? "admin" : "clients",
+      entityId: entityId,
+      changes: { type: "password_changed", actor: role },
+      ipAddress: ctx.ipAddress,
+      userAgent: ctx.userAgent,
+    });
 
     return NextResponse.json({ ok: true, message: "Mot de passe modifié" });
   } catch {

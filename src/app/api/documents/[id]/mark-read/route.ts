@@ -4,6 +4,8 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { captureRequestContext } from "@/lib/request-context";
+import { logAudit } from "@/lib/audit";
 
 const schema = z.object({ isRead: z.boolean().optional() });
 
@@ -32,6 +34,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   await prisma.document.update({ where: { id: docId }, data: { isRead: next } });
+
+  if (next && !doc.isRead && session.user.role === "client") {
+    const ctx = captureRequestContext(req);
+    await logAudit({
+      adminId: null,
+      action: "view",
+      entityType: "documents",
+      entityId: doc.id,
+      changes: { type: "document_read_by_client", clientId: doc.clientId, title: doc.title },
+      ipAddress: ctx.ipAddress,
+      userAgent: ctx.userAgent,
+    });
+  }
+
   if (session.user.role === "admin") revalidateAdminViews();
   return NextResponse.json({ success: true, isRead: next });
 }

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createPaymentIntent } from "@/lib/services/stripe";
+import { logOrderEvent } from "@/lib/request-context";
 
 const schema = z.object({
   invoiceId: z.number().int().positive(),
@@ -46,6 +47,16 @@ export async function POST(req: Request) {
       invoiceId: invoice.id,
       description: `${invoice.invoiceNumber} — ${invoice.title}`,
     })) as any;
+
+    await logOrderEvent({
+      req,
+      clientId: invoice.clientId,
+      type: "initiated",
+      amount: Number(invoice.amountTtc),
+      currency: invoice.currency,
+      stripeIntentId: intent.id,
+      invoiceId: invoice.id,
+    }).catch(() => {});
 
     return NextResponse.json({
       clientSecret: intent.client_secret,
