@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   CreditCard,
   Receipt,
@@ -38,7 +40,7 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 
 const TYPE_LABELS: Record<string, string> = {
-  charge: "Encaissement",
+  charge: "Vente",
   refund: "Remboursement",
   chargeback: "Rétrofacturation",
   chargeback_fee: "Frais de rétrofact.",
@@ -183,6 +185,11 @@ export function PaymentDetailDialog({
   const [editCategory, setEditCategory] = useState("");
   const [editNotes, setEditNotes] = useState("");
 
+  // Édition du type (Popover)
+  const [typePopoverOpen, setTypePopoverOpen] = useState(false);
+  const [pendingType, setPendingType] = useState<string>("");
+  const [savingType, setSavingType] = useState(false);
+
   const reload = async () => {
     if (!paymentId) return;
     const r = await fetch(`/api/payments/${paymentId}`);
@@ -235,6 +242,29 @@ export function PaymentDetailDialog({
       toast.error(err instanceof Error ? err.message : "Erreur");
     } finally {
       setSavingAccounting(false);
+    }
+  };
+
+  const saveType = async () => {
+    if (!paymentId || !pendingType) return;
+    setSavingType(true);
+    try {
+      const res = await fetch(`/api/payments/${paymentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: pendingType }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Erreur");
+      }
+      toast.success("Type modifié — vérifiez l'impact sur vos rapports comptables");
+      setTypePopoverOpen(false);
+      await reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur");
+    } finally {
+      setSavingType(false);
     }
   };
 
@@ -314,10 +344,63 @@ export function PaymentDetailDialog({
             Détail paiement
             {p && <span className="text-white/60 text-xs font-mono ml-2">#{p.id}</span>}
           </DialogTitle>
-          <DialogDescription className="text-white/70 text-xs">
-            {p?.type ? TYPE_LABELS[p.type] ?? p.type : "Paiement"}
-            {p?.paymentMethod && ` · ${METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod}`}
-            {isStripe ? " · Stripe" : " · Manuel"}
+          <DialogDescription className="text-white/70 text-xs inline-flex items-center flex-wrap gap-1.5">
+            {p && (
+              <>
+                <Popover
+                  open={typePopoverOpen}
+                  onOpenChange={(o) => {
+                    setTypePopoverOpen(o);
+                    if (o) setPendingType(p.type ?? "charge");
+                  }}
+                >
+                  <PopoverTrigger asChild>
+                    <button
+                      className="underline decoration-dotted underline-offset-2 hover:text-white inline-flex items-center gap-1 cursor-pointer"
+                      title="Cliquer pour modifier le type (rare — utiliser uniquement pour corriger une catégorisation erronée)"
+                    >
+                      {p.type ? TYPE_LABELS[p.type] ?? p.type : "Paiement"}
+                      <Edit3 className="h-2.5 w-2.5 opacity-70" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[280px] p-3 space-y-3" align="start">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                        Modifier le type de transaction
+                      </Label>
+                      <p className="text-[10px] text-amber-700 bg-amber-50 px-2 py-1 rounded">
+                        Attention : modifier le type modifie les rapports comptables (TPS, exports QB/Sage, KPI).
+                      </p>
+                    </div>
+                    <Select value={pendingType} onValueChange={setPendingType}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(TYPE_LABELS).map(([key, label]) => (
+                          <SelectItem key={key} value={key} className="text-xs">{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex justify-end gap-2">
+                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setTypePopoverOpen(false)}>
+                        Annuler
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs"
+                        disabled={savingType || pendingType === p.type}
+                        onClick={saveType}
+                      >
+                        {savingType ? "Enregistrement…" : "Confirmer"}
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                {p.paymentMethod && <span>· {METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod}</span>}
+                <span>· {isStripe ? "Stripe" : "Manuel"}</span>
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 

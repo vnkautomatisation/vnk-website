@@ -11,7 +11,16 @@ export default async function PaymentsPage() {
       take: 1000,
       include: {
         client: { select: { id: true, fullName: true, companyName: true, country: true } },
-        invoice: { select: { id: true, invoiceNumber: true } },
+        invoice: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            refunds: {
+              select: { amount: true, totalAmount: true, status: true },
+              where: { status: { in: ["processed", "confirmed"] } },
+            },
+          },
+        },
         assignedAccountant: { select: { id: true, fullName: true, email: true } },
       },
     }),
@@ -54,7 +63,16 @@ export default async function PaymentsPage() {
     if (p.client?.country) countrySet.add(p.client.country);
   });
 
-  const data = payments.map((p) => ({
+  const data = payments.map((p) => {
+    // Calcul du remboursement effectif pour ce paiement (somme des refunds liés à sa facture)
+    const refundsList = p.invoice?.refunds ?? [];
+    const refundedAmount = refundsList.reduce((s, r) => s + Number(r.totalAmount ?? r.amount ?? 0), 0);
+    const paymentTotal = Number(p.amount ?? 0);
+    let refundedStatus: "none" | "partial" | "full" = "none";
+    if (p.type === "charge" && refundedAmount > 0 && paymentTotal > 0) {
+      refundedStatus = refundedAmount >= paymentTotal - 0.01 ? "full" : "partial";
+    }
+    return ({
     id: p.id,
     invoiceId: p.invoiceId,
     invoiceNumber: p.invoice?.invoiceNumber ?? null,
@@ -93,7 +111,11 @@ export default async function PaymentsPage() {
     accountantNotes: p.accountantNotes,
     exportedAt: p.exportedAt?.toISOString() ?? null,
     exportFormat: p.exportFormat,
-  }));
+    // Statut remboursement calculé (depuis Refund table)
+    refundedAmount,
+    refundedStatus,
+    });
+  });
 
   return (
     <PaymentsView

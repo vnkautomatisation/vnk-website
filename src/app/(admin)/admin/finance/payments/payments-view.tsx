@@ -58,6 +58,8 @@ type Payment = {
   accountantNotes: string | null;
   exportedAt: string | null;
   exportFormat: string | null;
+  refundedAmount: number;
+  refundedStatus: "none" | "partial" | "full";
 };
 
 type Kpis = {
@@ -78,7 +80,7 @@ type ReconcileFilter = "all" | "reconciled" | "unreconciled" | "exported";
 // Modifier le type fausserait les rapports comptables → pas editable depuis la UI.
 const TYPE_META: Record<string, { label: string; color: string; description: string }> = {
   charge: {
-    label: "Encaissement",
+    label: "Vente",
     color: "bg-emerald-100 text-emerald-700",
     description: "Argent reçu d'un client (paiement entrant)",
   },
@@ -123,7 +125,7 @@ const METHOD_LABELS: Record<string, string> = {
 
 const TYPE_TABS: { key: TypeFilter; label: string }[] = [
   { key: "all", label: "Tous" },
-  { key: "charge", label: "Encaissements" },
+  { key: "charge", label: "Ventes" },
   { key: "refund", label: "Remboursements" },
   { key: "chargeback", label: "Rétrofacturations" },
   { key: "chargeback_fee", label: "Frais rétrofact." },
@@ -562,6 +564,24 @@ export function PaymentsView({
       accessor: (p) => (
         <div className="space-y-0.5">
           <StatusBadge status={p.status} />
+          {p.refundedStatus === "full" && (
+            <span
+              title={`Cette vente a été entièrement remboursée (${p.refundedAmount.toFixed(2)} ${p.currency})`}
+              className="inline-flex items-center gap-1 text-[9px] text-red-700 bg-red-50 px-1.5 py-0.5 rounded"
+            >
+              <RotateCcw className="h-2.5 w-2.5" />
+              Remboursé total
+            </span>
+          )}
+          {p.refundedStatus === "partial" && (
+            <span
+              title={`Cette vente a été partiellement remboursée (${p.refundedAmount.toFixed(2)} / ${Math.abs(p.amount).toFixed(2)} ${p.currency})`}
+              className="inline-flex items-center gap-1 text-[9px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded"
+            >
+              <RotateCcw className="h-2.5 w-2.5" />
+              Remboursé partiel
+            </span>
+          )}
           {p.reconciledAt && (
             <span
               title={`Confirmé reçu en banque le ${formatDate(new Date(p.reconciledAt))} — vérification que le paiement a bien été crédité (utile pour audit comptable)`}
