@@ -149,6 +149,21 @@ export function QuotesView({
     }
   }, [searchParams, clients]);
 
+  // Auto-ouvrir edition depuis ?editId=<id>
+  useEffect(() => {
+    const editId = searchParams.get("editId");
+    if (editId) {
+      const target = quotes.find((q) => String(q.id) === editId);
+      if (target) {
+        openEdit(target);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("editId");
+        window.history.replaceState({}, "", url.toString());
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, quotes]);
+
   const openEdit = (q: Quote) => {
     setEditQuote(q);
     setFClientId(String(q.clientId));
@@ -207,6 +222,7 @@ export function QuotesView({
           serviceType: fService || null,
           amountHt: Number(fAmount),
           expiryDate: fExpiry || null,
+          mandateId: fMandateId ? Number(fMandateId) : null,
           paymentPlan: fPaymentPlan,
           paymentConditions: fPaymentConditions.trim() || null,
         }),
@@ -589,7 +605,7 @@ export function QuotesView({
               ]}
               stats={[{ label: "TTC", value: formatCurrency(q.amountTtc) }]}
               actions={getActions(q)}
-              onClick={() => openEntity("quote", q.id)}
+              onClick={() => openPdf(q)}
               footer={
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <span>{formatCurrency(q.amountHt)} HT</span>
@@ -607,7 +623,7 @@ export function QuotesView({
           data={filtered}
           columns={columns}
           getRowId={(r) => r.id}
-          onRowClick={(r) => openEntity("quote", r.id)}
+          onRowClick={(r) => openPdf(r)}
           searchPlaceholder="Rechercher..."
           exportFilename="devis"
           storageKey="admin-quotes"

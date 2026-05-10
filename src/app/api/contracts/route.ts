@@ -17,6 +17,8 @@ const createSchema = z.object({
   title: z.string().min(1).max(255),
   content: z.string().optional(),
   fileUrl: z.string().url().optional(),
+  amountTtc: z.number().nonnegative().optional(),
+  expiresAt: z.string().optional(),
 });
 
 export async function GET() {
@@ -67,6 +69,8 @@ export async function POST(req: Request) {
       title: parsed.data.title,
       content: parsed.data.content,
       fileUrl: parsed.data.fileUrl,
+      amountTtc: parsed.data.amountTtc,
+      expiresAt: parsed.data.expiresAt ? new Date(parsed.data.expiresAt) : undefined,
     },
   });
 

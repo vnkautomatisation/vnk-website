@@ -14,9 +14,16 @@ import { createWorkflowEvent } from "@/lib/workflow";
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
+  serviceType: z.string().nullable().optional(),
   status: z.string().optional(),
   amountHt: z.number().positive().optional(),
   dueDate: z.string().nullable().optional(),
+  mandateId: z.number().int().positive().nullable().optional(),
+  quoteId: z.number().int().positive().nullable().optional(),
+  contractId: z.number().int().positive().nullable().optional(),
+  invoicePhase: z.string().max(60).nullable().optional(),
+  phaseNumber: z.number().int().positive().nullable().optional(),
+  paymentMethod: z.string().max(60).nullable().optional(),
 }).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnee a mettre a jour" });
 
 export async function GET(

@@ -41,8 +41,11 @@ export async function GET(
       postalCode: contract.client.postalCode ?? undefined,
     },
     amountTtc: Number(contract.amountTtc),
+    createdAt: contract.createdAt,
     clientSignatureData: contract.clientSignatureData,
+    clientSignatureIp: contract.clientSignatureIp,
     adminSignatureData: contract.adminSignatureData,
+    adminSignedAt: contract.adminSignedAt,
     signedAt: contract.signedAt,
   });
 

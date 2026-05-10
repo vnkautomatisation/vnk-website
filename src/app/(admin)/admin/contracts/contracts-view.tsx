@@ -38,6 +38,8 @@ type Contract = {
   clientId: number;
   clientName: string;
   companyName: string | null;
+  mandateId: number | null;
+  mandateTitle: string | null;
   quoteId: number | null;
   quoteNumber: string | null;
   title: string;
@@ -51,6 +53,8 @@ type Contract = {
 };
 
 type ClientOption = { id: number; fullName: string; companyName: string | null };
+type MandateOption = { id: number; title: string; clientId: number; status: string };
+type LinkedQuote = { id: number; quoteNumber: string; clientId: number; title: string; amountTtc: number };
 type StatusFilter = "all" | "pending" | "draft" | "signed" | "expired" | "cancelled";
 
 const STATUS_TABS: { key: StatusFilter; label: string }[] = [
@@ -65,10 +69,14 @@ const STATUS_TABS: { key: StatusFilter; label: string }[] = [
 export function ContractsView({
   contracts,
   clients,
+  mandates,
+  acceptedQuotes,
   kpis,
 }: {
   contracts: Contract[];
   clients: ClientOption[];
+  mandates: MandateOption[];
+  acceptedQuotes: LinkedQuote[];
   kpis: { total: number; pendingCount: number; signedCount: number; signedThisMonth: number; totalValue: number };
 }) {
   const router = useRouter();
@@ -94,6 +102,7 @@ export function ContractsView({
   const [editContract, setEditContract] = useState<Contract | null>(null);
   const [deleteContract, setDeleteContract] = useState<Contract | null>(null);
   const [pdfContract, setPdfContract] = useState<Contract | null>(null);
+  const [pdfRefreshKey, setPdfRefreshKey] = useState(0);
   const [signingContract, setSigningContract] = useState<Contract | null>(null);
 
   // Form state (partage create + edit)
@@ -103,10 +112,13 @@ export function ContractsView({
   const [fAmount, setFAmount] = useState("");
   const [fStatus, setFStatus] = useState("pending");
   const [fExpiresAt, setFExpiresAt] = useState("");
+  const [fMandateId, setFMandateId] = useState("");
+  const [fQuoteId, setFQuoteId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const resetForm = () => {
     setFClientId(""); setFTitle(""); setFContent(""); setFAmount("");
+    setFMandateId(""); setFQuoteId("");
     setFStatus("pending"); setFExpiresAt("");
   };
 
@@ -122,6 +134,20 @@ export function ContractsView({
     }
   }, [searchParams, clients]);
 
+  useEffect(() => {
+    const editId = searchParams.get("editId");
+    if (editId) {
+      const target = contracts.find((c) => String(c.id) === editId);
+      if (target) {
+        openEdit(target);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("editId");
+        window.history.replaceState({}, "", url.toString());
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, contracts]);
+
   const openEdit = (c: Contract) => {
     setEditContract(c);
     setFClientId(String(c.clientId));
@@ -130,6 +156,8 @@ export function ContractsView({
     setFAmount(c.amountTtc != null ? String(c.amountTtc) : "");
     setFStatus(c.status);
     setFExpiresAt(c.expiresAt ? c.expiresAt.slice(0, 10) : "");
+    setFMandateId(c.mandateId ? String(c.mandateId) : "");
+    setFQuoteId(c.quoteId ? String(c.quoteId) : "");
   };
 
   const handleCreate = async () => {
@@ -144,6 +172,10 @@ export function ContractsView({
           clientId: Number(fClientId),
           title: fTitle.trim(),
           content: fContent.trim() || undefined,
+          amountTtc: fAmount ? Number(fAmount) : undefined,
+          expiresAt: fExpiresAt || undefined,
+          mandateId: fMandateId ? Number(fMandateId) : undefined,
+          quoteId: fQuoteId ? Number(fQuoteId) : undefined,
         }),
       });
       if (res.ok) {
@@ -169,6 +201,8 @@ export function ContractsView({
           status: fStatus,
           amountTtc: fAmount ? Number(fAmount) : null,
           expiresAt: fExpiresAt || null,
+          mandateId: fMandateId ? Number(fMandateId) : null,
+          quoteId: fQuoteId ? Number(fQuoteId) : null,
         }),
       });
       if (res.ok) { toast.success("Contrat modifié"); setEditContract(null); router.refresh(); }
@@ -527,7 +561,7 @@ export function ContractsView({
               ]}
               stats={[{ label: "Montant", value: c.amountTtc ? formatCurrency(c.amountTtc) : "—" }]}
               actions={getActions(c)}
-              onClick={() => openEntity("contract", c.id)}
+              onClick={() => setPdfContract(c)}
               footer={
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <div className="flex items-center gap-2">
@@ -552,7 +586,7 @@ export function ContractsView({
           data={filtered}
           columns={columns}
           getRowId={(r) => r.id}
-          onRowClick={(r) => openEntity("contract", r.id)}
+          onRowClick={(r) => setPdfContract(r)}
           searchPlaceholder="Rechercher..."
           exportFilename="contrats"
           storageKey="admin-contracts"
@@ -565,11 +599,14 @@ export function ContractsView({
         onOpenChange={(o) => { if (!o) { resetForm(); setCreateOpen(false); } else setCreateOpen(true); }}
         mode="create"
         clients={clients}
+        mandates={mandates}
+        acceptedQuotes={acceptedQuotes}
         submitting={submitting}
-        values={{ clientId: fClientId, title: fTitle, content: fContent, amount: fAmount, status: fStatus, expiresAt: fExpiresAt }}
+        values={{ clientId: fClientId, title: fTitle, content: fContent, amount: fAmount, status: fStatus, expiresAt: fExpiresAt, mandateId: fMandateId, quoteId: fQuoteId }}
         setters={{
           setClientId: setFClientId, setTitle: setFTitle, setContent: setFContent,
           setAmount: setFAmount, setStatus: setFStatus, setExpiresAt: setFExpiresAt,
+          setMandateId: setFMandateId, setQuoteId: setFQuoteId,
         }}
         onSubmit={handleCreate}
       />
@@ -578,12 +615,15 @@ export function ContractsView({
         onOpenChange={(o) => { if (!o) setEditContract(null); }}
         mode="edit"
         clients={clients}
+        mandates={mandates}
+        acceptedQuotes={acceptedQuotes}
         editingContractNumber={editContract?.contractNumber}
         submitting={submitting}
-        values={{ clientId: fClientId, title: fTitle, content: fContent, amount: fAmount, status: fStatus, expiresAt: fExpiresAt }}
+        values={{ clientId: fClientId, title: fTitle, content: fContent, amount: fAmount, status: fStatus, expiresAt: fExpiresAt, mandateId: fMandateId, quoteId: fQuoteId }}
         setters={{
           setClientId: () => {}, setTitle: setFTitle, setContent: setFContent,
           setAmount: setFAmount, setStatus: setFStatus, setExpiresAt: setFExpiresAt,
+          setMandateId: setFMandateId, setQuoteId: setFQuoteId,
         }}
         onSubmit={handleEdit}
       />
@@ -597,7 +637,7 @@ export function ContractsView({
         onConfirm={handleDelete}
       />
 
-      {/* PDF preview VNK */}
+      {/* PDF preview VNK avec actions de signature */}
       {pdfContract && (
         <PdfViewerModal
           open
@@ -606,6 +646,29 @@ export function ContractsView({
           title={pdfContract.title}
           documentNumber={pdfContract.contractNumber}
           downloadName={`contrat-${pdfContract.contractNumber}`}
+          refreshKey={pdfRefreshKey}
+          actions={
+            <>
+              {!pdfContract.adminSignatureData && pdfContract.status !== "cancelled" && pdfContract.status !== "expired" && (
+                <Button
+                  size="sm"
+                  className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
+                  onClick={() => setSigningContract(pdfContract)}
+                >
+                  <PenTool className="h-3.5 w-3.5 mr-1" />Signer (admin)
+                </Button>
+              )}
+              {pdfContract.status === "pending" && pdfContract.adminSignatureData && !pdfContract.clientSignatureData && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleSendToClient(pdfContract)}
+                >
+                  <Send className="h-3.5 w-3.5 mr-1" />Envoyer au client
+                </Button>
+              )}
+            </>
+          }
         />
       )}
 
@@ -616,7 +679,27 @@ export function ContractsView({
           contractTitle={signingContract.title}
           contractAmount={signingContract.amountTtc ?? undefined}
           open={true}
-          onOpenChange={(o) => { if (!o) setSigningContract(null); }}
+          onOpenChange={async (o) => {
+            if (!o) {
+              const just = signingContract;
+              setSigningContract(null);
+              // Recharge la liste pour avoir le nouvel etat de signature
+              router.refresh();
+              // Si le PDF preview est ouvert sur ce meme contrat, refresh apres delai
+              if (pdfContract && pdfContract.id === just.id) {
+                setTimeout(() => {
+                  setPdfRefreshKey((k) => k + 1);
+                  setPdfContract({ ...pdfContract, adminSignatureData: true });
+                }, 500);
+              }
+              // Auto-send au client si pas encore signe par client
+              if (!just.clientSignatureData) {
+                fetch(`/api/contracts/${just.id}/send`, { method: "POST" })
+                  .then((r) => { if (r.ok) toast.success("Contrat envoyé au client automatiquement"); })
+                  .catch(() => {});
+              }
+            }
+          }}
         />
       )}
 
@@ -626,19 +709,22 @@ export function ContractsView({
 }
 
 // ─── ContractFormDialog VNK navy ─────────────────────────
-type CFormValues = { clientId: string; title: string; content: string; amount: string; status: string; expiresAt: string };
+type CFormValues = { clientId: string; title: string; content: string; amount: string; status: string; expiresAt: string; mandateId: string; quoteId: string };
 type CFormSetters = {
   setClientId: (v: string) => void; setTitle: (v: string) => void; setContent: (v: string) => void;
   setAmount: (v: string) => void; setStatus: (v: string) => void; setExpiresAt: (v: string) => void;
+  setMandateId: (v: string) => void; setQuoteId: (v: string) => void;
 };
 
 function ContractFormDialog({
-  open, onOpenChange, mode, clients, editingContractNumber, submitting, values, setters, onSubmit,
+  open, onOpenChange, mode, clients, mandates, acceptedQuotes, editingContractNumber, submitting, values, setters, onSubmit,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   mode: "create" | "edit";
   clients: ClientOption[];
+  mandates: MandateOption[];
+  acceptedQuotes: LinkedQuote[];
   editingContractNumber?: string;
   submitting: boolean;
   values: CFormValues;
@@ -646,6 +732,17 @@ function ContractFormDialog({
   onSubmit: () => void | Promise<void>;
 }) {
   const isCreate = mode === "create";
+  const clientIdNum = Number(values.clientId) || 0;
+  const filteredMandates = mandates.filter((m) => m.clientId === clientIdNum);
+  const filteredQuotes = acceptedQuotes.filter((q) => q.clientId === clientIdNum);
+
+  const fillFromQuote = (qid: string) => {
+    setters.setQuoteId(qid);
+    if (!qid) return;
+    const q = acceptedQuotes.find((x) => String(x.id) === qid);
+    if (q && !values.title.trim()) setters.setTitle(q.title);
+    if (q && !values.amount) setters.setAmount(String(q.amountTtc));
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -689,10 +786,55 @@ function ContractFormDialog({
               <Input value={values.title} onChange={(e) => setters.setTitle(e.target.value)} placeholder="Contrat de service automatisation PLC" />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Contenu / Clauses</Label>
-              <Textarea value={values.content} onChange={(e) => setters.setContent(e.target.value)} rows={6} placeholder={isCreate ? "Termes et conditions du contrat…" : "Laisser vide pour ne pas modifier"} />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description du mandat (optionnel)</Label>
+              <Textarea
+                value={values.content}
+                onChange={(e) => setters.setContent(e.target.value)}
+                rows={5}
+                placeholder={isCreate
+                  ? "Portée spécifique du contrat (ex: Audit PLC sur 3 lignes de production)…"
+                  : "Laisser vide pour ne pas modifier"}
+              />
             </div>
           </FormSection>
+
+          {clientIdNum === 0 && isCreate && (
+            <div className="rounded-lg border-2 border-dashed border-[#0F2D52]/20 bg-[#0F2D52]/5 p-3 text-center">
+              <p className="text-xs text-[#0F2D52] font-semibold">Sélectionnez d&apos;abord un client</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">pour voir mandats et devis associés (auto-remplissage titre & montant)</p>
+            </div>
+          )}
+          {clientIdNum > 0 && (
+            <FormSection title="Liens (optionnel)" icon={<DollarSign className="h-3.5 w-3.5" />}>
+              {filteredMandates.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Mandat associé</Label>
+                  <Select value={values.mandateId || "none"} onValueChange={(v) => setters.setMandateId(v === "none" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="Aucun mandat" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Aucun mandat</SelectItem>
+                      {filteredMandates.map((m) => (<SelectItem key={m.id} value={String(m.id)}>{m.title}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {filteredQuotes.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Devis source (auto-remplit titre & montant)</Label>
+                  <Select value={values.quoteId || "none"} onValueChange={(v) => fillFromQuote(v === "none" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="Aucun devis" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Aucun devis</SelectItem>
+                      {filteredQuotes.map((q) => (<SelectItem key={q.id} value={String(q.id)}>{q.quoteNumber} — {q.title}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {filteredMandates.length === 0 && filteredQuotes.length === 0 && (
+                <p className="text-[11px] text-muted-foreground">Aucun mandat / devis accepté pour ce client.</p>
+              )}
+            </FormSection>
+          )}
 
           <FormSection title="Montant & échéance" icon={<DollarSign className="h-3.5 w-3.5" />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -700,12 +842,11 @@ function ContractFormDialog({
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">Montant TTC (CAD)</Label>
                 <Input type="number" min="0" step="0.01" value={values.amount} onChange={(e) => setters.setAmount(e.target.value)} placeholder="0.00" />
               </div>
-              {!isCreate && (
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date d&apos;expiration</Label>
-                  <Input type="date" value={values.expiresAt} onChange={(e) => setters.setExpiresAt(e.target.value)} />
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date d&apos;expiration</Label>
+                <Input type="date" value={values.expiresAt} onChange={(e) => setters.setExpiresAt(e.target.value)} />
+                {isCreate && <p className="text-[10px] text-muted-foreground">Date limite pour signer (optionnel)</p>}
+              </div>
             </div>
             {!isCreate && (
               <div className="space-y-2">

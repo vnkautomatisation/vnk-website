@@ -1,3 +1,4 @@
+// Admin · Documents — KPIs + filtres + upload + bulk + envoi client
 import { prisma } from "@/lib/prisma";
 import { DocumentsView } from "./documents-view";
 import type { Metadata } from "next";
@@ -8,7 +9,7 @@ export default async function DocumentsPage() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [rawDocuments, clients] = await Promise.all([
+  const [rawDocuments, clients, mandates] = await Promise.all([
     prisma.document.findMany({
       include: {
         client: { select: { id: true, fullName: true, companyName: true } },
@@ -20,6 +21,10 @@ export default async function DocumentsPage() {
       where: { isActive: true, archived: false },
       select: { id: true, fullName: true, companyName: true },
       orderBy: { fullName: "asc" },
+    }),
+    prisma.mandate.findMany({
+      select: { id: true, title: true, clientId: true },
+      orderBy: { title: "asc" },
     }),
   ]);
 
@@ -39,6 +44,9 @@ export default async function DocumentsPage() {
     category: d.category,
     status: d.status,
     isRead: d.isRead,
+    uploadedBy: d.uploadedBy,
+    isUploaded: d.fileUrl?.startsWith("data:") ?? false,
+    isSystemGenerated: d.fileUrl?.startsWith("/api/") ?? false,
     createdAt: d.createdAt.toISOString(),
     updatedAt: d.updatedAt.toISOString(),
   }));
@@ -46,12 +54,20 @@ export default async function DocumentsPage() {
   const totalThisMonth = documents.filter((d) => new Date(d.createdAt) >= monthStart).length;
   const unreadCount = documents.filter((d) => !d.isRead).length;
   const uniqueClients = new Set(documents.map((d) => d.clientId)).size;
+  const totalStorageBytes = documents.reduce((s, d) => s + (d.isUploaded && d.fileSize ? d.fileSize : 0), 0);
 
   return (
     <DocumentsView
       documents={documents}
       clients={clients}
-      kpis={{ total: documents.length, thisMonth: totalThisMonth, unread: unreadCount, uniqueClients }}
+      mandates={mandates}
+      kpis={{
+        total: documents.length,
+        thisMonth: totalThisMonth,
+        unread: unreadCount,
+        uniqueClients,
+        totalStorageBytes,
+      }}
     />
   );
 }

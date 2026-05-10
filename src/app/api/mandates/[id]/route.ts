@@ -22,13 +22,14 @@ const updateSchema = z.object({
   status: z.string().optional(),
   progress: z.number().min(0).max(100).optional(),
   title: z.string().min(1).optional(),
-  description: z.string().optional(),
-  serviceType: z.string().optional(),
-  notes: z.string().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  estimatedHours: z.number().optional(),
-  hourlyRate: z.number().optional(),
+  description: z.string().nullable().optional(),
+  serviceType: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+  estimatedHours: z.number().nullable().optional(),
+  actualHours: z.number().nullable().optional(),
+  hourlyRate: z.number().nullable().optional(),
 }).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnee a mettre a jour" });
 
 export async function GET(

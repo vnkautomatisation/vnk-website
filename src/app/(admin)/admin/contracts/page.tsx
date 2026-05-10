@@ -9,7 +9,7 @@ export default async function ContractsPage() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [rawContracts, clients] = await Promise.all([
+  const [rawContracts, clients, mandates, quotes] = await Promise.all([
     prisma.contract.findMany({
       include: {
         client: { select: { id: true, fullName: true, companyName: true } },
@@ -23,6 +23,15 @@ export default async function ContractsPage() {
       select: { id: true, fullName: true, companyName: true },
       orderBy: { fullName: "asc" },
     }),
+    prisma.mandate.findMany({
+      select: { id: true, title: true, clientId: true, status: true },
+      orderBy: { title: "asc" },
+    }),
+    prisma.quote.findMany({
+      where: { status: { in: ["accepted", "signed"] } },
+      select: { id: true, quoteNumber: true, clientId: true, title: true, amountTtc: true },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   const contracts = rawContracts.map((c) => ({
@@ -31,6 +40,8 @@ export default async function ContractsPage() {
     clientId: c.clientId,
     clientName: c.client.fullName,
     companyName: c.client.companyName,
+    mandateId: c.mandateId,
+    mandateTitle: c.mandate?.title ?? null,
     quoteId: c.quoteId,
     quoteNumber: c.quote?.quoteNumber ?? null,
     title: c.title,
@@ -52,6 +63,14 @@ export default async function ContractsPage() {
     <ContractsView
       contracts={contracts}
       clients={clients}
+      mandates={mandates}
+      acceptedQuotes={quotes.map((q) => ({
+        id: q.id,
+        quoteNumber: q.quoteNumber,
+        clientId: q.clientId,
+        title: q.title,
+        amountTtc: Number(q.amountTtc),
+      }))}
       kpis={{ total: contracts.length, pendingCount, signedCount, signedThisMonth, totalValue }}
     />
   );

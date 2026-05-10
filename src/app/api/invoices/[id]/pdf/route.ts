@@ -44,9 +44,11 @@ export async function GET(
     tpsAmount: Number(invoice.tpsAmount),
     tvqAmount: Number(invoice.tvqAmount),
     amountTtc: Number(invoice.amountTtc),
+    createdAt: invoice.createdAt,
     dueDate: invoice.dueDate ?? undefined,
     paidAt: invoice.paidAt,
     status: invoice.status,
+    serviceType: invoice.serviceType,
     invoicePhase: invoice.invoicePhase,
     phaseNumber: invoice.phaseNumber,
   });

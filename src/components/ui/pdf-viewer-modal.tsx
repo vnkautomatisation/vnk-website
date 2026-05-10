@@ -159,19 +159,18 @@ export function PdfViewerModal({
           )}
         </div>
 
-        {/* Footer — wrap sur mobile si trop d'actions */}
+        {/* Footer — wrap sur mobile, toujours Télécharger + actions custom */}
         <div className="flex flex-wrap items-center justify-end gap-2 px-3 sm:px-5 py-2 sm:py-0 sm:h-14 min-h-12 bg-white border-t border-gray-200 shrink-0">
-          {actions === undefined ? (
-            <Button
-              className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
-              size="sm"
-              onClick={handleDownload}
-              disabled={!blobUrl}
-            >
-              <Download className="h-4 w-4 mr-1.5" />
-              Télécharger
-            </Button>
-          ) : actions}
+          {actions}
+          <Button
+            className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
+            size="sm"
+            onClick={handleDownload}
+            disabled={!blobUrl}
+          >
+            <Download className="h-4 w-4 mr-1.5" />
+            Télécharger
+          </Button>
         </div>
       </div>
     </div>,

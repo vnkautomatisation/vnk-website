@@ -59,6 +59,7 @@ type Mandate = {
   startDate: string | null;
   endDate: string | null;
   estimatedHours: number | null;
+  actualHours: number | null;
   hourlyRate: number | null;
   createdAt: string;
 };
@@ -131,6 +132,7 @@ export function MandatesView({
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
   const [editEstimatedHours, setEditEstimatedHours] = useState("");
+  const [editActualHours, setEditActualHours] = useState("");
   const [editHourlyRate, setEditHourlyRate] = useState("");
   const [editNotes, setEditNotes] = useState("");
 
@@ -175,6 +177,7 @@ export function MandatesView({
     setEditStart(m.startDate ? m.startDate.slice(0, 10) : "");
     setEditEnd(m.endDate ? m.endDate.slice(0, 10) : "");
     setEditEstimatedHours(m.estimatedHours != null ? String(m.estimatedHours) : "");
+    setEditActualHours(m.actualHours != null ? String(m.actualHours) : "");
     setEditHourlyRate(m.hourlyRate != null ? String(m.hourlyRate) : "");
     setEditNotes(m.notes ?? "");
   };
@@ -217,9 +220,10 @@ export function MandatesView({
           description: editDesc.trim() || undefined,
           startDate: editStart || undefined,
           endDate: editEnd || undefined,
-          estimatedHours: editEstimatedHours ? Number(editEstimatedHours) : undefined,
-          hourlyRate: editHourlyRate ? Number(editHourlyRate) : undefined,
-          notes: editNotes.trim() || undefined,
+          estimatedHours: editEstimatedHours ? Number(editEstimatedHours) : null,
+          actualHours: editActualHours ? Number(editActualHours) : null,
+          hourlyRate: editHourlyRate ? Number(editHourlyRate) : null,
+          notes: editNotes.trim() || null,
         }),
       });
       if (res.ok) { router.refresh(); return { success: true }; }
@@ -621,12 +625,13 @@ export function MandatesView({
         loading={false}
         values={{
           clientId: newClientId, title: newTitle, service: newService, status: "pending", progress: 0,
-          desc: newDesc, start: newStart, end: newEnd, estimatedHours: newEstimatedHours, hourlyRate: newHourlyRate, notes: newNotes,
+          desc: newDesc, start: newStart, end: newEnd, estimatedHours: newEstimatedHours, actualHours: "", hourlyRate: newHourlyRate, notes: newNotes,
         }}
         setters={{
           setClientId: setNewClientId, setTitle: setNewTitle, setService: setNewService, setStatus: () => {}, setProgress: () => {},
           setDesc: setNewDesc, setStart: setNewStart, setEnd: setNewEnd,
-          setEstimatedHours: setNewEstimatedHours, setHourlyRate: setNewHourlyRate, setNotes: setNewNotes,
+          setEstimatedHours: setNewEstimatedHours, setActualHours: () => {},
+          setHourlyRate: setNewHourlyRate, setNotes: setNewNotes,
         }}
         onSubmit={handleCreate}
       />
@@ -643,13 +648,14 @@ export function MandatesView({
           clientId: editMandate?.clientId ? String(editMandate.clientId) : "",
           title: editTitle, service: editService, status: editStatus, progress: editProgress,
           desc: editDesc, start: editStart, end: editEnd,
-          estimatedHours: editEstimatedHours, hourlyRate: editHourlyRate, notes: editNotes,
+          estimatedHours: editEstimatedHours, actualHours: editActualHours, hourlyRate: editHourlyRate, notes: editNotes,
         }}
         setters={{
           setClientId: () => {}, setTitle: setEditTitle, setService: setEditService,
           setStatus: setEditStatus, setProgress: setEditProgress,
           setDesc: setEditDesc, setStart: setEditStart, setEnd: setEditEnd,
-          setEstimatedHours: setEditEstimatedHours, setHourlyRate: setEditHourlyRate, setNotes: setEditNotes,
+          setEstimatedHours: setEditEstimatedHours, setActualHours: setEditActualHours,
+          setHourlyRate: setEditHourlyRate, setNotes: setEditNotes,
         }}
         onSubmit={handleEdit}
       />
@@ -675,13 +681,14 @@ export function MandatesView({
 type MFormValues = {
   clientId: string; title: string; service: string; status: string; progress: number;
   desc: string; start: string; end: string;
-  estimatedHours: string; hourlyRate: string; notes: string;
+  estimatedHours: string; actualHours: string; hourlyRate: string; notes: string;
 };
 type MFormSetters = {
   setClientId: (v: string) => void; setTitle: (v: string) => void; setService: (v: string) => void;
   setStatus: (v: string) => void; setProgress: (v: number) => void;
   setDesc: (v: string) => void; setStart: (v: string) => void; setEnd: (v: string) => void;
-  setEstimatedHours: (v: string) => void; setHourlyRate: (v: string) => void; setNotes: (v: string) => void;
+  setEstimatedHours: (v: string) => void; setActualHours: (v: string) => void;
+  setHourlyRate: (v: string) => void; setNotes: (v: string) => void;
 };
 
 function MandateFormDialog({
@@ -818,22 +825,38 @@ function MandateFormDialog({
               </FormSection>
 
               <FormSection title="Estimations" icon={<DollarSign className="h-3.5 w-3.5" />}>
-                <div className="grid sm:grid-cols-2 gap-3">
+                <div className="grid sm:grid-cols-3 gap-3">
                   <div className="space-y-2">
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">Heures estimées</Label>
                     <Input type="number" min="0" step="0.5" value={values.estimatedHours} onChange={(e) => setters.setEstimatedHours(e.target.value)} placeholder="40" />
                   </div>
+                  {!isCreate && (
+                    <div className="space-y-2">
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">Heures réelles</Label>
+                      <Input type="number" min="0" step="0.25" value={values.actualHours} onChange={(e) => setters.setActualHours(e.target.value)} placeholder="0" />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">Taux horaire ($)</Label>
                     <Input type="number" min="0" step="5" value={values.hourlyRate} onChange={(e) => setters.setHourlyRate(e.target.value)} placeholder="125" />
                   </div>
                 </div>
                 {values.estimatedHours && values.hourlyRate && (
-                  <div className="rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 p-2.5 flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Total estimé</span>
-                    <span className="font-bold text-[#0F2D52] tabular-nums">
-                      {(Number(values.estimatedHours) * Number(values.hourlyRate)).toFixed(2)} $
-                    </span>
+                  <div className="rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 p-2.5 space-y-1 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Total estimé</span>
+                      <span className="font-bold text-[#0F2D52] tabular-nums">
+                        {(Number(values.estimatedHours) * Number(values.hourlyRate)).toFixed(2)} $
+                      </span>
+                    </div>
+                    {!isCreate && values.actualHours && (
+                      <div className="flex items-center justify-between border-t pt-1">
+                        <span className="text-muted-foreground">Total facturable réel</span>
+                        <span className="font-bold text-emerald-600 tabular-nums">
+                          {(Number(values.actualHours) * Number(values.hourlyRate)).toFixed(2)} $
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </FormSection>

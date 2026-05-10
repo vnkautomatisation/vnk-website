@@ -6,7 +6,17 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { revalidateAdminViews } from "@/lib/revalidate";
 import { headers } from "next/headers";
+
+// Construit un Content-Disposition compatible HTTP/1.1 (Latin-1 only) avec fallback RFC 5987 UTF-8
+function safeContentDisposition(filename: string, mode: "inline" | "attachment" = "inline"): string {
+  // ASCII-only fallback (remplace caracteres > 0x7F par "_")
+  const ascii = filename.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "'");
+  // UTF-8 percent-encoded pour filename*
+  const encoded = encodeURIComponent(filename);
+  return `${mode}; filename="${ascii}"; filename*=UTF-8''${encoded}`;
+}
 
 export async function GET(
   req: Request,
@@ -43,7 +53,22 @@ export async function GET(
     );
   }
 
-  // Pour les URLs internes (API PDF routes), proxy le contenu
+  // Cas 1 : fichier upload stocke en data URL
+  if (doc.fileUrl.startsWith("data:")) {
+    const match = doc.fileUrl.match(/^data:([^;,]+)[;,]/);
+    const mimeType = match?.[1] ?? doc.fileType ?? "application/octet-stream";
+    const base64 = doc.fileUrl.split(",")[1] ?? "";
+    const buf = Buffer.from(base64, "base64");
+    const fname = doc.fileName ?? doc.title;
+    return new Response(new Uint8Array(buf), {
+      headers: {
+        "Content-Type": mimeType,
+        "Content-Disposition": safeContentDisposition(fname, "inline"),
+      },
+    });
+  }
+
+  // Cas 2 : URL interne (API PDF routes), proxy le contenu
   if (doc.fileUrl.startsWith("/api/")) {
     const hdrs = await headers();
     const host = hdrs.get("host") ?? "localhost:3000";
@@ -65,7 +90,7 @@ export async function GET(
     return new Response(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="${doc.title}.pdf"`,
+        "Content-Disposition": safeContentDisposition(`${doc.title}.pdf`, "inline"),
       },
     });
   }
@@ -114,6 +139,8 @@ export async function PATCH(
     changes: parsed.data,
   });
 
+  revalidateAdminViews();
+
   return NextResponse.json({ success: true, document: updated });
 }
 
@@ -141,6 +168,8 @@ export async function DELETE(
     entityType: "documents",
     entityId: docId,
   });
+
+  revalidateAdminViews();
 
   return NextResponse.json({ success: true });
 }

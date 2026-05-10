@@ -262,6 +262,7 @@ model Invoice {
   invoiceNumber            String        @unique @map("invoice_number")
   title                    String
   description              String?
+  serviceType              String?       @map("service_type")
   amountHt                 Decimal       @default(0) @map("amount_ht") @db.Decimal(10, 2)
   tpsAmount                Decimal       @default(0) @map("tps_amount") @db.Decimal(10, 2)
   tvqAmount                Decimal       @default(0) @map("tvq_amount") @db.Decimal(10, 2)

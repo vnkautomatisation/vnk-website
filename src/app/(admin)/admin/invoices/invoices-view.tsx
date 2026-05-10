@@ -42,6 +42,7 @@ type Invoice = {
   quoteNumber: string | null;
   title: string;
   description: string | null;
+  serviceType: string | null;
   status: string;
   amountHt: number;
   tpsAmount: number;
@@ -75,13 +76,51 @@ const PAYMENT_METHODS = [
   { value: "other", label: "Autre" },
 ];
 
+type MandateOption = { id: number; title: string; clientId: number; status: string };
+type LinkedQuote = { id: number; quoteNumber: string; clientId: number; title: string; amountTtc: number };
+type LinkedContract = { id: number; contractNumber: string; clientId: number; title: string; amountTtc: number | null };
+
+const SERVICE_TYPES = [
+  { value: "plc-support", label: "Support PLC" },
+  { value: "audit", label: "Audit technique" },
+  { value: "documentation", label: "Documentation" },
+  { value: "refactoring", label: "Refactorisation" },
+  { value: "modernization", label: "Modernisation" },
+  { value: "training", label: "Formation" },
+  { value: "other", label: "Autre" },
+];
+
+const PHASE_OPTIONS = [
+  { value: "acompte", label: "Acompte" },
+  { value: "solde", label: "Solde" },
+  { value: "phase_1", label: "Phase 1" },
+  { value: "phase_2", label: "Phase 2" },
+  { value: "phase_3", label: "Phase 3" },
+  { value: "honoraires", label: "Honoraires" },
+  { value: "frais", label: "Frais" },
+  { value: "autre", label: "Autre" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "unpaid", label: "Non payée" },
+  { value: "overdue", label: "En retard" },
+  { value: "paid", label: "Payée" },
+  { value: "cancelled", label: "Annulée" },
+];
+
 export function InvoicesView({
   invoices,
   clients,
+  mandates,
+  acceptedQuotes,
+  signedContracts,
   kpis,
 }: {
   invoices: Invoice[];
   clients: ClientOption[];
+  mandates: MandateOption[];
+  acceptedQuotes: LinkedQuote[];
+  signedContracts: LinkedContract[];
   kpis: { unpaidTotal: number; overdueTotal: number; paidThisMonth: number; overdueCount: number; unpaidCount: number };
 }) {
   const router = useRouter();
@@ -118,11 +157,22 @@ export function InvoicesView({
   const [fAmount, setFAmount] = useState("");
   const [fDueDate, setFDueDate] = useState("");
   const [fDueDays, setFDueDays] = useState("30");
+  const [fMandateId, setFMandateId] = useState("");
+  const [fQuoteId, setFQuoteId] = useState("");
+  const [fContractId, setFContractId] = useState("");
+  const [fInvoicePhase, setFInvoicePhase] = useState("");
+  const [fPhaseNumber, setFPhaseNumber] = useState("1");
+  const [fPaymentMethod, setFPaymentMethod] = useState("");
+  const [fStatus, setFStatus] = useState("unpaid");
+  const [fServiceType, setFServiceType] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const resetForm = () => {
     setFClientId(""); setFTitle(""); setFDesc(""); setFAmount("");
     setFDueDate(""); setFDueDays("30");
+    setFMandateId(""); setFQuoteId(""); setFContractId("");
+    setFInvoicePhase(""); setFPhaseNumber("1"); setFPaymentMethod("");
+    setFStatus("unpaid"); setFServiceType("");
   };
 
   useEffect(() => {
@@ -137,6 +187,20 @@ export function InvoicesView({
     }
   }, [searchParams, clients]);
 
+  useEffect(() => {
+    const editId = searchParams.get("editId");
+    if (editId) {
+      const target = invoices.find((i) => String(i.id) === editId);
+      if (target) {
+        openEdit(target);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("editId");
+        window.history.replaceState({}, "", url.toString());
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, invoices]);
+
   const openEdit = (i: Invoice) => {
     setEditInvoice(i);
     setFClientId(String(i.clientId));
@@ -145,6 +209,14 @@ export function InvoicesView({
     setFAmount(String(i.amountHt));
     setFDueDate(i.dueDate ? i.dueDate.slice(0, 10) : "");
     setFDueDays("30");
+    setFMandateId(""); // Invoice type doesn't expose mandateId yet, leave blank
+    setFQuoteId(i.quoteId ? String(i.quoteId) : "");
+    setFContractId(i.contractId ? String(i.contractId) : "");
+    setFInvoicePhase(i.invoicePhase ?? "");
+    setFPhaseNumber(i.phaseNumber ? String(i.phaseNumber) : "1");
+    setFPaymentMethod(i.paymentMethod ?? "");
+    setFStatus(i.status ?? "unpaid");
+    setFServiceType(i.serviceType ?? "");
   };
 
   const handleCreate = async () => {
@@ -160,8 +232,16 @@ export function InvoicesView({
           clientId: Number(fClientId),
           title: fTitle.trim(),
           description: fDesc.trim() || undefined,
+          serviceType: fServiceType || undefined,
           amountHt: Number(fAmount),
-          dueDays: fDueDays ? Number(fDueDays) : undefined,
+          dueDays: fDueDate ? undefined : (fDueDays ? Number(fDueDays) : undefined),
+          dueDate: fDueDate || undefined,
+          mandateId: fMandateId ? Number(fMandateId) : undefined,
+          quoteId: fQuoteId ? Number(fQuoteId) : undefined,
+          contractId: fContractId ? Number(fContractId) : undefined,
+          invoicePhase: fInvoicePhase || undefined,
+          phaseNumber: fPhaseNumber ? Number(fPhaseNumber) : undefined,
+          paymentMethod: fPaymentMethod || undefined,
         }),
       });
       if (res.ok) {
@@ -184,8 +264,16 @@ export function InvoicesView({
         body: JSON.stringify({
           title: fTitle.trim(),
           description: fDesc.trim() || null,
+          serviceType: fServiceType || null,
           amountHt: Number(fAmount),
           dueDate: fDueDate || null,
+          mandateId: fMandateId ? Number(fMandateId) : null,
+          quoteId: fQuoteId ? Number(fQuoteId) : null,
+          contractId: fContractId ? Number(fContractId) : null,
+          invoicePhase: fInvoicePhase || null,
+          phaseNumber: fPhaseNumber ? Number(fPhaseNumber) : null,
+          paymentMethod: fPaymentMethod || null,
+          status: fStatus,
         }),
       });
       if (res.ok) { toast.success("Facture modifiée"); setEditInvoice(null); router.refresh(); }
@@ -571,7 +659,7 @@ export function InvoicesView({
               ]}
               stats={[{ label: "TTC", value: formatCurrency(inv.amountTtc) }]}
               actions={getActions(inv)}
-              onClick={() => openEntity("invoice", inv.id)}
+              onClick={() => setPdfInvoice(inv)}
               footer={
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <span>{formatCurrency(inv.amountHt)} HT</span>
@@ -589,7 +677,7 @@ export function InvoicesView({
           data={filtered}
           columns={columns}
           getRowId={(r) => r.id}
-          onRowClick={(r) => openEntity("invoice", r.id)}
+          onRowClick={(r) => setPdfInvoice(r)}
           searchPlaceholder="Rechercher..."
           exportFilename="factures"
           storageKey="admin-invoices"
@@ -602,11 +690,23 @@ export function InvoicesView({
         onOpenChange={(o) => { if (!o) { resetForm(); setCreateOpen(false); } else setCreateOpen(true); }}
         mode="create"
         clients={clients}
+        mandates={mandates}
+        acceptedQuotes={acceptedQuotes}
+        signedContracts={signedContracts}
         submitting={submitting}
-        values={{ clientId: fClientId, title: fTitle, desc: fDesc, amount: fAmount, dueDate: fDueDate, dueDays: fDueDays }}
+        values={{
+          clientId: fClientId, title: fTitle, desc: fDesc, amount: fAmount, dueDate: fDueDate, dueDays: fDueDays,
+          mandateId: fMandateId, quoteId: fQuoteId, contractId: fContractId,
+          invoicePhase: fInvoicePhase, phaseNumber: fPhaseNumber, paymentMethod: fPaymentMethod, status: fStatus,
+          serviceType: fServiceType,
+        }}
         setters={{
           setClientId: setFClientId, setTitle: setFTitle, setDesc: setFDesc,
           setAmount: setFAmount, setDueDate: setFDueDate, setDueDays: setFDueDays,
+          setMandateId: setFMandateId, setQuoteId: setFQuoteId, setContractId: setFContractId,
+          setInvoicePhase: setFInvoicePhase, setPhaseNumber: setFPhaseNumber,
+          setPaymentMethod: setFPaymentMethod, setStatus: setFStatus,
+          setServiceType: setFServiceType,
         }}
         onSubmit={handleCreate}
       />
@@ -615,12 +715,24 @@ export function InvoicesView({
         onOpenChange={(o) => { if (!o) setEditInvoice(null); }}
         mode="edit"
         clients={clients}
+        mandates={mandates}
+        acceptedQuotes={acceptedQuotes}
+        signedContracts={signedContracts}
         editingInvoiceNumber={editInvoice?.invoiceNumber}
         submitting={submitting}
-        values={{ clientId: fClientId, title: fTitle, desc: fDesc, amount: fAmount, dueDate: fDueDate, dueDays: fDueDays }}
+        values={{
+          clientId: fClientId, title: fTitle, desc: fDesc, amount: fAmount, dueDate: fDueDate, dueDays: fDueDays,
+          mandateId: fMandateId, quoteId: fQuoteId, contractId: fContractId,
+          invoicePhase: fInvoicePhase, phaseNumber: fPhaseNumber, paymentMethod: fPaymentMethod, status: fStatus,
+          serviceType: fServiceType,
+        }}
         setters={{
           setClientId: () => {}, setTitle: setFTitle, setDesc: setFDesc,
           setAmount: setFAmount, setDueDate: setFDueDate, setDueDays: setFDueDays,
+          setMandateId: setFMandateId, setQuoteId: setFQuoteId, setContractId: setFContractId,
+          setInvoicePhase: setFInvoicePhase, setPhaseNumber: setFPhaseNumber,
+          setPaymentMethod: setFPaymentMethod, setStatus: setFStatus,
+          setServiceType: setFServiceType,
         }}
         onSubmit={handleEdit}
       />
@@ -692,19 +804,32 @@ export function InvoicesView({
 }
 
 // ─── InvoiceFormDialog VNK navy ──────────────────────────
-type IFormValues = { clientId: string; title: string; desc: string; amount: string; dueDate: string; dueDays: string };
+type IFormValues = {
+  clientId: string; title: string; desc: string; amount: string; dueDate: string; dueDays: string;
+  mandateId: string; quoteId: string; contractId: string;
+  invoicePhase: string; phaseNumber: string; paymentMethod: string; status: string;
+  serviceType: string;
+};
 type IFormSetters = {
   setClientId: (v: string) => void; setTitle: (v: string) => void; setDesc: (v: string) => void;
   setAmount: (v: string) => void; setDueDate: (v: string) => void; setDueDays: (v: string) => void;
+  setMandateId: (v: string) => void; setQuoteId: (v: string) => void; setContractId: (v: string) => void;
+  setInvoicePhase: (v: string) => void; setPhaseNumber: (v: string) => void;
+  setPaymentMethod: (v: string) => void; setStatus: (v: string) => void;
+  setServiceType: (v: string) => void;
 };
 
 function InvoiceFormDialog({
-  open, onOpenChange, mode, clients, editingInvoiceNumber, submitting, values, setters, onSubmit,
+  open, onOpenChange, mode, clients, mandates, acceptedQuotes, signedContracts,
+  editingInvoiceNumber, submitting, values, setters, onSubmit,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   mode: "create" | "edit";
   clients: ClientOption[];
+  mandates: MandateOption[];
+  acceptedQuotes: LinkedQuote[];
+  signedContracts: LinkedContract[];
   editingInvoiceNumber?: string;
   submitting: boolean;
   values: IFormValues;
@@ -716,6 +841,32 @@ function InvoiceFormDialog({
   const tps = amountNum * 0.05;
   const tvq = amountNum * 0.09975;
   const ttc = amountNum + tps + tvq;
+
+  const clientIdNum = Number(values.clientId) || 0;
+  const filteredMandates = mandates.filter((m) => m.clientId === clientIdNum);
+  const filteredQuotes = acceptedQuotes.filter((q) => q.clientId === clientIdNum);
+  const filteredContracts = signedContracts.filter((c) => c.clientId === clientIdNum);
+
+  const fillFromQuote = (qid: string) => {
+    setters.setQuoteId(qid);
+    if (!qid) return;
+    const q = acceptedQuotes.find((x) => String(x.id) === qid);
+    if (q && !values.title.trim()) setters.setTitle(q.title);
+    if (q && !values.amount) {
+      const ht = q.amountTtc / 1.14975;
+      setters.setAmount(ht.toFixed(2));
+    }
+  };
+  const fillFromContract = (cid: string) => {
+    setters.setContractId(cid);
+    if (!cid) return;
+    const c = signedContracts.find((x) => String(x.id) === cid);
+    if (c && !values.title.trim()) setters.setTitle(c.title);
+    if (c && !values.amount && c.amountTtc) {
+      const ht = c.amountTtc / 1.14975;
+      setters.setAmount(ht.toFixed(2));
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -757,6 +908,16 @@ function InvoiceFormDialog({
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Titre *</Label>
               <Input value={values.title} onChange={(e) => setters.setTitle(e.target.value)} placeholder="Audit PLC — phase 1" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type de service</Label>
+              <Select value={values.serviceType || "none"} onValueChange={(v) => setters.setServiceType(v === "none" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Sélectionner un service" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucun</SelectItem>
+                  {SERVICE_TYPES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description</Label>
@@ -801,6 +962,110 @@ function InvoiceFormDialog({
                 <Input type="date" value={values.dueDate} onChange={(e) => setters.setDueDate(e.target.value)} />
               </div>
             )}
+            {isCreate && (
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date précise (optionnel — override le délai)</Label>
+                <Input type="date" value={values.dueDate} onChange={(e) => setters.setDueDate(e.target.value)} />
+              </div>
+            )}
+          </FormSection>
+
+          {/* Phase de facturation */}
+          <FormSection title="Phase de facturation" icon={<Receipt className="h-3.5 w-3.5" />}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type de phase</Label>
+                <Select value={values.invoicePhase || "none"} onValueChange={(v) => setters.setInvoicePhase(v === "none" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Aucune phase" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucune phase</SelectItem>
+                    {PHASE_OPTIONS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Numéro de phase</Label>
+                <Input type="number" min="1" value={values.phaseNumber} onChange={(e) => setters.setPhaseNumber(e.target.value)} />
+              </div>
+            </div>
+          </FormSection>
+
+          {/* Liens (mandate, quote, contract) */}
+          {clientIdNum > 0 && (
+            <FormSection title="Liens (optionnel)" icon={<DollarSign className="h-3.5 w-3.5" />}>
+              {filteredMandates.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Mandat associé</Label>
+                  <Select value={values.mandateId || "none"} onValueChange={(v) => setters.setMandateId(v === "none" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="Aucun mandat" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Aucun mandat</SelectItem>
+                      {filteredMandates.map((m) => (
+                        <SelectItem key={m.id} value={String(m.id)}>{m.title}{m.status !== "active" && m.status !== "in_progress" ? ` (${m.status})` : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {filteredQuotes.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Devis source (auto-remplit titre & montant)</Label>
+                  <Select value={values.quoteId || "none"} onValueChange={(v) => fillFromQuote(v === "none" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="Aucun devis" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Aucun devis</SelectItem>
+                      {filteredQuotes.map((q) => (
+                        <SelectItem key={q.id} value={String(q.id)}>{q.quoteNumber} — {q.title} ({formatCurrency(q.amountTtc)})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {filteredContracts.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Contrat source (auto-remplit titre & montant)</Label>
+                  <Select value={values.contractId || "none"} onValueChange={(v) => fillFromContract(v === "none" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="Aucun contrat" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Aucun contrat</SelectItem>
+                      {filteredContracts.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.contractNumber} — {c.title}{c.amountTtc ? ` (${formatCurrency(c.amountTtc)})` : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {filteredMandates.length === 0 && filteredQuotes.length === 0 && filteredContracts.length === 0 && (
+                <p className="text-[11px] text-muted-foreground">Aucun mandat / devis accepté / contrat signé pour ce client.</p>
+              )}
+            </FormSection>
+          )}
+
+          {/* Méthode de paiement (les deux modes) + Statut (edit only) */}
+          <FormSection title="Paiement" icon={<CreditCard className="h-3.5 w-3.5" />}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Méthode prévue</Label>
+                <Select value={values.paymentMethod || "none"} onValueChange={(v) => setters.setPaymentMethod(v === "none" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="À définir" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">À définir</SelectItem>
+                    {PAYMENT_METHODS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {!isCreate && (
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Statut</Label>
+                  <Select value={values.status} onValueChange={setters.setStatus}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </FormSection>
         </div>
 

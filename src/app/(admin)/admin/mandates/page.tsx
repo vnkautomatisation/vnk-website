@@ -37,6 +37,7 @@ export default async function MandatesPage() {
     startDate: m.startDate?.toISOString() ?? null,
     endDate: m.endDate?.toISOString() ?? null,
     estimatedHours: m.estimatedHours != null ? Number(m.estimatedHours) : null,
+    actualHours: m.actualHours != null ? Number(m.actualHours) : null,
     hourlyRate: m.hourlyRate != null ? Number(m.hourlyRate) : null,
     createdAt: m.createdAt.toISOString(),
   }));

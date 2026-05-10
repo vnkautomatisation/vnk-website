@@ -28,12 +28,14 @@ type QuotePdfData = {
   tpsAmount: number;
   tvqAmount: number;
   amountTtc: number;
+  createdAt?: Date;
   expiryDate?: Date;
   paymentConditions?: string;
   paymentPlan?: string;
   paymentPct1?: number;
   paymentPct2?: number;
   status?: string;
+  serviceType?: string | null;
   clientSignatureData?: string | null;
   signedAt?: Date | null;
   acceptedAt?: Date | null;
@@ -48,9 +50,11 @@ type InvoicePdfData = {
   tpsAmount: number;
   tvqAmount: number;
   amountTtc: number;
+  createdAt?: Date;
   dueDate?: Date;
   paidAt?: Date | null;
   status?: string;
+  serviceType?: string | null;
   invoicePhase?: string | null;
   phaseNumber?: number | null;
 };
@@ -61,8 +65,11 @@ type ContractPdfData = {
   content?: string;
   client: Client;
   amountTtc?: number;
+  createdAt?: Date;
   clientSignatureData?: string | null;
+  clientSignatureIp?: string | null;
   adminSignatureData?: string | null;
+  adminSignedAt?: Date | null;
   signedAt?: Date | null;
 };
 
@@ -118,12 +125,14 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<Buffer> {
     tps_amount: data.tpsAmount,
     tvq_amount: data.tvqAmount,
     amount_ttc: data.amountTtc,
+    created_at: data.createdAt ?? new Date(),
     expiry_date: data.expiryDate,
     payment_conditions: data.paymentConditions,
     payment_plan: data.paymentPlan,
     payment_pct_1: data.paymentPct1,
     payment_pct_2: data.paymentPct2,
     status: data.status,
+    service_type: data.serviceType,
     client_signature_data: data.clientSignatureData,
     signed_at: data.signedAt,
     accepted_at: data.acceptedAt,
@@ -143,9 +152,11 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     tps_amount: data.tpsAmount,
     tvq_amount: data.tvqAmount,
     amount_ttc: data.amountTtc,
+    created_at: data.createdAt ?? new Date(),
     due_date: data.dueDate,
     paid_at: data.paidAt,
     status: data.status,
+    service_type: data.serviceType,
     invoice_phase: data.invoicePhase,
     phase_number: data.phaseNumber,
   };
@@ -161,8 +172,11 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
     title: data.title,
     content: data.content,
     amount_ttc: data.amountTtc,
+    created_at: data.createdAt ?? new Date(),
     client_signature_data: data.clientSignatureData,
+    client_signature_ip: data.clientSignatureIp,
     admin_signature_data: data.adminSignatureData,
+    admin_signed_at: data.adminSignedAt,
     signed_at: data.signedAt,
   };
 

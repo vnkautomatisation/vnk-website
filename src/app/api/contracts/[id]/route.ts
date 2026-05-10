@@ -16,6 +16,8 @@ const updateSchema = z.object({
   status: z.string().optional(),
   amountTtc: z.number().nullable().optional(),
   expiresAt: z.string().nullable().optional(),
+  mandateId: z.number().int().positive().nullable().optional(),
+  quoteId: z.number().int().positive().nullable().optional(),
 }).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnee a mettre a jour" });
 
 export async function GET(

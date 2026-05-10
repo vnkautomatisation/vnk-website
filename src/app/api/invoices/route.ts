@@ -12,13 +12,18 @@ import { revalidateAdminViews } from "@/lib/revalidate";
 
 const createSchema = z.object({
   clientId: z.number().int().positive(),
-  mandateId: z.number().int().positive().optional(),
-  quoteId: z.number().int().positive().optional(),
-  contractId: z.number().int().positive().optional(),
+  mandateId: z.number().int().positive().nullable().optional(),
+  quoteId: z.number().int().positive().nullable().optional(),
+  contractId: z.number().int().positive().nullable().optional(),
   title: z.string().min(1).max(255),
   description: z.string().optional(),
+  serviceType: z.string().max(60).optional(),
   amountHt: z.number().positive(),
   dueDays: z.number().int().positive().optional(),
+  dueDate: z.string().optional(),
+  invoicePhase: z.string().max(60).optional(),
+  phaseNumber: z.number().int().positive().optional(),
+  paymentMethod: z.string().max(60).optional(),
 });
 
 export async function GET() {
@@ -64,25 +69,34 @@ export async function POST(req: Request) {
   const nextSeq = last ? Number(last.invoiceNumber.split("-").pop()) + 1 : 1;
   const invoiceNumber = generateDocumentNumber(prefix, nextSeq);
 
-  const dueDays = parsed.data.dueDays ??
-    Number(await getSetting<number>("billing", "default_payment_due_days", 30));
-  const dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + dueDays);
+  let dueDate: Date;
+  if (parsed.data.dueDate) {
+    dueDate = new Date(parsed.data.dueDate);
+  } else {
+    const dueDays = parsed.data.dueDays ??
+      Number(await getSetting<number>("billing", "default_payment_due_days", 30));
+    dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + dueDays);
+  }
 
   const invoice = await prisma.invoice.create({
     data: {
       clientId: parsed.data.clientId,
-      mandateId: parsed.data.mandateId,
-      quoteId: parsed.data.quoteId,
-      contractId: parsed.data.contractId,
+      mandateId: parsed.data.mandateId ?? undefined,
+      quoteId: parsed.data.quoteId ?? undefined,
+      contractId: parsed.data.contractId ?? undefined,
       invoiceNumber,
       title: parsed.data.title,
       description: parsed.data.description,
+      serviceType: parsed.data.serviceType,
       amountHt: taxes.ht,
       tpsAmount: taxes.tps,
       tvqAmount: taxes.tvq,
       amountTtc: taxes.ttc,
       dueDate,
+      invoicePhase: parsed.data.invoicePhase,
+      phaseNumber: parsed.data.phaseNumber,
+      paymentMethod: parsed.data.paymentMethod,
     },
   });
 

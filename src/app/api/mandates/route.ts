@@ -17,7 +17,10 @@ const createSchema = z.object({
   endDate: z.string().optional(),
   notes: z.string().optional(),
   estimatedHours: z.number().optional(),
+  actualHours: z.number().optional(),
   hourlyRate: z.number().optional(),
+  status: z.string().optional(),
+  progress: z.number().min(0).max(100).optional(),
 });
 
 export async function GET(req: Request) {

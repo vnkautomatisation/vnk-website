@@ -17,6 +17,7 @@ const updateSchema = z.object({
   status: z.string().optional(),
   amountHt: z.number().positive().optional(),
   expiryDate: z.string().nullable().optional(),
+  mandateId: z.number().int().positive().nullable().optional(),
   paymentPlan: z.string().nullable().optional(),
   paymentPct1: z.number().int().min(0).max(100).nullable().optional(),
   paymentPct2: z.number().int().min(0).max(100).nullable().optional(),
