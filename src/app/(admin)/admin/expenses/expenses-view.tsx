@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -30,7 +30,7 @@ import { EntityCard } from "@/components/admin/entity-card";
 import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/data-table/data-table";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatCurrency, formatDate } from "@/lib/utils";
 
 type Expense = {
   id: number;
@@ -69,6 +69,20 @@ export function ExpensesView({
   const [view, setView] = useViewMode("expenses", "list");
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+
+  // Sticky scroll detection (Wix pattern)
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setScrolled(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    obs.observe(sentinel);
+    return () => obs.disconnect();
+  }, []);
 
   const [newDate, setNewDate] = useState("");
   const [newCategory, setNewCategory] = useState("");
@@ -259,12 +273,44 @@ export function ExpensesView({
         <StatCard label="TVQ reclamable" value={formatCurrency(kpis.tvq)} icon={DollarSign} accent="bg-indigo-500" />
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Description, categorie, fournisseur..." className="pl-9" />
+      {/* Sentinel — détecte quand les KPIs quittent le viewport */}
+      <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
+
+      {/* Toolbar — sticky au scroll, avec récap KPI compact qui apparaît seulement quand scrolled */}
+      <div
+        className={cn(
+          "sticky top-[64px] z-20 bg-background -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 transition-shadow",
+          scrolled && "shadow-sm border-b"
+        )}
+      >
+        {scrolled && (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs mb-2 pt-1">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <Wallet className="h-4 w-4" />
+              Dépenses
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground">Total :</span>
+              <span className="font-bold text-red-600">{formatCurrency(kpis.total)}</span>
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground">TPS :</span>
+              <span className="font-bold text-blue-600">{formatCurrency(kpis.tps)}</span>
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground">TVQ :</span>
+              <span className="font-bold text-indigo-600">{formatCurrency(kpis.tvq)}</span>
+            </span>
+            <span className="ml-auto text-muted-foreground">{filtered.length} affichées</span>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Description, categorie, fournisseur..." className="pl-9" />
+          </div>
+          <ViewToggle storageKey="expenses" defaultView="list" onChange={setView} />
         </div>
-        <ViewToggle storageKey="expenses" defaultView="list" onChange={setView} />
       </div>
 
       {/* Vue grille */}

@@ -1,21 +1,44 @@
 "use client";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   CreditCard,
   Search,
-  DollarSign,
-  RotateCcw,
-  Hash,
   Eye,
+  Download,
+  CheckSquare,
+  Square,
+  CheckCircle2,
+  FileSpreadsheet,
+  Users,
+  MoreHorizontal,
+  TrendingUp,
+  FileText,
+  Filter,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { StatCard } from "@/components/admin/stat-card";
-import { EntityCard } from "@/components/admin/entity-card";
-import { useViewMode, ViewToggle } from "@/components/admin/view-toggle";
+import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { PaymentDetailDialog } from "./payment-detail-dialog";
 
 type Payment = {
   id: number;
@@ -24,6 +47,7 @@ type Payment = {
   clientName: string;
   companyName: string | null;
   invoiceNumber: string;
+  invoiceTitle: string | null;
   stripePaymentIntentId: string | null;
   stripeChargeId: string | null;
   amount: number;
@@ -32,52 +56,180 @@ type Payment = {
   paymentMethod: string | null;
   paidAt: string | null;
   createdAt: string;
+  reconciledAt?: string | null;
+  reconciledBy?: string | null;
+  exportedAt?: string | null;
+  exportedBy?: string | null;
+  accountingCategory?: string | null;
+  fiscalPeriod?: string | null;
+  assignedAccountantId?: number | null;
+  assignedAccountantName?: string | null;
+  accountantNotes?: string | null;
 };
 
-type StatusFilter = "all" | "paid" | "refunded";
+type ClientOption = { id: number; fullName: string; companyName: string | null };
+type AdminOption = { id: number; fullName: string | null; email: string };
+
+type StatusFilter = "all" | "succeeded" | "failed" | "refunded" | "to_reconcile" | "reconciled" | "exported";
 
 const STATUS_TABS: { key: StatusFilter; label: string }[] = [
   { key: "all", label: "Toutes" },
-  { key: "paid", label: "Payees" },
-  { key: "refunded", label: "Remboursees" },
+  { key: "to_reconcile", label: "À réconcilier" },
+  { key: "reconciled", label: "Réconciliées" },
+  { key: "exported", label: "Exportées" },
+  { key: "failed", label: "Échouées" },
+  { key: "refunded", label: "Remboursées" },
+];
+
+const CATEGORIES = [
+  "services_recurrent",
+  "services_unique",
+  "acompte",
+  "solde",
+  "consultation",
+  "support",
+  "autre",
 ];
 
 export function TransactionsView({
   payments,
+  clients,
+  methods,
+  accountants,
   kpis,
 }: {
   payments: Payment[];
-  kpis: { totalPaid: number; totalRefunded: number; count: number };
+  clients: ClientOption[];
+  methods: string[];
+  accountants: AdminOption[];
+  kpis: {
+    totalPaid: number;
+    thisMonthAmount: number;
+    toReconcileCount: number;
+    count: number;
+  };
 }) {
-  const { open: openEntity } = useEntityPanels();
-  const [view, setView] = useViewMode("transactions", "list");
+  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [methodFilter, setMethodFilter] = useState<string>("all");
+  const [clientFilter, setClientFilter] = useState<string>("all");
+  const [accountantFilter, setAccountantFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const filtered = useMemo(() => {
     let result = payments;
-    if (statusFilter === "paid") result = result.filter((p) => p.status === "succeeded" || p.status === "paid");
+    if (statusFilter === "to_reconcile") result = result.filter((p) => !p.reconciledAt && (p.status === "succeeded" || p.status === "paid"));
+    else if (statusFilter === "reconciled") result = result.filter((p) => p.reconciledAt && !p.exportedAt);
+    else if (statusFilter === "exported") result = result.filter((p) => p.exportedAt);
+    else if (statusFilter === "succeeded") result = result.filter((p) => p.status === "succeeded" || p.status === "paid");
+    else if (statusFilter === "failed") result = result.filter((p) => p.status === "failed");
     else if (statusFilter === "refunded") result = result.filter((p) => p.status === "refunded");
+    if (methodFilter !== "all") result = result.filter((p) => p.paymentMethod === methodFilter);
+    if (clientFilter !== "all") result = result.filter((p) => p.clientId === Number(clientFilter));
+    if (accountantFilter !== "all") {
+      if (accountantFilter === "none") result = result.filter((p) => !p.assignedAccountantId);
+      else result = result.filter((p) => p.assignedAccountantId === Number(accountantFilter));
+    }
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      result = result.filter((p) => new Date(p.paidAt ?? p.createdAt) >= fromDate);
+    }
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setDate(toDate.getDate() + 1);
+      result = result.filter((p) => new Date(p.paidAt ?? p.createdAt) <= toDate);
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
         (p) =>
           p.clientName.toLowerCase().includes(q) ||
+          (p.companyName ?? "").toLowerCase().includes(q) ||
           p.invoiceNumber.toLowerCase().includes(q) ||
-          (p.stripePaymentIntentId ?? "").toLowerCase().includes(q)
+          (p.invoiceTitle ?? "").toLowerCase().includes(q) ||
+          (p.stripePaymentIntentId ?? "").toLowerCase().includes(q) ||
+          (p.accountantNotes ?? "").toLowerCase().includes(q),
       );
     }
     return result;
-  }, [payments, statusFilter, searchQuery]);
+  }, [payments, statusFilter, methodFilter, clientFilter, accountantFilter, dateFrom, dateTo, searchQuery]);
 
-  // Actions menu pour EntityCard (lecture seule)
-  const getActions = useCallback((p: Payment) => [
-    ...(p.invoiceId ? [{ label: "Voir facture", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("invoice", p.invoiceId!) }] : []),
-    ...(p.clientId ? [{ label: "Voir client", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", p.clientId!) }] : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], []);
+  // Sélection
+  const allSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
+  const toggleAll = () => {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filtered.map((p) => p.id)));
+  };
+  const toggleOne = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const bulkAction = async (action: string, extra: Record<string, unknown> = {}) => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    try {
+      const res = await fetch("/api/payments/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentIds: Array.from(selectedIds), action, ...extra }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Erreur");
+      }
+      const data = await res.json();
+      toast.success(`${data.count} paiement(s) mis à jour`);
+      setSelectedIds(new Set());
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const exportComptable = (format: string) => {
+    const params = new URLSearchParams({ format });
+    if (dateFrom) params.set("from", dateFrom);
+    if (dateTo) params.set("to", dateTo);
+    const a = document.createElement("a");
+    a.href = `/api/payments/export?${params.toString()}`;
+    a.click();
+    toast.success(`Export ${format}`);
+  };
+
+  const accountingStatusBadge = (p: Payment) => {
+    if (p.exportedAt) return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700">Exporté</span>;
+    if (p.reconciledAt) return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">Réconcilié</span>;
+    if (p.status === "succeeded" || p.status === "paid") return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">À réconcilier</span>;
+    return <span className="text-[10px] text-muted-foreground">—</span>;
+  };
 
   const columns: Column<Payment>[] = [
+    {
+      key: "select",
+      header: (
+        <button onClick={toggleAll} className="flex items-center" title={allSelected ? "Tout désélectionner" : "Tout sélectionner"}>
+          {allSelected ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
+        </button>
+      ),
+      accessor: (r) => (
+        <button onClick={(e) => { e.stopPropagation(); toggleOne(r.id); }} className="flex items-center">
+          {selectedIds.has(r.id) ? <CheckSquare className="h-3.5 w-3.5 text-[#0F2D52]" /> : <Square className="h-3.5 w-3.5 text-muted-foreground" />}
+        </button>
+      ),
+    },
     {
       key: "date",
       header: "Date",
@@ -89,9 +241,9 @@ export function TransactionsView({
       key: "client",
       header: "Client",
       accessor: (r) => (
-        <div>
-          <div className="font-medium text-sm">{r.clientName}</div>
-          {r.companyName && <div className="text-xs text-muted-foreground">{r.companyName}</div>}
+        <div className="min-w-0">
+          <div className="font-medium text-sm truncate">{r.clientName}</div>
+          {r.companyName && <div className="text-xs text-muted-foreground truncate">{r.companyName}</div>}
         </div>
       ),
       sortable: true,
@@ -105,97 +257,248 @@ export function TransactionsView({
     {
       key: "amount",
       header: "Montant",
-      accessor: (r) => <span className="font-semibold">{formatCurrency(r.amount)}</span>,
+      accessor: (r) => <span className="font-semibold">{formatCurrency(r.amount, (r.currency || "CAD").toUpperCase())}</span>,
       sortable: true,
       sortBy: (r) => r.amount,
     },
     {
       key: "method",
-      header: "Methode",
+      header: "Méthode",
       accessor: (r) => <span className="text-xs capitalize">{r.paymentMethod ?? "—"}</span>,
       hiddenOnMobile: true,
     },
     { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
     {
-      key: "stripe",
-      header: "Stripe ID",
-      accessor: (r) => r.stripePaymentIntentId ? (
-        <span className="font-mono text-xs text-muted-foreground truncate max-w-[120px] block">{r.stripePaymentIntentId}</span>
-      ) : "—",
+      key: "accounting",
+      header: "Compta",
+      accessor: (r) => accountingStatusBadge(r),
+    },
+    {
+      key: "accountant",
+      header: "Comptable",
+      accessor: (r) => r.assignedAccountantName ? (
+        <span className="text-xs">{r.assignedAccountantName}</span>
+      ) : <span className="text-xs text-muted-foreground italic">—</span>,
       hiddenOnMobile: true,
+    },
+    {
+      key: "actions",
+      header: "",
+      accessor: (r) => (
+        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setDetailId(r.id); }} className="h-7 px-2">
+          <Eye className="h-3.5 w-3.5" />
+        </Button>
+      ),
     },
   ];
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-3">
-          <CreditCard className="h-6 w-6" />
-          Transactions
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">Historique des paiements et remboursements Stripe</p>
-      </div>
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setMethodFilter("all");
+    setClientFilter("all");
+    setAccountantFilter("all");
+    setDateFrom("");
+    setDateTo("");
+    setSearchQuery("");
+  };
 
-      <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
-        <StatCard label="Total paye" value={formatCurrency(kpis.totalPaid)} icon={DollarSign} accent="bg-emerald-500" />
-        <StatCard label="Total rembourse" value={formatCurrency(kpis.totalRefunded)} icon={RotateCcw} accent="bg-red-500" />
-        <StatCard label="Nombre transactions" value={kpis.count} icon={Hash} accent="bg-blue-500" />
-      </div>
+  // Totaux filtrés (changent selon les filtres pour aider comptable à voir les sous-totaux)
+  const filteredTotalPaid = filtered.filter((p) => p.status === "succeeded" || p.status === "paid").reduce((s, p) => s + p.amount, 0);
+  const filteredTotalRefunded = filtered.filter((p) => p.status === "refunded").reduce((s, p) => s + p.amount, 0);
+  const filteredNet = filteredTotalPaid - filteredTotalRefunded;
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Client, facture, Stripe ID..." className="pl-9" />
+  // Sticky header : KPI strip + filtres + tabs status (passé au DataTable)
+  const stickyHeader = (
+    <div className="space-y-2">
+      {/* KPI strip horizontal compact (comme Wix Rapport de règlement) */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-3 py-2 rounded-md bg-blue-50/60 border border-blue-100 text-sm">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-xs text-muted-foreground">Montant total :</span>
+          <span className="font-bold text-[#0F2D52]">{formatCurrency(filteredTotalPaid)}</span>
         </div>
-        <div className="flex bg-muted rounded-lg p-0.5">
+        <span className="text-muted-foreground/40">|</span>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-xs text-muted-foreground">Total remboursé :</span>
+          <span className="font-semibold text-red-600">{formatCurrency(filteredTotalRefunded)}</span>
+        </div>
+        <span className="text-muted-foreground/40">|</span>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-xs text-muted-foreground">Net :</span>
+          <span className="font-bold text-emerald-700">{formatCurrency(filteredNet)}</span>
+        </div>
+        <div className="flex-1" />
+        <span className="text-[10px] text-muted-foreground">
+          {filtered.length} sur {payments.length} · {kpis.toReconcileCount} à réconcilier
+        </span>
+      </div>
+
+      {/* Tabs status */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex bg-muted rounded-md p-0.5 flex-wrap">
           {STATUS_TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setStatusFilter(tab.key)}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
-                statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                "px-2.5 py-1 text-xs font-medium rounded transition-colors",
+                statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
               {tab.label}
             </button>
           ))}
         </div>
-        <ViewToggle storageKey="transactions" defaultView="list" onChange={setView} />
+        <Button variant="outline" size="sm" onClick={() => setShowAdvanced(!showAdvanced)} className="h-8 text-xs gap-1">
+          <Filter className="h-3 w-3" />Filtres
+        </Button>
+        {(statusFilter !== "all" || methodFilter !== "all" || clientFilter !== "all" || accountantFilter !== "all" || dateFrom || dateTo || searchQuery) && (
+          <button onClick={clearFilters} className="text-xs text-muted-foreground hover:text-foreground">
+            Effacer filtres
+          </button>
+        )}
       </div>
 
-      {/* Vue grille */}
-      {view === "grid" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map((p) => (
-            <EntityCard
-              key={p.id}
-              title={p.clientName}
-              subtitle={p.invoiceNumber}
-              avatarName={p.clientName}
-              badges={[
-                { label: p.status === "succeeded" || p.status === "paid" ? "Payee" : p.status === "refunded" ? "Remboursee" : p.status, variant: p.status === "succeeded" || p.status === "paid" ? "secondary" : p.status === "refunded" ? "destructive" : "outline" },
-                ...(p.paymentMethod ? [{ label: p.paymentMethod, variant: "outline" as const }] : []),
-              ]}
-              stats={[
-                { label: "Montant", value: formatCurrency(p.amount) },
-              ]}
-              actions={getActions(p)}
-              footer={
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span>{formatDate(new Date(p.paidAt ?? p.createdAt))}</span>
-                  <span className="truncate max-w-[50%]">{p.stripePaymentIntentId ?? "—"}</span>
-                </div>
-              }
-            />
-          ))}
-          {filtered.length === 0 && (
-            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucune transaction trouvee</div>
-          )}
+      {/* Filtres avancés repliables */}
+      {showAdvanced && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 p-2.5 rounded-md border bg-muted/30">
+          <Select value={methodFilter} onValueChange={setMethodFilter}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Méthode" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes méthodes</SelectItem>
+              {methods.map((m) => <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Client" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous clients</SelectItem>
+              {clients.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>{c.fullName}{c.companyName ? ` — ${c.companyName}` : ""}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={accountantFilter} onValueChange={setAccountantFilter}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Comptable" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous comptables</SelectItem>
+              <SelectItem value="none">Non assignés</SelectItem>
+              {accountants.map((a) => <SelectItem key={a.id} value={String(a.id)}>{a.fullName || a.email}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-8 text-xs" placeholder="Du" />
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-8 text-xs" placeholder="Au" />
         </div>
-      ) : (
-        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="transactions" storageKey="admin-transactions" />
       )}
+
+      {/* Bulk actions bar — visible uniquement si sélection */}
+      {selectedIds.size > 0 && (
+        <div className="bg-[#0F2D52] text-white rounded-md p-2 flex items-center gap-2 flex-wrap shadow-md">
+          <span className="text-sm font-medium px-2">{selectedIds.size} sélectionnée(s)</span>
+          <div className="flex-1" />
+          <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 h-7 text-xs" disabled={bulkBusy} onClick={() => bulkAction("reconcile")}>
+            <CheckCircle2 className="h-3 w-3 mr-1" />Réconcilier
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 h-7 text-xs" disabled={bulkBusy}>
+                <Users className="h-3 w-3 mr-1" />Assigner
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {accountants.map((a) => (
+                <DropdownMenuItem key={a.id} onClick={() => bulkAction("assign_accountant", { accountantId: a.id })}>
+                  {a.fullName || a.email}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => bulkAction("assign_accountant", { accountantId: null })}>Désassigner</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 h-7 text-xs" disabled={bulkBusy}>
+                <MoreHorizontal className="h-3 w-3 mr-1" />Catégoriser
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {CATEGORIES.map((c) => (
+                <DropdownMenuItem key={c} onClick={() => bulkAction("set_category", { category: c })} className="capitalize">
+                  {c.replace(/_/g, " ")}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => bulkAction("set_category", { category: null })}>Effacer catégorie</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button size="sm" variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 h-7 text-xs" onClick={() => setSelectedIds(new Set())}>
+            Annuler
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Hero — scrolle away quand on descend */}
+      <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-4 text-white">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-bold flex items-center gap-2"><CreditCard className="h-5 w-5" />Transactions</h1>
+            <p className="text-white/70 text-xs mt-0.5">
+              {kpis.count} transactions · {formatCurrency(kpis.totalPaid)} encaissés au total · {kpis.toReconcileCount} à réconcilier
+            </p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant="secondary" asChild className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
+              <Link href="/admin/finance"><TrendingUp className="h-3.5 w-3.5 mr-1.5" />Tableau de bord</Link>
+            </Button>
+            <Button size="sm" variant="secondary" asChild className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
+              <Link href="/admin/tax-declarations"><FileText className="h-3.5 w-3.5 mr-1.5" />Rapports fiscaux</Link>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
+                  <Download className="h-3.5 w-3.5 mr-1.5" />Exporter
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Format comptable</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => exportComptable("quickbooks")}>
+                  <FileSpreadsheet className="h-3.5 w-3.5 mr-2" />QuickBooks
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportComptable("sage")}>
+                  <FileSpreadsheet className="h-3.5 w-3.5 mr-2" />Sage 50 Canada
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportComptable("acomba")}>
+                  <FileSpreadsheet className="h-3.5 w-3.5 mr-2" />Acomba
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => exportComptable("csv_standard")}>
+                  <FileSpreadsheet className="h-3.5 w-3.5 mr-2" />CSV standard
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+
+      {/* Tableau avec stickyHeader contenant KPIs + tabs + filtres */}
+      <DataTable
+        data={filtered}
+        columns={columns}
+        getRowId={(r) => r.id}
+        searchPlaceholder="Client, facture, Stripe ID, notes..."
+        exportFilename="transactions"
+        storageKey="admin-transactions"
+        stickyHeader={stickyHeader}
+      />
+
+      <PaymentDetailDialog
+        paymentId={detailId}
+        open={detailId !== null}
+        onOpenChange={(open) => { if (!open) setDetailId(null); }}
+      />
     </div>
   );
 }

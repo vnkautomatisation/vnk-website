@@ -69,6 +69,18 @@ type InvoicePdfData = {
   lang?: DocLang;
 };
 
+type ReceiptPdfData = {
+  receiptNumber?: string;
+  invoiceNumber?: string;
+  invoiceTitle?: string;
+  client: Client;
+  amount: number;
+  paymentMethod?: string;
+  stripePaymentIntentId?: string;
+  paidAt?: Date;
+  lang?: DocLang;
+};
+
 type ContractPdfData = {
   contractNumber: string;
   title: string;
@@ -193,5 +205,21 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
 
   return capturePdf((fakeRes) =>
     PdfTemplates.generateContractPDF(fakeRes, contract, toSnakeClient(data.client), null, { lang: data.lang ?? "fr" })
+  );
+}
+
+export async function generateReceiptPdf(data: ReceiptPdfData): Promise<Buffer> {
+  const receipt = {
+    receipt_number: data.receiptNumber,
+    invoice_number: data.invoiceNumber,
+    invoice_title: data.invoiceTitle,
+    amount: data.amount,
+    payment_method: data.paymentMethod,
+    stripe_payment_intent_id: data.stripePaymentIntentId,
+    paid_at: data.paidAt ?? new Date(),
+  };
+
+  return capturePdf((fakeRes) =>
+    PdfTemplates.generateReceiptPDF(fakeRes, receipt, toSnakeClient(data.client), { lang: data.lang ?? "fr" })
   );
 }

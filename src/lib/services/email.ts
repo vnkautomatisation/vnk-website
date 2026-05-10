@@ -3,12 +3,19 @@ import "server-only";
 import { getSetting } from "@/lib/settings";
 import { prisma } from "@/lib/prisma";
 
+type EmailAttachment = {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+};
+
 type EmailParams = {
   to: string;
   subject: string;
   html: string;
   text?: string;
   bcc?: string;
+  attachments?: EmailAttachment[];
 };
 
 export async function sendEmail(params: EmailParams) {
@@ -46,6 +53,7 @@ export async function sendEmail(params: EmailParams) {
       subject: params.subject,
       html: params.html,
       text: params.text,
+      attachments: params.attachments,
     });
 
     return { ok: true };

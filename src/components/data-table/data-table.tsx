@@ -85,7 +85,7 @@ export function DataTable<T>({
   filterOptions,
   filterFn,
   filterLabel = "Tous les statuts",
-  pageSize = 10,
+  pageSize: defaultPageSize = 50,
   headerActions,
   emptyMessage = "Aucun resultat",
   emptyIcon,
@@ -132,6 +132,18 @@ export function DataTable<T>({
   );
 
   // ── Pagination ─────────────────────────────────────────
+  const pageSizeKey = storageKey ? `vnk-pagesize-${storageKey}` : null;
+  const [pageSize, setPageSize] = useState<number>(() => {
+    if (typeof window === "undefined" || !pageSizeKey) return defaultPageSize;
+    const saved = localStorage.getItem(pageSizeKey);
+    const parsed = saved ? parseInt(saved, 10) : NaN;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultPageSize;
+  });
+  const changePageSize = (n: number) => {
+    setPageSize(n);
+    if (pageSizeKey) localStorage.setItem(pageSizeKey, String(n));
+    setPage(1);
+  };
   const [page, setPage] = useState(1);
   useEffect(() => { setPage(1); }, [search, filter]);
 
@@ -220,8 +232,8 @@ export function DataTable<T>({
 
   return (
     <div className="space-y-4">
-      {/* ── Header + KPIs + toolbar (sticky dans le main scrollable) ── */}
-      <div className="lg:sticky lg:top-0 z-10 bg-background pb-3 -mx-3 sm:-mx-4 lg:-mx-8 px-3 sm:px-4 lg:px-8 pt-4 overflow-hidden">
+      {/* ── Header + KPIs + toolbar (sticky sous le topbar admin 64px) ── */}
+      <div className="lg:sticky lg:top-[64px] z-10 bg-background pb-3 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 pt-4 overflow-hidden">
         {stickyHeader}
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-start sm:items-center justify-between mt-2 sm:mt-3">
@@ -330,7 +342,15 @@ export function DataTable<T>({
               </div>
             ))}
           </div>
-          <PaginationBar page={safePage} totalPages={totalPages} showing={showingText} onPageChange={setPage} />
+          <PaginationBar
+            page={safePage}
+            totalPages={totalPages}
+            showing={showingText}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={changePageSize}
+            totalCount={processed.length}
+          />
         </>
       ) : (
         /* ── Table view ──────────────────────────────── */
@@ -397,7 +417,15 @@ export function DataTable<T>({
             </Card>
           </div>
 
-          <PaginationBar page={safePage} totalPages={totalPages} showing={showingText} onPageChange={setPage} />
+          <PaginationBar
+            page={safePage}
+            totalPages={totalPages}
+            showing={showingText}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={changePageSize}
+            totalCount={processed.length}
+          />
         </>
       )}
     </div>
@@ -406,19 +434,52 @@ export function DataTable<T>({
 
 // ═══ PAGINATION ══════════════════════════════════════════
 
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
+
 function PaginationBar({
   page,
   totalPages,
   showing,
   onPageChange,
+  pageSize,
+  onPageSizeChange,
+  totalCount,
 }: {
   page: number;
   totalPages: number;
   showing: string;
   onPageChange: (p: number) => void;
+  pageSize: number;
+  onPageSizeChange: (n: number) => void;
+  totalCount: number;
 }) {
-  if (totalPages <= 1) {
-    return <div className="text-xs text-muted-foreground text-center py-2">{showing}</div>;
+  // Selector visible dès qu'on a + de 25 lignes (sinon inutile)
+  const showSizeSelector = totalCount > 25;
+  const noPagination = totalPages <= 1;
+
+  const PageSizeSelector = showSizeSelector ? (
+    <label className="text-[10px] sm:text-xs text-muted-foreground inline-flex items-center gap-1.5">
+      <span>Lignes :</span>
+      <select
+        value={pageSize}
+        onChange={(e) => onPageSizeChange(Number(e.target.value))}
+        className="h-7 rounded border border-input bg-background px-1.5 text-[10px] sm:text-xs"
+        aria-label="Lignes par page"
+      >
+        {PAGE_SIZE_OPTIONS.map((n) => (
+          <option key={n} value={n}>{n}</option>
+        ))}
+      </select>
+    </label>
+  ) : null;
+
+  if (noPagination) {
+    return (
+      <div className="flex items-center justify-between gap-2 pt-2">
+        <span className="text-[10px] sm:text-xs text-muted-foreground">{showing}</span>
+        {PageSizeSelector}
+      </div>
+    );
   }
 
   const pages: (number | "...")[] = [];
@@ -433,8 +494,11 @@ function PaginationBar({
   }
 
   return (
-    <div className="flex items-center justify-between gap-2 pt-2">
-      <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0">{showing}</span>
+    <div className="flex items-center justify-between gap-2 pt-2 flex-wrap">
+      <div className="flex items-center gap-3 shrink-0">
+        <span className="text-[10px] sm:text-xs text-muted-foreground">{showing}</span>
+        {PageSizeSelector}
+      </div>
       <div className="flex items-center gap-0.5 sm:gap-1">
         <Button variant="outline" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
           <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />

@@ -104,3 +104,83 @@ export async function verifyWebhookSignature(
   if (!secret) throw new Error("Webhook secret manquant");
   return stripe.webhooks.constructEvent(rawBody, signature, secret);
 }
+
+// ─── Données enrichies pour reporting (CSV style Wix) ───────
+// Récupère une Charge avec balance_transaction expand pour avoir frais, net, settled_at, etc.
+export async function getEnrichedChargeData(chargeId: string): Promise<{
+  fee: number | null;            // frais Stripe en unité majeure (ex: 0.33 $)
+  net: number | null;            // montant net après frais
+  settledAt: Date | null;        // available_on de la balance transaction
+  balanceTxId: string | null;    // ID transaction balance
+  payoutId: string | null;       // ID versement (si déjà groupé)
+  cardBrand: string | null;
+  cardLast4: string | null;
+  cardCountry: string | null;
+  cardholderName: string | null;
+  receiptUrl: string | null;
+  receiptNumber: string | null;
+  receiptEmail: string | null;
+} | null> {
+  const stripe = (await getStripe()) as any;
+  if (!stripe) return null;
+  try {
+    const charge = await stripe.charges.retrieve(chargeId, {
+      expand: ["balance_transaction", "payment_method_details"],
+    });
+    const bt = charge.balance_transaction;
+    const card = charge.payment_method_details?.card;
+    return {
+      fee: bt?.fee != null ? bt.fee / 100 : null,
+      net: bt?.net != null ? bt.net / 100 : null,
+      settledAt: bt?.available_on ? new Date(bt.available_on * 1000) : null,
+      balanceTxId: bt?.id ?? null,
+      payoutId: typeof bt?.payout === "string" ? bt.payout : (bt?.payout?.id ?? null),
+      cardBrand: card?.brand ?? null,
+      cardLast4: card?.last4 ?? null,
+      cardCountry: card?.country ?? null,
+      cardholderName: charge.billing_details?.name ?? null,
+      receiptUrl: charge.receipt_url ?? null,
+      receiptNumber: charge.receipt_number ?? null,
+      receiptEmail: charge.receipt_email ?? null,
+    };
+  } catch (err) {
+    console.error("[stripe] getEnrichedChargeData failed:", err);
+    return null;
+  }
+}
+
+// Récupère détails d'un payout (pour création/MAJ de la table Payout)
+export async function getPayoutData(payoutId: string): Promise<{
+  amount: number;
+  currency: string;
+  status: string;
+  arrivalDate: Date | null;
+  initiatedAt: Date;
+  method: string | null;
+  failureMessage: string | null;
+  description: string | null;
+  destinationLast4: string | null;
+  destinationBank: string | null;
+} | null> {
+  const stripe = (await getStripe()) as any;
+  if (!stripe) return null;
+  try {
+    const p = await stripe.payouts.retrieve(payoutId, { expand: ["destination"] });
+    const dest = p.destination as { last4?: string; bank_name?: string } | null;
+    return {
+      amount: p.amount / 100,
+      currency: (p.currency ?? "cad").toUpperCase(),
+      status: p.status ?? "pending",
+      arrivalDate: p.arrival_date ? new Date(p.arrival_date * 1000) : null,
+      initiatedAt: new Date(p.created * 1000),
+      method: p.method ?? null,
+      failureMessage: p.failure_message ?? null,
+      description: p.description ?? null,
+      destinationLast4: dest?.last4 ?? null,
+      destinationBank: dest?.bank_name ?? null,
+    };
+  } catch (err) {
+    console.error("[stripe] getPayoutData failed:", err);
+    return null;
+  }
+}

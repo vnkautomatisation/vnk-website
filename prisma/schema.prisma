@@ -31,6 +31,7 @@ model Admin {
 
   auditLogs     AuditLog[]
   sessions      AdminSession[]
+  assignedPayments Payment[] @relation("AssignedPayments")
 
   @@map("admins")
 }
@@ -96,6 +97,20 @@ model Client {
   businessSize       String?   @map("business_size")
   employeeCount      Int?      @map("employee_count")
   annualRevenue      String?   @map("annual_revenue")
+
+  // ─── Conformité fiscale internationale ──────────────────
+  // Type d'identifiant fiscal : NEQ (QC), GST_HST (Canada), VAT_EU, VAT_GB, EIN (US), SIRET (FR), RCCM (Afrique), other
+  taxIdType          String?   @map("tax_id_type")
+  // Valeur du numéro fiscal (ex: FR12345678901, GB123456789, etc.)
+  taxIdValue         String?   @map("tax_id_value")
+  // Type de client pour règles fiscales (B2B = reverse charge UE, B2C = TVA destination)
+  customerType       String?   @default("B2B") @map("customer_type") // 'B2B' | 'B2C'
+  // Devise préférée pour facturation (ISO 4217)
+  preferredCurrency  String?   @default("CAD") @map("preferred_currency")
+  // Validation VIES (UE) — date de dernière vérification du numéro VAT
+  viesValidatedAt    DateTime? @map("vies_validated_at")
+  // Province/État pour règles fiscales sub-nationales (US sales tax, Canada GST/HST)
+  taxRegion          String?   @map("tax_region") // ex: "QC", "ON", "CA-AB", "US-NY"
 
   // Acquisition
   leadSource         String?   @map("lead_source")
@@ -348,19 +363,104 @@ model Payment {
   clientId                 Int?      @map("client_id")
   stripePaymentIntentId    String?   @map("stripe_payment_intent_id")
   stripeChargeId           String?   @map("stripe_charge_id")
-  amount                   Decimal   @db.Decimal(10, 2)
+  amount                   Decimal   @db.Decimal(12, 2)
   currency                 String    @default("cad")
+  // ─── Multi-devises (figés au paiement pour audit IFRS / ARC) ───
+  amountCad                Decimal?  @map("amount_cad") @db.Decimal(12, 2)
+  fxRate                   Decimal?  @map("fx_rate") @db.Decimal(12, 6)
+  fxRateSource             String?   @map("fx_rate_source") // 'BOC' | 'ECB' | 'manual'
+  fxRateDate               DateTime? @map("fx_rate_date") @db.Date
   status                   String    @default("pending")
   paymentMethod            String?   @map("payment_method")
   paidAt                   DateTime? @map("paid_at")
   createdAt                DateTime  @default(now()) @map("created_at")
 
+  // ─── Type Wix-like (transaction type, pour rapport de règlement) ───
+  // 'charge' | 'refund' | 'chargeback' | 'chargeback_fee' | 'adjustment' | 'topup' | 'payout'
+  type                     String?   @default("charge")
+
+  // ─── 3 dates distinctes (CSV style Wix / Stripe) ───
+  // paidAt = Date de paiement (déjà ci-dessus)
+  settledAt                DateTime? @map("settled_at")   // Date de règlement (fonds disponibles dans solde Stripe)
+  payoutAt                 DateTime? @map("payout_at")    // Date de versement (déposé en banque)
+
+  // ─── Frais Stripe ───────────────────────────────────────────
+  processingFee            Decimal?  @map("processing_fee") @db.Decimal(10, 2)
+  netAmount                Decimal?  @map("net_amount") @db.Decimal(10, 2)
+
+  // ─── Chaînage Stripe (IDs externes) ─────────────────────────
+  stripeBalanceTxId        String?   @map("stripe_balance_tx_id")
+  stripePayoutId           String?   @map("stripe_payout_id")
+  stripeReceiptUrl         String?   @map("stripe_receipt_url")
+  stripeReceiptNumber      String?   @map("stripe_receipt_number")
+  stripeReceiptEmail       String?   @map("stripe_receipt_email")
+
+  // ─── Identité carte (utile reçus + sécurité) ───────────────
+  cardBrand                String?   @map("card_brand")
+  cardLast4                String?   @map("card_last4")
+  cardCountry              String?   @map("card_country")     // pays émetteur (issuer)
+  cardholderName           String?   @map("cardholder_name")
+
+  // ─── Workflow comptable ──────────────────────────────
+  // Catégorie comptable libre : services_recurrent, services_unique, acompte, solde, autre
+  accountingCategory       String?   @map("accounting_category")
+  // Réconciliation (rapprochement bancaire)
+  reconciledAt             DateTime? @map("reconciled_at")
+  reconciledBy             String?   @map("reconciled_by") // email admin
+  // Export comptable (vers Sage / QuickBooks / Acomba)
+  exportedAt               DateTime? @map("exported_at")
+  exportedBy               String?   @map("exported_by") // email admin
+  exportFormat             String?   @map("export_format") // quickbooks | sage | acomba | csv
+  // Affectation à un comptable
+  assignedAccountantId     Int?      @map("assigned_accountant_id")
+  // Notes internes du comptable
+  accountantNotes          String?   @map("accountant_notes")
+  // Période fiscale figée à la réconciliation (YYYY-MM) — pour figer les rapports
+  fiscalPeriod             String?   @map("fiscal_period")
+
   invoice                  Invoice?  @relation(fields: [invoiceId], references: [id])
   client                   Client?   @relation(fields: [clientId], references: [id])
+  assignedAccountant       Admin?    @relation("AssignedPayments", fields: [assignedAccountantId], references: [id])
+
+  payout                   Payout?   @relation(fields: [stripePayoutId], references: [stripePayoutId])
 
   @@index([invoiceId])
   @@index([clientId])
+  @@index([reconciledAt])
+  @@index([fiscalPeriod])
+  @@index([assignedAccountantId])
+  @@index([stripePayoutId])
+  @@index([type])
+  @@index([settledAt])
+  @@index([payoutAt])
   @@map("payments")
+}
+
+// ─── Versements bancaires Stripe (groupe plusieurs Payments) ───────
+model Payout {
+  id                Int       @id @default(autoincrement())
+  stripePayoutId    String    @unique @map("stripe_payout_id")
+  amount            Decimal   @db.Decimal(12, 2)
+  currency          String    @default("CAD")
+  status            String    @default("pending") // pending | in_transit | paid | failed | canceled
+  arrivalDate       DateTime? @map("arrival_date") @db.Date
+  initiatedAt       DateTime  @default(now()) @map("initiated_at")
+  paidAt            DateTime? @map("paid_at")
+  failureReason     String?   @map("failure_reason")
+  method            String?   // standard | instant
+  destinationLast4  String?   @map("destination_last4")
+  destinationBank   String?   @map("destination_bank")
+  itemCount         Int       @default(0) @map("item_count")
+  feeTotal          Decimal   @default(0) @map("fee_total") @db.Decimal(10, 2)
+  description       String?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  payments          Payment[]
+
+  @@index([status])
+  @@index([arrivalDate])
+  @@map("payouts")
 }
 
 model Refund {

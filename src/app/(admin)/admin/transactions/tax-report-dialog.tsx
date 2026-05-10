@@ -1,0 +1,323 @@
+"use client";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { FileText, Calendar, Download } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+
+type TaxReport = {
+  period: { from: string; to: string };
+  summary: {
+    revenue: { ht: number; tps: number; tvq: number; ttc: number; count: number };
+    refunds: { ht: number; tps: number; tvq: number; ttc: number; count: number };
+    net: { ht: number; tps: number; tvq: number; ttc: number };
+  };
+  byMonth: Array<{ month: string; ht: number; tps: number; tvq: number; ttc: number; count: number }>;
+  byMethod: Array<{ method: string; count: number; total: number }>;
+  topClients: Array<{ clientId: number; name: string; count: number; total: number }>;
+};
+
+function presetRange(p: string): { from: string; to: string } {
+  const now = new Date();
+  const toIso = (d: Date) => d.toISOString().slice(0, 10);
+  switch (p) {
+    case "this_month":
+      return { from: toIso(new Date(now.getFullYear(), now.getMonth(), 1)), to: toIso(now) };
+    case "last_month":
+      return {
+        from: toIso(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
+        to: toIso(new Date(now.getFullYear(), now.getMonth(), 0)),
+      };
+    case "q1":
+      return { from: `${now.getFullYear()}-01-01`, to: `${now.getFullYear()}-03-31` };
+    case "q2":
+      return { from: `${now.getFullYear()}-04-01`, to: `${now.getFullYear()}-06-30` };
+    case "q3":
+      return { from: `${now.getFullYear()}-07-01`, to: `${now.getFullYear()}-09-30` };
+    case "q4":
+      return { from: `${now.getFullYear()}-10-01`, to: `${now.getFullYear()}-12-31` };
+    case "this_year":
+      return { from: `${now.getFullYear()}-01-01`, to: toIso(now) };
+    case "last_year":
+      return { from: `${now.getFullYear() - 1}-01-01`, to: `${now.getFullYear() - 1}-12-31` };
+    default:
+      return { from: "", to: "" };
+  }
+}
+
+export function TaxReportDialog({
+  open,
+  onOpenChange,
+  defaultFrom,
+  defaultTo,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  defaultFrom: string;
+  defaultTo: string;
+}) {
+  const [from, setFrom] = useState(defaultFrom);
+  const [to, setTo] = useState(defaultTo);
+  const [report, setReport] = useState<TaxReport | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setFrom(defaultFrom);
+      setTo(defaultTo);
+      setReport(null);
+    }
+  }, [open, defaultFrom, defaultTo]);
+
+  const fetchReport = async () => {
+    if (!from || !to) {
+      toast.error("Période requise");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/payments/tax-report?from=${from}&to=${to}`);
+      if (!res.ok) throw new Error("Erreur");
+      const data = await res.json();
+      setReport(data);
+    } catch {
+      toast.error("Impossible de charger le rapport");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyPreset = (p: string) => {
+    const r = presetRange(p);
+    setFrom(r.from);
+    setTo(r.to);
+  };
+
+  const exportCsv = () => {
+    if (!report) return;
+    const rows: string[][] = [];
+    rows.push(["Rapport fiscal — VNK Automatisation Inc."]);
+    rows.push([`Période : ${report.period.from} au ${report.period.to}`]);
+    rows.push([]);
+    rows.push(["SOMMAIRE"]);
+    rows.push(["", "HT", "TPS (5%)", "TVQ (9.975%)", "Total TTC", "Nb"]);
+    rows.push(["Revenus", report.summary.revenue.ht.toFixed(2), report.summary.revenue.tps.toFixed(2), report.summary.revenue.tvq.toFixed(2), report.summary.revenue.ttc.toFixed(2), String(report.summary.revenue.count)]);
+    rows.push(["Remboursements", report.summary.refunds.ht.toFixed(2), report.summary.refunds.tps.toFixed(2), report.summary.refunds.tvq.toFixed(2), report.summary.refunds.ttc.toFixed(2), String(report.summary.refunds.count)]);
+    rows.push(["NET À DÉCLARER", report.summary.net.ht.toFixed(2), report.summary.net.tps.toFixed(2), report.summary.net.tvq.toFixed(2), report.summary.net.ttc.toFixed(2), ""]);
+    rows.push([]);
+    rows.push(["DÉTAIL PAR MOIS"]);
+    rows.push(["Mois", "HT", "TPS", "TVQ", "TTC", "Nb"]);
+    report.byMonth.forEach((m) => rows.push([m.month, m.ht.toFixed(2), m.tps.toFixed(2), m.tvq.toFixed(2), m.ttc.toFixed(2), String(m.count)]));
+    rows.push([]);
+    rows.push(["DÉTAIL PAR MÉTHODE"]);
+    rows.push(["Méthode", "Total", "Nb"]);
+    report.byMethod.forEach((m) => rows.push([m.method, m.total.toFixed(2), String(m.count)]));
+
+    const csv = "﻿" + rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `rapport-tps-tvq_${from}_${to}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-3xl p-0 overflow-hidden max-h-[90vh] flex flex-col">
+        <DialogHeader className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-5">
+          <DialogTitle className="text-lg font-bold flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Rapport fiscal — TPS / TVQ
+          </DialogTitle>
+          <DialogDescription className="text-white/70 text-xs">
+            Totaux à déclarer aux gouvernements (Revenu Canada + Revenu Québec) pour la période sélectionnée
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="overflow-y-auto p-5 space-y-4 flex-1">
+          {/* Période */}
+          <div className="space-y-2">
+            <Label className="text-xs">Période</Label>
+            <div className="flex flex-wrap gap-2 items-end">
+              <Select onValueChange={applyPreset}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Préréglage..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="this_month">Ce mois</SelectItem>
+                  <SelectItem value="last_month">Mois dernier</SelectItem>
+                  <SelectItem value="q1">T1 (Jan–Mar)</SelectItem>
+                  <SelectItem value="q2">T2 (Avr–Juin)</SelectItem>
+                  <SelectItem value="q3">T3 (Juil–Sept)</SelectItem>
+                  <SelectItem value="q4">T4 (Oct–Déc)</SelectItem>
+                  <SelectItem value="this_year">Cette année</SelectItem>
+                  <SelectItem value="last_year">Année dernière</SelectItem>
+                </SelectContent>
+              </Select>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Du</Label>
+                <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-[140px]" />
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Au</Label>
+                <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-[140px]" />
+              </div>
+              <Button size="sm" onClick={fetchReport} disabled={loading || !from || !to}>
+                <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                {loading ? "Calcul…" : "Calculer"}
+              </Button>
+              {report && (
+                <Button size="sm" variant="outline" onClick={exportCsv}>
+                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                  Export CSV
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {report && (
+            <>
+              {/* Sommaire net à déclarer */}
+              <div className="space-y-3">
+                <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                  Net à déclarer
+                </p>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="p-3 rounded-md border bg-emerald-50">
+                    <p className="text-[10px] text-muted-foreground">HT (revenus)</p>
+                    <p className="text-lg font-bold text-emerald-700 mt-1">{formatCurrency(report.summary.net.ht)}</p>
+                  </div>
+                  <div className="p-3 rounded-md border bg-blue-50">
+                    <p className="text-[10px] text-muted-foreground">TPS perçue (5%)</p>
+                    <p className="text-lg font-bold text-blue-700 mt-1">{formatCurrency(report.summary.net.tps)}</p>
+                  </div>
+                  <div className="p-3 rounded-md border bg-violet-50">
+                    <p className="text-[10px] text-muted-foreground">TVQ perçue (9.975%)</p>
+                    <p className="text-lg font-bold text-violet-700 mt-1">{formatCurrency(report.summary.net.tvq)}</p>
+                  </div>
+                  <div className="p-3 rounded-md border bg-[#0F2D52] text-white">
+                    <p className="text-[10px] text-white/60">Total TTC</p>
+                    <p className="text-lg font-bold mt-1">{formatCurrency(report.summary.net.ttc)}</p>
+                  </div>
+                </div>
+                <div className="text-[10px] text-muted-foreground italic">
+                  Net = Revenus encaissés − Remboursements émis. Ces montants sont à reporter sur vos formulaires TPS (FPZ-500) et TVQ (VDZ-471).
+                </div>
+              </div>
+
+              {/* Détail revenus / remboursements */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-md border bg-card">
+                  <p className="text-xs uppercase tracking-wider font-semibold text-emerald-600">Revenus ({report.summary.revenue.count})</p>
+                  <div className="mt-2 space-y-0.5 text-xs">
+                    <div className="flex justify-between"><span className="text-muted-foreground">HT</span><span>{formatCurrency(report.summary.revenue.ht)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">TPS</span><span>{formatCurrency(report.summary.revenue.tps)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">TVQ</span><span>{formatCurrency(report.summary.revenue.tvq)}</span></div>
+                    <div className="flex justify-between font-bold border-t pt-1 mt-1"><span>TTC</span><span>{formatCurrency(report.summary.revenue.ttc)}</span></div>
+                  </div>
+                </div>
+                <div className="p-3 rounded-md border bg-card">
+                  <p className="text-xs uppercase tracking-wider font-semibold text-red-600">Remboursements ({report.summary.refunds.count})</p>
+                  <div className="mt-2 space-y-0.5 text-xs">
+                    <div className="flex justify-between"><span className="text-muted-foreground">HT</span><span>-{formatCurrency(report.summary.refunds.ht)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">TPS</span><span>-{formatCurrency(report.summary.refunds.tps)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">TVQ</span><span>-{formatCurrency(report.summary.refunds.tvq)}</span></div>
+                    <div className="flex justify-between font-bold border-t pt-1 mt-1"><span>TTC</span><span>-{formatCurrency(report.summary.refunds.ttc)}</span></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Détail par mois */}
+              {report.byMonth.length > 0 && (
+                <div>
+                  <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">Détail par mois</p>
+                  <div className="border rounded-md overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-muted">
+                        <tr className="text-left">
+                          <th className="p-2">Mois</th>
+                          <th className="p-2 text-right">HT</th>
+                          <th className="p-2 text-right">TPS</th>
+                          <th className="p-2 text-right">TVQ</th>
+                          <th className="p-2 text-right">TTC</th>
+                          <th className="p-2 text-right">Nb</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {report.byMonth.map((m) => (
+                          <tr key={m.month} className="border-t">
+                            <td className="p-2 font-mono">{m.month}</td>
+                            <td className="p-2 text-right">{formatCurrency(m.ht)}</td>
+                            <td className="p-2 text-right">{formatCurrency(m.tps)}</td>
+                            <td className="p-2 text-right">{formatCurrency(m.tvq)}</td>
+                            <td className="p-2 text-right font-semibold">{formatCurrency(m.ttc)}</td>
+                            <td className="p-2 text-right">{m.count}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Par méthode */}
+              {report.byMethod.length > 0 && (
+                <div>
+                  <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">Par méthode de paiement</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {report.byMethod.map((m) => (
+                      <div key={m.method} className="p-2 rounded-md border bg-card">
+                        <p className="text-[10px] text-muted-foreground capitalize">{m.method}</p>
+                        <p className="text-sm font-bold">{formatCurrency(m.total)}</p>
+                        <p className="text-[10px] text-muted-foreground">{m.count} transaction(s)</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Top clients */}
+              {report.topClients.length > 0 && (
+                <div>
+                  <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">Top 10 clients de la période</p>
+                  <div className="space-y-1">
+                    {report.topClients.map((c, i) => (
+                      <div key={c.clientId} className="flex items-center justify-between p-2 rounded-md border bg-card text-xs">
+                        <span className="flex items-center gap-2">
+                          <span className="text-muted-foreground font-mono w-5">#{i + 1}</span>
+                          {c.name}
+                        </span>
+                        <span className="text-right">
+                          <span className="font-bold">{formatCurrency(c.total)}</span>
+                          <span className="text-muted-foreground"> · {c.count}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

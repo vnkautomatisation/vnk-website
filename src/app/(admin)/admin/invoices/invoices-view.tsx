@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -141,6 +141,20 @@ export function InvoicesView({
 
   // Bulk
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // Sticky scroll detection (Wix pattern)
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setScrolled(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    obs.observe(sentinel);
+    return () => obs.disconnect();
+  }, []);
 
   // Edit/Delete + PDF + Mark paid
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
@@ -555,7 +569,37 @@ export function InvoicesView({
         <StatCard label="Total factures" value={invoices.length} icon={Receipt} accent="bg-blue-500" />
       </div>
 
-      {/* Toolbar */}
+      {/* Sentinel — détecte quand les KPIs quittent le viewport */}
+      <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
+
+      {/* Toolbar — sticky au scroll, avec récap KPI compact qui apparaît seulement quand scrolled */}
+      <div
+        className={cn(
+          "sticky top-[64px] z-20 bg-background -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 transition-shadow",
+          scrolled && "shadow-sm border-b"
+        )}
+      >
+        {scrolled && (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs mb-2 pt-1">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <Receipt className="h-4 w-4" />
+              Factures
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground">Impayé :</span>
+              <span className="font-bold text-amber-600">{formatCurrency(kpis.unpaidTotal)}</span>
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground">En retard :</span>
+              <span className="font-bold text-red-600">{formatCurrency(kpis.overdueTotal)}</span>
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground">Encaissé ce mois :</span>
+              <span className="font-bold text-emerald-600">{formatCurrency(kpis.paidThisMonth)}</span>
+            </span>
+            <span className="ml-auto text-muted-foreground">{filtered.length} affichées</span>
+          </div>
+        )}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -625,6 +669,7 @@ export function InvoicesView({
         </Popover>
 
         <ViewToggle storageKey="invoices" defaultView="list" onChange={setView} />
+      </div>
       </div>
 
       {selectedIds.size > 0 && (

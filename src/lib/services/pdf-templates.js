@@ -1727,10 +1727,131 @@ async function autoGenerateContract(pool, quoteId) {
 }
 
 
+// ─────────────────────────────────────────────
+// TEMPLATE 4 — REÇU DE PAIEMENT (1 page, simple, post-paiement Stripe)
+// ─────────────────────────────────────────────
+async function generateReceiptPDF(res, receipt, client, opts) {
+    opts = opts || {};
+    const lang = opts.lang === 'en' ? 'en' : 'fr';
+    const t = getDict(lang);
+    const dateLoc = (d) => dateForLang(d, lang);
+    const fmtLoc = (v) => fmtForLang(v, lang);
+    const L = lang === 'en'
+        ? { receipt: 'RECEIPT', paidOn: 'Paid on', reference: 'Reference',
+            method: 'Method', amount: 'Amount', invoice: 'Invoice',
+            thanks: 'Thank you for your business.',
+            keepRecord: 'Please keep this receipt for your records.',
+            stripeFooter: 'Secure payment processed via Stripe',
+            number: 'Receipt no.' }
+        : { receipt: 'REÇU', paidOn: 'Payé le', reference: 'Référence',
+            method: 'Méthode', amount: 'Montant', invoice: 'Facture',
+            thanks: 'Merci de votre confiance.',
+            keepRecord: 'Veuillez conserver ce reçu pour vos archives.',
+            stripeFooter: 'Paiement sécurisé traité via Stripe',
+            number: 'Reçu n°' };
+
+    const doc = new PDFDocument({ size: 'LETTER', margin: 0, bufferPages: true });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="receipt-${receipt.invoice_number || receipt.id}.pdf"`);
+    doc.pipe(res);
+
+    const w = pageWidth(doc);
+    const cw = contentWidth(doc);
+
+    // Header navy avec badge "REÇU"
+    const headerH = 100;
+    doc.rect(0, 0, w, headerH).fillColor(C.green).fill();
+    doc.rect(0, headerH - 4, w, 4).fillColor('#15803D').fillOpacity(0.6).fill().fillOpacity(1);
+
+    drawHexLogo(doc, 56, 50, 30, C.white, C.white);
+
+    doc.fillColor(C.white).fontSize(14).font('Helvetica-Bold').text(C.name, 100, 22);
+    doc.fillColor('rgba(255,255,255,0.85)').fontSize(7).font('Helvetica')
+        .text('VALUE · NETWORK · KNOWLEDGE', 100, 41, { characterSpacing: 1.5 });
+    doc.fillColor('#D1FAE5').fontSize(6.5).text(`${C.email}  ·  ${C.phone}`, 100, 54);
+
+    // Badge "REÇU" / "RECEIPT"
+    const bx = w - 150, by = 18, bw = 124, bh = 64;
+    doc.rect(bx, by, bw, bh).fillColor('#15803D').fill();
+    doc.rect(bx, by, 3, bh).fillColor('#86EFAC').fill();
+    doc.fillColor(C.white).fontSize(12).font('Helvetica-Bold')
+        .text(L.receipt, bx, by + 14, { width: bw, align: 'center', characterSpacing: 3 });
+    doc.fillColor('#D1FAE5').fontSize(7.5).font('Helvetica')
+        .text(`${L.number} ${receipt.receipt_number || ('R-' + (receipt.id ?? '00000'))}`, bx, by + 36, { width: bw, align: 'center' });
+    doc.fillColor('#86EFAC').fontSize(7)
+        .text(dateLoc(receipt.paid_at ?? new Date()), bx, by + 50, { width: bw, align: 'center' });
+
+    doc.y = headerH + 28;
+
+    // Bloc client + sommaire
+    const halfW = (cw - 12) / 2;
+    const infoY = doc.y;
+    infoBox(doc, C.marginL, infoY, halfW, 100, C.green, t.client, [
+        [t.name, client.full_name],
+        [t.company, client.company_name],
+        [t.email, client.email],
+    ]);
+
+    // Sommaire paiement
+    const rx = C.marginL + halfW + 12;
+    doc.rect(rx, infoY, halfW, 100).fillColor(C.grayLight).fill();
+    doc.rect(rx, infoY, halfW, 100).lineWidth(0.5).strokeColor(C.border).stroke();
+    doc.rect(rx, infoY, 3, 100).fillColor(C.green).fill();
+    doc.fillColor(C.green).font('Helvetica-Bold').fontSize(8)
+        .text(L.amount.toUpperCase(), rx + 12, infoY + 12, { characterSpacing: 0.6 });
+    doc.fillColor(C.green).font('Helvetica-Bold').fontSize(24)
+        .text(fmtLoc(receipt.amount), rx + 12, infoY + 26, { width: halfW - 24 });
+    doc.fillColor(C.gray).font('Helvetica').fontSize(7.5)
+        .text(L.paidOn + ' : ' + dateLoc(receipt.paid_at ?? new Date()), rx + 12, infoY + 62);
+    doc.text(L.method + ' : ' + (receipt.payment_method || 'Stripe'), rx + 12, infoY + 76);
+
+    doc.y = infoY + 116;
+
+    // Détails facture liée
+    if (receipt.invoice_number) {
+        sectionBar(doc, lang === 'en' ? 'Linked invoice' : 'Facture liée');
+        doc.fillColor(C.text).font('Helvetica-Bold').fontSize(10)
+            .text(receipt.invoice_number, C.marginL, doc.y);
+        if (receipt.invoice_title) {
+            doc.fillColor(C.gray).font('Helvetica').fontSize(8.5)
+                .text(receipt.invoice_title, C.marginL, doc.y + 2, { width: cw });
+        }
+        doc.moveDown(0.5);
+    }
+
+    // Reference Stripe si applicable
+    if (receipt.stripe_payment_intent_id) {
+        doc.moveDown(0.5);
+        doc.fillColor(C.gray).font('Helvetica').fontSize(7.5)
+            .text(L.reference + ' Stripe : ' + receipt.stripe_payment_intent_id, C.marginL, doc.y);
+    }
+
+    // Message remerciement
+    doc.moveDown(2);
+    doc.fillColor(C.green).font('Helvetica-Bold').fontSize(11)
+        .text(L.thanks, C.marginL, doc.y, { width: cw, align: 'center' });
+    doc.moveDown(0.3);
+    doc.fillColor(C.gray).font('Helvetica').fontSize(8)
+        .text(L.keepRecord, C.marginL, doc.y, { width: cw, align: 'center' });
+
+    // Footer note Stripe
+    if (receipt.stripe_payment_intent_id) {
+        doc.moveDown(2);
+        doc.rect(C.marginL, doc.y, cw, 26).fillColor('#F0FDF4').fill();
+        doc.rect(C.marginL, doc.y, 3, 26).fillColor(C.green).fill();
+        doc.fillColor(C.green).font('Helvetica-Bold').fontSize(8)
+            .text(L.stripeFooter, C.marginL + 10, doc.y + 8, { width: cw - 20 });
+    }
+
+    drawFooter(doc, receipt.receipt_number || ('R-' + (receipt.id ?? '00000')), C.navy, t);
+    doc.end();
+}
+
 module.exports = {
     generateQuotePDF,
     generateInvoicePDF,
     generateContractPDF,
+    generateReceiptPDF,
     autoGenerateContract,
     fmt
 };

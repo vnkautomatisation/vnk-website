@@ -9,7 +9,7 @@ export default async function RefundsPage() {
     prisma.refund.findMany({
       include: {
         client: { select: { id: true, fullName: true, companyName: true } },
-        invoice: { select: { id: true, invoiceNumber: true } },
+        invoice: { select: { id: true, invoiceNumber: true, stripePaymentIntentId: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -33,6 +33,8 @@ export default async function RefundsPage() {
     companyName: r.client.companyName,
     invoiceId: r.invoiceId,
     invoiceNumber: r.invoice?.invoiceNumber ?? null,
+    invoiceStripePaymentIntentId: r.invoice?.stripePaymentIntentId ?? null,
+    stripeRefundId: r.stripeRefundId,
     reason: r.reason,
     amount: Number(r.amount),
     tpsAmount: Number(r.tpsAmount),

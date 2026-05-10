@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -11,6 +11,8 @@ import {
   Eye,
   Pencil,
   Trash2,
+  CreditCard,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +44,8 @@ type Refund = {
   companyName: string | null;
   invoiceId: number | null;
   invoiceNumber: string | null;
+  invoiceStripePaymentIntentId: string | null;
+  stripeRefundId: string | null;
   reason: string;
   amount: number;
   tpsAmount: number;
@@ -88,6 +92,20 @@ export function RefundsView({
   const [newAmount, setNewAmount] = useState("");
   const [newNotes, setNewNotes] = useState("");
 
+  // Sticky scroll detection (Wix pattern)
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setScrolled(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    obs.observe(sentinel);
+    return () => obs.disconnect();
+  }, []);
+
   // Edit/Delete
   const [editRefund, setEditRefund] = useState<Refund | null>(null);
   const [editReason, setEditReason] = useState("");
@@ -95,6 +113,34 @@ export function RefundsView({
   const [editStatus, setEditStatus] = useState("pending");
   const [editNotes, setEditNotes] = useState("");
   const [deleteRefund, setDeleteRefund] = useState<Refund | null>(null);
+
+  // Stripe processing
+  const [stripeRefund, setStripeRefund] = useState<Refund | null>(null);
+  const [processingStripe, setProcessingStripe] = useState(false);
+
+  const handleProcessStripe = async () => {
+    if (!stripeRefund) return;
+    setProcessingStripe(true);
+    try {
+      const res = await fetch(`/api/refunds/${stripeRefund.id}/process-stripe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "requested_by_customer" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Remboursement émis via Stripe — délai bancaire 5–10 jours");
+        setStripeRefund(null);
+        router.refresh();
+      } else {
+        toast.error(data.error ?? "Erreur Stripe");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    } finally {
+      setProcessingStripe(false);
+    }
+  };
 
   const resetForm = () => {
     setNewClientId("");
@@ -184,12 +230,17 @@ export function RefundsView({
   // Actions menu pour EntityCard
   const getActions = useCallback((r: Refund) => {
     const editable = r.status !== "processed" && !r.processedAt;
+    const stripeEligible = r.status === "pending"
+      && !r.stripeRefundId
+      && !!r.invoiceStripePaymentIntentId;
     return [
       { label: "Voir client", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", r.clientId) },
+      ...(stripeEligible ? [{ label: "Traiter via Stripe", icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => setStripeRefund(r) }] : []),
+      ...(r.stripeRefundId ? [{ label: "Voir sur Stripe", icon: <ExternalLink className="h-3.5 w-3.5" />, onClick: () => window.open(`https://dashboard.stripe.com/refunds/${r.stripeRefundId}`, "_blank") }] : []),
       ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(r) }] : []),
       ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteRefund(r), separator: true, variant: "destructive" as const }] : []),
     ];
-  }, []);
+  }, [openEntity]);
 
   const columns: Column<Refund>[] = [
     {
@@ -227,6 +278,43 @@ export function RefundsView({
     },
     { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
     {
+      key: "stripe",
+      header: "Stripe",
+      accessor: (r) => {
+        if (r.stripeRefundId) {
+          return (
+            <a
+              href={`https://dashboard.stripe.com/refunds/${r.stripeRefundId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-medium hover:bg-emerald-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CheckCircle2 className="h-3 w-3" />
+              Émis
+              <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+            </a>
+          );
+        }
+        if (r.status === "pending" && r.invoiceStripePaymentIntentId) {
+          return (
+            <button
+              onClick={(e) => { e.stopPropagation(); setStripeRefund(r); }}
+              className="inline-flex items-center gap-1 text-[10px] text-white bg-[#0F2D52] hover:bg-[#15406d] px-2 py-1 rounded font-medium transition-colors"
+            >
+              <CreditCard className="h-3 w-3" />
+              Émettre
+            </button>
+          );
+        }
+        if (r.status === "pending" && !r.invoiceStripePaymentIntentId) {
+          return <span className="text-[10px] text-muted-foreground italic">Non Stripe</span>;
+        }
+        return <span className="text-[10px] text-muted-foreground italic">—</span>;
+      },
+      hiddenOnMobile: true,
+    },
+    {
       key: "date",
       header: "Date",
       accessor: (r) => formatDate(new Date(r.createdAt)),
@@ -258,26 +346,58 @@ export function RefundsView({
         <StatCard label="Traites" value={kpis.processed} icon={CheckCircle2} accent="bg-emerald-500" />
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Numero, client, raison..." className="pl-9" />
+      {/* Sentinel — détecte quand les StatCards quittent le viewport */}
+      <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
+
+      {/* Barre de filtres — devient sticky au scroll, affiche un récap KPI compact quand scrolled */}
+      <div
+        className={cn(
+          "sticky top-[64px] z-20 bg-background -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 transition-shadow",
+          scrolled && "shadow-sm border-b"
+        )}
+      >
+        {scrolled && (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs mb-2 pt-1">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <RotateCcw className="h-4 w-4" />
+              Remboursements
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground">Total :</span>
+              <span className="font-bold text-[#0F2D52]">{kpis.total}</span>
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground">En attente :</span>
+              <span className="font-bold text-amber-600">{kpis.pending}</span>
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground">Traites :</span>
+              <span className="font-bold text-emerald-600">{kpis.processed}</span>
+            </span>
+            <span className="ml-auto text-muted-foreground">{filtered.length} affichés</span>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Numero, client, raison..." className="pl-9" />
+          </div>
+          <div className="flex bg-muted rounded-lg p-0.5">
+            {STATUS_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setStatusFilter(tab.key)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                  statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <ViewToggle storageKey="refunds" defaultView="list" onChange={setView} />
         </div>
-        <div className="flex bg-muted rounded-lg p-0.5">
-          {STATUS_TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setStatusFilter(tab.key)}
-              className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
-                statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-        <ViewToggle storageKey="refunds" defaultView="list" onChange={setView} />
       </div>
 
       {/* Vue grille */}
@@ -337,6 +457,19 @@ export function RefundsView({
         description={`Le remboursement "${deleteRefund?.refundNumber}" sera supprime definitivement.`}
         confirmLabel="Supprimer"
         onConfirm={handleDelete}
+      />
+
+      <ConfirmDialog
+        open={!!stripeRefund}
+        onOpenChange={(o) => { if (!o) setStripeRefund(null); }}
+        title="Émettre le remboursement via Stripe ?"
+        description={
+          stripeRefund
+            ? `${formatCurrency(stripeRefund.totalAmount)} sera remboursé sur la carte du client (facture ${stripeRefund.invoiceNumber ?? "—"}). Cette action appelle directement l'API Stripe — délai bancaire 5 à 10 jours ouvrables avant que le client voie le crédit.`
+            : ""
+        }
+        confirmLabel={processingStripe ? "Émission en cours…" : "Émettre via Stripe"}
+        onConfirm={handleProcessStripe}
       />
 
       <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau remboursement" icon={RotateCcw} accent="bg-amber-500" submitLabel="Creer le remboursement" onSubmit={handleCreate}>
