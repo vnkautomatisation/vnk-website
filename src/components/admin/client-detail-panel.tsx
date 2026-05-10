@@ -1239,13 +1239,16 @@ function ClientTabs({
 
   return (
     <Tabs value={tab} onValueChange={setTab}>
-      <TabsList className={cn("grid w-full h-auto gap-1 bg-muted p-1", tabsCount === 4 ? "grid-cols-4" : tabsCount === 5 ? "grid-cols-5" : "grid-cols-6")}>
-        <TabsTrigger value="identite" className="text-[11px] px-2 py-1.5">Identité</TabsTrigger>
-        <TabsTrigger value="finance" className="text-[11px] px-2 py-1.5">Finance</TabsTrigger>
-        <TabsTrigger value="activite" className="text-[11px] px-2 py-1.5">Activité</TabsTrigger>
-        <TabsTrigger value="documents" className="text-[11px] px-2 py-1.5">Documents</TabsTrigger>
-        {hasLegalData && <TabsTrigger value="legal" className="text-[11px] px-2 py-1.5">Légal</TabsTrigger>}
-        {hasTeamMembers && <TabsTrigger value="equipe" className="text-[11px] px-2 py-1.5">Équipe</TabsTrigger>}
+      <TabsList className={cn(
+        "h-auto gap-1 bg-muted p-1 w-full flex overflow-x-auto sm:grid sm:overflow-visible",
+        tabsCount === 4 ? "sm:grid-cols-4" : tabsCount === 5 ? "sm:grid-cols-5" : "sm:grid-cols-6",
+      )}>
+        <TabsTrigger value="identite" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Identité</TabsTrigger>
+        <TabsTrigger value="finance" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Finance</TabsTrigger>
+        <TabsTrigger value="activite" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Activité</TabsTrigger>
+        <TabsTrigger value="documents" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Documents</TabsTrigger>
+        {hasLegalData && <TabsTrigger value="legal" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Légal</TabsTrigger>}
+        {hasTeamMembers && <TabsTrigger value="equipe" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Équipe</TabsTrigger>}
       </TabsList>
 
       {/* Identité — fusionne courriel + contact + adresse + business */}
@@ -1502,8 +1505,17 @@ function ClientTabs({
                       {c.signedAt && ` · ${formatDate(new Date(c.signedAt))}`}
                     </p>
                   </div>
-                  <Button variant="ghost" size="sm" className="h-7" onClick={() => openEntity("contract", c.id)}>
-                    Voir
+                  <Button variant="ghost" size="sm" className="h-7" onClick={() => setPdfPreview({
+                    url: `/api/contracts/${c.id}/pdf`,
+                    title: c.title,
+                    documentNumber: c.contractNumber,
+                    downloadName: `contrat-${c.contractNumber}`,
+                    entityType: "contract",
+                    entityId: c.id,
+                    status: c.status,
+                    isAdminSigned: !!c.adminSignatureData,
+                  })}>
+                    Voir PDF
                   </Button>
                 </div>
               ))}
