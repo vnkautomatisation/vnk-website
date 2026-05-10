@@ -59,12 +59,9 @@ import {
   Calendar,
   Globe,
   Clock,
-  DollarSign,
   RotateCcw,
   AlertCircle,
   ShieldCheck,
-  Users,
-  Activity,
 } from "lucide-react";
 
 type ClientFull = {
@@ -1231,78 +1228,50 @@ function ClientTabs({
     .filter((i) => i.status === "unpaid" || i.status === "overdue")
     .reduce((s, i) => s + Number(i.amountTtc ?? 0), 0);
 
+  // Onglets conditionnels selon les donnees presentes
+  const hasLegalData =
+    !!client.termsAcceptedAt ||
+    !!client.privacyAcceptedAt ||
+    !!client.identityVerifiedAt ||
+    client.contracts.some((c) => c.adminSignatureData || c.clientSignatureData);
+  const hasTeamMembers = (client.teamMembers?.length ?? 0) > 0;
+  const tabsCount = 4 + (hasLegalData ? 1 : 0) + (hasTeamMembers ? 1 : 0);
+
   return (
     <Tabs value={tab} onValueChange={setTab}>
-      <TabsList className="grid w-full grid-cols-3 sm:grid-cols-9 h-auto gap-1 bg-muted p-1">
+      <TabsList className={cn("grid w-full h-auto gap-1 bg-muted p-1", tabsCount === 4 ? "grid-cols-4" : tabsCount === 5 ? "grid-cols-5" : "grid-cols-6")}>
         <TabsTrigger value="identite" className="text-[11px] px-2 py-1.5">Identité</TabsTrigger>
-        <TabsTrigger value="contact" className="text-[11px] px-2 py-1.5">Contact</TabsTrigger>
-        <TabsTrigger value="business" className="text-[11px] px-2 py-1.5">Business</TabsTrigger>
         <TabsTrigger value="finance" className="text-[11px] px-2 py-1.5">Finance</TabsTrigger>
         <TabsTrigger value="activite" className="text-[11px] px-2 py-1.5">Activité</TabsTrigger>
         <TabsTrigger value="documents" className="text-[11px] px-2 py-1.5">Documents</TabsTrigger>
-        <TabsTrigger value="comm" className="text-[11px] px-2 py-1.5">Comm.</TabsTrigger>
-        <TabsTrigger value="legal" className="text-[11px] px-2 py-1.5">Légal</TabsTrigger>
-        <TabsTrigger value="equipe" className="text-[11px] px-2 py-1.5">Équipe</TabsTrigger>
+        {hasLegalData && <TabsTrigger value="legal" className="text-[11px] px-2 py-1.5">Légal</TabsTrigger>}
+        {hasTeamMembers && <TabsTrigger value="equipe" className="text-[11px] px-2 py-1.5">Équipe</TabsTrigger>}
       </TabsList>
 
-      {/* 1. Identité */}
+      {/* Identité — fusionne courriel + contact + adresse + business */}
       <TabsContent value="identite" className="space-y-3 mt-4">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-1.5">
+          <Button size="sm" variant="outline" onClick={() => router.push(`/admin/messages?clientId=${client.id}`)}>
+            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />Conversation
+          </Button>
           <Button size="sm" variant="outline" onClick={openEdit}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" />Modifier
           </Button>
         </div>
         <InfoRow icon={Mail} label="Courriel" value={client.email} />
-        <InfoRow icon={Briefcase} label="Poste" value={client.position ?? "—"} />
-        <InfoRow icon={Calendar} label="Date de naissance" value={client.birthdate ? formatDate(new Date(client.birthdate)) : "—"} />
-        <InfoRow icon={Globe} label="Langue" value={client.locale ?? "fr-CA"} />
-        <InfoRow icon={Clock} label="Fuseau horaire" value={client.timezone ?? "America/Montreal"} />
+        {client.phone && <InfoRow icon={Phone} label="Téléphone" value={client.phone} />}
+        {(client.address || client.city || client.province || client.postalCode) && (
+          <InfoRow
+            icon={MapPin}
+            label="Adresse"
+            value={[client.address, client.city, client.province, client.postalCode, client.country].filter(Boolean).join(", ")}
+          />
+        )}
+        {client.companyName && <InfoRow icon={Building2} label="Entreprise" value={client.companyName} />}
+        {client.sector && <InfoRow icon={Briefcase} label="Secteur" value={client.sector} />}
         <InfoRow icon={Calendar} label="Compte créé" value={formatDate(new Date(client.createdAt))} />
         <InfoRow icon={Clock} label="Dernière connexion" value={client.lastLogin ? formatDate(new Date(client.lastLogin)) : "Jamais"} />
-        {client.internalNotes && (
-          <div className="pt-2">
-            <p className="text-xs text-muted-foreground mb-2">Notes internes (admin)</p>
-            <div className="p-3 rounded-md bg-amber-50 border border-amber-200 text-xs whitespace-pre-wrap">
-              {client.internalNotes}
-            </div>
-          </div>
-        )}
-      </TabsContent>
 
-      {/* 2. Contact */}
-      <TabsContent value="contact" className="space-y-3 mt-4">
-        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Contacts</p>
-        <InfoRow icon={Mail} label="Courriel principal" value={client.email} />
-        <InfoRow icon={Phone} label="Téléphone principal" value={client.phone ?? "—"} />
-        <InfoRow icon={Phone} label="Mobile" value={client.mobilePhone ?? "—"} />
-        <InfoRow icon={Phone} label="Bureau" value={client.workPhone ?? "—"} />
-        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Adresse</p>
-        <InfoRow
-          icon={MapPin}
-          label="Adresse"
-          value={[client.address, client.city, client.province, client.postalCode, client.country].filter(Boolean).join(", ") || "—"}
-        />
-        {client.billingAddress && (
-          <div>
-            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Adresse facturation</p>
-            <pre className="text-xs bg-muted/40 p-2 rounded">{JSON.stringify(client.billingAddress, null, 2)}</pre>
-          </div>
-        )}
-      </TabsContent>
-
-      {/* 3. Business */}
-      <TabsContent value="business" className="space-y-3 mt-4">
-        <InfoRow icon={Building2} label="Entreprise" value={client.companyName ?? "—"} />
-        <InfoRow icon={Briefcase} label="Secteur" value={client.sector ?? client.industry ?? "—"} />
-        <InfoRow icon={Users} label="Taille" value={client.businessSize ?? "—"} />
-        <InfoRow icon={Users} label="Employés" value={client.employeeCount != null ? String(client.employeeCount) : "—"} />
-        <InfoRow icon={DollarSign} label="Revenu annuel" value={client.annualRevenue ?? "—"} />
-        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Taxes</p>
-        <InfoRow icon={Receipt} label="N° TPS" value={client.taxNumberTps ?? "—"} />
-        <InfoRow icon={Receipt} label="N° TVQ" value={client.taxNumberTvq ?? "—"} />
-        <InfoRow icon={CheckCircle2} label="Exempt de taxes" value={client.taxExempt ? "Oui" : "Non"} />
-        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Acquisition</p>
-        <InfoRow icon={Users} label="Source" value={client.leadSource ?? "—"} />
         {client.technologies && (
           <div className="pt-2">
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Technologies</p>
@@ -1313,20 +1282,23 @@ function ClientTabs({
             </div>
           </div>
         )}
+
+        {client.internalNotes && (
+          <div className="pt-2">
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Notes internes</p>
+            <div className="p-3 rounded-md bg-amber-50 border border-amber-200 text-xs whitespace-pre-wrap">
+              {client.internalNotes}
+            </div>
+          </div>
+        )}
       </TabsContent>
 
-      {/* 4. Finance */}
+      {/* Finance */}
       <TabsContent value="finance" className="space-y-3 mt-4">
         <div className="grid grid-cols-3 gap-2">
           <FinanceBox label="Total dépensé" value={formatCurrency(totalSpent || totalInvoicesAmount)} accent="text-emerald-600" />
           <FinanceBox label="Solde ouvert" value={formatCurrency(openBalance || unpaidAmount)} accent={openBalance > 0 || unpaidAmount > 0 ? "text-amber-600" : "text-muted-foreground"} />
           <FinanceBox label="LTV" value={formatCurrency(totalSpent || totalInvoicesAmount)} accent="text-[#0F2D52]" />
-        </div>
-        <div className="grid grid-cols-2 gap-2 pt-2">
-          <InfoRow icon={CreditCard} label="Mode paiement préféré" value={client.preferredPaymentMethod ?? "—"} />
-          <InfoRow icon={Calendar} label="Conditions paiement" value={client.creditTerms ?? "net_30"} />
-          <InfoRow icon={DollarSign} label="Devise" value={client.currencyPreference ?? "CAD"} />
-          <InfoRow icon={Receipt} label="Tier remise" value={client.discountTier ?? "Standard"} />
         </div>
 
         {client.mandates.length > 0 && (
@@ -1489,53 +1461,53 @@ function ClientTabs({
         )}
       </TabsContent>
 
-      {/* 7. Communications */}
-      <TabsContent value="comm" className="space-y-3 mt-4">
-        <div className="grid grid-cols-2 gap-2">
-          <FinanceBox label="Messages" value={String(client._count?.messages ?? 0)} accent="text-blue-600" />
-          <FinanceBox label="Rendez-vous" value={String(client._count?.appointments ?? 0)} accent="text-violet-600" />
-        </div>
-        <Button variant="outline" className="w-full" onClick={() => router.push(`/admin/messages?clientId=${client.id}`)}>
-          <MessageSquare className="h-3.5 w-3.5 mr-1.5" />Ouvrir la conversation
-        </Button>
-        <Button variant="outline" className="w-full" onClick={() => router.push(`/admin/calendar?clientId=${client.id}`)}>
-          <Calendar className="h-3.5 w-3.5 mr-1.5" />Voir les rendez-vous
-        </Button>
-      </TabsContent>
-
-      {/* 8. Légal / Compliance */}
+      {/* Légal / Compliance — affiche uniquement si donnees presentes */}
       <TabsContent value="legal" className="space-y-3 mt-4">
-        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Consentements</p>
-        <InfoRow icon={CheckCircle2} label="Conditions générales" value={client.termsAcceptedAt ? `${formatDate(new Date(client.termsAcceptedAt))} (v${client.termsAcceptedVersion ?? "?"})` : "Non accepté"} />
-        <InfoRow icon={CheckCircle2} label="Politique vie privée" value={client.privacyAcceptedAt ? formatDate(new Date(client.privacyAcceptedAt)) : "Non accepté"} />
-        <InfoRow icon={CheckCircle2} label="Marketing" value={client.marketingConsent ? `Oui (${client.marketingConsentAt ? formatDate(new Date(client.marketingConsentAt)) : "—"})` : "Refusé"} />
-        {client.termsAcceptedIp && <InfoRow icon={Globe} label="IP acceptation" value={client.termsAcceptedIp} />}
+        {(client.termsAcceptedAt || client.privacyAcceptedAt || client.marketingConsent) && (
+          <>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Consentements</p>
+            {client.termsAcceptedAt && (
+              <InfoRow icon={CheckCircle2} label="Conditions générales" value={`${formatDate(new Date(client.termsAcceptedAt))}${client.termsAcceptedVersion ? ` (v${client.termsAcceptedVersion})` : ""}`} />
+            )}
+            {client.privacyAcceptedAt && (
+              <InfoRow icon={CheckCircle2} label="Politique vie privée" value={formatDate(new Date(client.privacyAcceptedAt))} />
+            )}
+            {client.marketingConsent && (
+              <InfoRow icon={CheckCircle2} label="Marketing" value={`Oui${client.marketingConsentAt ? ` (${formatDate(new Date(client.marketingConsentAt))})` : ""}`} />
+            )}
+            {client.termsAcceptedIp && <InfoRow icon={Globe} label="IP acceptation" value={client.termsAcceptedIp} />}
+          </>
+        )}
 
-        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Vérification identité</p>
-        <InfoRow icon={CheckCircle2} label="Vérifié le" value={client.identityVerifiedAt ? formatDate(new Date(client.identityVerifiedAt)) : "Non vérifié"} />
-        {client.identityVerifiedBy && <InfoRow icon={ShieldCheck} label="Vérifié par" value={client.identityVerifiedBy} />}
+        {client.identityVerifiedAt && (
+          <>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Vérification identité</p>
+            <InfoRow icon={CheckCircle2} label="Vérifié le" value={formatDate(new Date(client.identityVerifiedAt))} />
+            {client.identityVerifiedBy && <InfoRow icon={ShieldCheck} label="Vérifié par" value={client.identityVerifiedBy} />}
+          </>
+        )}
 
-        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Signatures</p>
-        {client.contracts.filter((c) => c.adminSignatureData || c.clientSignatureData).length === 0 ? (
-          <p className="text-xs text-muted-foreground">Aucune signature électronique enregistrée</p>
-        ) : (
-          client.contracts
-            .filter((c) => c.adminSignatureData || c.clientSignatureData)
-            .map((c) => (
-              <div key={c.id} className="flex items-center justify-between p-2 rounded-md border bg-card text-xs">
-                <div className="min-w-0">
-                  <p className="font-medium truncate">{c.contractNumber} — {c.title}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {c.adminSignatureData && c.clientSignatureData ? "Signé par les deux parties" :
-                     c.adminSignatureData ? "Admin signé" : "Client signé"}
-                    {c.signedAt && ` · ${formatDate(new Date(c.signedAt))}`}
-                  </p>
+        {client.contracts.some((c) => c.adminSignatureData || c.clientSignatureData) && (
+          <>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Signatures</p>
+            {client.contracts
+              .filter((c) => c.adminSignatureData || c.clientSignatureData)
+              .map((c) => (
+                <div key={c.id} className="flex items-center justify-between p-2 rounded-md border bg-card text-xs">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{c.contractNumber} — {c.title}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {c.adminSignatureData && c.clientSignatureData ? "Signé par les deux parties" :
+                       c.adminSignatureData ? "Admin signé" : "Client signé"}
+                      {c.signedAt && ` · ${formatDate(new Date(c.signedAt))}`}
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-7" onClick={() => openEntity("contract", c.id)}>
+                    Voir
+                  </Button>
                 </div>
-                <Button variant="ghost" size="sm" className="h-7" onClick={() => openEntity("contract", c.id)}>
-                  Voir
-                </Button>
-              </div>
-            ))
+              ))}
+          </>
         )}
       </TabsContent>
 
