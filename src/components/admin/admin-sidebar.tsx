@@ -26,6 +26,7 @@ import {
   Wallet,
   FileBarChart,
   UserCircle,
+  Activity,
   Settings,
   Menu,
   X,
@@ -90,6 +91,7 @@ const GROUPS: NavGroup[] = [
     key: "system_group",
     items: [
       { key: "profile", icon: UserCircle, href: "/admin/profile" },
+      { key: "audit_trail", icon: Activity, href: "/admin/audit-trail" },
       { key: "settings", icon: Settings, href: "/admin/settings" },
     ],
   },

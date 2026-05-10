@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { createWorkflowEvent, onContractFullySigned } from "@/lib/workflow";
 import { logAudit } from "@/lib/audit";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { logSignatureEvent } from "@/lib/request-context";
+import { createHash } from "crypto";
 
 const schema = z.object({
   signatureData: z.string().min(10),
@@ -80,6 +82,17 @@ export async function POST(
     eventLabel: `Contrat ${contract.contractNumber} signé par ${session.user.role === "admin" ? "admin" : "client"}`,
     triggeredBy: session.user.role,
   });
+
+  // SignatureEvent immuable avec hash + IP/UA
+  const signatureHash = createHash("sha256").update(parsed.data.signatureData).digest("hex");
+  await logSignatureEvent({
+    req,
+    entityType: "contract",
+    entityId: contract.id,
+    clientId: contract.clientId,
+    signedBy: session.user.role === "admin" ? (session.user.email ?? "admin") : "client",
+    signatureHash,
+  }).catch((e) => console.error("signature event log failed", e));
 
   // Si les deux ont signé → générer la facture automatiquement
   const fullySigned = !!updated.adminSignatureData && !!updated.clientSignatureData;

@@ -44,6 +44,7 @@ import {
   Plus,
   MessageSquare,
   Briefcase,
+  Archive,
   FileText,
   Receipt,
   FileSignature,
@@ -420,6 +421,20 @@ export function ClientDetailPanel({
                   <Link href={`/admin/messages?clientId=${client.id}`}>
                     <MessageSquare className="h-3 w-3" />Message
                   </Link>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur"
+                  onClick={() => {
+                    const a = document.createElement("a");
+                    a.href = `/api/clients/${client.id}/export-zip`;
+                    a.click();
+                    toast.success("Préparation du dossier ZIP…");
+                  }}
+                  title="Télécharger l'intégralité du dossier client"
+                >
+                  <Archive className="h-3 w-3" />Dossier ZIP
                 </Button>
               </div>
             </SheetHeader>

@@ -76,12 +76,57 @@ model Client {
   twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
   twoFactorSecret  String? @map("two_factor_secret")
   lastLogin      DateTime? @map("last_login")
-  lastSeenAt     DateTime? @map("last_seen_at") // online indicator
+  lastSeenAt     DateTime? @map("last_seen_at")
+
+  // Identite etendue
+  position           String?
+  birthdate          DateTime? @db.Date
+  locale             String?   @default("fr-CA")
+  timezone           String?   @default("America/Montreal")
+  mobilePhone        String?   @map("mobile_phone")
+  workPhone          String?   @map("work_phone")
+  billingAddress     Json?     @map("billing_address")
+  shippingAddress    Json?     @map("shipping_address")
+
+  // Business
+  taxNumberTps       String?   @map("tax_number_tps")
+  taxNumberTvq       String?   @map("tax_number_tvq")
+  taxExempt          Boolean   @default(false) @map("tax_exempt")
+  industry           String?
+  businessSize       String?   @map("business_size")
+  employeeCount      Int?      @map("employee_count")
+  annualRevenue      String?   @map("annual_revenue")
+
+  // Acquisition
+  leadSource         String?   @map("lead_source")
+  referrerClientId   Int?      @map("referrer_client_id")
+
+  // Finance
+  creditTerms        String?   @default("net_30") @map("credit_terms")
+  discountTier       String?   @map("discount_tier")
+  currencyPreference String?   @default("CAD") @map("currency_preference")
+  preferredPaymentMethod String? @map("preferred_payment_method")
+  totalSpentTtc      Decimal   @default(0) @map("total_spent_ttc") @db.Decimal(12, 2)
+  openBalanceTtc     Decimal   @default(0) @map("open_balance_ttc") @db.Decimal(12, 2)
+
+  // Compliance / RGPD / Loi 25
+  termsAcceptedVersion  String?   @map("terms_accepted_version")
+  termsAcceptedAt       DateTime? @map("terms_accepted_at")
+  termsAcceptedIp       String?   @map("terms_accepted_ip")
+  privacyAcceptedAt     DateTime? @map("privacy_accepted_at")
+  marketingConsent      Boolean   @default(false) @map("marketing_consent")
+  marketingConsentAt    DateTime? @map("marketing_consent_at")
+  dataRetentionPolicy   String?   @default("standard") @map("data_retention_policy")
+
+  // Verification
+  identityVerifiedAt    DateTime? @map("identity_verified_at")
+  identityVerifiedBy    String?   @map("identity_verified_by")
+
   // Conversation meta (admin perspective)
   chatPinned     Boolean   @default(false) @map("chat_pinned")
   chatArchivedAt DateTime? @map("chat_archived_at")
   chatSnoozedUntil DateTime? @map("chat_snoozed_until")
-  chatLabels     Json?     @map("chat_labels") // ex: ["urgent","suivi","facturer"]
+  chatLabels     Json?     @map("chat_labels")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
 
@@ -354,12 +399,49 @@ model Dispute {
   resolution       String?
   openedAt         DateTime        @default(now()) @map("opened_at")
   resolvedAt       DateTime?       @map("resolved_at")
+
+  // Type & catégorisation
+  type             String          @default("other") // chargeback | invoice | service | refund | warranty | legal | other
+  category         String?         // sous-catégorie libre
+  amountDisputed   Decimal?        @map("amount_disputed") @db.Decimal(10, 2)
+  currency         String?         @default("CAD")
+
+  // Stripe chargeback specifics
+  stripeReason     String?         @map("stripe_reason") // duplicate | fraudulent | subscription_canceled | etc.
+  evidenceDueBy    DateTime?       @map("evidence_due_by")
+  evidenceSubmittedAt DateTime?    @map("evidence_submitted_at")
+  outcome          String?         // won | lost | warning_under_review | warning_closed
+  cardBrand        String?         @map("card_brand")
+
+  // Gestion interne
+  assignedTo       String?         @map("assigned_to")
+  estimatedResolutionDate DateTime? @map("estimated_resolution_date") @db.Date
+  escalatedAt      DateTime?       @map("escalated_at")
+  internalNotes    String?         @map("internal_notes")
+  evidenceDocumentIds Json?        @map("evidence_document_ids") // [docId, ...]
+
+  // Communication
+  lastClientContactAt DateTime?    @map("last_client_contact_at")
+  nextActionDue    DateTime?       @map("next_action_due")
+  contactMethod    String?         @map("contact_method") // email | phone | letter | meeting
+
+  // Escalade juridique
+  lawFirmInvolved  String?         @map("law_firm_involved")
+  caseNumber       String?         @map("case_number")
+  tribunal         String?         // regie_logement | cour_petites_creances | etc.
+  smallClaimsFiledAt DateTime?     @map("small_claims_filed_at")
+
   createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @default(now()) @updatedAt @map("updated_at")
 
   client           Client          @relation(fields: [clientId], references: [id])
   invoice          Invoice?        @relation(fields: [invoiceId], references: [id])
   mandate          Mandate?        @relation(fields: [mandateId], references: [id])
 
+  @@index([clientId])
+  @@index([status])
+  @@index([type])
+  @@index([assignedTo])
   @@map("disputes")
 }
 
@@ -985,12 +1067,114 @@ model IncidentReport {
   id          Int       @id @default(autoincrement())
   title       String
   description String
-  severity    String    @default("minor") // minor | major | critical
-  status      String    @default("investigating") // investigating | identified | monitoring | resolved
+  severity    String    @default("minor")
+  status      String    @default("investigating")
   startedAt   DateTime  @default(now()) @map("started_at")
   resolvedAt  DateTime? @map("resolved_at")
   isPublic    Boolean   @default(true) @map("is_public")
   createdAt   DateTime  @default(now()) @map("created_at")
 
   @@map("incident_reports")
+}
+
+// ════════════════════════════════════════════════════════════
+// EVENT SOURCING — capture immuable de tous les événements clients
+// ════════════════════════════════════════════════════════════
+
+model EmailEvent {
+  id          Int      @id @default(autoincrement())
+  clientId    Int?     @map("client_id")
+  messageId   String?  @map("message_id") // Resend/SMTP message-id
+  type        String   // sent | delivered | opened | clicked | bounced | complained | failed
+  email       String
+  subject     String?
+  link        String?
+  metadata    Json?
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([clientId, type])
+  @@index([messageId])
+  @@index([createdAt])
+  @@map("email_events")
+}
+
+model LoginEvent {
+  id          Int      @id @default(autoincrement())
+  clientId    Int?     @map("client_id")
+  adminId     Int?     @map("admin_id")
+  email       String
+  type        String   // success | failed | locked | 2fa_challenge | 2fa_success | 2fa_failed | logout
+  reason      String?  // wrong_password, account_locked, 2fa_invalid
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  country     String?
+  city        String?
+  deviceType  String?  @map("device_type") // desktop | mobile | tablet
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([clientId, createdAt])
+  @@index([adminId, createdAt])
+  @@index([email, createdAt])
+  @@index([type])
+  @@map("login_events")
+}
+
+model ConsentLog {
+  id          Int      @id @default(autoincrement())
+  clientId    Int      @map("client_id")
+  consentType String   @map("consent_type") // terms | privacy | marketing | cookies | data_retention
+  version     String   // version du document accepte
+  granted     Boolean  // true si accepte
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  source      String?  // signup | portal_settings | popup_banner
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([clientId, consentType])
+  @@index([createdAt])
+  @@map("consent_logs")
+}
+
+model OrderEvent {
+  id              Int      @id @default(autoincrement())
+  clientId        Int?     @map("client_id")
+  guestEmail      String?  @map("guest_email") // si checkout sans compte
+  type            String   // initiated | created | paid | failed | refunded | cancelled | dispute_opened | dispute_updated
+  amount          Decimal? @db.Decimal(10, 2)
+  currency        String?
+  stripeIntentId  String?  @map("stripe_intent_id")
+  paymentMethod   String?  @map("payment_method")
+  invoiceId       Int?     @map("invoice_id")
+  ipAddress       String?  @map("ip_address")
+  userAgent       String?  @map("user_agent")
+  referer         String?
+  origin          String?
+  geoCountry      String?  @map("geo_country")
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([clientId, type])
+  @@index([stripeIntentId])
+  @@index([createdAt])
+  @@map("order_events")
+}
+
+model SignatureEvent {
+  id              Int      @id @default(autoincrement())
+  entityType      String   @map("entity_type") // contract | quote
+  entityId        Int      @map("entity_id")
+  clientId        Int      @map("client_id")
+  signedBy        String   @map("signed_by") // admin email or "client"
+  signatureHash   String?  @map("signature_hash") // SHA-256 du PDF signe
+  rfc3161Token    String?  @map("rfc3161_token") // token TSA pour horodatage legal
+  ipAddress       String?  @map("ip_address")
+  userAgent       String?  @map("user_agent")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@index([clientId])
+  @@index([createdAt])
+  @@map("signature_events")
 }

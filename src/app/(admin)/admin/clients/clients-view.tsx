@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Users, UserCheck, UserX, UserPlus, Plus, Search,
-  Eye, Pencil, Archive, Copy, KeyRound, RotateCcw, Power, SlidersHorizontal, X, CheckSquare,
+  Eye, Pencil, Archive, Copy, KeyRound, RotateCcw, Power, SlidersHorizontal, X, CheckSquare, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -362,8 +362,18 @@ export function ClientsView({
     const actions: Array<{ label: string; icon: React.ReactNode; onClick: () => void; separator?: boolean; variant?: "destructive" }> = [
       { label: "Voir le détail", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", c.id) },
     ];
+    actions.push({
+      label: "Télécharger dossier ZIP",
+      icon: <Download className="h-3.5 w-3.5" />,
+      onClick: () => {
+        const a = document.createElement("a");
+        a.href = `/api/clients/${c.id}/export-zip`;
+        a.click();
+        toast.success("Préparation du dossier ZIP…");
+      },
+    });
     if (!c.archived) {
-      actions.push({ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(c) });
+      actions.push({ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(c), separator: true });
       actions.push({ label: "Réinitialiser MDP", icon: <KeyRound className="h-3.5 w-3.5" />, onClick: () => handleResetPassword(c) });
       actions.push({
         label: c.isActive ? "Désactiver" : "Activer",

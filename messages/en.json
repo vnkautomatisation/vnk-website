@@ -213,6 +213,7 @@
       "tax_declarations": "Tax declarations",
       "system_group": "System",
       "profile": "My profile",
+      "audit_trail": "Audit trail",
       "settings": "Settings"
     },
     "topbar": {
