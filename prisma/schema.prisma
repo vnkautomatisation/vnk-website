@@ -456,17 +456,44 @@ model Message {
 }
 
 model MessageTemplate {
-  id          Int      @id @default(autoincrement())
-  shortcut    String   @unique // ex: "devis_pret" → tape /devis_pret
-  title       String
-  body        String
-  category    String?  // greetings | followup | billing | other
-  usageCount  Int      @default(0) @map("usage_count")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  shortcut        String   @unique
+  title           String
+  body            String
+  category        String?
+  categoryCustom  String?  @map("category_custom") // sous-categorie libre quand category="other"
+  defaultChannel  String?  @map("default_channel") // chat | email | both
+  emailSubject    String?  @map("email_subject")
+  appendSignature Boolean  @default(false) @map("append_signature")
+  defaultAttachmentsData Json? @map("default_attachments_data") // [{name, mimeType, size, dataUrl, kind}]
+  tags            Json?    // ["onboarding", "billing"]
+  locale          String   @default("fr")
+  isSystem        Boolean  @default(false) @map("is_system")
+  isActive        Boolean  @default(true) @map("is_active")
+  usageCount      Int      @default(0) @map("usage_count")
+  lastUsedAt      DateTime? @map("last_used_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  versions        MessageTemplateVersion[]
 
   @@index([category])
+  @@index([locale])
   @@map("message_templates")
+}
+
+model MessageTemplateVersion {
+  id          Int      @id @default(autoincrement())
+  templateId  Int      @map("template_id")
+  body        String
+  emailSubject String? @map("email_subject")
+  editedBy    String?  @map("edited_by") // admin email
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  template    MessageTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("message_template_versions")
 }
 
 model ContactMessage {

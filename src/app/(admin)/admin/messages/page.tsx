@@ -38,7 +38,7 @@ export default async function MessagesPage() {
     prisma.message.count({ where: { deletedAt: null, createdAt: { gte: startOfDay } } }),
     prisma.message.count({ where: { deletedAt: null, createdAt: { gte: startOfWeek } } }),
     prisma.message.count({ where: { isRead: false, sender: "client", deletedAt: null } }),
-    prisma.messageTemplate.findMany({ orderBy: [{ usageCount: "desc" }, { title: "asc" }] }),
+    prisma.messageTemplate.findMany({ where: { isActive: true }, orderBy: [{ usageCount: "desc" }, { title: "asc" }] }),
   ]);
 
   return (
@@ -70,6 +70,10 @@ export default async function MessagesPage() {
         title: t.title,
         body: t.body,
         category: t.category,
+        defaultChannel: t.defaultChannel as "chat" | "email" | "both" | null,
+        emailSubject: t.emailSubject,
+        appendSignature: t.appendSignature,
+        defaultAttachmentsData: (t.defaultAttachmentsData as unknown[] | null) ?? null,
         usageCount: t.usageCount,
       }))}
       kpis={{

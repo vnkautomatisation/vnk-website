@@ -29,6 +29,7 @@ import { ConversationMetaActions } from "@/components/messages/conversation-meta
 import { ConversationTabsBar, ConversationFilesTab, ConversationLinksTab, type ConvTab, type MsgLite } from "@/components/messages/conversation-tabs";
 import { useMessageStream } from "@/components/messages/use-message-stream";
 import { NotificationToggle, playMessageSound, showDesktopNotification } from "@/components/messages/notification-toggle";
+import { expandTemplateVariables } from "@/lib/template-variables";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
@@ -400,16 +401,32 @@ export function MessagesView({
   }, [newMsg]);
 
   const applyTemplate = useCallback(async (tpl: Template) => {
-    // Remplace le "/xxx" par le body du template
     const lastSlashIdx = Math.max(newMsg.lastIndexOf("\n/"), newMsg.startsWith("/") ? 0 : -1);
     if (lastSlashIdx === -1) return;
     const before = lastSlashIdx === 0 ? "" : newMsg.slice(0, lastSlashIdx + 1);
-    setNewMsg(before + tpl.body);
+    const expanded = expandTemplateVariables(tpl.body, {
+      clientName: selected?.fullName,
+      clientCompany: selected?.companyName,
+      clientEmail: selected?.email,
+    });
+    setNewMsg(before + expanded);
+    // Applique le canal par defaut du template
+    if (tpl.defaultChannel === "chat" || tpl.defaultChannel === "email") {
+      setChannel(tpl.defaultChannel);
+    }
+    // Ajoute les pieces jointes par defaut (sans dupliquer)
+    if (tpl.defaultAttachmentsData && Array.isArray(tpl.defaultAttachmentsData) && tpl.defaultAttachmentsData.length > 0) {
+      const newAtts = tpl.defaultAttachmentsData as MessageAttachment[];
+      setPendingAtts((prev) => {
+        const existingNames = new Set(prev.map((a) => a.name));
+        return [...prev, ...newAtts.filter((a) => !existingNames.has(a.name))];
+      });
+      toast.success(`${newAtts.length} pièce(s) jointe(s) ajoutée(s) du template`);
+    }
     setTemplatePickerOpen(false);
-    // Increment usage counter (fire & forget)
     fetch(`/api/message-templates/${tpl.id}`, { method: "POST" }).catch(() => {});
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [newMsg]);
+  }, [newMsg, selected]);
 
   const sendInternal = async (extra: { scheduledFor?: string } = {}) => {
     if ((!newMsg.trim() && pendingAtts.length === 0) || !selectedId || sending) return;

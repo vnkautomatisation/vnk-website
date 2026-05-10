@@ -1,17 +1,34 @@
-// PATCH /api/message-templates/[id] — modifier
+// PATCH /api/message-templates/[id] — modifier (cree une version)
 // DELETE /api/message-templates/[id] — supprimer
-// POST /api/message-templates/[id] — incrementer usageCount (sans audit)
+// POST /api/message-templates/[id] — incrementer usageCount + lastUsedAt
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 
+const attachmentSchema = z.object({
+  kind: z.enum(["image", "audio", "pdf", "file"]),
+  name: z.string().min(1).max(255),
+  mimeType: z.string().min(1).max(120),
+  size: z.number().int().positive(),
+  dataUrl: z.string().startsWith("data:"),
+  durationSec: z.number().int().nonnegative().optional(),
+});
+
 const patchSchema = z.object({
   shortcut: z.string().min(1).max(40).regex(/^[a-z0-9_-]+$/i).optional(),
   title: z.string().min(1).max(120).optional(),
-  body: z.string().min(1).max(10000).optional(),
+  body: z.string().min(1).max(20000).optional(),
   category: z.string().max(40).nullable().optional(),
+  categoryCustom: z.string().max(80).nullable().optional(),
+  defaultChannel: z.enum(["chat", "email", "both"]).nullable().optional(),
+  emailSubject: z.string().max(200).nullable().optional(),
+  appendSignature: z.boolean().optional(),
+  defaultAttachmentsData: z.array(attachmentSchema).max(10).nullable().optional(),
+  tags: z.array(z.string().max(40)).max(15).nullable().optional(),
+  locale: z.enum(["fr", "en"]).optional(),
+  isActive: z.boolean().optional(),
 }).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnée" });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -24,8 +41,27 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
 
-  const data = { ...parsed.data };
-  if (data.shortcut) data.shortcut = data.shortcut.toLowerCase();
+  const existing = await prisma.messageTemplate.findUnique({ where: { id: Number(id) } });
+  if (!existing) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+
+  // Snapshot version si body ou subject modifie
+  const bodyChanged = parsed.data.body !== undefined && parsed.data.body !== existing.body;
+  const subjectChanged = parsed.data.emailSubject !== undefined && parsed.data.emailSubject !== existing.emailSubject;
+  if (bodyChanged || subjectChanged) {
+    await prisma.messageTemplateVersion.create({
+      data: {
+        templateId: existing.id,
+        body: existing.body,
+        emailSubject: existing.emailSubject,
+        editedBy: session.user.email ?? "admin",
+      },
+    });
+  }
+
+  const data: Record<string, unknown> = { ...parsed.data };
+  if (data.shortcut) data.shortcut = String(data.shortcut).toLowerCase();
+  if (data.tags === null) data.tags = undefined;
+  if (data.defaultAttachmentsData === null) data.defaultAttachmentsData = undefined;
 
   try {
     const tpl = await prisma.messageTemplate.update({ where: { id: Number(id) }, data });
@@ -68,7 +104,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   await prisma.messageTemplate.update({
     where: { id: Number(id) },
-    data: { usageCount: { increment: 1 } },
+    data: { usageCount: { increment: 1 }, lastUsedAt: new Date() },
   });
   return NextResponse.json({ success: true });
 }

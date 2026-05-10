@@ -10,6 +10,10 @@ export type Template = {
   title: string;
   body: string;
   category: string | null;
+  defaultChannel?: "chat" | "email" | "both" | null;
+  emailSubject?: string | null;
+  appendSignature?: boolean;
+  defaultAttachmentsData?: unknown[] | null;
   usageCount: number;
 };
 
