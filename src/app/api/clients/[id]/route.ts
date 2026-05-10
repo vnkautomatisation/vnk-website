@@ -23,6 +23,28 @@ const updateSchema = z.object({
   internalNotes: z.string().optional(),
   isActive: z.boolean().optional(),
   archived: z.boolean().optional(),
+  // Identite etendue
+  position: z.string().max(120).nullable().optional(),
+  birthdate: z.string().nullable().optional(),
+  locale: z.string().max(10).nullable().optional(),
+  timezone: z.string().max(60).nullable().optional(),
+  mobilePhone: z.string().max(40).nullable().optional(),
+  workPhone: z.string().max(40).nullable().optional(),
+  // Business
+  taxNumberTps: z.string().max(40).nullable().optional(),
+  taxNumberTvq: z.string().max(40).nullable().optional(),
+  taxExempt: z.boolean().optional(),
+  industry: z.string().max(80).nullable().optional(),
+  businessSize: z.string().max(40).nullable().optional(),
+  employeeCount: z.number().int().nonnegative().nullable().optional(),
+  annualRevenue: z.string().max(40).nullable().optional(),
+  // Acquisition
+  leadSource: z.string().max(80).nullable().optional(),
+  // Finance
+  creditTerms: z.string().max(40).nullable().optional(),
+  discountTier: z.string().max(40).nullable().optional(),
+  currencyPreference: z.string().max(10).nullable().optional(),
+  preferredPaymentMethod: z.string().max(40).nullable().optional(),
 });
 
 export async function GET(
@@ -44,6 +66,12 @@ export async function GET(
       quotes: { orderBy: { createdAt: "desc" } },
       invoices: { orderBy: { createdAt: "desc" } },
       contracts: { orderBy: { createdAt: "desc" } },
+      payments: { orderBy: { createdAt: "desc" }, take: 50 },
+      refunds: { orderBy: { createdAt: "desc" }, take: 50 },
+      disputes: { orderBy: { createdAt: "desc" }, take: 50 },
+      documents: { orderBy: { createdAt: "desc" }, take: 100 },
+      teamMembers: { orderBy: { invitedAt: "desc" } },
+      _count: { select: { messages: true, appointments: true } },
     },
   });
 

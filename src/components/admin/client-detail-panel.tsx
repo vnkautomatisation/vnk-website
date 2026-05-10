@@ -35,7 +35,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useConfirm } from "@/hooks/use-confirm";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { useGooglePlaces, parseAddressComponents } from "@/hooks/use-google-places";
-import { initials, formatCurrency, formatDate } from "@/lib/utils";
+import { initials, formatCurrency, formatDate, cn } from "@/lib/utils";
 import {
   Mail,
   Phone,
@@ -56,6 +56,15 @@ import {
   ExternalLink,
   Download,
   Pencil,
+  Calendar,
+  Globe,
+  Clock,
+  DollarSign,
+  RotateCcw,
+  AlertCircle,
+  ShieldCheck,
+  Users,
+  Activity,
 } from "lucide-react";
 
 type ClientFull = {
@@ -74,6 +83,46 @@ type ClientFull = {
   internalNotes: string | null;
   createdAt: Date;
   lastLogin: Date | null;
+  // Identite etendue
+  position?: string | null;
+  birthdate?: Date | null;
+  locale?: string | null;
+  timezone?: string | null;
+  mobilePhone?: string | null;
+  workPhone?: string | null;
+  billingAddress?: Record<string, string> | null;
+  shippingAddress?: Record<string, string> | null;
+  // Business
+  taxNumberTps?: string | null;
+  taxNumberTvq?: string | null;
+  taxExempt?: boolean;
+  industry?: string | null;
+  businessSize?: string | null;
+  employeeCount?: number | null;
+  annualRevenue?: string | null;
+  // Acquisition
+  leadSource?: string | null;
+  // Finance
+  creditTerms?: string | null;
+  discountTier?: string | null;
+  currencyPreference?: string | null;
+  preferredPaymentMethod?: string | null;
+  totalSpentTtc?: any;
+  openBalanceTtc?: any;
+  // Compliance
+  termsAcceptedVersion?: string | null;
+  termsAcceptedAt?: Date | null;
+  termsAcceptedIp?: string | null;
+  privacyAcceptedAt?: Date | null;
+  marketingConsent?: boolean;
+  marketingConsentAt?: Date | null;
+  identityVerifiedAt?: Date | null;
+  identityVerifiedBy?: string | null;
+  // Status
+  isActive?: boolean;
+  archived?: boolean;
+  lastSeenAt?: Date | null;
+  // Relations
   mandates: Array<{ id: number; title: string; status: string; progress: number }>;
   quotes: Array<{ id: number; quoteNumber: string; title: string; status: string; amountTtc: any; expiryDate: Date | null }>;
   invoices: Array<{ id: number; invoiceNumber: string; status: string; amountTtc: any; dueDate: Date | null }>;
@@ -87,6 +136,12 @@ type ClientFull = {
     clientSignatureData: string | null;
     signedAt: Date | string | null;
   }>;
+  payments?: Array<{ id: number; amount: any; status: string; paymentMethod: string | null; paidAt: Date | null; createdAt: Date; stripePaymentIntentId: string | null; invoiceId: number | null }>;
+  refunds?: Array<{ id: number; amount: any; status: string; reason: string; processedAt: Date | null; createdAt: Date; stripeRefundId: string | null; invoiceId: number | null }>;
+  disputes?: Array<{ id: number; title: string; status: string; type: string; priority: string; amountDisputed: any; openedAt: Date; resolvedAt: Date | null }>;
+  documents?: Array<{ id: number; title: string; fileType: string | null; fileSize: number | null; category: string | null; isRead: boolean; createdAt: Date }>;
+  teamMembers?: Array<{ id: number; email: string; fullName: string; role: string; invitedAt: Date; acceptedAt: Date | null; lastLogin: Date | null }>;
+  _count?: { messages: number; appointments: number };
 };
 
 export function ClientDetailPanel({
@@ -441,212 +496,16 @@ export function ClientDetailPanel({
 
             {/* Tabs scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="info">Infos</TabsTrigger>
-                  <TabsTrigger value="mandates">Mandats</TabsTrigger>
-                  <TabsTrigger value="quotes">Devis</TabsTrigger>
-                  <TabsTrigger value="invoices">Factures</TabsTrigger>
-                  <TabsTrigger value="contracts">Contrats</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="info" className="space-y-3 mt-4">
-                  <div className="flex justify-end">
-                    <Button size="sm" variant="outline" onClick={openEdit}>
-                      <Pencil className="h-3.5 w-3.5 mr-1.5" />Modifier
-                    </Button>
-                  </div>
-                  <InfoRow icon={Mail} label="Courriel" value={client.email} />
-                  <InfoRow icon={Phone} label="Téléphone" value={client.phone ?? "—"} />
-                  <InfoRow icon={Building2} label="Entreprise" value={client.companyName ?? "—"} />
-                  <InfoRow icon={Briefcase} label="Secteur" value={client.sector ?? "—"} />
-                  <InfoRow
-                    icon={MapPin}
-                    label="Adresse"
-                    value={[client.address, client.city, client.province, client.postalCode].filter(Boolean).join(", ") || "—"}
-                  />
-                  {client.technologies && (
-                    <div className="pt-2">
-                      <p className="text-xs text-muted-foreground mb-2">Technologies</p>
-                      <div className="flex flex-wrap gap-1">
-                        {client.technologies.split(",").map((t, i) => (
-                          <Badge key={i} variant="secondary" className="text-[10px]">{t.trim()}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {client.internalNotes && (
-                    <div className="pt-2">
-                      <p className="text-xs text-muted-foreground mb-2">Notes internes</p>
-                      <div className="p-3 rounded-md bg-amber-50 border border-amber-200 text-xs whitespace-pre-wrap">
-                        {client.internalNotes}
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="mandates" className="space-y-2 mt-4">
-                  {client.mandates.length === 0 ? (
-                    <EmptyState text="Aucun mandat" actionLabel="Créer un mandat" actionHref={`/admin/mandates?newFor=${client.id}`} />
-                  ) : (
-                    client.mandates.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => openEntity("mandate", m.id)}
-                        className="w-full text-left p-3 rounded-lg border bg-card hover:shadow-sm hover:border-primary transition-all"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{m.title}</p>
-                            <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div className="h-full bg-primary transition-all" style={{ width: `${m.progress}%` }} />
-                            </div>
-                            <p className="text-[10px] text-muted-foreground mt-1">{m.progress}% complete</p>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <StatusBadge status={m.status} />
-                          </div>
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </TabsContent>
-
-                <TabsContent value="quotes" className="space-y-2 mt-4">
-                  {client.quotes.length === 0 ? (
-                    <EmptyState text="Aucun devis" actionLabel="Créer un devis" actionHref={`/admin/quotes?newFor=${client.id}`} />
-                  ) : (
-                    client.quotes.map((q) => (
-                      <EntityRow
-                        key={q.id}
-                        ref1={q.quoteNumber}
-                        title={q.title}
-                        secondary={q.expiryDate ? `Expire le ${formatDate(q.expiryDate)}` : undefined}
-                        amount={Number(q.amountTtc)}
-                        status={q.status}
-                        onClick={() => openEntity("quote", q.id)}
-                        actions={[
-                          ...(q.status === "pending" ? [{
-                            label: "Marquer accepté",
-                            icon: <CheckCircle2 className="h-3.5 w-3.5" />,
-                            onClick: () => acceptQuote(q.id, q.quoteNumber),
-                          }] : []),
-                          {
-                            label: "Voir PDF",
-                            icon: <ExternalLink className="h-3.5 w-3.5" />,
-                            onClick: () => setPdfPreview({
-                              url: `/api/quotes/${q.id}/pdf`,
-                              title: q.title,
-                              documentNumber: q.quoteNumber,
-                              downloadName: `devis-${q.quoteNumber}`,
-                              entityType: "quote",
-                              entityId: q.id,
-                              status: q.status,
-                            }),
-                          },
-                        ]}
-                        busy={busy}
-                      />
-                    ))
-                  )}
-                </TabsContent>
-
-                <TabsContent value="invoices" className="space-y-2 mt-4">
-                  {client.invoices.length === 0 ? (
-                    <EmptyState text="Aucune facture" actionLabel="Créer une facture" actionHref={`/admin/invoices?newFor=${client.id}`} />
-                  ) : (
-                    client.invoices.map((i) => (
-                      <EntityRow
-                        key={i.id}
-                        ref1={i.invoiceNumber}
-                        secondary={i.dueDate ? `Échéance ${formatDate(i.dueDate)}` : undefined}
-                        amount={Number(i.amountTtc)}
-                        status={i.status}
-                        alert={i.status === "overdue"}
-                        onClick={() => openEntity("invoice", i.id)}
-                        actions={[
-                          ...(i.status === "unpaid" || i.status === "overdue" ? [{
-                            label: "Marquer payée",
-                            icon: <CreditCard className="h-3.5 w-3.5" />,
-                            onClick: () => markPaid(i.id, i.invoiceNumber),
-                          }] : []),
-                          {
-                            label: "Voir PDF",
-                            icon: <ExternalLink className="h-3.5 w-3.5" />,
-                            onClick: () => setPdfPreview({
-                              url: `/api/invoices/${i.id}/pdf`,
-                              title: `Facture ${i.invoiceNumber}`,
-                              documentNumber: i.invoiceNumber,
-                              downloadName: `facture-${i.invoiceNumber}`,
-                              entityType: "invoice",
-                              entityId: i.id,
-                              status: i.status,
-                            }),
-                          },
-                          ...(i.status === "unpaid" || i.status === "overdue" ? [{
-                            label: "Relancer",
-                            icon: <Send className="h-3.5 w-3.5" />,
-                            onClick: () => router.push(`/admin/messages?clientId=${client.id}`),
-                          }] : []),
-                        ]}
-                        busy={busy}
-                      />
-                    ))
-                  )}
-                </TabsContent>
-
-                <TabsContent value="contracts" className="space-y-2 mt-4">
-                  {client.contracts.length === 0 ? (
-                    <EmptyState text="Aucun contrat" />
-                  ) : (
-                    client.contracts.map((c) => {
-                      const adminSigned = !!c.adminSignatureData;
-                      const clientSigned = !!c.clientSignatureData;
-                      const fullySigned = adminSigned && clientSigned;
-                      const sigStatus = fullySigned
-                        ? "Signé par les deux parties"
-                        : adminSigned && !clientSigned
-                          ? "Admin signé · attente client"
-                          : !adminSigned && clientSigned
-                            ? "Client signé · attente admin"
-                            : "En attente des deux signatures";
-                      const openContractPdf = () => setPdfPreview({
-                        url: `/api/contracts/${c.id}/pdf`,
-                        title: `Contrat ${c.contractNumber}`,
-                        documentNumber: c.contractNumber,
-                        downloadName: `contrat-${c.contractNumber}`,
-                        entityType: "contract",
-                        entityId: c.id,
-                        status: c.status,
-                        isAdminSigned: adminSigned,
-                      });
-                      return (
-                        <EntityRow
-                          key={c.id}
-                          ref1={c.contractNumber}
-                          secondary={sigStatus}
-                          status={c.status === "signed" ? "signed" : adminSigned ? "admin_signed" : clientSigned ? "client_signed" : "pending"}
-                          onClick={() => openEntity("contract", c.id)}
-                          actions={[
-                            ...(c.status === "pending" && !adminSigned ? [{
-                              label: "Signer admin",
-                              icon: <PenTool className="h-3.5 w-3.5" />,
-                              onClick: openContractPdf,
-                            }] : []),
-                            {
-                              label: "Voir PDF",
-                              icon: <ExternalLink className="h-3.5 w-3.5" />,
-                              onClick: openContractPdf,
-                            },
-                          ]}
-                          busy={busy}
-                        />
-                      );
-                    })
-                  )}
-                </TabsContent>
-              </Tabs>
+              <ClientTabs
+                client={client}
+                busy={busy}
+                router={router}
+                openEdit={openEdit}
+                openEntity={openEntity}
+                acceptQuote={acceptQuote}
+                markPaid={markPaid}
+                setPdfPreview={setPdfPreview}
+              />
             </div>
           </>
         )}
@@ -1328,6 +1187,389 @@ function FormSection({ title, icon, children }: { title: string; icon: React.Rea
       <div className="space-y-3 pt-1">
         {children}
       </div>
+    </div>
+  );
+}
+
+// ─── ClientTabs : 9 onglets thematiques ──────────────────
+type AuditEvent = {
+  id: string; source: string; type: string; label: string;
+  ipAddress: string | null; createdAt: string;
+};
+
+function ClientTabs({
+  client, busy, router, openEdit, openEntity, acceptQuote, markPaid, setPdfPreview,
+}: {
+  client: ClientFull;
+  busy: boolean;
+  router: ReturnType<typeof useRouter>;
+  openEdit: () => void;
+  openEntity: (type: "client" | "mandate" | "quote" | "invoice" | "contract" | "appointment", id: number) => void;
+  acceptQuote: (id: number, num: string) => void;
+  markPaid: (id: number, num: string) => void;
+  setPdfPreview: (p: { url: string; title: string; documentNumber?: string; downloadName?: string; entityType?: "quote" | "invoice" | "contract"; entityId?: number; status?: string; isAdminSigned?: boolean }) => void;
+}) {
+  const [tab, setTab] = useState("identite");
+  const [activity, setActivity] = useState<AuditEvent[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+
+  // Fetch activity events lazily quand on ouvre l'onglet
+  useEffect(() => {
+    if (tab !== "activite") return;
+    if (activity.length > 0) return;
+    setActivityLoading(true);
+    fetch(`/api/audit-trail?clientId=${client.id}&limit=100`)
+      .then((r) => r.ok ? r.json() : { events: [] })
+      .then((d) => setActivity(d.events ?? []))
+      .finally(() => setActivityLoading(false));
+  }, [tab, client.id, activity.length]);
+
+  const totalSpent = Number(client.totalSpentTtc ?? 0);
+  const openBalance = Number(client.openBalanceTtc ?? 0);
+  const totalInvoicesAmount = client.invoices.reduce((s, i) => s + Number(i.amountTtc ?? 0), 0);
+  const unpaidAmount = client.invoices
+    .filter((i) => i.status === "unpaid" || i.status === "overdue")
+    .reduce((s, i) => s + Number(i.amountTtc ?? 0), 0);
+
+  return (
+    <Tabs value={tab} onValueChange={setTab}>
+      <TabsList className="grid w-full grid-cols-3 sm:grid-cols-9 h-auto gap-1 bg-muted p-1">
+        <TabsTrigger value="identite" className="text-[11px] px-2 py-1.5">Identité</TabsTrigger>
+        <TabsTrigger value="contact" className="text-[11px] px-2 py-1.5">Contact</TabsTrigger>
+        <TabsTrigger value="business" className="text-[11px] px-2 py-1.5">Business</TabsTrigger>
+        <TabsTrigger value="finance" className="text-[11px] px-2 py-1.5">Finance</TabsTrigger>
+        <TabsTrigger value="activite" className="text-[11px] px-2 py-1.5">Activité</TabsTrigger>
+        <TabsTrigger value="documents" className="text-[11px] px-2 py-1.5">Documents</TabsTrigger>
+        <TabsTrigger value="comm" className="text-[11px] px-2 py-1.5">Comm.</TabsTrigger>
+        <TabsTrigger value="legal" className="text-[11px] px-2 py-1.5">Légal</TabsTrigger>
+        <TabsTrigger value="equipe" className="text-[11px] px-2 py-1.5">Équipe</TabsTrigger>
+      </TabsList>
+
+      {/* 1. Identité */}
+      <TabsContent value="identite" className="space-y-3 mt-4">
+        <div className="flex justify-end">
+          <Button size="sm" variant="outline" onClick={openEdit}>
+            <Pencil className="h-3.5 w-3.5 mr-1.5" />Modifier
+          </Button>
+        </div>
+        <InfoRow icon={Mail} label="Courriel" value={client.email} />
+        <InfoRow icon={Briefcase} label="Poste" value={client.position ?? "—"} />
+        <InfoRow icon={Calendar} label="Date de naissance" value={client.birthdate ? formatDate(new Date(client.birthdate)) : "—"} />
+        <InfoRow icon={Globe} label="Langue" value={client.locale ?? "fr-CA"} />
+        <InfoRow icon={Clock} label="Fuseau horaire" value={client.timezone ?? "America/Montreal"} />
+        <InfoRow icon={Calendar} label="Compte créé" value={formatDate(new Date(client.createdAt))} />
+        <InfoRow icon={Clock} label="Dernière connexion" value={client.lastLogin ? formatDate(new Date(client.lastLogin)) : "Jamais"} />
+        {client.internalNotes && (
+          <div className="pt-2">
+            <p className="text-xs text-muted-foreground mb-2">Notes internes (admin)</p>
+            <div className="p-3 rounded-md bg-amber-50 border border-amber-200 text-xs whitespace-pre-wrap">
+              {client.internalNotes}
+            </div>
+          </div>
+        )}
+      </TabsContent>
+
+      {/* 2. Contact */}
+      <TabsContent value="contact" className="space-y-3 mt-4">
+        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Contacts</p>
+        <InfoRow icon={Mail} label="Courriel principal" value={client.email} />
+        <InfoRow icon={Phone} label="Téléphone principal" value={client.phone ?? "—"} />
+        <InfoRow icon={Phone} label="Mobile" value={client.mobilePhone ?? "—"} />
+        <InfoRow icon={Phone} label="Bureau" value={client.workPhone ?? "—"} />
+        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Adresse</p>
+        <InfoRow
+          icon={MapPin}
+          label="Adresse"
+          value={[client.address, client.city, client.province, client.postalCode, client.country].filter(Boolean).join(", ") || "—"}
+        />
+        {client.billingAddress && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Adresse facturation</p>
+            <pre className="text-xs bg-muted/40 p-2 rounded">{JSON.stringify(client.billingAddress, null, 2)}</pre>
+          </div>
+        )}
+      </TabsContent>
+
+      {/* 3. Business */}
+      <TabsContent value="business" className="space-y-3 mt-4">
+        <InfoRow icon={Building2} label="Entreprise" value={client.companyName ?? "—"} />
+        <InfoRow icon={Briefcase} label="Secteur" value={client.sector ?? client.industry ?? "—"} />
+        <InfoRow icon={Users} label="Taille" value={client.businessSize ?? "—"} />
+        <InfoRow icon={Users} label="Employés" value={client.employeeCount != null ? String(client.employeeCount) : "—"} />
+        <InfoRow icon={DollarSign} label="Revenu annuel" value={client.annualRevenue ?? "—"} />
+        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Taxes</p>
+        <InfoRow icon={Receipt} label="N° TPS" value={client.taxNumberTps ?? "—"} />
+        <InfoRow icon={Receipt} label="N° TVQ" value={client.taxNumberTvq ?? "—"} />
+        <InfoRow icon={CheckCircle2} label="Exempt de taxes" value={client.taxExempt ? "Oui" : "Non"} />
+        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Acquisition</p>
+        <InfoRow icon={Users} label="Source" value={client.leadSource ?? "—"} />
+        {client.technologies && (
+          <div className="pt-2">
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Technologies</p>
+            <div className="flex flex-wrap gap-1">
+              {client.technologies.split(",").map((t, i) => (
+                <Badge key={i} variant="secondary" className="text-[10px]">{t.trim()}</Badge>
+              ))}
+            </div>
+          </div>
+        )}
+      </TabsContent>
+
+      {/* 4. Finance */}
+      <TabsContent value="finance" className="space-y-3 mt-4">
+        <div className="grid grid-cols-3 gap-2">
+          <FinanceBox label="Total dépensé" value={formatCurrency(totalSpent || totalInvoicesAmount)} accent="text-emerald-600" />
+          <FinanceBox label="Solde ouvert" value={formatCurrency(openBalance || unpaidAmount)} accent={openBalance > 0 || unpaidAmount > 0 ? "text-amber-600" : "text-muted-foreground"} />
+          <FinanceBox label="LTV" value={formatCurrency(totalSpent || totalInvoicesAmount)} accent="text-[#0F2D52]" />
+        </div>
+        <div className="grid grid-cols-2 gap-2 pt-2">
+          <InfoRow icon={CreditCard} label="Mode paiement préféré" value={client.preferredPaymentMethod ?? "—"} />
+          <InfoRow icon={Calendar} label="Conditions paiement" value={client.creditTerms ?? "net_30"} />
+          <InfoRow icon={DollarSign} label="Devise" value={client.currencyPreference ?? "CAD"} />
+          <InfoRow icon={Receipt} label="Tier remise" value={client.discountTier ?? "Standard"} />
+        </div>
+
+        {client.mandates.length > 0 && (
+          <div className="pt-3">
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Mandats ({client.mandates.length})</p>
+            {client.mandates.slice(0, 5).map((m) => (
+              <button key={m.id} type="button" onClick={() => openEntity("mandate", m.id)}
+                className="w-full text-left p-2 rounded-lg border bg-card hover:border-primary mb-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium truncate">{m.title}</span>
+                  <StatusBadge status={m.status} />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {client.quotes.length > 0 && (
+          <div className="pt-3">
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Devis ({client.quotes.length})</p>
+            {client.quotes.slice(0, 5).map((q) => (
+              <EntityRow key={q.id} ref1={q.quoteNumber} title={q.title}
+                amount={Number(q.amountTtc)} status={q.status}
+                onClick={() => openEntity("quote", q.id)}
+                actions={[
+                  ...(q.status === "pending" ? [{ label: "Marquer accepté", icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => acceptQuote(q.id, q.quoteNumber) }] : []),
+                  { label: "Voir PDF", icon: <ExternalLink className="h-3.5 w-3.5" />, onClick: () => setPdfPreview({ url: `/api/quotes/${q.id}/pdf`, title: q.title, documentNumber: q.quoteNumber, downloadName: `devis-${q.quoteNumber}`, entityType: "quote", entityId: q.id, status: q.status }) },
+                ]}
+                busy={busy} />
+            ))}
+          </div>
+        )}
+
+        {client.invoices.length > 0 && (
+          <div className="pt-3">
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Factures ({client.invoices.length})</p>
+            {client.invoices.slice(0, 5).map((i) => (
+              <EntityRow key={i.id} ref1={i.invoiceNumber}
+                secondary={i.dueDate ? `Échéance ${formatDate(i.dueDate)}` : undefined}
+                amount={Number(i.amountTtc)} status={i.status} alert={i.status === "overdue"}
+                onClick={() => openEntity("invoice", i.id)}
+                actions={[
+                  ...(i.status === "unpaid" || i.status === "overdue" ? [{ label: "Marquer payée", icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => markPaid(i.id, i.invoiceNumber) }] : []),
+                  { label: "Voir PDF", icon: <ExternalLink className="h-3.5 w-3.5" />, onClick: () => setPdfPreview({ url: `/api/invoices/${i.id}/pdf`, title: `Facture ${i.invoiceNumber}`, documentNumber: i.invoiceNumber, downloadName: `facture-${i.invoiceNumber}`, entityType: "invoice", entityId: i.id, status: i.status }) },
+                ]}
+                busy={busy} />
+            ))}
+          </div>
+        )}
+
+        {(client.payments?.length ?? 0) > 0 && (
+          <div className="pt-3">
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Paiements ({client.payments!.length})</p>
+            {client.payments!.slice(0, 5).map((p) => (
+              <div key={p.id} className="flex items-center justify-between p-2 rounded-md border bg-card text-xs mb-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CreditCard className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-medium">{formatCurrency(Number(p.amount))}</p>
+                    <p className="text-[10px] text-muted-foreground">{p.paymentMethod ?? "—"} · {p.paidAt ? formatDate(p.paidAt) : formatDate(p.createdAt)}</p>
+                  </div>
+                </div>
+                <StatusBadge status={p.status} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {(client.refunds?.length ?? 0) > 0 && (
+          <div className="pt-3">
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Remboursements ({client.refunds!.length})</p>
+            {client.refunds!.slice(0, 5).map((r) => (
+              <div key={r.id} className="flex items-center justify-between p-2 rounded-md border bg-card text-xs mb-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <RotateCcw className="h-3.5 w-3.5 text-red-600 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-medium">-{formatCurrency(Number(r.amount))}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{r.reason} · {r.processedAt ? formatDate(r.processedAt) : formatDate(r.createdAt)}</p>
+                  </div>
+                </div>
+                <StatusBadge status={r.status} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {(client.disputes?.length ?? 0) > 0 && (
+          <div className="pt-3">
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Litiges ({client.disputes!.length})</p>
+            {client.disputes!.slice(0, 5).map((d) => (
+              <div key={d.id} className="flex items-center justify-between p-2 rounded-md border bg-card text-xs mb-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <AlertCircle className={cn("h-3.5 w-3.5 shrink-0", d.priority === "urgent" || d.priority === "high" ? "text-red-600" : "text-amber-600")} />
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{d.title}</p>
+                    <p className="text-[10px] text-muted-foreground">{d.type} · {d.amountDisputed ? formatCurrency(Number(d.amountDisputed)) : "—"}</p>
+                  </div>
+                </div>
+                <StatusBadge status={d.status} />
+              </div>
+            ))}
+          </div>
+        )}
+      </TabsContent>
+
+      {/* 5. Activité (timeline event-sourcing) */}
+      <TabsContent value="activite" className="space-y-2 mt-4">
+        {activityLoading ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Chargement…</p>
+        ) : activity.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Aucun événement enregistré pour ce client</p>
+        ) : (
+          <div className="space-y-1">
+            {activity.map((e) => (
+              <div key={e.id} className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/40 text-xs">
+                <div className="h-6 w-6 rounded-full bg-[#0F2D52]/10 flex items-center justify-center shrink-0 text-[9px] uppercase font-bold text-[#0F2D52]">
+                  {e.source.slice(0, 2)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{e.label}</p>
+                  <p className="text-[10px] text-muted-foreground flex items-center gap-2 flex-wrap">
+                    <span className="font-mono uppercase">{e.source}.{e.type}</span>
+                    {e.ipAddress && <span className="font-mono">{e.ipAddress}</span>}
+                    <span>{new Date(e.createdAt).toLocaleString("fr-CA")}</span>
+                  </p>
+                </div>
+              </div>
+            ))}
+            <Button variant="link" size="sm" onClick={() => router.push(`/admin/audit-trail?clientId=${client.id}`)} className="w-full">
+              Voir l&apos;audit trail complet →
+            </Button>
+          </div>
+        )}
+      </TabsContent>
+
+      {/* 6. Documents */}
+      <TabsContent value="documents" className="space-y-2 mt-4">
+        {(client.documents?.length ?? 0) === 0 ? (
+          <EmptyState text="Aucun document" actionLabel="Téléverser" actionHref={`/admin/documents?newFor=${client.id}`} />
+        ) : (
+          <>
+            {client.documents!.slice(0, 30).map((d) => (
+              <div key={d.id} className="flex items-center justify-between p-2 rounded-md border bg-card text-xs mb-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{d.title}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {d.category ?? "—"} · {d.fileSize ? `${(d.fileSize / 1024).toFixed(1)} Ko` : ""} · {formatDate(d.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                {!d.isRead && <Badge variant="destructive" className="text-[9px]">Non lu</Badge>}
+              </div>
+            ))}
+            <Button variant="link" size="sm" onClick={() => router.push(`/admin/documents`)} className="w-full">
+              Voir tous les documents →
+            </Button>
+          </>
+        )}
+      </TabsContent>
+
+      {/* 7. Communications */}
+      <TabsContent value="comm" className="space-y-3 mt-4">
+        <div className="grid grid-cols-2 gap-2">
+          <FinanceBox label="Messages" value={String(client._count?.messages ?? 0)} accent="text-blue-600" />
+          <FinanceBox label="Rendez-vous" value={String(client._count?.appointments ?? 0)} accent="text-violet-600" />
+        </div>
+        <Button variant="outline" className="w-full" onClick={() => router.push(`/admin/messages?clientId=${client.id}`)}>
+          <MessageSquare className="h-3.5 w-3.5 mr-1.5" />Ouvrir la conversation
+        </Button>
+        <Button variant="outline" className="w-full" onClick={() => router.push(`/admin/calendar?clientId=${client.id}`)}>
+          <Calendar className="h-3.5 w-3.5 mr-1.5" />Voir les rendez-vous
+        </Button>
+      </TabsContent>
+
+      {/* 8. Légal / Compliance */}
+      <TabsContent value="legal" className="space-y-3 mt-4">
+        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Consentements</p>
+        <InfoRow icon={CheckCircle2} label="Conditions générales" value={client.termsAcceptedAt ? `${formatDate(new Date(client.termsAcceptedAt))} (v${client.termsAcceptedVersion ?? "?"})` : "Non accepté"} />
+        <InfoRow icon={CheckCircle2} label="Politique vie privée" value={client.privacyAcceptedAt ? formatDate(new Date(client.privacyAcceptedAt)) : "Non accepté"} />
+        <InfoRow icon={CheckCircle2} label="Marketing" value={client.marketingConsent ? `Oui (${client.marketingConsentAt ? formatDate(new Date(client.marketingConsentAt)) : "—"})` : "Refusé"} />
+        {client.termsAcceptedIp && <InfoRow icon={Globe} label="IP acceptation" value={client.termsAcceptedIp} />}
+
+        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Vérification identité</p>
+        <InfoRow icon={CheckCircle2} label="Vérifié le" value={client.identityVerifiedAt ? formatDate(new Date(client.identityVerifiedAt)) : "Non vérifié"} />
+        {client.identityVerifiedBy && <InfoRow icon={ShieldCheck} label="Vérifié par" value={client.identityVerifiedBy} />}
+
+        <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Signatures</p>
+        {client.contracts.filter((c) => c.adminSignatureData || c.clientSignatureData).length === 0 ? (
+          <p className="text-xs text-muted-foreground">Aucune signature électronique enregistrée</p>
+        ) : (
+          client.contracts
+            .filter((c) => c.adminSignatureData || c.clientSignatureData)
+            .map((c) => (
+              <div key={c.id} className="flex items-center justify-between p-2 rounded-md border bg-card text-xs">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{c.contractNumber} — {c.title}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {c.adminSignatureData && c.clientSignatureData ? "Signé par les deux parties" :
+                     c.adminSignatureData ? "Admin signé" : "Client signé"}
+                    {c.signedAt && ` · ${formatDate(new Date(c.signedAt))}`}
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" className="h-7" onClick={() => openEntity("contract", c.id)}>
+                  Voir
+                </Button>
+              </div>
+            ))
+        )}
+      </TabsContent>
+
+      {/* 9. Équipe */}
+      <TabsContent value="equipe" className="space-y-2 mt-4">
+        {(client.teamMembers?.length ?? 0) === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Aucun membre d&apos;équipe — ce client est seul utilisateur</p>
+        ) : (
+          client.teamMembers!.map((m) => (
+            <div key={m.id} className="p-3 rounded-lg border bg-card">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{m.fullName}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{m.email}</p>
+                </div>
+                <Badge variant={m.role === "owner" ? "default" : "secondary"} className="text-[10px] capitalize">{m.role}</Badge>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {m.acceptedAt ? `Membre depuis ${formatDate(m.acceptedAt)}` : `Invité ${formatDate(m.invitedAt)}`}
+                {m.lastLogin && ` · Dernière connexion ${formatDate(m.lastLogin)}`}
+              </p>
+            </div>
+          ))
+        )}
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function FinanceBox({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div className="rounded-lg border bg-card p-2 text-center">
+      <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
+      <p className={cn("text-sm font-bold mt-0.5 tabular-nums", accent ?? "")}>{value}</p>
     </div>
   );
 }
