@@ -37,7 +37,6 @@ export default async function PaymentsPage() {
   let totalFees = 0;
   let reconciledCount = 0;
   let unreconciledCount = 0;
-  let reconciledTotal = 0;
   for (const p of payments) {
     const t = (p.type ?? "charge").toLowerCase();
     if (!byType[t]) byType[t] = { count: 0, total: 0 };
@@ -45,12 +44,8 @@ export default async function PaymentsPage() {
     byType[t].total += Number(p.amountCad ?? p.amount);
     totalFees += Number(p.processingFee ?? 0);
     totalNet += Number(p.netAmount ?? p.amountCad ?? p.amount);
-    if (p.reconciledAt) {
-      reconciledCount += 1;
-      reconciledTotal += Number(p.amountCad ?? p.amount);
-    } else {
-      unreconciledCount += 1;
-    }
+    if (p.reconciledAt) reconciledCount += 1;
+    else unreconciledCount += 1;
   }
 
   // Listes pour filtres
@@ -131,7 +126,6 @@ export default async function PaymentsPage() {
         byType,
         reconciledCount,
         unreconciledCount,
-        reconciledTotal,
       }}
     />
   );

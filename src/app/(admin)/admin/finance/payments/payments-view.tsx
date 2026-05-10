@@ -68,7 +68,6 @@ type Kpis = {
   byType: Record<string, { count: number; total: number }>;
   reconciledCount: number;
   unreconciledCount: number;
-  reconciledTotal: number;
 };
 
 type AccountantOption = { id: number; name: string };
@@ -420,7 +419,6 @@ export function PaymentsView({
 
   const bulkReconcile = () => callBulk({ action: "reconcile" }, "Confirmés reçus");
   const bulkUnreconcile = () => callBulk({ action: "unreconcile" }, "Confirmations retirées");
-  const bulkMarkExported = (fmt: string) => callBulk({ action: "mark_exported", exportFormat: fmt }, `Marqués exportés (${fmt})`);
   const bulkAssign = () => {
     if (!assignAccountantId) return;
     callBulk({ action: "assign_accountant", accountantId: Number(assignAccountantId) }, "Comptable assigné");
@@ -965,10 +963,10 @@ export function PaymentsView({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => { handleExport("csv"); bulkMarkExported("csv"); }}>CSV simple</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { handleExport("quickbooks"); bulkMarkExported("quickbooks"); }}>QuickBooks</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { handleExport("sage"); bulkMarkExported("sage"); }}>Sage</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { handleExport("acomba"); bulkMarkExported("acomba"); }}>Acomba</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("csv")}>CSV simple</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("quickbooks")}>QuickBooks</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("sage")}>Sage</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("acomba")}>Acomba</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button size="sm" variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 h-7 text-xs" onClick={() => setSelectedIds(new Set())}>
