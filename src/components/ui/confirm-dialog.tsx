@@ -19,7 +19,9 @@ export function ConfirmDialog({
   cancelLabel = "Annuler",
   variant = "destructive",
   loading = false,
+  disableConfirm = false,
   onConfirm,
+  children,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -29,7 +31,9 @@ export function ConfirmDialog({
   cancelLabel?: string;
   variant?: "destructive" | "default";
   loading?: boolean;
+  disableConfirm?: boolean;
   onConfirm: () => void;
+  children?: React.ReactNode;
 }) {
   const isDestructive = variant === "destructive";
 
@@ -63,6 +67,9 @@ export function ConfirmDialog({
           </div>
         </div>
 
+        {/* Contenu custom optionnel (form champs additionnels) */}
+        {children && <div className="px-6 py-4 bg-card border-b">{children}</div>}
+
         {/* Footer */}
         <div className="px-6 py-4 bg-card flex items-center justify-end gap-2">
           <Button
@@ -80,7 +87,7 @@ export function ConfirmDialog({
                 : "bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             )}
             onClick={onConfirm}
-            disabled={loading}
+            disabled={loading || disableConfirm}
           >
             {loading ? "En cours..." : confirmLabel}
           </Button>

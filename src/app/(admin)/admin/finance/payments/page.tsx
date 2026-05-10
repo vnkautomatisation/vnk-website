@@ -5,19 +5,30 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Tous les paiements" };
 
 export default async function PaymentsPage() {
-  const payments = await prisma.payment.findMany({
-    orderBy: { paidAt: "desc" },
-    take: 500,
-    include: {
-      client: { select: { id: true, fullName: true, companyName: true, country: true } },
-      invoice: { select: { id: true, invoiceNumber: true } },
-    },
-  });
+  const [payments, accountants] = await Promise.all([
+    prisma.payment.findMany({
+      orderBy: { paidAt: "desc" },
+      take: 1000,
+      include: {
+        client: { select: { id: true, fullName: true, companyName: true, country: true } },
+        invoice: { select: { id: true, invoiceNumber: true } },
+        assignedAccountant: { select: { id: true, fullName: true, email: true } },
+      },
+    }),
+    prisma.admin.findMany({
+      where: { isActive: true },
+      select: { id: true, fullName: true, email: true },
+      orderBy: { fullName: "asc" },
+    }),
+  ]);
 
-  // Agrégats par type pour les KPI
+  // Agrégats par type + réconciliation
   const byType: Record<string, { count: number; total: number }> = {};
   let totalNet = 0;
   let totalFees = 0;
+  let reconciledCount = 0;
+  let unreconciledCount = 0;
+  let reconciledTotal = 0;
   for (const p of payments) {
     const t = (p.type ?? "charge").toLowerCase();
     if (!byType[t]) byType[t] = { count: 0, total: 0 };
@@ -25,7 +36,21 @@ export default async function PaymentsPage() {
     byType[t].total += Number(p.amountCad ?? p.amount);
     totalFees += Number(p.processingFee ?? 0);
     totalNet += Number(p.netAmount ?? p.amountCad ?? p.amount);
+    if (p.reconciledAt) {
+      reconciledCount += 1;
+      reconciledTotal += Number(p.amountCad ?? p.amount);
+    } else {
+      unreconciledCount += 1;
+    }
   }
+
+  // Listes pour filtres
+  const methodSet = new Set<string>();
+  const statusSet = new Set<string>();
+  payments.forEach((p) => {
+    if (p.paymentMethod) methodSet.add(p.paymentMethod);
+    if (p.status) statusSet.add(p.status);
+  });
 
   const data = payments.map((p) => ({
     id: p.id,
@@ -57,16 +82,31 @@ export default async function PaymentsPage() {
     stripePayoutId: p.stripePayoutId,
     stripeBalanceTxId: p.stripeBalanceTxId,
     stripeReceiptUrl: p.stripeReceiptUrl,
+    // Workflow comptable
+    reconciledAt: p.reconciledAt?.toISOString() ?? null,
+    reconciledBy: p.reconciledBy,
+    accountingCategory: p.accountingCategory,
+    assignedAccountantId: p.assignedAccountantId,
+    assignedAccountantName: p.assignedAccountant?.fullName ?? p.assignedAccountant?.email ?? null,
+    accountantNotes: p.accountantNotes,
+    exportedAt: p.exportedAt?.toISOString() ?? null,
+    exportFormat: p.exportFormat,
   }));
 
   return (
     <PaymentsView
       payments={data}
+      accountants={accountants.map((a) => ({ id: a.id, name: a.fullName ?? a.email }))}
+      methodList={Array.from(methodSet).sort()}
+      statusList={Array.from(statusSet).sort()}
       kpis={{
         total: data.length,
         totalNet,
         totalFees,
         byType,
+        reconciledCount,
+        unreconciledCount,
+        reconciledTotal,
       }}
     />
   );
