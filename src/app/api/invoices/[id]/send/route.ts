@@ -48,7 +48,7 @@ export async function POST(
   await prisma.message.create({
     data: {
       clientId: invoice.clientId,
-      sender: "admin",
+      sender: "vnk",
       content: `Nouvelle facture disponible : ${invoice.invoiceNumber} — ${Number(invoice.amountTtc).toFixed(2)} $ TTC. Réglez via votre portail (/portail/factures).`,
       channel: "chat",
       isRead: false,

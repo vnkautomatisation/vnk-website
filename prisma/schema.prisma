@@ -76,6 +76,12 @@ model Client {
   twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
   twoFactorSecret  String? @map("two_factor_secret")
   lastLogin      DateTime? @map("last_login")
+  lastSeenAt     DateTime? @map("last_seen_at") // online indicator
+  // Conversation meta (admin perspective)
+  chatPinned     Boolean   @default(false) @map("chat_pinned")
+  chatArchivedAt DateTime? @map("chat_archived_at")
+  chatSnoozedUntil DateTime? @map("chat_snoozed_until")
+  chatLabels     Json?     @map("chat_labels") // ex: ["urgent","suivi","facturer"]
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
 
@@ -424,17 +430,43 @@ model Message {
   clientId        Int       @map("client_id")
   sender          String    // 'client' | 'vnk'
   content         String?
-  attachmentData  Json?     @map("attachment_data")
+  attachmentData  Json?     @map("attachment_data") // legacy single attachment (lecture seule)
+  attachmentsData Json?     @map("attachments_data") // array MessageAttachment (preferred)
+  reactions       Json?     // { "👍": ["vnk", "client"], "❤️": ["vnk"] }
+  replyToId       Int?      @map("reply_to_id")
+  isInternalNote  Boolean   @default(false) @map("is_internal_note")
+  editedAt        DateTime? @map("edited_at")
+  deletedAt       DateTime? @map("deleted_at")
+  scheduledFor    DateTime? @map("scheduled_for")
   isRead          Boolean   @default(false) @map("is_read")
   channel         String    @default("chat")
   requestStatus   String?   @map("request_status") // null | new | in_progress | converted | closed
+  emailMessageId  String?   @unique @map("email_message_id")
+  emailOpenedAt   DateTime? @map("email_opened_at")
   createdAt       DateTime  @default(now()) @map("created_at")
 
   client          Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  replyTo         Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies         Message[] @relation("MessageReplies")
 
   @@index([clientId])
   @@index([clientId, isRead])
+  @@index([clientId, deletedAt])
   @@map("messages")
+}
+
+model MessageTemplate {
+  id          Int      @id @default(autoincrement())
+  shortcut    String   @unique // ex: "devis_pret" → tape /devis_pret
+  title       String
+  body        String
+  category    String?  // greetings | followup | billing | other
+  usageCount  Int      @default(0) @map("usage_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("message_templates")
 }
 
 model ContactMessage {

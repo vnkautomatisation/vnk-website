@@ -50,7 +50,7 @@ export async function POST(
   await prisma.message.create({
     data: {
       clientId: contract.clientId,
-      sender: "admin",
+      sender: "vnk",
       content: `Nouveau contrat à signer : ${contract.contractNumber}${contract.amountTtc ? ` — ${Number(contract.amountTtc).toFixed(2)} $ TTC` : ""}. Consultez et signez via votre portail (/portail/contrats).`,
       channel: "chat",
       isRead: false,

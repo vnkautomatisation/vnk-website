@@ -95,7 +95,7 @@ export async function GET(req: Request) {
       await prisma.message.create({
         data: {
           clientId: inv.clientId,
-          sender: "admin",
+          sender: "vnk",
           content: `${stage} — Facture ${inv.invoiceNumber} de ${Number(inv.amountTtc).toFixed(2)} $ TTC échue depuis le ${dueLabel}. Merci de procéder au règlement via votre portail (/portail/factures).`,
           channel: "chat",
           isRead: false,

@@ -16,6 +16,7 @@ import {
   FileText,
   Receipt,
   MessageSquare,
+  Zap,
   FolderOpen,
   FileSignature,
   AlertCircle,
@@ -64,6 +65,7 @@ const GROUPS: NavGroup[] = [
     key: "communication_group",
     items: [
       { key: "messages", icon: MessageSquare, href: "/admin/messages" },
+      { key: "message_templates", icon: Zap, href: "/admin/message-templates" },
       { key: "documents", icon: FolderOpen, href: "/admin/documents" },
     ],
   },

@@ -1,21 +1,37 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
-  MessageSquare,
-  Search,
-  Send,
-  CheckCheck,
-  Mail,
-  MessageCircle,
-  User,
+  MessageSquare, Search, Send, CheckCheck, Mail, MessageCircle, ArrowLeft,
+  Inbox, CheckSquare, Calendar, Users, Paperclip, X, Image as ImageIcon, FileText,
+  Reply, Pencil, Trash2, MoreVertical, SmilePlus, StickyNote, CornerUpLeft,
+  Pin, Archive, BellOff, Clock, AtSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { StatCard } from "@/components/admin/stat-card";
+import { EmojiPicker } from "@/components/messages/emoji-picker";
+import { VoiceRecorderButton, type VoiceAttachment } from "@/components/messages/voice-recorder-button";
+import { MessageAttachmentDisplay, type MessageAttachment } from "@/components/messages/message-attachment-display";
+import { OnlineIndicator } from "@/components/messages/online-indicator";
+import { TemplatePicker, type Template } from "@/components/messages/template-picker";
+import { ScheduleSendDialog } from "@/components/messages/schedule-send-dialog";
+import { ConversationMetaActions } from "@/components/messages/conversation-meta-actions";
+import { ConversationTabsBar, ConversationFilesTab, ConversationLinksTab, type ConvTab, type MsgLite } from "@/components/messages/conversation-tabs";
+import { useMessageStream } from "@/components/messages/use-message-stream";
+import { NotificationToggle, playMessageSound, showDesktopNotification } from "@/components/messages/notification-toggle";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirm } from "@/hooks/use-confirm";
+import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { cn, initials } from "@/lib/utils";
 
 type Conversation = {
@@ -23,14 +39,31 @@ type Conversation = {
   fullName: string;
   companyName: string | null;
   email: string;
+  lastSeenAt: string | null;
+  chatPinned: boolean;
+  chatArchivedAt: string | null;
+  chatSnoozedUntil: string | null;
+  chatLabels: string[];
   lastMessage: {
     content: string | null;
     sender: string;
     channel: string;
     createdAt: string;
+    isInternalNote: boolean;
   } | null;
   unreadCount: number;
 };
+
+type ReplyToSummary = {
+  id: number;
+  sender: string;
+  content: string | null;
+  attachmentsData: MessageAttachment[] | null;
+  attachmentData: MessageAttachment | null;
+  deletedAt: string | null;
+};
+
+type ReactionsMap = Record<string, string[]>;
 
 type Message = {
   id: number;
@@ -39,8 +72,23 @@ type Message = {
   content: string | null;
   channel: string;
   isRead: boolean;
+  isInternalNote: boolean;
   createdAt: string;
+  editedAt: string | null;
+  deletedAt: string | null;
+  attachmentData: MessageAttachment | null;
+  attachmentsData: MessageAttachment[] | null;
+  reactions: ReactionsMap | null;
+  replyToId: number | null;
+  replyTo: ReplyToSummary | null;
+  scheduledFor: string | null;
 };
+
+const MAX_UPLOAD_MB = 10;
+const MAX_ATTACHMENTS = 10;
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "🙏", "🔥"];
+
+type FilterMode = "all" | "unread" | "chat" | "email" | "archived" | "snoozed";
 
 const CHANNEL_BADGE: Record<string, { label: string; color: string }> = {
   chat: { label: "Chat", color: "bg-emerald-100 text-emerald-700" },
@@ -48,11 +96,20 @@ const CHANNEL_BADGE: Record<string, { label: string; color: string }> = {
   both: { label: "Chat+Email", color: "bg-violet-100 text-violet-700" },
 };
 
+const FILTER_TABS: { key: FilterMode; label: string }[] = [
+  { key: "all", label: "Toutes" },
+  { key: "unread", label: "Non lus" },
+  { key: "chat", label: "Chat" },
+  { key: "email", label: "Email" },
+  { key: "archived", label: "Archivées" },
+  { key: "snoozed", label: "Snoozées" },
+];
+
 function formatTime(iso: string): string {
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "A l'instant";
+  if (min < 1) return "À l'instant";
   if (min < 60) return `${min}min`;
   const h = Math.floor(min / 60);
   if (h < 24) return `${h}h`;
@@ -67,13 +124,55 @@ function formatMsgDate(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long" });
 }
 
-export function MessagesView({ conversations }: { conversations: Conversation[] }) {
+function getAttachments(msg: Message | ReplyToSummary): MessageAttachment[] {
+  if (msg.attachmentsData && msg.attachmentsData.length > 0) return msg.attachmentsData;
+  if (msg.attachmentData) return [msg.attachmentData];
+  return [];
+}
+
+function summarizeForReply(m: ReplyToSummary): string {
+  if (m.deletedAt) return "[Message supprimé]";
+  if (m.content) return m.content;
+  const atts = m.attachmentsData ?? (m.attachmentData ? [m.attachmentData] : []);
+  if (atts.length > 0) {
+    const a = atts[0];
+    const more = atts.length > 1 ? ` +${atts.length - 1}` : "";
+    return `📎 ${a.name}${more}`;
+  }
+  return "(vide)";
+}
+
+function highlightSearch(text: string, query: string): React.ReactNode {
+  if (!query) return text;
+  const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi"));
+  return parts.map((p, i) =>
+    p.toLowerCase() === query.toLowerCase()
+      ? <mark key={i} className="bg-yellow-200 text-black rounded px-0.5">{p}</mark>
+      : <span key={i}>{p}</span>
+  );
+}
+
+function isSnoozeActive(c: Conversation): boolean {
+  return !!c.chatSnoozedUntil && new Date(c.chatSnoozedUntil) > new Date();
+}
+
+export function MessagesView({
+  conversations,
+  templates,
+  kpis,
+}: {
+  conversations: Conversation[];
+  templates: Template[];
+  kpis: { totalConversations: number; totalMessages: number; todayMessages: number; weekMessages: number; totalUnread: number };
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { open: openEntity } = useEntityPanels();
+  const { ConfirmModal } = useConfirm();
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<FilterMode>("all");
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // Auto-selection conversation depuis ?clientId=<id>
   useEffect(() => {
     const cid = searchParams.get("clientId");
     if (cid) {
@@ -86,22 +185,136 @@ export function MessagesView({ conversations }: { conversations: Conversation[] 
       }
     }
   }, [searchParams, conversations]);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [newMsg, setNewMsg] = useState("");
+  const [pendingAtts, setPendingAtts] = useState<MessageAttachment[]>([]);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [internalNote, setInternalNote] = useState(false);
   const [sending, setSending] = useState(false);
   const [channel, setChannel] = useState<"chat" | "email">("chat");
+  const [editingMsg, setEditingMsg] = useState<Message | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [deleteMsg, setDeleteMsg] = useState<Message | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [activeTab, setActiveTab] = useState<ConvTab>("messages");
+  const [threadSearchOpen, setThreadSearchOpen] = useState(false);
+  const [threadSearch, setThreadSearch] = useState("");
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [templateQuery, setTemplateQuery] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
 
-  // Filtrer conversations
-  const filtered = conversations.filter((c) =>
-    c.fullName.toLowerCase().includes(search.toLowerCase()) ||
-    c.companyName?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    let result = conversations;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter((c) =>
+        c.fullName.toLowerCase().includes(q) ||
+        c.companyName?.toLowerCase().includes(q) ||
+        c.email.toLowerCase().includes(q) ||
+        c.chatLabels.some((l) => l.toLowerCase().includes(q))
+      );
+    }
+    // Filtres mutuellement exclusifs
+    if (filter === "archived") {
+      result = result.filter((c) => !!c.chatArchivedAt);
+    } else if (filter === "snoozed") {
+      result = result.filter(isSnoozeActive);
+    } else {
+      // Par defaut on cache les archivees
+      result = result.filter((c) => !c.chatArchivedAt);
+      if (filter === "unread") result = result.filter((c) => c.unreadCount > 0);
+      else if (filter === "chat") result = result.filter((c) => c.lastMessage?.channel === "chat" || c.lastMessage?.channel === "both");
+      else if (filter === "email") result = result.filter((c) => c.lastMessage?.channel === "email" || c.lastMessage?.channel === "both");
+    }
+    return result;
+  }, [conversations, search, filter]);
 
-  // Charger messages quand on selectionne un client
+  const insertEmoji = useCallback((emoji: string) => {
+    const ta = textareaRef.current;
+    if (!ta) { setNewMsg((m) => m + emoji); return; }
+    const start = ta.selectionStart ?? newMsg.length;
+    const end = ta.selectionEnd ?? newMsg.length;
+    const next = newMsg.slice(0, start) + emoji + newMsg.slice(end);
+    setNewMsg(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(start + emoji.length, start + emoji.length);
+    });
+  }, [newMsg]);
+
+  const insertMention = useCallback(() => {
+    if (!selected) return;
+    insertEmoji(`@${selected.fullName} `);
+  }, [selected, insertEmoji]);
+
+  const addAttachmentFromFile = useCallback((file: File) => {
+    if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      toast.error(`"${file.name}" : trop volumineux (max ${MAX_UPLOAD_MB} Mo)`);
+      return;
+    }
+    setPendingAtts((prev) => {
+      if (prev.length >= MAX_ATTACHMENTS) {
+        toast.error(`Maximum ${MAX_ATTACHMENTS} pièces jointes par message`);
+        return prev;
+      }
+      return prev;
+    });
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      const isImage = file.type.startsWith("image/");
+      const isPdf = file.type === "application/pdf";
+      const isAudio = file.type.startsWith("audio/");
+      const kind: MessageAttachment["kind"] = isImage ? "image" : isPdf ? "pdf" : isAudio ? "audio" : "file";
+      const att: MessageAttachment = {
+        kind, name: file.name, mimeType: file.type || "application/octet-stream", size: file.size, dataUrl,
+      };
+      setPendingAtts((prev) => prev.length >= MAX_ATTACHMENTS ? prev : [...prev, att]);
+    };
+    reader.onerror = () => toast.error("Lecture du fichier impossible");
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleFilesSelected = useCallback((files: FileList | File[]) => {
+    Array.from(files).forEach(addAttachmentFromFile);
+  }, [addAttachmentFromFile]);
+
+  const handleVoiceRecorded = useCallback((att: VoiceAttachment) => {
+    setPendingAtts((prev) => [...prev, att]);
+  }, []);
+
+  const removePendingAtt = useCallback((idx: number) => {
+    setPendingAtts((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = Array.from(e.clipboardData?.items ?? []);
+    const filesFromPaste = items
+      .filter((it) => it.kind === "file")
+      .map((it) => it.getAsFile())
+      .filter((f): f is File => f !== null);
+    if (filesFromPaste.length > 0) {
+      e.preventDefault();
+      handleFilesSelected(filesFromPaste);
+    }
+  }, [handleFilesSelected]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      handleFilesSelected(e.dataTransfer.files);
+    }
+  }, [handleFilesSelected]);
+
   const loadMessages = useCallback(async (clientId: number) => {
     setLoadingMsgs(true);
     try {
@@ -109,49 +322,97 @@ export function MessagesView({ conversations }: { conversations: Conversation[] 
       if (res.ok) {
         const data = await res.json();
         setMessages(data.messages);
-        // Marquer comme lu
         await fetch("/api/messages/mark-read", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ clientId }),
         });
+        router.refresh();
       }
     } catch {
       toast.error("Erreur lors du chargement");
     } finally {
       setLoadingMsgs(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (selectedId) loadMessages(selectedId);
+    setReplyingTo(null);
+    setInternalNote(false);
+    setPendingAtts([]);
+    setNewMsg("");
+    setActiveTab("messages");
+    setThreadSearch("");
+    setThreadSearchOpen(false);
   }, [selectedId, loadMessages]);
 
-  // Auto-scroll en bas
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && activeTab === "messages") {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, activeTab]);
 
-  // Polling messages toutes les 5s quand conversation ouverte
+  // SSE realtime sur conversation ouverte (remplace polling 5s)
+  useMessageStream({
+    enabled: !!selectedId,
+    clientId: selectedId ?? undefined,
+    onNewMessage: (msg) => {
+      // Refetch full thread pour avoir les nouveaux + reactions/edits sur anciens
+      if (selectedId === msg.clientId) {
+        fetch(`/api/messages?clientId=${selectedId}`).then((r) => r.ok ? r.json() : null).then((d) => {
+          if (d?.messages) setMessages(d.messages);
+        });
+      }
+    },
+  });
+
+  // SSE global (sans clientId) pour notifs admin sur n'importe quelle conversation
+  useMessageStream({
+    enabled: true,
+    onNewMessage: (msg) => {
+      if (msg.sender !== "client") return;
+      const conv = conversations.find((c) => c.id === msg.clientId);
+      const name = conv?.fullName ?? "Client";
+      playMessageSound();
+      showDesktopNotification(`Message de ${name}`, msg.content?.slice(0, 80) ?? "📎 Pièce jointe", () => {
+        setSelectedId(msg.clientId);
+      });
+      router.refresh();
+    },
+  });
+
+  // Detect slash command in textarea (au debut OU apres newline)
   useEffect(() => {
-    if (!selectedId) return;
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/messages?clientId=${selectedId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setMessages(data.messages);
-        }
-      } catch { /* ignore */ }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [selectedId]);
+    const lastSlashIdx = Math.max(newMsg.lastIndexOf("\n/"), newMsg.startsWith("/") ? 0 : -1);
+    if (lastSlashIdx === -1) {
+      setTemplatePickerOpen(false);
+      return;
+    }
+    const startOffset = lastSlashIdx === 0 ? 1 : lastSlashIdx + 2;
+    const tail = newMsg.slice(startOffset);
+    if (tail.includes(" ") || tail.includes("\n")) {
+      setTemplatePickerOpen(false);
+      return;
+    }
+    setTemplatePickerOpen(true);
+    setTemplateQuery(tail);
+  }, [newMsg]);
 
-  // Envoyer message
-  const handleSend = async () => {
-    if (!newMsg.trim() || !selectedId) return;
+  const applyTemplate = useCallback(async (tpl: Template) => {
+    // Remplace le "/xxx" par le body du template
+    const lastSlashIdx = Math.max(newMsg.lastIndexOf("\n/"), newMsg.startsWith("/") ? 0 : -1);
+    if (lastSlashIdx === -1) return;
+    const before = lastSlashIdx === 0 ? "" : newMsg.slice(0, lastSlashIdx + 1);
+    setNewMsg(before + tpl.body);
+    setTemplatePickerOpen(false);
+    // Increment usage counter (fire & forget)
+    fetch(`/api/message-templates/${tpl.id}`, { method: "POST" }).catch(() => {});
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [newMsg]);
+
+  const sendInternal = async (extra: { scheduledFor?: string } = {}) => {
+    if ((!newMsg.trim() && pendingAtts.length === 0) || !selectedId || sending) return;
     setSending(true);
     try {
       const res = await fetch("/api/messages", {
@@ -159,110 +420,298 @@ export function MessagesView({ conversations }: { conversations: Conversation[] 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clientId: selectedId,
-          content: newMsg.trim(),
+          content: newMsg.trim() || undefined,
           channel,
+          attachmentsData: pendingAtts.length > 0 ? pendingAtts : undefined,
+          replyToId: replyingTo?.id,
+          isInternalNote: internalNote,
+          scheduledFor: extra.scheduledFor,
         }),
       });
       if (res.ok) {
         setNewMsg("");
+        setPendingAtts([]);
+        setReplyingTo(null);
+        setInternalNote(false);
+        if (extra.scheduledFor) toast.success("Envoi programmé");
         await loadMessages(selectedId);
-        router.refresh();
       } else {
         const data = await res.json();
         toast.error(data.error || "Erreur");
       }
     } catch {
-      toast.error("Erreur reseau");
+      toast.error("Erreur réseau");
     } finally {
       setSending(false);
     }
   };
 
-  // Grouper messages par date
-  const groupedMessages = messages.reduce<{ date: string; msgs: Message[] }[]>((acc, msg) => {
-    const date = formatMsgDate(msg.createdAt);
-    const last = acc[acc.length - 1];
-    if (last && last.date === date) {
-      last.msgs.push(msg);
-    } else {
-      acc.push({ date, msgs: [msg] });
+  const handleSend = () => sendInternal();
+  const handleSchedule = (iso: string) => { sendInternal({ scheduledFor: iso }); setScheduleOpen(false); };
+
+  const handleMarkAllRead = async () => {
+    const res = await fetch("/api/messages/mark-read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      toast.success(`${data.count ?? 0} message(s) marqué(s) lus`);
+      router.refresh();
+    } else { toast.error("Erreur"); }
+  };
+
+  const openEdit = (m: Message) => {
+    setEditingMsg(m);
+    setEditContent(m.content ?? "");
+  };
+
+  const handleEditSave = async () => {
+    if (!editingMsg) return;
+    const res = await fetch(`/api/messages/${editingMsg.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: editContent }),
+    });
+    if (res.ok) {
+      toast.success("Message modifié");
+      setEditingMsg(null);
+      if (selectedId) loadMessages(selectedId);
+    } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteMsg) return;
+    const res = await fetch(`/api/messages/${deleteMsg.id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Message supprimé");
+      setDeleteMsg(null);
+      if (selectedId) loadMessages(selectedId);
+    } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+  };
+
+  const handleToggleReaction = async (msgId: number, emoji: string) => {
+    const res = await fetch(`/api/messages/${msgId}/reactions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ emoji }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setMessages((prev) => prev.map((m) => m.id === msgId ? { ...m, reactions: data.reactions } : m));
+    } else { toast.error("Erreur"); }
+  };
+
+  // Export
+  const exportCsv = useCallback(() => {
+    if (!selected) return;
+    const rows = [
+      ["Date", "Heure", "Auteur", "Canal", "Note interne", "Contenu", "Pieces jointes"],
+      ...messages.filter((m) => !m.deletedAt).map((m) => {
+        const d = new Date(m.createdAt);
+        const atts = getAttachments(m);
+        return [
+          d.toLocaleDateString("fr-CA"),
+          d.toLocaleTimeString("fr-CA"),
+          m.sender === "vnk" ? "Admin" : "Client",
+          m.channel,
+          m.isInternalNote ? "Oui" : "Non",
+          (m.content ?? "").replace(/"/g, '""'),
+          atts.map((a) => a.name).join(" | "),
+        ];
+      }),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(";")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `conversation-${selected.fullName.replace(/\s+/g, "_")}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exporté");
+  }, [selected, messages]);
+
+  const exportPdf = useCallback(() => {
+    if (!selected) return;
+    // Open new window with print-optimized HTML
+    const w = window.open("", "_blank", "width=900,height=900");
+    if (!w) { toast.error("Bloqueur de popup ?"); return; }
+    const rows = messages.filter((m) => !m.deletedAt).map((m) => {
+      const d = new Date(m.createdAt);
+      const atts = getAttachments(m);
+      const isAdmin = m.sender === "vnk";
+      const note = m.isInternalNote ? '<span style="background:#fef3c7;color:#92400e;padding:1px 4px;border-radius:3px;font-size:9px;margin-right:4px">NOTE INTERNE</span>' : "";
+      return `
+        <div style="margin-bottom:14px;padding:10px;border-left:3px solid ${isAdmin ? "#0F2D52" : "#94a3b8"};background:${isAdmin ? "#f1f5f9" : "#ffffff"};border-radius:4px">
+          <div style="font-size:10px;color:#64748b;margin-bottom:4px">
+            ${note}<strong>${isAdmin ? "VNK" : "Client"}</strong> · ${d.toLocaleString("fr-CA")} · ${m.channel}${m.editedAt ? " · modifié" : ""}
+          </div>
+          <div style="font-size:13px;white-space:pre-wrap">${(m.content ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")}</div>
+          ${atts.length > 0 ? `<div style="font-size:11px;color:#475569;margin-top:6px">📎 ${atts.map((a) => a.name).join(", ")}</div>` : ""}
+        </div>
+      `;
+    }).join("");
+    w.document.write(`
+      <!DOCTYPE html><html><head><title>Conversation ${selected.fullName}</title>
+      <style>body{font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:800px;margin:auto;color:#1e293b}
+      h1{font-size:18px;color:#0F2D52;margin-bottom:4px}
+      .meta{font-size:11px;color:#64748b;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid #e2e8f0}
+      @media print{body{padding:0}}</style></head><body>
+      <h1>Conversation — ${selected.fullName}</h1>
+      <div class="meta">${selected.companyName ?? selected.email} · ${messages.filter((m) => !m.deletedAt).length} messages · Exporté le ${new Date().toLocaleDateString("fr-CA")}</div>
+      ${rows}
+      <script>window.onload=()=>setTimeout(window.print,300)</script>
+      </body></html>
+    `);
+    w.document.close();
+    toast.success("PDF prêt à imprimer");
+  }, [selected, messages]);
+
+  const groupedMessages = useMemo(() => {
+    const filteredBySearch = threadSearch
+      ? messages.filter((m) => !m.deletedAt && m.content?.toLowerCase().includes(threadSearch.toLowerCase()))
+      : messages;
+    return filteredBySearch.reduce<{ date: string; msgs: Message[] }[]>((acc, msg) => {
+      const date = formatMsgDate(msg.createdAt);
+      const last = acc[acc.length - 1];
+      if (last && last.date === date) last.msgs.push(msg);
+      else acc.push({ date, msgs: [msg] });
+      return acc;
+    }, []);
+  }, [messages, threadSearch]);
+
+  const filesCount = useMemo(() => messages.reduce((s, m) => !m.deletedAt ? s + getAttachments(m).length : s, 0), [messages]);
+  const linksCount = useMemo(() => {
+    let n = 0;
+    for (const m of messages) {
+      if (m.deletedAt || !m.content) continue;
+      const matches = m.content.match(/https?:\/\/[^\s<>"]+/g);
+      if (matches) n += matches.length;
     }
-    return acc;
+    return n;
+  }, [messages]);
+
+  const jumpToMessage = useCallback((msgId: number) => {
+    setActiveTab("messages");
+    requestAnimationFrame(() => {
+      document.getElementById(`msg-${msgId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   }, []);
 
-  // Total non-lus
-  const totalUnread = conversations.reduce((s, c) => s + c.unreadCount, 0);
-
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-3">
-            <MessageSquare className="h-6 w-6" />
-            Messages
-            {totalUnread > 0 && (
-              <Badge variant="destructive" className="text-xs">{totalUnread}</Badge>
+    <div className="space-y-4 lg:h-[calc(100dvh-6.5rem)] lg:flex lg:flex-col">
+      {/* Hero VNK navy */}
+      <div className="rounded-2xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] p-5 sm:p-6 text-white shadow-md relative overflow-hidden shrink-0">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24" />
+        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0">
+              <MessageSquare className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">Messages</h1>
+              <p className="text-white/70 text-sm mt-0.5">Multi-pièces · réactions · notes internes · templates · programmation · archive</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {kpis.totalUnread > 0 && (
+              <div className="flex items-center gap-2 bg-red-500/20 border border-red-300/30 rounded-lg px-3 py-2 backdrop-blur">
+                <Inbox className="h-4 w-4 text-red-200" />
+                <span className="text-sm font-semibold text-white">{kpis.totalUnread} non lus</span>
+              </div>
             )}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {conversations.length} conversation{conversations.length > 1 ? "s" : ""}
-          </p>
+            {kpis.totalUnread > 0 && (
+              <Button className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold" onClick={handleMarkAllRead}>
+                <CheckSquare className="h-4 w-4" />Tout marquer lu
+              </Button>
+            )}
+            <div className="bg-white/10 rounded-lg p-1 backdrop-blur">
+              <NotificationToggle />
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Layout 2 colonnes */}
-      <div className="grid md:grid-cols-[340px_1fr] gap-4 h-[calc(100vh-200px)]">
-        {/* ── Sidebar conversations ───────────────────────── */}
-        <Card className="overflow-hidden flex flex-col">
-          {/* Recherche */}
-          <div className="p-3 border-b">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 shrink-0">
+        <StatCard label="Conversations" value={kpis.totalConversations} icon={Users} accent="bg-indigo-500" />
+        <StatCard label="Total messages" value={kpis.totalMessages} icon={MessageSquare} accent="bg-blue-500" />
+        <StatCard label="Aujourd'hui" value={kpis.todayMessages} icon={Calendar} accent="bg-emerald-500" />
+        <StatCard label="Non lus" value={kpis.totalUnread} icon={Inbox} accent="bg-red-500" />
+      </div>
+
+      <div className={cn(
+        "grid gap-4 min-h-[600px] lg:flex-1 lg:min-h-0",
+        "md:grid-cols-[340px_1fr]",
+        selectedId ? "grid-cols-1" : "grid-cols-1"
+      )}>
+        {/* Sidebar conversations */}
+        <Card className={cn("overflow-hidden flex flex-col", selectedId && "hidden md:flex")}>
+          <div className="p-3 border-b space-y-2 shrink-0">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher un client..."
-                className="pl-10"
+                placeholder="Rechercher (nom, étiquette…)"
+                className="pl-10 h-9"
               />
+            </div>
+            <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto">
+              {FILTER_TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setFilter(tab.key)}
+                  className={cn(
+                    "flex-1 px-2 py-1 text-[11px] font-medium rounded-md transition-colors whitespace-nowrap",
+                    filter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Liste */}
           <ul className="flex-1 overflow-y-auto">
             {filtered.length === 0 ? (
-              <li className="p-6 text-center text-sm text-muted-foreground">
-                Aucune conversation
-              </li>
+              <li className="p-6 text-center text-sm text-muted-foreground">Aucune conversation</li>
             ) : (
               filtered.map((c) => {
                 const isActive = selectedId === c.id;
                 const channelBadge = c.lastMessage ? CHANNEL_BADGE[c.lastMessage.channel] : null;
+                const snoozeActive = isSnoozeActive(c);
                 return (
                   <li
                     key={c.id}
                     onClick={() => setSelectedId(c.id)}
                     className={cn(
                       "p-3 border-b cursor-pointer transition-colors",
-                      isActive ? "bg-primary/5 border-l-2 border-l-primary" : "hover:bg-muted/50",
+                      isActive ? "bg-[#0F2D52]/5 border-l-2 border-l-[#0F2D52]" : "hover:bg-muted/50",
                       c.unreadCount > 0 && !isActive && "bg-muted/30"
                     )}
                   >
                     <div className="flex items-start gap-3">
-                      <Avatar className="h-10 w-10 shrink-0">
-                        <AvatarFallback className="vnk-gradient text-white text-xs font-bold">
-                          {initials(c.fullName)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="relative shrink-0">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white text-xs font-bold">
+                            {initials(c.fullName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <OnlineIndicator lastSeenAt={c.lastSeenAt} className="absolute bottom-0 right-0 ring-2 ring-background" />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className={cn("text-sm truncate", c.unreadCount > 0 ? "font-bold" : "font-medium")}>
-                            {c.fullName}
-                          </span>
-                          {c.lastMessage && (
-                            <span className="text-[10px] text-muted-foreground shrink-0">
-                              {formatTime(c.lastMessage.createdAt)}
+                          <div className="flex items-center gap-1 min-w-0">
+                            {c.chatPinned && <Pin className="h-3 w-3 text-[#0F2D52] shrink-0" />}
+                            <span className={cn("text-sm truncate", c.unreadCount > 0 ? "font-bold" : "font-medium")}>
+                              {c.fullName}
                             </span>
+                          </div>
+                          {c.lastMessage && (
+                            <span className="text-[10px] text-muted-foreground shrink-0">{formatTime(c.lastMessage.createdAt)}</span>
                           )}
                         </div>
                         {c.companyName && (
@@ -270,20 +719,37 @@ export function MessagesView({ conversations }: { conversations: Conversation[] 
                         )}
                         {c.lastMessage && (
                           <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                            {c.lastMessage.sender === "vnk" && <span className="text-primary">Vous : </span>}
-                            {c.lastMessage.content?.slice(0, 50) ?? ""}
+                            {c.lastMessage.isInternalNote && <StickyNote className="h-2.5 w-2.5 text-amber-500 inline mr-0.5" />}
+                            {c.lastMessage.sender === "vnk" && <span className="text-[#0F2D52]">Vous : </span>}
+                            {c.lastMessage.content?.slice(0, 60) ?? "📎 Pièce jointe"}
                           </p>
                         )}
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-1 mt-1 flex-wrap">
                           {channelBadge && (
                             <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-medium", channelBadge.color)}>
                               {channelBadge.label}
                             </span>
                           )}
+                          {snoozeActive && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium flex items-center gap-0.5">
+                              <BellOff className="h-2.5 w-2.5" />Snoozée
+                            </span>
+                          )}
+                          {c.chatArchivedAt && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium flex items-center gap-0.5">
+                              <Archive className="h-2.5 w-2.5" />Archivée
+                            </span>
+                          )}
+                          {c.chatLabels.slice(0, 2).map((l) => (
+                            <span key={l} className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#0F2D52]/10 text-[#0F2D52] font-medium">
+                              {l}
+                            </span>
+                          ))}
+                          {c.chatLabels.length > 2 && (
+                            <span className="text-[9px] text-muted-foreground">+{c.chatLabels.length - 2}</span>
+                          )}
                           {c.unreadCount > 0 && (
-                            <Badge variant="destructive" className="text-[9px] h-4 min-w-4 px-1">
-                              {c.unreadCount}
-                            </Badge>
+                            <Badge variant="destructive" className="text-[9px] h-4 min-w-4 px-1 ml-auto">{c.unreadCount}</Badge>
                           )}
                         </div>
                       </div>
@@ -295,159 +761,615 @@ export function MessagesView({ conversations }: { conversations: Conversation[] 
           </ul>
         </Card>
 
-        {/* ── Zone conversation ───────────────────────────── */}
-        <Card className="overflow-hidden flex flex-col">
+        {/* Zone conversation */}
+        <Card
+          className={cn(
+            "overflow-hidden flex flex-col relative",
+            !selectedId && "hidden md:flex",
+            dragOver && "ring-2 ring-[#0F2D52]"
+          )}
+          onDragOver={(e) => { if (selectedId && activeTab === "messages") { e.preventDefault(); setDragOver(true); } }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={selectedId && activeTab === "messages" ? handleDrop : undefined}
+        >
+          {dragOver && selectedId && (
+            <div className="absolute inset-0 z-10 bg-[#0F2D52]/10 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+              <div className="bg-white rounded-lg shadow-lg px-6 py-4 text-center">
+                <Paperclip className="h-8 w-8 mx-auto text-[#0F2D52] mb-1" />
+                <p className="text-sm font-semibold text-[#0F2D52]">Déposer pour joindre</p>
+              </div>
+            </div>
+          )}
+
           {!selected ? (
-            /* Etat vide */
             <div className="flex-1 flex items-center justify-center text-center p-8">
               <div>
                 <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground">Selectionnez une conversation</p>
+                <p className="text-sm text-muted-foreground">Sélectionnez une conversation</p>
               </div>
             </div>
           ) : (
             <>
-              {/* Header conversation */}
-              <div className="flex items-center gap-3 p-4 border-b">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="vnk-gradient text-white text-xs font-bold">
-                    {initials(selected.fullName)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">{selected.fullName}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {selected.companyName ?? selected.email} · {messages.length} messages
-                  </p>
-                </div>
-              </div>
-
-              {/* Messages */}
-              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-1">
-                {loadingMsgs ? (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-sm text-muted-foreground">Chargement...</p>
+              {/* Header */}
+              <div className="flex items-center gap-2 p-3 border-b shrink-0">
+                <Button variant="ghost" size="sm" className="md:hidden h-8 w-8 p-0" onClick={() => setSelectedId(null)} aria-label="Retour">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <button
+                  className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity text-left"
+                  onClick={() => openEntity("client", selected.id)}
+                >
+                  <div className="relative shrink-0">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white text-xs font-bold">
+                        {initials(selected.fullName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <OnlineIndicator lastSeenAt={selected.lastSeenAt} className="absolute bottom-0 right-0 ring-2 ring-background" />
                   </div>
-                ) : messages.length === 0 ? (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-sm text-muted-foreground">Aucun message</p>
-                  </div>
-                ) : (
-                  groupedMessages.map((group) => (
-                    <div key={group.date}>
-                      {/* Separateur date */}
-                      <div className="flex items-center gap-3 my-4">
-                        <div className="flex-1 h-px bg-border" />
-                        <span className="text-[10px] text-muted-foreground font-medium uppercase">
-                          {group.date}
-                        </span>
-                        <div className="flex-1 h-px bg-border" />
-                      </div>
-
-                      {group.msgs.map((msg, idx) => {
-                        const isAdmin = msg.sender === "vnk";
-                        const isLast = idx === group.msgs.length - 1;
-                        const channelInfo = CHANNEL_BADGE[msg.channel];
-                        return (
-                          <div
-                            key={msg.id}
-                            className={cn("flex mb-2", isAdmin ? "justify-end" : "justify-start")}
-                          >
-                            <div
-                              className={cn(
-                                "max-w-[75%] rounded-2xl px-4 py-2.5",
-                                isAdmin
-                                  ? "bg-primary text-primary-foreground rounded-br-md"
-                                  : "bg-muted rounded-bl-md"
-                              )}
-                            >
-                              <p className="text-sm whitespace-pre-wrap break-words">
-                                {msg.content}
-                              </p>
-                              <div className={cn(
-                                "flex items-center gap-1.5 mt-1",
-                                isAdmin ? "justify-end" : "justify-start"
-                              )}>
-                                <span className={cn("text-[10px]", isAdmin ? "text-primary-foreground/60" : "text-muted-foreground")}>
-                                  {formatMsgTime(msg.createdAt)}
-                                </span>
-                                {channelInfo && (
-                                  <span className={cn(
-                                    "text-[9px] px-1 py-0.5 rounded",
-                                    isAdmin ? "bg-white/15 text-primary-foreground/70" : channelInfo.color
-                                  )}>
-                                    {channelInfo.label}
-                                  </span>
-                                )}
-                                {isAdmin && isLast && (
-                                  <CheckCheck className={cn("h-3 w-3", msg.isRead ? "text-primary-foreground" : "text-primary-foreground/40")} />
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1">
+                      {selected.chatPinned && <Pin className="h-3 w-3 text-[#0F2D52] shrink-0" />}
+                      <p className="font-semibold text-sm truncate">{selected.fullName}</p>
                     </div>
-                  ))
-                )}
+                    <p className="text-xs text-muted-foreground truncate">
+                      {selected.companyName ?? selected.email} · {messages.filter((m) => !m.deletedAt).length} message(s)
+                    </p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setThreadSearchOpen((v) => !v)}
+                  className={cn(
+                    "h-8 w-8 flex items-center justify-center rounded-md transition-colors",
+                    threadSearchOpen ? "bg-[#0F2D52] text-white" : "hover:bg-muted text-muted-foreground"
+                  )}
+                  aria-label="Rechercher dans la conversation"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
+                <ConversationMetaActions
+                  clientId={selected.id}
+                  pinned={selected.chatPinned}
+                  archived={!!selected.chatArchivedAt}
+                  snoozedUntil={selected.chatSnoozedUntil}
+                  labels={selected.chatLabels}
+                  onChange={() => router.refresh()}
+                  onExportCsv={exportCsv}
+                  onExportPdf={exportPdf}
+                />
               </div>
 
-              {/* Zone composition */}
-              <div className="border-t p-3">
-                {/* Toggle canal */}
-                <div className="flex items-center gap-2 mb-2">
-                  <button
-                    onClick={() => setChannel("chat")}
-                    className={cn(
-                      "flex items-center gap-1 text-xs px-2.5 py-1 rounded-md transition-colors",
-                      channel === "chat" ? "bg-emerald-100 text-emerald-700 font-medium" : "text-muted-foreground hover:bg-muted"
+              {threadSearchOpen && (
+                <div className="px-3 pb-2 border-b shrink-0 bg-muted/20">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      autoFocus
+                      value={threadSearch}
+                      onChange={(e) => setThreadSearch(e.target.value)}
+                      placeholder="Rechercher dans le thread…"
+                      className="pl-9 h-8 text-sm"
+                    />
+                    {threadSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setThreadSearch("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:bg-background"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     )}
-                  >
-                    <MessageCircle className="h-3 w-3" /> Chat
-                  </button>
-                  <button
-                    onClick={() => setChannel("email")}
-                    className={cn(
-                      "flex items-center gap-1 text-xs px-2.5 py-1 rounded-md transition-colors",
-                      channel === "email" ? "bg-blue-100 text-blue-700 font-medium" : "text-muted-foreground hover:bg-muted"
-                    )}
-                  >
-                    <Mail className="h-3 w-3" /> Email
-                  </button>
-                  <span className="text-[10px] text-muted-foreground ml-2">
-                    {channel === "chat" ? "Message dans le portail client" : "Envoyer par courriel"}
-                  </span>
+                  </div>
+                  {threadSearch && (
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {groupedMessages.reduce((s, g) => s + g.msgs.length, 0)} résultat(s)
+                    </p>
+                  )}
                 </div>
+              )}
 
-                {/* Input + send */}
-                <div className="flex items-end gap-2">
-                  <textarea
-                    value={newMsg}
-                    onChange={(e) => setNewMsg(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSend();
-                      }
-                    }}
-                    placeholder="Ecrivez un message..."
-                    className="flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-sm min-h-[40px] max-h-[120px] focus:outline-none focus:ring-2 focus:ring-ring"
-                    rows={1}
-                  />
-                  <Button
-                    onClick={handleSend}
-                    disabled={sending || !newMsg.trim()}
-                    size="sm"
-                    className="h-10 w-10 p-0 shrink-0"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <ConversationTabsBar active={activeTab} onChange={setActiveTab} filesCount={filesCount} linksCount={linksCount} />
+
+              {activeTab === "files" ? (
+                <ConversationFilesTab messages={messages as MsgLite[]} />
+              ) : activeTab === "links" ? (
+                <ConversationLinksTab messages={messages as MsgLite[]} onJumpToMessage={jumpToMessage} />
+              ) : (
+                <>
+                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-1">
+                    {loadingMsgs ? (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-sm text-muted-foreground">Chargement…</p>
+                      </div>
+                    ) : groupedMessages.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-sm text-muted-foreground">{threadSearch ? "Aucun résultat" : "Aucun message"}</p>
+                      </div>
+                    ) : (
+                      groupedMessages.map((group) => (
+                        <div key={group.date}>
+                          <div className="flex items-center gap-3 my-4">
+                            <div className="flex-1 h-px bg-border" />
+                            <span className="text-[10px] text-muted-foreground font-medium uppercase">{group.date}</span>
+                            <div className="flex-1 h-px bg-border" />
+                          </div>
+                          {group.msgs.map((msg, idx) => (
+                            <MessageBubble
+                              key={msg.id}
+                              msg={msg}
+                              isLast={idx === group.msgs.length - 1}
+                              searchHighlight={threadSearch}
+                              onReply={() => setReplyingTo(msg)}
+                              onEdit={() => openEdit(msg)}
+                              onDelete={() => setDeleteMsg(msg)}
+                              onReact={(emoji) => handleToggleReaction(msg.id, emoji)}
+                              allMessages={messages}
+                            />
+                          ))}
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* COMPOSER */}
+                  <div className="border-t p-3 shrink-0 bg-card space-y-2 relative">
+                    {/* Reply quote */}
+                    {replyingTo && (
+                      <div className="flex items-start gap-2 rounded-lg border-l-2 border-[#0F2D52] bg-muted/40 px-2 py-1.5">
+                        <CornerUpLeft className="h-3.5 w-3.5 text-[#0F2D52] shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-semibold text-[#0F2D52]">
+                            Réponse à {replyingTo.sender === "vnk" ? "vous" : selected.fullName}
+                          </p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">{summarizeForReply(replyingTo as ReplyToSummary)}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setReplyingTo(null)}
+                          className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:bg-background"
+                          aria-label="Annuler la réponse"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {internalNote && (
+                      <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5">
+                        <StickyNote className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+                        <p className="text-[11px] text-amber-800 flex-1">Note interne — visible admin uniquement, jamais envoyée au client</p>
+                        <button
+                          type="button"
+                          onClick={() => setInternalNote(false)}
+                          className="h-6 w-6 flex items-center justify-center rounded text-amber-700 hover:bg-amber-100"
+                          aria-label="Désactiver note interne"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => setChannel("chat")}
+                        className={cn(
+                          "flex items-center gap-1 text-xs px-2.5 py-1 rounded-md transition-colors",
+                          channel === "chat" ? "bg-emerald-100 text-emerald-700 font-medium" : "text-muted-foreground hover:bg-muted"
+                        )}
+                      >
+                        <MessageCircle className="h-3 w-3" /> Chat
+                      </button>
+                      <button
+                        onClick={() => setChannel("email")}
+                        className={cn(
+                          "flex items-center gap-1 text-xs px-2.5 py-1 rounded-md transition-colors",
+                          channel === "email" ? "bg-blue-100 text-blue-700 font-medium" : "text-muted-foreground hover:bg-muted"
+                        )}
+                      >
+                        <Mail className="h-3 w-3" /> Email
+                      </button>
+                      <button
+                        onClick={() => setInternalNote((v) => !v)}
+                        className={cn(
+                          "flex items-center gap-1 text-xs px-2.5 py-1 rounded-md transition-colors",
+                          internalNote ? "bg-amber-100 text-amber-700 font-medium" : "text-muted-foreground hover:bg-muted"
+                        )}
+                        title="Note visible admin seulement"
+                      >
+                        <StickyNote className="h-3 w-3" /> Note interne
+                      </button>
+                      <button
+                        type="button"
+                        onClick={insertMention}
+                        className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-md text-muted-foreground hover:bg-muted transition-colors"
+                        title={`Mentionner ${selected.fullName}`}
+                      >
+                        <AtSign className="h-3 w-3" />Mention
+                      </button>
+                    </div>
+
+                    {pendingAtts.length > 0 && (
+                      <div className="flex gap-1.5 overflow-x-auto pb-1">
+                        {pendingAtts.map((att, i) => (
+                          <div key={i} className="relative shrink-0 group">
+                            <div className="h-16 w-16 rounded-lg border bg-muted/40 overflow-hidden flex items-center justify-center">
+                              {att.kind === "image" ? (
+                                <img src={att.dataUrl} alt="" className="h-full w-full object-cover" />
+                              ) : att.kind === "pdf" ? (
+                                <FileText className="h-6 w-6 text-red-600" />
+                              ) : att.kind === "audio" ? (
+                                <span className="text-lg">🎙</span>
+                              ) : (
+                                <Paperclip className="h-6 w-6 text-muted-foreground" />
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removePendingAtt(i)}
+                              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-destructive text-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                              aria-label="Retirer"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                            <p className="text-[9px] text-muted-foreground truncate max-w-[64px] mt-0.5">{att.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <TemplatePicker
+                      templates={templates}
+                      query={templateQuery}
+                      open={templatePickerOpen}
+                      onSelect={applyTemplate}
+                      onClose={() => setTemplatePickerOpen(false)}
+                    />
+
+                    <div className="flex items-end gap-1">
+                      <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files) handleFilesSelected(e.target.files);
+                          e.currentTarget.value = "";
+                        }}
+                      />
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files) handleFilesSelected(e.target.files);
+                          e.currentTarget.value = "";
+                        }}
+                      />
+
+                      <button type="button" onClick={() => imageInputRef.current?.click()}
+                        className="h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        aria-label="Joindre une ou plusieurs images">
+                        <ImageIcon className="h-5 w-5" />
+                      </button>
+                      <button type="button" onClick={() => fileInputRef.current?.click()}
+                        className="h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        aria-label="Joindre des fichiers">
+                        <Paperclip className="h-5 w-5" />
+                      </button>
+                      <EmojiPicker onSelect={insertEmoji} />
+                      <VoiceRecorderButton onRecorded={handleVoiceRecorded} />
+
+                      <textarea
+                        ref={textareaRef}
+                        value={newMsg}
+                        onChange={(e) => setNewMsg(e.target.value)}
+                        onPaste={handlePaste}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey && !templatePickerOpen) {
+                            e.preventDefault();
+                            handleSend();
+                          }
+                        }}
+                        placeholder={
+                          internalNote ? "Note interne…" :
+                          pendingAtts.length > 0 ? "Légende (optionnel)…" :
+                          replyingTo ? "Répondre… ('/' pour template)" : "Écrivez un message… ('/' pour template)"
+                        }
+                        className={cn(
+                          "flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-sm min-h-[40px] max-h-[120px] focus:outline-none focus:ring-2",
+                          internalNote ? "focus:ring-amber-400 border-amber-200" : "focus:ring-ring"
+                        )}
+                        rows={1}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setScheduleOpen(true)}
+                        disabled={sending || (!newMsg.trim() && pendingAtts.length === 0) || internalNote}
+                        className="h-9 w-9 p-0 shrink-0"
+                        title="Programmer l'envoi"
+                      >
+                        <Clock className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        onClick={handleSend}
+                        disabled={sending || (!newMsg.trim() && pendingAtts.length === 0)}
+                        size="sm"
+                        className={cn(
+                          "h-9 w-9 p-0 shrink-0",
+                          internalNote ? "bg-amber-500 hover:bg-amber-600" : "bg-[#0F2D52] hover:bg-[#1a3a66]"
+                        )}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground hidden sm:block">
+                      Entrée envoie · / template · @ mention · 📋 paste image · drag & drop · max {MAX_ATTACHMENTS} fichiers ({MAX_UPLOAD_MB} Mo)
+                    </p>
+                  </div>
+                </>
+              )}
             </>
           )}
         </Card>
       </div>
+
+      <Dialog open={!!editingMsg} onOpenChange={(o) => { if (!o) setEditingMsg(null); }}>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+          <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-6 py-4 text-white">
+            <DialogTitle className="text-white text-base">Modifier le message</DialogTitle>
+            <DialogDescription className="text-white/70 text-xs mt-0.5">
+              L&apos;historique sera marqué « modifié »
+            </DialogDescription>
+          </div>
+          <div className="p-4">
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              rows={4}
+              className="w-full resize-none rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <DialogFooter className="px-4 py-3 border-t bg-card sm:gap-2">
+            <Button variant="outline" onClick={() => setEditingMsg(null)}>Annuler</Button>
+            <Button onClick={handleEditSave} className="bg-[#0F2D52] hover:bg-[#1a3a66]">Enregistrer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteMsg}
+        onOpenChange={(o) => { if (!o) setDeleteMsg(null); }}
+        title="Supprimer ce message ?"
+        description="Le message sera masqué pour tous (texte et pièces jointes). Action irréversible."
+        confirmLabel="Supprimer"
+        onConfirm={handleDelete}
+      />
+
+      <ScheduleSendDialog open={scheduleOpen} onOpenChange={setScheduleOpen} onConfirm={handleSchedule} />
+
+      {ConfirmModal}
     </div>
   );
 }
+
+// ─── MessageBubble ────────────────────────────────────────
+function MessageBubble({
+  msg, isLast, searchHighlight, onReply, onEdit, onDelete, onReact, allMessages,
+}: {
+  msg: Message;
+  isLast: boolean;
+  searchHighlight: string;
+  onReply: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onReact: (emoji: string) => void;
+  allMessages: Message[];
+}) {
+  const isAdmin = msg.sender === "vnk";
+  const isInternal = msg.isInternalNote;
+  const channelInfo = CHANNEL_BADGE[msg.channel];
+  const attachments = getAttachments(msg);
+  const replyTarget = msg.replyTo ?? (msg.replyToId ? allMessages.find((m) => m.id === msg.replyToId) ?? null : null);
+  const reactions = msg.reactions ?? {};
+  const reactionEntries = Object.entries(reactions).filter(([, who]) => who.length > 0);
+
+  const ageMs = Date.now() - new Date(msg.createdAt).getTime();
+  const canEditDelete = isAdmin && !msg.deletedAt && ageMs < 24 * 60 * 60 * 1000;
+
+  if (msg.deletedAt) {
+    return (
+      <div className={cn("flex mb-2", isAdmin ? "justify-end" : "justify-start")}>
+        <div className="max-w-[75%] rounded-2xl px-3 py-2 bg-muted/40 border border-dashed">
+          <p className="text-xs italic text-muted-foreground">Message supprimé</p>
+          <span className="text-[10px] text-muted-foreground">{formatMsgTime(msg.createdAt)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  const isScheduled = msg.scheduledFor && new Date(msg.scheduledFor) > new Date();
+
+  return (
+    <div className={cn("group flex mb-2", isAdmin ? "justify-end" : "justify-start")}>
+      <div className="max-w-[75%] flex flex-col items-stretch">
+        {isInternal && (
+          <div className="text-[10px] font-semibold text-amber-700 mb-0.5 self-end flex items-center gap-1">
+            <StickyNote className="h-3 w-3" />Note interne
+          </div>
+        )}
+        {isScheduled && (
+          <div className="text-[10px] font-semibold text-blue-700 mb-0.5 self-end flex items-center gap-1">
+            <Clock className="h-3 w-3" />Programmé pour {new Date(msg.scheduledFor!).toLocaleString("fr-CA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+          </div>
+        )}
+        <div className="flex items-end gap-1">
+          {isAdmin && (
+            <MessageActionsButton onReply={onReply} onEdit={onEdit} onDelete={onDelete} canEditDelete={canEditDelete} onReact={onReact} />
+          )}
+
+          <div id={`msg-${msg.id}`} className={cn(
+            "rounded-2xl px-3 py-2 space-y-1.5",
+            isInternal ? "bg-amber-50 border border-amber-200 rounded-br-md text-amber-900"
+            : isAdmin ? "bg-[#0F2D52] text-white rounded-br-md"
+            : "bg-muted rounded-bl-md"
+          )}>
+            {replyTarget && (
+              <button
+                type="button"
+                className={cn(
+                  "block text-left rounded-md border-l-2 px-2 py-1 mb-1 text-[11px]",
+                  isInternal ? "border-amber-400 bg-amber-100/60"
+                  : isAdmin ? "border-white/40 bg-white/10"
+                  : "border-[#0F2D52] bg-background"
+                )}
+                onClick={() => {
+                  document.getElementById(`msg-${replyTarget.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
+              >
+                <p className={cn("font-semibold", isAdmin && !isInternal ? "text-white/80" : "text-[#0F2D52]")}>
+                  {replyTarget.sender === "vnk" ? "Vous" : "Client"}
+                </p>
+                <p className={cn("line-clamp-1", isAdmin && !isInternal ? "text-white/70" : "text-muted-foreground")}>
+                  {summarizeForReply(replyTarget as ReplyToSummary)}
+                </p>
+              </button>
+            )}
+
+            {attachments.length > 0 && (
+              <div className={cn("space-y-1.5", attachments.length > 1 && attachments.every((a) => a.kind === "image") && "grid grid-cols-2 gap-1 space-y-0")}>
+                {attachments.map((att, i) => (
+                  <MessageAttachmentDisplay key={i} attachment={att} isAdmin={isAdmin && !isInternal} />
+                ))}
+              </div>
+            )}
+
+            {msg.content && (
+              <p className="text-sm whitespace-pre-wrap break-words px-1">
+                {searchHighlight ? highlightSearch(msg.content, searchHighlight) : msg.content}
+              </p>
+            )}
+
+            <div className={cn("flex items-center gap-1.5 px-1", isAdmin ? "justify-end" : "justify-start")}>
+              <span className={cn("text-[10px]",
+                isInternal ? "text-amber-700"
+                : isAdmin ? "text-white/60"
+                : "text-muted-foreground"
+              )}>
+                {formatMsgTime(msg.createdAt)}
+                {msg.editedAt && " · modifié"}
+              </span>
+              {channelInfo && !isInternal && (
+                <span className={cn("text-[9px] px-1 py-0.5 rounded",
+                  isAdmin ? "bg-white/15 text-white/70" : channelInfo.color
+                )}>
+                  {channelInfo.label}
+                </span>
+              )}
+              {isAdmin && isLast && !isInternal && (
+                <CheckCheck className={cn("h-3 w-3", msg.isRead ? "text-white" : "text-white/40")} />
+              )}
+            </div>
+          </div>
+
+          {!isAdmin && (
+            <MessageActionsButton onReply={onReply} onReact={onReact} />
+          )}
+        </div>
+
+        {reactionEntries.length > 0 && (
+          <div className={cn("flex flex-wrap gap-1 mt-1", isAdmin ? "justify-end" : "justify-start")}>
+            {reactionEntries.map(([emoji, who]) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => onReact(emoji)}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs border transition-colors",
+                  who.includes("vnk") ? "border-[#0F2D52] bg-[#0F2D52]/10" : "border-input bg-background hover:bg-muted"
+                )}
+              >
+                <span>{emoji}</span>
+                <span className="text-[10px] text-muted-foreground">{who.length}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MessageActionsButton({
+  onReply, onEdit, onDelete, canEditDelete, onReact,
+}: {
+  onReply: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  canEditDelete?: boolean;
+  onReact: (emoji: string) => void;
+}) {
+  return (
+    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 self-center">
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Réagir"
+          >
+            <SmilePlus className="h-3.5 w-3.5" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-1" side="top">
+          <div className="flex gap-0.5">
+            {QUICK_REACTIONS.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => onReact(e)}
+                className="h-8 w-8 flex items-center justify-center rounded hover:bg-muted text-lg transition-colors"
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Actions"
+          >
+            <MoreVertical className="h-3.5 w-3.5" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem onSelect={onReply}>
+            <Reply className="h-3.5 w-3.5 mr-2" />Répondre
+          </DropdownMenuItem>
+          {canEditDelete && onEdit && (
+            <DropdownMenuItem onSelect={onEdit}>
+              <Pencil className="h-3.5 w-3.5 mr-2" />Modifier
+            </DropdownMenuItem>
+          )}
+          {canEditDelete && onDelete && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={onDelete} className="text-destructive">
+                <Trash2 className="h-3.5 w-3.5 mr-2" />Supprimer
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+

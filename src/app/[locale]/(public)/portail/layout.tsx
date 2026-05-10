@@ -10,6 +10,7 @@ import { PortalSidebar } from "@/components/portal/portal-sidebar";
 import { PortalBottomNav } from "@/components/portal/portal-bottom-nav";
 import { PortalUserMenu } from "@/components/portal/portal-user-menu";
 import { ChatWidget } from "@/components/chat/chat-widget";
+import { PortalHeartbeat } from "@/components/portal/portal-heartbeat";
 
 const getClient = cache(async (clientId: number) =>
   prisma.client.findUnique({
@@ -82,6 +83,7 @@ export default async function PortalLayout({
       </div>
       <PortalBottomNav badges={badges} />
       <ChatWidget clientId={clientId} clientName={client?.fullName ?? ""} />
+      <PortalHeartbeat />
     </>
   );
 }

@@ -52,7 +52,7 @@ export async function POST(
   await prisma.message.create({
     data: {
       clientId: quote.clientId,
-      sender: "admin",
+      sender: "vnk",
       content: `Nouveau devis disponible : ${quote.quoteNumber} — ${Number(quote.amountTtc).toFixed(2)} $ TTC. Consultez-le dans votre portail (/portail/devis).`,
       channel: "chat",
       isRead: false,
