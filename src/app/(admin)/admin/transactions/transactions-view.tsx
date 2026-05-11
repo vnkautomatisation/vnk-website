@@ -74,8 +74,8 @@ type StatusFilter = "all" | "succeeded" | "failed" | "refunded" | "to_reconcile"
 
 const STATUS_TABS: { key: StatusFilter; label: string }[] = [
   { key: "all", label: "Toutes" },
-  { key: "to_reconcile", label: "À réconcilier" },
-  { key: "reconciled", label: "Réconciliées" },
+  { key: "to_reconcile", label: "À vérifier" },
+  { key: "reconciled", label: "Confirmées reçues" },
   { key: "exported", label: "Exportées" },
   { key: "failed", label: "Échouées" },
   { key: "refunded", label: "Remboursées" },
@@ -211,8 +211,8 @@ export function TransactionsView({
 
   const accountingStatusBadge = (p: Payment) => {
     if (p.exportedAt) return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700">Exporté</span>;
-    if (p.reconciledAt) return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">Réconcilié</span>;
-    if (p.status === "succeeded" || p.status === "paid") return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">À réconcilier</span>;
+    if (p.reconciledAt) return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">Confirmé reçu</span>;
+    if (p.status === "succeeded" || p.status === "paid") return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">À vérifier</span>;
     return <span className="text-[10px] text-muted-foreground">—</span>;
   };
 
@@ -328,7 +328,7 @@ export function TransactionsView({
         </div>
         <div className="flex-1" />
         <span className="text-[10px] text-muted-foreground">
-          {filtered.length} sur {payments.length} · {kpis.toReconcileCount} à réconcilier
+          {filtered.length} sur {payments.length} · {kpis.toReconcileCount} à vérifier
         </span>
       </div>
 
@@ -396,7 +396,7 @@ export function TransactionsView({
           <span className="text-sm font-medium px-2">{selectedIds.size} sélectionnée(s)</span>
           <div className="flex-1" />
           <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 h-7 text-xs" disabled={bulkBusy} onClick={() => bulkAction("reconcile")}>
-            <CheckCircle2 className="h-3 w-3 mr-1" />Réconcilier
+            <CheckCircle2 className="h-3 w-3 mr-1" />Confirmer reçus
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -446,7 +446,7 @@ export function TransactionsView({
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2"><CreditCard className="h-5 w-5" />Transactions</h1>
             <p className="text-white/70 text-xs mt-0.5">
-              {kpis.count} transactions · {formatCurrency(kpis.totalPaid)} encaissés au total · {kpis.toReconcileCount} à réconcilier
+              {kpis.count} transactions · {formatCurrency(kpis.totalPaid)} encaissés au total · {kpis.toReconcileCount} à vérifier
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">

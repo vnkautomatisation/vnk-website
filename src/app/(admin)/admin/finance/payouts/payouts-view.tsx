@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DataTable, type Column } from "@/components/data-table/data-table";
+import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { PayoutDetailDialog } from "./payout-detail-dialog";
 
@@ -248,17 +249,19 @@ export function PayoutsView({
       key: "stripe",
       header: "Référence",
       accessor: (p) => (
-        <a
-          href={`https://dashboard.stripe.com/payouts/${p.stripePayoutId}`}
-          target="_blank"
-          rel="noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-          title="Ouvrir le versement sur la plateforme de paiement"
-        >
-          <span className="font-mono truncate max-w-[80px]">{p.stripePayoutId.slice(0, 14)}…</span>
-          <ExternalLink className="h-3 w-3" />
-        </a>
+        <ActionTooltip label="Ouvrir le versement sur la plateforme de paiement">
+          <a
+            href={`https://dashboard.stripe.com/payouts/${p.stripePayoutId}`}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            aria-label="Ouvrir le versement sur la plateforme"
+          >
+            <span className="font-mono truncate max-w-[80px]">{p.stripePayoutId.slice(0, 14)}…</span>
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </ActionTooltip>
       ),
       hiddenOnMobile: true,
     },
@@ -266,13 +269,15 @@ export function PayoutsView({
       key: "actions",
       header: "",
       accessor: (p) => (
-        <button
-          onClick={(e) => { e.stopPropagation(); setDetailPayoutId(p.id); }}
-          className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-          title="Voir détail du versement"
-        >
-          <Eye className="h-3.5 w-3.5" />
-        </button>
+        <ActionTooltip label="Voir détail du versement">
+          <button
+            onClick={(e) => { e.stopPropagation(); setDetailPayoutId(p.id); }}
+            className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            aria-label="Voir détail du versement"
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </button>
+        </ActionTooltip>
       ),
     },
   ];

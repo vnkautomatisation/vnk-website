@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
+import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { PaymentDetailDialog } from "@/app/(admin)/admin/transactions/payment-detail-dialog";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
@@ -583,47 +584,55 @@ export function PaymentsView({
       header: "Actions",
       accessor: (p) => (
         <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={() => setDetailPaymentId(p.id)}
-            className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-            title="Voir détail du paiement"
-          >
-            <Eye className="h-3.5 w-3.5" />
-          </button>
+          <ActionTooltip label="Voir détail du paiement">
+            <button
+              onClick={() => setDetailPaymentId(p.id)}
+              className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+              aria-label="Voir détail du paiement"
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </button>
+          </ActionTooltip>
           {p.invoiceId && p.invoiceNumber && (
+            <ActionTooltip label="Prévisualiser la facture (PDF)">
+              <button
+                onClick={() => setPdfPreview({
+                  url: `/api/invoices/${p.invoiceId}/pdf`,
+                  title: `Facture ${p.invoiceNumber}`,
+                  downloadName: `facture-${p.invoiceNumber}`,
+                })}
+                className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                aria-label="Prévisualiser la facture"
+              >
+                <ReceiptIcon className="h-3.5 w-3.5" />
+              </button>
+            </ActionTooltip>
+          )}
+          <ActionTooltip label="Prévisualiser le reçu VNK (PDF)">
             <button
               onClick={() => setPdfPreview({
-                url: `/api/invoices/${p.invoiceId}/pdf`,
-                title: `Facture ${p.invoiceNumber}`,
-                downloadName: `facture-${p.invoiceNumber}`,
+                url: `/api/payments/${p.id}/receipt`,
+                title: `Reçu paiement #${p.id}`,
+                downloadName: `recu-${p.id}`,
               })}
               className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              title="Prévisualiser la facture (PDF)"
+              aria-label="Prévisualiser le reçu VNK"
             >
-              <ReceiptIcon className="h-3.5 w-3.5" />
+              <FileText className="h-3.5 w-3.5" />
             </button>
-          )}
-          <button
-            onClick={() => setPdfPreview({
-              url: `/api/payments/${p.id}/receipt`,
-              title: `Reçu paiement #${p.id}`,
-              downloadName: `recu-${p.id}`,
-            })}
-            className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-            title="Prévisualiser le reçu VNK (PDF)"
-          >
-            <FileText className="h-3.5 w-3.5" />
-          </button>
+          </ActionTooltip>
           {p.stripeReceiptUrl && (
-            <a
-              href={p.stripeReceiptUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              title="Ouvrir reçu officiel du processeur de paiement"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
+            <ActionTooltip label="Reçu officiel de la plateforme de paiement">
+              <a
+                href={p.stripeReceiptUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                aria-label="Reçu officiel"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </ActionTooltip>
           )}
         </div>
       ),
@@ -743,7 +752,7 @@ export function PaymentsView({
               Tous les paiements
             </span>
             <span className="font-semibold text-[#0F2D52]">{filtered.length} affichés</span>
-            <span className="text-muted-foreground">Crédits : <span className="font-semibold text-emerald-600">{formatCurrency(kpis.byType.charge?.total ?? 0)}</span></span>
+            <span className="text-muted-foreground">Ventes : <span className="font-semibold text-emerald-600">{formatCurrency(kpis.byType.charge?.total ?? 0)}</span></span>
             <span className="text-muted-foreground">Remb. : <span className="font-semibold text-amber-600">{formatCurrency(Math.abs(kpis.byType.refund?.total ?? 0))}</span></span>
             <span className="text-muted-foreground">Net : <span className="font-semibold">{formatCurrency(kpis.totalNet)}</span></span>
             <span className="text-muted-foreground">Confirmés : <span className="font-semibold text-emerald-600">{kpis.reconciledCount}/{kpis.total}</span></span>
@@ -882,20 +891,26 @@ export function PaymentsView({
             <span className="text-white/70 ml-2 font-normal">— {formatCurrency(selectedTotal)}</span>
           </span>
           <div className="flex-1" />
-          <Button size="sm" variant="secondary" className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 h-7 text-xs" onClick={bulkReconcile} disabled={busy} title="Marquer comme confirmé reçu en banque">
-            <CheckCircle2 className="h-3 w-3 mr-1" />Confirmer reçus
-          </Button>
+          <ActionTooltip label="Marquer comme confirmé reçu en banque">
+            <Button size="sm" variant="secondary" className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 h-7 text-xs" onClick={bulkReconcile} disabled={busy}>
+              <CheckCircle2 className="h-3 w-3 mr-1" />Confirmer reçus
+            </Button>
+          </ActionTooltip>
           <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs" onClick={bulkUnreconcile} disabled={busy}>
             <Clock className="h-3 w-3 mr-1" />Retirer confirmation
           </Button>
           {hasMultipleAdmins && (
-            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs" onClick={() => setAssignDialogOpen(true)} disabled={busy} title="Assigner à un comptable interne pour suivi">
-              <FolderInput className="h-3 w-3 mr-1" />Comptable
-            </Button>
+            <ActionTooltip label="Assigner à un comptable interne pour suivi">
+              <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs" onClick={() => setAssignDialogOpen(true)} disabled={busy}>
+                <FolderInput className="h-3 w-3 mr-1" />Comptable
+              </Button>
+            </ActionTooltip>
           )}
-          <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs" onClick={() => setCategoryDialogOpen(true)} disabled={busy} title="Catégorie comptable pour export (services_recurrents, acompte...)">
-            <FolderInput className="h-3 w-3 mr-1" />Catégorie
-          </Button>
+          <ActionTooltip label="Catégorie comptable pour export (services_recurrents, acompte...)">
+            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs" onClick={() => setCategoryDialogOpen(true)} disabled={busy}>
+              <FolderInput className="h-3 w-3 mr-1" />Catégorie
+            </Button>
+          </ActionTooltip>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs">

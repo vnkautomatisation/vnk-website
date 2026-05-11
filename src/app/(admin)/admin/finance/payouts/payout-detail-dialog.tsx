@@ -23,6 +23,7 @@ import {
   Eye,
 } from "lucide-react";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
+import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { PaymentDetailDialog } from "@/app/(admin)/admin/transactions/payment-detail-dialog";
 import { TYPE_META, getStatusDisplay } from "@/lib/payment-status";
 
@@ -259,13 +260,15 @@ export function PayoutDetailDialog({
                             <p className="text-[10px] text-emerald-700 tabular-nums">Net : {Number(pay.netAmount).toFixed(2)}</p>
                           )}
                         </div>
-                        <button
-                          onClick={() => setDrillPaymentId(pay.id)}
-                          className="inline-flex items-center justify-center h-6 w-6 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                          title="Voir détail du paiement"
-                        >
-                          <Eye className="h-3 w-3" />
-                        </button>
+                        <ActionTooltip label="Voir détail du paiement">
+                          <button
+                            onClick={() => setDrillPaymentId(pay.id)}
+                            className="inline-flex items-center justify-center h-6 w-6 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                            aria-label="Voir détail du paiement"
+                          >
+                            <Eye className="h-3 w-3" />
+                          </button>
+                        </ActionTooltip>
                       </div>
                     );
                   })
@@ -274,15 +277,17 @@ export function PayoutDetailDialog({
 
               {/* Référence externe */}
               <Section title="Référence" icon={ExternalLink} action={
-                <a
-                  href={`https://dashboard.stripe.com/payouts/${p.stripePayoutId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                  title="Ouvrir ce versement sur la plateforme de paiement"
-                >
-                  Voir sur la plateforme <ExternalLink className="h-2.5 w-2.5" />
-                </a>
+                <ActionTooltip label="Ouvrir ce versement sur la plateforme de paiement">
+                  <a
+                    href={`https://dashboard.stripe.com/payouts/${p.stripePayoutId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                    aria-label="Ouvrir le versement sur la plateforme"
+                  >
+                    Voir sur la plateforme <ExternalLink className="h-2.5 w-2.5" />
+                  </a>
+                </ActionTooltip>
               }>
                 <Row label="Référence versement" value={<span className="font-mono text-[10px] truncate inline-block max-w-[260px]">{p.stripePayoutId}</span>} />
               </Section>

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { getStatusDisplay, TYPE_META, TYPE_LABELS } from "@/lib/payment-status";
 import { PaymentDetailDialog } from "@/app/(admin)/admin/transactions/payment-detail-dialog";
 
@@ -86,9 +87,17 @@ function isManualPayment(r: Row): boolean {
 
 // Affichage uniformise pour cellules vides selon contexte
 function emptyCell(isManual: boolean, label = "Manuel") {
-  return isManual
-    ? <span className="text-[10px] italic text-muted-foreground/70" title="Paiement saisi manuellement — pas de référence de paiement en ligne">{label}</span>
-    : <span className="text-[10px] italic text-amber-700" title="Donnée pas encore reçue (confirmation automatique en attente)">En attente</span>;
+  const tooltip = isManual
+    ? "Paiement saisi manuellement — pas de référence de paiement en ligne"
+    : "Donnée pas encore reçue (confirmation automatique en attente)";
+  const className = isManual
+    ? "text-[10px] italic text-muted-foreground/70 cursor-help"
+    : "text-[10px] italic text-amber-700 cursor-help";
+  return (
+    <ActionTooltip label={tooltip}>
+      <span className={className}>{isManual ? label : "En attente"}</span>
+    </ActionTooltip>
+  );
 }
 
 // Compute date range for a preset
@@ -436,7 +445,7 @@ export function SettlementsView({
           )}
         </div>
 
-        {/* Deuxième ligne : dates from/to + filterBy + apply */}
+        {/* Deuxième ligne : dates from/to + filterBy + apply + recherche + tabs */}
         <div className="flex flex-wrap items-end gap-2">
           <div>
             <Label className="text-[10px]">Filtrer par</Label>
@@ -482,14 +491,10 @@ export function SettlementsView({
               />
             </div>
           </div>
-
-          <span className="ml-auto text-xs text-muted-foreground">
-            {sortedRows.length > 0 ? `Page ${page + 1} / ${pageCount}` : "Aucune donnée"}
-          </span>
         </div>
 
         {/* Troisième ligne : tabs filtre type */}
-        <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto mt-2 w-fit max-w-full">
+        <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto mt-2">
           {TYPE_FILTER_TABS.map((tab) => (
             <button
               key={tab.key}
@@ -562,21 +567,19 @@ export function SettlementsView({
                 >
                   <td className="px-2 py-1.5 whitespace-nowrap">
                     {manual ? (
-                      <span
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 text-slate-700"
-                        title="Paiement saisi manuellement par l'admin"
-                      >
-                        <Banknote className="h-2.5 w-2.5" />
-                        Manuel
-                      </span>
+                      <ActionTooltip label="Paiement saisi manuellement par l'admin">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 text-slate-700 cursor-help">
+                          <Banknote className="h-2.5 w-2.5" />
+                          Manuel
+                        </span>
+                      </ActionTooltip>
                     ) : (
-                      <span
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-indigo-100 text-indigo-700"
-                        title="Paiement en ligne par carte"
-                      >
-                        <CreditCard className="h-2.5 w-2.5" />
-                        Carte
-                      </span>
+                      <ActionTooltip label="Paiement en ligne par carte">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-indigo-100 text-indigo-700 cursor-help">
+                          <CreditCard className="h-2.5 w-2.5" />
+                          Carte
+                        </span>
+                      </ActionTooltip>
                     )}
                   </td>
                   <td className="px-2 py-1.5 whitespace-nowrap">{r.paidAt ? formatDate(new Date(r.paidAt)) : "—"}</td>
@@ -588,7 +591,11 @@ export function SettlementsView({
                   </td>
                   <td className="px-2 py-1.5 whitespace-nowrap max-w-[140px] truncate" title={r.clientName}>{r.clientName}</td>
                   <td className="px-2 py-1.5 whitespace-nowrap max-w-[140px] truncate text-muted-foreground" title={r.cardholderName}>
-                    {manual ? <span className="italic text-muted-foreground/70" title="Pas de carte (paiement manuel)">—</span> : r.cardholderName}
+                    {manual ? (
+                      <ActionTooltip label="Pas de carte (paiement manuel)">
+                        <span className="italic text-muted-foreground/70 cursor-help">—</span>
+                      </ActionTooltip>
+                    ) : r.cardholderName}
                   </td>
                   <td className="px-2 py-1.5 whitespace-nowrap">
                     <span
@@ -622,13 +629,15 @@ export function SettlementsView({
                   </td>
                   <td className="px-2 py-1.5 font-mono text-[10px] text-muted-foreground">{r.invoiceNumber ?? "—"}</td>
                   <td className="px-2 py-1.5 text-right">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDetailPaymentId(r.id); }}
-                      className="inline-flex items-center justify-center h-6 w-6 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                      title="Voir détail"
-                    >
-                      <Eye className="h-3 w-3" />
-                    </button>
+                    <ActionTooltip label="Voir détail du paiement">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDetailPaymentId(r.id); }}
+                        className="inline-flex items-center justify-center h-6 w-6 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                        aria-label="Voir détail du paiement"
+                      >
+                        <Eye className="h-3 w-3" />
+                      </button>
+                    </ActionTooltip>
                   </td>
                 </tr>
               );
@@ -680,7 +689,7 @@ export function SettlementsView({
           Utilisez le sélecteur <strong>Filtrer par</strong> pour adapter la période au besoin :
           paiement (rapport fiscal TPS/TVQ),
           règlement (suivi des disponibilités),
-          versement (réconciliation avec relevé bancaire).
+          versement (vérification avec relevé bancaire).
         </p>
       </div>
 

@@ -4,14 +4,41 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Reçus" };
 
-export default async function ReceiptsPage() {
-  // On considère un Payment comme "ayant un reçu" s'il a paidAt + (stripeReceiptUrl OU invoice OU type = charge)
+export default async function ReceiptsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string; method?: string }>;
+}) {
+  const params = await searchParams;
+
+  // Validation defensive des dates
+  function parseSafe(s: string | undefined): Date | null {
+    if (!s) return null;
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  let from = parseSafe(params.from);
+  let to = parseSafe(params.to);
+  if (from && to && from > to) [from, to] = [to, from];
+
+  const where: Record<string, unknown> = {
+    status: { in: ["succeeded", "paid"] },
+    paidAt: from || to
+      ? {
+          ...(from ? { gte: from } : {}),
+          ...(to ? { lte: (() => { const t = new Date(to); t.setDate(t.getDate() + 1); return t; })() } : {}),
+          not: null,
+        }
+      : { not: null },
+    type: { in: ["charge", "topup"] },
+  };
+
+  // Filtre méthode (carte = stripe, manuel = autre)
+  if (params.method === "card") where.paymentMethod = "stripe";
+  else if (params.method === "manual") where.paymentMethod = { not: "stripe" };
+
   const payments = await prisma.payment.findMany({
-    where: {
-      status: { in: ["succeeded", "paid"] },
-      paidAt: { not: null },
-      type: { in: ["charge", "topup"] },
-    },
+    where,
     orderBy: { paidAt: "desc" },
     take: 500,
     include: {
@@ -39,8 +66,8 @@ export default async function ReceiptsPage() {
     receiptNumber: p.stripeReceiptNumber,
     receiptEmail: p.stripeReceiptEmail,
     stripePaymentIntentId: p.stripePaymentIntentId,
-    // URL du reçu interne VNK généré par notre système
     internalReceiptUrl: `/api/payments/${p.id}/receipt`,
+    isCardPayment: p.paymentMethod === "stripe" || !!p.stripeChargeId,
   }));
 
   const kpis = {
@@ -48,7 +75,16 @@ export default async function ReceiptsPage() {
     sentByEmail: data.filter((d) => d.receiptEmail).length,
     withStripeUrl: data.filter((d) => d.receiptUrl).length,
     totalAmount: data.reduce((s, d) => s + (d.amountCad ?? d.amount), 0),
+    cardCount: data.filter((d) => d.isCardPayment).length,
+    manualCount: data.filter((d) => !d.isCardPayment).length,
   };
 
-  return <ReceiptsView receipts={data} kpis={kpis} />;
+  return (
+    <ReceiptsView
+      receipts={data}
+      kpis={kpis}
+      dateRange={{ from: from ? from.toISOString().slice(0, 10) : "", to: to ? to.toISOString().slice(0, 10) : "" }}
+      methodFilter={(params.method === "card" || params.method === "manual") ? params.method : "all"}
+    />
+  );
 }

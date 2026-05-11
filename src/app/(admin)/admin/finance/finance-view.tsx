@@ -299,7 +299,7 @@ export function FinanceView({
             <span className="text-muted-foreground">En retard :</span>
             <span className="font-semibold text-red-600">{formatCurrency(kpis.totalOverdue)}</span>
           </span>
-          <span className="ml-auto flex items-center gap-3 text-muted-foreground">
+          <span className="flex ml-auto items-center gap-3 text-muted-foreground">
             <span>{byJurisdiction.length} {byJurisdiction.length > 1 ? "juridictions" : "juridiction"}</span>
             <span>·</span>
             <span>{totalCurrencies} devise{totalCurrencies > 1 ? "s" : ""}</span>

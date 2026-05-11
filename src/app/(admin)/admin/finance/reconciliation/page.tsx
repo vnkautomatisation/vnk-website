@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { ReconciliationView } from "./reconciliation-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Réconciliation bancaire" };
+export const metadata: Metadata = { title: "Confirmation banque" };
 
 export default async function ReconciliationPage() {
   const [toReconcileRaw, accountants, methods] = await Promise.all([

@@ -121,7 +121,7 @@ export function ReconciliationView({
         throw new Error(err.error || "Erreur");
       }
       const data = await res.json();
-      toast.success(`${data.count} paiement(s) réconcilié(s)`);
+      toast.success(`${data.count} paiement(s) confirmé(s) reçu(s)`);
       setSelectedIds(new Set());
       router.refresh();
     } catch (err) {
@@ -133,7 +133,7 @@ export function ReconciliationView({
 
   const reconcileAll = async () => {
     if (filtered.length === 0) return;
-    if (!confirm(`Réconcilier les ${filtered.length} paiement(s) affichés ?`)) return;
+    if (!confirm(`Confirmer la réception de ${filtered.length} paiement(s) ?`)) return;
     setSelectedIds(new Set(filtered.map((p) => p.id)));
     // Petit délai pour permettre la mise à jour state, puis appel
     setTimeout(reconcileSelected, 100);
@@ -208,7 +208,7 @@ export function ReconciliationView({
             try {
               const res = await fetch(`/api/payments/${r.id}/reconcile`, { method: "POST" });
               if (!res.ok) throw new Error();
-              toast.success("Réconcilié");
+              toast.success("Paiement confirmé reçu");
               router.refresh();
             } catch {
               toast.error("Erreur");
@@ -217,7 +217,7 @@ export function ReconciliationView({
             }
           }}
         >
-          <CheckCircle2 className="h-3 w-3 mr-1" />Réconcilier
+          <CheckCircle2 className="h-3 w-3 mr-1" />Confirmer reçu
         </Button>
       ),
     },
@@ -231,10 +231,10 @@ export function ReconciliationView({
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5" />
-              Réconciliation bancaire
+              Confirmation banque
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
-              {payments.length} paiement{payments.length > 1 ? "s" : ""} en attente · {formatCurrency(totalPending)} à rapprocher
+              {payments.length} paiement{payments.length > 1 ? "s" : ""} à vérifier · {formatCurrency(totalPending)} en attente de vérification
             </p>
           </div>
           {filtered.length > 0 && (
@@ -246,7 +246,7 @@ export function ReconciliationView({
               disabled={busy}
             >
               <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-              Tout réconcilier ({filtered.length})
+              Tout confirmer reçu ({filtered.length})
             </Button>
           )}
         </div>
@@ -269,11 +269,11 @@ export function ReconciliationView({
       <div className="rounded-lg border bg-blue-50 p-3 text-xs text-blue-900 flex items-start gap-2">
         <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
         <div>
-          <p className="font-semibold">Workflow réconciliation</p>
+          <p className="font-semibold">Comment vérifier les paiements reçus en banque</p>
           <p className="mt-0.5">
             1. Filtrer par méthode (ex : carte pour matcher le relevé de la plateforme)
             · 2. Vérifier que la somme correspond au virement reçu en banque
-            · 3. Cocher les paiements rapprochés et cliquer <strong>Réconcilier la sélection</strong>
+            · 3. Cocher les paiements vérifiés et cliquer <strong>Confirmer la sélection</strong>
             · 4. Une fois exportés vers le logiciel comptable (Sage/QuickBooks/Acomba), ils disparaissent d&apos;ici.
           </p>
         </div>
@@ -294,12 +294,12 @@ export function ReconciliationView({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
             <CheckCircle2 className="h-4 w-4" />
-            Réconciliation
+            Confirmation banque
           </span>
-          <span className="font-semibold text-[#0F2D52]">{filtered.length} en attente</span>
-          <span className="text-muted-foreground">À rapprocher : <span className="font-bold text-[#0F2D52]">{formatCurrency(totalPending)}</span></span>
+          <span className="font-semibold text-[#0F2D52]">{filtered.length} à vérifier</span>
+          <span className="text-muted-foreground">En attente : <span className="font-bold text-[#0F2D52]">{formatCurrency(totalPending)}</span></span>
           {selectedIds.size > 0 && (
-            <span className="text-muted-foreground">Sélectionnés : <span className="font-bold text-emerald-600">{selectedIds.size}</span></span>
+            <span className="text-muted-foreground">Sél. : <span className="font-bold text-emerald-600">{selectedIds.size}</span></span>
           )}
           <span className="ml-auto text-muted-foreground">{methodFilter !== "all" ? `Méthode : ${methodFilter}` : "Toutes méthodes"}</span>
         </div>
@@ -344,7 +344,7 @@ export function ReconciliationView({
           </span>
           <div className="flex-1" />
           <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 h-7 text-xs" onClick={reconcileSelected} disabled={busy}>
-            <CheckCircle2 className="h-3 w-3 mr-1" />Réconcilier la sélection
+            <CheckCircle2 className="h-3 w-3 mr-1" />Confirmer la sélection
           </Button>
           <Button size="sm" variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 h-7 text-xs" onClick={() => setSelectedIds(new Set())}>
             Annuler
@@ -357,7 +357,7 @@ export function ReconciliationView({
         columns={columns}
         getRowId={(r) => r.id}
         searchPlaceholder="Rechercher..."
-        exportFilename="reconciliation"
+        exportFilename="confirmation-banque"
         storageKey="admin-reconciliation"
       />
 
@@ -367,8 +367,8 @@ export function ReconciliationView({
       {payments.length === 0 && (
         <div className="text-center py-12">
           <CheckCircle2 className="h-12 w-12 mx-auto text-emerald-500 mb-2" />
-          <p className="font-medium">Tous les paiements sont réconciliés</p>
-          <p className="text-xs text-muted-foreground mt-1">Aucun rapprochement bancaire en attente.</p>
+          <p className="font-medium">Tous les paiements sont confirmés reçus</p>
+          <p className="text-xs text-muted-foreground mt-1">Aucune vérification banque en attente.</p>
         </div>
       )}
     </div>

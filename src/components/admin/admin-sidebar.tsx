@@ -188,33 +188,99 @@ function saveJson(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* noop */ }
 }
 
-// Trouve récursivement la chaîne de groupes contenant le path actif
-// Retourne ['finance_group', 'payments_group'] si /admin/transactions est actif
-function findAncestorGroupKeys(entries: NavEntry[], pathname: string, ancestors: string[] = []): string[] | null {
+// Collecte tous les href de leaves (recursif)
+function getAllLeafHrefs(entries: NavEntry[]): string[] {
+  const out: string[] = [];
+  for (const e of entries) {
+    if (isGroup(e)) out.push(...getAllLeafHrefs(e.children));
+    else out.push(e.href);
+  }
+  return out;
+}
+
+// Retourne l'href du leaf qui correspond le mieux au pathname courant.
+// - Exact match prioritaire
+// - Sinon : prefix match le plus long (ex : "/admin/finance/settlements" gagne contre "/admin/finance")
+// - "/admin" ne match QUE exact (sinon il s'active pour toute page admin)
+function findActiveLeafHref(allHrefs: string[], pathname: string): string | null {
+  if (allHrefs.includes(pathname)) return pathname;
+  let best: string | null = null;
+  for (const h of allHrefs) {
+    if (h === "/admin") continue;
+    if (pathname.startsWith(h + "/") && (!best || h.length > best.length)) {
+      best = h;
+    }
+  }
+  return best;
+}
+
+// Trouve récursivement la chaîne de groupes contenant le leaf actif (en fonction de activeHref).
+function findAncestorGroupKeys(entries: NavEntry[], activeHref: string | null, ancestors: string[] = []): string[] | null {
+  if (!activeHref) return null;
   for (const e of entries) {
     if (!isGroup(e)) {
-      const active = e.href === "/admin" ? pathname === "/admin" : pathname === e.href || pathname.startsWith(e.href + "/");
-      if (active) return ancestors;
+      if (e.href === activeHref) return ancestors;
       continue;
     }
-    const result = findAncestorGroupKeys(e.children, pathname, [...ancestors, e.key]);
+    const result = findAncestorGroupKeys(e.children, activeHref, [...ancestors, e.key]);
     if (result) return result;
   }
   return null;
 }
 
-function isLeafActive(href: string, pathname: string): boolean {
-  return href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(href + "/");
+// Vrai si l'href actif est un descendant (à n'importe quelle profondeur) du groupe.
+function groupContainsHref(group: NavGroup, activeHref: string): boolean {
+  for (const c of group.children) {
+    if (isGroup(c)) {
+      if (groupContainsHref(c, activeHref)) return true;
+    } else if (c.href === activeHref) {
+      return true;
+    }
+  }
+  return false;
 }
+
+// Retourne les keys des autres groupes au MEME niveau d'arbre que targetKey
+// (pour comportement accordion : ouvrir un groupe ferme ses voisins de même niveau).
+// Ne touche pas aux ancêtres ni aux enfants.
+function getSiblingGroupKeys(entries: NavEntry[], targetKey: string): string[] | null {
+  // Liste des groupes à ce niveau
+  const thisLevelGroups: string[] = [];
+  for (const e of entries) {
+    if (isGroup(e)) thisLevelGroups.push(e.key);
+  }
+  if (thisLevelGroups.includes(targetKey)) {
+    return thisLevelGroups.filter((k) => k !== targetKey);
+  }
+  // Recursion : chercher dans les enfants des groupes
+  for (const e of entries) {
+    if (isGroup(e)) {
+      const result = getSiblingGroupKeys(e.children, targetKey);
+      if (result !== null) return result;
+    }
+  }
+  return null;
+}
+
+// Précalculé une fois — la liste des href ne change pas
+const ALL_LEAF_HREFS = getAllLeafHrefs(NAV);
 
 export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
   const t = useTranslations("admin.sidebar");
   const pathname = usePathname();
+  const activeHref = findActiveLeafHref(ALL_LEAF_HREFS, pathname);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const [compact, setCompactState] = useState(false);
   useEffect(() => { setCompactState(loadJson("admin.sidebar.compact", false)); }, []);
   const setCompact = (v: boolean) => { setCompactState(v); saveJson("admin.sidebar.compact", v); };
+
+  // Synchronise la largeur de la sidebar avec une CSS variable
+  // pour que le <main> du layout suive automatiquement (evite le gap blanc en mode compact)
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.style.setProperty("--admin-sidebar-w", compact ? "64px" : "240px");
+  }, [compact]);
 
   const [openGroups, setOpenGroupsState] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -223,8 +289,8 @@ export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
     if (stored) {
       setOpenGroupsState(stored);
     } else {
-      // Premier passage : ouvrir tous les ancêtres du path actif
-      const ancestors = findAncestorGroupKeys(NAV, pathname) ?? [];
+      // Premier passage : ouvrir tous les ancêtres du leaf actif
+      const ancestors = findAncestorGroupKeys(NAV, activeHref) ?? [];
       setOpenGroupsState(ancestors);
     }
     setHydrated(true);
@@ -235,20 +301,28 @@ export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
     saveJson("admin.sidebar.openGroups", groups);
   };
   const toggleGroup = (key: string) => {
-    setOpenGroups(openGroups.includes(key) ? openGroups.filter((k) => k !== key) : [...openGroups, key]);
+    if (openGroups.includes(key)) {
+      // Fermer le groupe (et ses descendants ouverts)
+      setOpenGroups(openGroups.filter((k) => k !== key));
+    } else {
+      // Ouvrir : accordion = fermer les voisins du même niveau, garder les ancêtres
+      const siblings = getSiblingGroupKeys(NAV, key) ?? [];
+      const filtered = openGroups.filter((k) => !siblings.includes(k));
+      setOpenGroups([...filtered, key]);
+    }
   };
 
-  // Auto-ouvrir tous les ancêtres du path actif lors de la navigation
+  // Auto-ouvrir tous les ancêtres du leaf actif lors de la navigation
   useEffect(() => {
     if (!hydrated) return;
-    const ancestors = findAncestorGroupKeys(NAV, pathname);
+    const ancestors = findAncestorGroupKeys(NAV, activeHref);
     if (!ancestors || ancestors.length === 0) return;
     const missing = ancestors.filter((k) => !openGroups.includes(k));
     if (missing.length > 0) {
       setOpenGroups([...openGroups, ...missing]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, hydrated]);
+  }, [activeHref, hydrated]);
 
   return (
     <>
@@ -261,7 +335,7 @@ export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
         aria-label="Navigation admin"
       >
         <SidebarContent
-          pathname={pathname}
+          activeHref={activeHref}
           t={t}
           counts={counts}
           compact={compact}
@@ -307,7 +381,7 @@ export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
               </button>
             </div>
             <SidebarContent
-              pathname={pathname}
+              activeHref={activeHref}
               t={t}
               counts={counts}
               compact={false}
@@ -323,7 +397,7 @@ export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
 }
 
 function SidebarContent({
-  pathname,
+  activeHref,
   t,
   counts = {},
   compact,
@@ -331,7 +405,7 @@ function SidebarContent({
   toggleGroup,
   onNavigate,
 }: {
-  pathname: string;
+  activeHref: string | null;
   t: (key: string) => string;
   counts?: SidebarCounts;
   compact: boolean;
@@ -340,13 +414,13 @@ function SidebarContent({
   onNavigate?: () => void;
 }) {
   return (
-    <nav className="flex-1 overflow-y-auto py-2 px-2" aria-label="Navigation principale">
+    <nav className="flex-1 min-h-0 overflow-y-auto py-2 px-2 admin-sidebar-scroll" aria-label="Navigation principale">
       <ul className="space-y-0.5">
         {NAV.map((entry) => (
           <NavRow
             key={entry.key}
             entry={entry}
-            pathname={pathname}
+            activeHref={activeHref}
             t={t}
             counts={counts}
             compact={compact}
@@ -364,7 +438,7 @@ function SidebarContent({
 // Render récursif : décide si leaf ou group
 function NavRow({
   entry,
-  pathname,
+  activeHref,
   t,
   counts = {},
   compact,
@@ -374,7 +448,7 @@ function NavRow({
   onNavigate,
 }: {
   entry: NavEntry;
-  pathname: string;
+  activeHref: string | null;
   t: (key: string) => string;
   counts?: SidebarCounts;
   compact: boolean;
@@ -387,7 +461,7 @@ function NavRow({
     return (
       <GroupRow
         group={entry}
-        pathname={pathname}
+        activeHref={activeHref}
         t={t}
         counts={counts}
         compact={compact}
@@ -403,7 +477,7 @@ function NavRow({
   return (
     <LeafRow
       item={entry}
-      pathname={pathname}
+      activeHref={activeHref}
       t={t}
       counts={counts}
       compact={compact}
@@ -415,7 +489,7 @@ function NavRow({
 
 function GroupRow({
   group,
-  pathname,
+  activeHref,
   t,
   counts = {},
   compact,
@@ -427,7 +501,7 @@ function GroupRow({
   onNavigate,
 }: {
   group: NavGroup;
-  pathname: string;
+  activeHref: string | null;
   t: (key: string) => string;
   counts?: SidebarCounts;
   compact: boolean;
@@ -439,12 +513,7 @@ function GroupRow({
   onNavigate?: () => void;
 }) {
   const Icon = group.icon;
-  const hasActive = group.children.some((c) => {
-    if (isGroup(c)) {
-      return findAncestorGroupKeys([c], pathname) !== null;
-    }
-    return isLeafActive(c.href, pathname);
-  });
+  const hasActive = activeHref !== null && groupContainsHref(group, activeHref);
   const badge = entryBadgeSum(group, counts);
   const label = t(group.key);
 
@@ -515,7 +584,7 @@ function GroupRow({
             <NavRow
               key={child.key}
               entry={child}
-              pathname={pathname}
+              activeHref={activeHref}
               t={t}
               counts={counts}
               compact={false}
@@ -545,7 +614,7 @@ function GroupRow({
               <FlyoutNavRow
                 key={child.key}
                 entry={child}
-                pathname={pathname}
+                activeHref={activeHref}
                 t={t}
                 counts={counts}
                 onNavigate={() => { setFlyoutPos(null); onNavigate?.(); }}
@@ -562,13 +631,13 @@ function GroupRow({
 // Version flyout récursive : sub-groups apparaissent en sub-flyout au hover
 function FlyoutNavRow({
   entry,
-  pathname,
+  activeHref,
   t,
   counts = {},
   onNavigate,
 }: {
   entry: NavEntry;
-  pathname: string;
+  activeHref: string | null;
   t: (key: string) => string;
   counts?: SidebarCounts;
   onNavigate?: () => void;
@@ -577,7 +646,7 @@ function FlyoutNavRow({
     return (
       <LeafRow
         item={entry}
-        pathname={pathname}
+        activeHref={activeHref}
         t={t}
         counts={counts}
         compact={false}
@@ -615,7 +684,7 @@ function FlyoutNavRow({
             <FlyoutNavRow
               key={child.key}
               entry={child}
-              pathname={pathname}
+              activeHref={activeHref}
               t={t}
               counts={counts}
               onNavigate={onNavigate}
@@ -629,7 +698,7 @@ function FlyoutNavRow({
 
 function LeafRow({
   item,
-  pathname,
+  activeHref,
   t,
   counts = {},
   compact,
@@ -637,7 +706,7 @@ function LeafRow({
   onNavigate,
 }: {
   item: NavLeaf;
-  pathname: string;
+  activeHref: string | null;
   t: (key: string) => string;
   counts?: SidebarCounts;
   compact: boolean;
@@ -645,7 +714,7 @@ function LeafRow({
   onNavigate?: () => void;
 }) {
   const Icon = item.icon;
-  const active = isLeafActive(item.href, pathname);
+  const active = item.href === activeHref;
   const countKey = BADGE_MAP[item.key];
   const badgeValue = countKey ? counts[countKey] : undefined;
   const label = t(item.key);

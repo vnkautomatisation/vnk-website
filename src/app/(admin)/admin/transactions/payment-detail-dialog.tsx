@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ActionTooltip } from "@/components/ui/action-tooltip";
 import {
   CreditCard,
   Receipt,
@@ -351,14 +352,16 @@ export function PaymentDetailDialog({
                 {!editingType ? (
                   <>
                     <span>{p.type ? TYPE_LABELS[p.type] ?? p.type : "Paiement"}</span>
-                    <button
-                      onClick={() => { setPendingType(p.type ?? "charge"); setEditingType(true); }}
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white/80 text-[10px]"
-                      title="Modifier le type (rare — pour corriger une catégorisation erronée)"
-                    >
-                      <Edit3 className="h-2.5 w-2.5" />
-                      Modifier
-                    </button>
+                    <ActionTooltip label="Modifier le type (rare — pour corriger une catégorisation erronée)">
+                      <button
+                        onClick={() => { setPendingType(p.type ?? "charge"); setEditingType(true); }}
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white/80 text-[10px]"
+                        aria-label="Modifier le type"
+                      >
+                        <Edit3 className="h-2.5 w-2.5" />
+                        Modifier
+                      </button>
+                    </ActionTooltip>
                     {p.paymentMethod && <span>· {METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod}</span>}
                     <span>· {isStripe ? "Carte" : "Manuel"}</span>
                   </>
@@ -480,13 +483,21 @@ export function PaymentDetailDialog({
                 {p.paidAt && <Row label="Payé" value={formatDateTime(new Date(p.paidAt))} />}
                 {p.settledAt && (
                   <Row
-                    label={<span title="Date à laquelle les fonds sont disponibles dans votre solde de la plateforme de paiement">Réglé</span>}
+                    label={
+                      <ActionTooltip label="Date à laquelle les fonds sont disponibles dans votre solde de la plateforme de paiement">
+                        <span className="cursor-help">Réglé</span>
+                      </ActionTooltip>
+                    }
                     value={formatDate(new Date(p.settledAt))}
                   />
                 )}
                 {p.payoutAt && (
                   <Row
-                    label={<span title="Date à laquelle l'argent arrive sur votre compte bancaire">Versé en banque</span>}
+                    label={
+                      <ActionTooltip label="Date à laquelle l'argent arrive sur votre compte bancaire">
+                        <span className="cursor-help">Versé en banque</span>
+                      </ActionTooltip>
+                    }
                     value={formatDate(new Date(p.payoutAt))}
                   />
                 )}
@@ -535,15 +546,17 @@ export function PaymentDetailDialog({
               {isStripe && (
                 <Section title="Références techniques" icon={ExternalLink} action={
                   p.stripePaymentIntentId && (
-                    <a
-                      href={`https://dashboard.stripe.com/payments/${p.stripePaymentIntentId}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                      title="Ouvrir cette transaction sur la plateforme de paiement"
-                    >
-                      Voir détails plateforme <ExternalLink className="h-2.5 w-2.5" />
-                    </a>
+                    <ActionTooltip label="Ouvrir cette transaction sur la plateforme de paiement">
+                      <a
+                        href={`https://dashboard.stripe.com/payments/${p.stripePaymentIntentId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                        aria-label="Voir détails sur la plateforme"
+                      >
+                        Voir détails plateforme <ExternalLink className="h-2.5 w-2.5" />
+                      </a>
+                    </ActionTooltip>
                   )
                 }>
                   {p.stripePaymentIntentId && <Row label="Référence paiement" value={p.stripePaymentIntentId} mono />}
@@ -551,15 +564,17 @@ export function PaymentDetailDialog({
                   {p.stripeBalanceTxId && <Row label="Référence solde" value={p.stripeBalanceTxId} mono />}
                   {p.stripePayoutId && (
                     <Row label="Référence versement" value={
-                      <a
-                        href={`https://dashboard.stripe.com/payouts/${p.stripePayoutId}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-mono text-[10px] hover:underline truncate inline-block max-w-[200px]"
-                        title="Ouvrir le détail du versement sur la plateforme de paiement"
-                      >
-                        {p.stripePayoutId}
-                      </a>
+                      <ActionTooltip label="Ouvrir le détail du versement sur la plateforme de paiement">
+                        <a
+                          href={`https://dashboard.stripe.com/payouts/${p.stripePayoutId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono text-[10px] hover:underline truncate inline-block max-w-[200px]"
+                          aria-label="Voir le versement sur la plateforme"
+                        >
+                          {p.stripePayoutId}
+                        </a>
+                      </ActionTooltip>
                     } />
                   )}
                   {p.stripeReceiptNumber && <Row label="N° reçu officiel" value={p.stripeReceiptNumber} mono />}
@@ -569,7 +584,7 @@ export function PaymentDetailDialog({
 
               {/* Section Workflow comptable */}
               <Section
-                title="Comptabilité & réconciliation"
+                title="Comptabilité & confirmation banque"
                 icon={FolderInput}
                 action={
                   !editingAccounting && (
@@ -585,24 +600,28 @@ export function PaymentDetailDialog({
                   <>
                     <div className="px-3 py-2 flex items-center justify-between gap-2">
                       <span className="text-xs text-muted-foreground">Confirmation banque</span>
-                      <button
-                        onClick={toggleReconciled}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium transition-colors",
-                          isReconciled
-                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                            : "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                        )}
-                        title={isReconciled
+                      <ActionTooltip
+                        label={isReconciled
                           ? "Cliquer pour retirer la confirmation"
                           : "Cliquer pour marquer ce paiement comme confirmé reçu en banque"}
                       >
-                        {isReconciled ? (
-                          <><CheckCircle2 className="h-3 w-3" /> Confirmé reçu</>
-                        ) : (
-                          <><Clock className="h-3 w-3" /> À vérifier</>
-                        )}
-                      </button>
+                        <button
+                          onClick={toggleReconciled}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium transition-colors",
+                            isReconciled
+                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                              : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                          )}
+                          aria-label={isReconciled ? "Retirer la confirmation" : "Confirmer reçu"}
+                        >
+                          {isReconciled ? (
+                            <><CheckCircle2 className="h-3 w-3" /> Confirmé reçu</>
+                          ) : (
+                            <><Clock className="h-3 w-3" /> À vérifier</>
+                          )}
+                        </button>
+                      </ActionTooltip>
                     </div>
                     {p.reconciledAt && p.reconciledBy && (
                       <Row label="Confirmé par" value={`${p.reconciledBy} · ${formatDate(new Date(p.reconciledAt))}`} />
@@ -610,7 +629,7 @@ export function PaymentDetailDialog({
                   </>
                 ) : (
                   <div className="px-3 py-2 text-[10px] text-muted-foreground italic">
-                    Pas de réconciliation banque pour ce type ({TYPE_LABELS[p.type ?? "charge"] ?? p.type}) — il s&apos;agit d&apos;une sortie d&apos;argent ou d&apos;un frais, pas d&apos;un encaissement à vérifier.
+                    Pas de vérification banque pour ce type ({TYPE_LABELS[p.type ?? "charge"] ?? p.type}) — il s&apos;agit d&apos;une sortie d&apos;argent ou d&apos;un frais, pas d&apos;un encaissement à vérifier.
                   </div>
                 )}
                 {editingAccounting ? (

@@ -395,7 +395,8 @@ export async function markInvoicePaid(
 }
 
 // Envoi async du reçu de paiement (PDF + email) — non bloquant
-async function sendPaymentReceipt(paymentId: number) {
+// Exportee pour permettre le renvoi manuel depuis /admin/finance/receipts
+export async function sendPaymentReceipt(paymentId: number) {
   const { generateReceiptPdf, localeToDocLang } = await import("./services/pdf");
   const { sendEmail } = await import("./services/email");
   const { logEmailEvent } = await import("./request-context");
