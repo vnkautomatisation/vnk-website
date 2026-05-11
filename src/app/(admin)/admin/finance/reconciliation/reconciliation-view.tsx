@@ -8,12 +8,11 @@ import {
   Square,
   Search,
   CreditCard,
-  Users,
-  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import {
@@ -23,6 +22,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+// Labels FR pour méthodes de paiement (memes labels que receipts/payments)
+const METHOD_LABELS: Record<string, string> = {
+  stripe: "Carte de crédit",
+  interac: "Interac",
+  cheque: "Chèque",
+  virement: "Virement bancaire",
+  comptant: "Comptant",
+  manual: "Manuel",
+  autre: "Autre",
+};
+
+function methodLabel(m: string | null | undefined): string {
+  if (!m) return "—";
+  return METHOD_LABELS[m] ?? m;
+}
 
 type Payment = {
   id: number;
@@ -185,7 +200,7 @@ export function ReconciliationView({
     {
       key: "method",
       header: "Méthode",
-      accessor: (r) => <span className="text-xs capitalize">{r.paymentMethod ?? "—"}</span>,
+      accessor: (r) => <span className="text-xs">{methodLabel(r.paymentMethod)}</span>,
     },
     {
       key: "stripe",
@@ -199,26 +214,29 @@ export function ReconciliationView({
       key: "actions",
       header: "",
       accessor: (r) => (
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 px-2 text-xs"
-          onClick={async () => {
-            setBusy(true);
-            try {
-              const res = await fetch(`/api/payments/${r.id}/reconcile`, { method: "POST" });
-              if (!res.ok) throw new Error();
-              toast.success("Paiement confirmé reçu");
-              router.refresh();
-            } catch {
-              toast.error("Erreur");
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          <CheckCircle2 className="h-3 w-3 mr-1" />Confirmer reçu
-        </Button>
+        <ActionTooltip label="Marquer ce paiement comme vérifié en banque">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-xs"
+            onClick={async (e) => {
+              e.stopPropagation();
+              setBusy(true);
+              try {
+                const res = await fetch(`/api/payments/${r.id}/reconcile`, { method: "POST" });
+                if (!res.ok) throw new Error();
+                toast.success("Paiement confirmé reçu");
+                router.refresh();
+              } catch {
+                toast.error("Erreur");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <CheckCircle2 className="h-3 w-3 mr-1" />Confirmer reçu
+          </Button>
+        </ActionTooltip>
       ),
     },
   ];
@@ -257,7 +275,7 @@ export function ReconciliationView({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {byMethod.map((m) => (
             <div key={m.method} className="rounded-lg border bg-card p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground capitalize">{m.method}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{methodLabel(m.method)}</p>
               <p className="text-lg font-bold mt-1">{formatCurrency(m.total)}</p>
               <p className="text-[10px] text-muted-foreground">{m.count} paiement{m.count > 1 ? "s" : ""}</p>
             </div>
@@ -271,68 +289,68 @@ export function ReconciliationView({
         <div>
           <p className="font-semibold">Comment vérifier les paiements reçus en banque</p>
           <p className="mt-0.5">
-            1. Filtrer par méthode (ex : carte pour matcher le relevé de la plateforme)
+            1. Filtrer par méthode (ex : carte pour matcher le relevé de la plateforme de paiement)
             · 2. Vérifier que la somme correspond au virement reçu en banque
-            · 3. Cocher les paiements vérifiés et cliquer <strong>Confirmer la sélection</strong>
-            · 4. Une fois exportés vers le logiciel comptable (Sage/QuickBooks/Acomba), ils disparaissent d&apos;ici.
+            · 3. Cocher les paiements vérifiés et cliquer <strong>Confirmer la sélection</strong>.
           </p>
         </div>
       </div>
 
-      {/* Sentinel — détecte quand le hero+sommaire+aide quittent le viewport */}
+      {/* Sentinel + sticky bar (filtres + KPI summary au scroll) */}
       <div ref={sentinelRef} aria-hidden className="h-px -mt-2" />
-
-      {/* Bandeau sticky compact (Wix pattern) — apparaît au scroll */}
       <div
         className={cn(
-          "sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 transition-all",
-          scrolled
-            ? "bg-background/95 backdrop-blur shadow-sm border-b"
-            : "bg-transparent pointer-events-none opacity-0 -translate-y-2"
+          "sticky top-[64px] z-20 bg-background -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 transition-shadow",
+          scrolled && "shadow-sm border-b backdrop-blur"
         )}
       >
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-          <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
-            <CheckCircle2 className="h-4 w-4" />
-            Confirmation banque
-          </span>
-          <span className="font-semibold text-[#0F2D52]">{filtered.length} à vérifier</span>
-          <span className="text-muted-foreground">En attente : <span className="font-bold text-[#0F2D52]">{formatCurrency(totalPending)}</span></span>
-          {selectedIds.size > 0 && (
-            <span className="text-muted-foreground">Sél. : <span className="font-bold text-emerald-600">{selectedIds.size}</span></span>
-          )}
-          <span className="ml-auto text-muted-foreground">{methodFilter !== "all" ? `Méthode : ${methodFilter}` : "Toutes méthodes"}</span>
-        </div>
-      </div>
+        {scrolled && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs mb-2 pt-1">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <CheckCircle2 className="h-4 w-4" />
+              Confirmation banque
+            </span>
+            <span className="font-semibold text-[#0F2D52]">{filtered.length} à vérifier</span>
+            <span className="text-muted-foreground">En attente : <span className="font-bold text-[#0F2D52]">{formatCurrency(totalPending)}</span></span>
+            {selectedIds.size > 0 && (
+              <span className="text-muted-foreground">Sél. : <span className="font-bold text-emerald-600">{selectedIds.size}</span></span>
+            )}
+            <span className="ml-auto text-muted-foreground">{methodFilter !== "all" ? `Méthode : ${methodLabel(methodFilter)}` : "Toutes méthodes"}</span>
+          </div>
+        )}
 
-      {/* Filtres */}
-      <div className="flex flex-wrap items-end gap-2 p-3 rounded-lg border bg-card">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Client, facture, référence..."
-            className="pl-8 h-8 text-sm"
-          />
-        </div>
-        <div>
-          <Label className="text-[10px] text-muted-foreground"><CreditCard className="h-3 w-3 inline mr-1" />Méthode</Label>
-          <Select value={methodFilter} onValueChange={setMethodFilter}>
-            <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes</SelectItem>
-              {methodList.map((m) => <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className="text-[10px] text-muted-foreground"><Calendar className="h-3 w-3 inline mr-1" />Du</Label>
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-8 w-[140px] text-xs" />
-        </div>
-        <div>
-          <Label className="text-[10px] text-muted-foreground"><Calendar className="h-3 w-3 inline mr-1" />Au</Label>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-8 w-[140px] text-xs" />
+        {/* Filtres inline (recherche + méthode + dates) */}
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="relative flex-1 min-w-[200px] max-w-md">
+            <Label className="text-[10px]">Recherche</Label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Client, facture, référence…"
+                className="h-9 pl-8 text-xs"
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-[10px]"><CreditCard className="h-3 w-3 inline mr-1" />Méthode</Label>
+            <Select value={methodFilter} onValueChange={setMethodFilter}>
+              <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                {methodList.map((m) => <SelectItem key={m} value={m}>{methodLabel(m)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-[10px]">Du</Label>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-36 text-xs" />
+          </div>
+          <div>
+            <Label className="text-[10px]">Au</Label>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-36 text-xs" />
+          </div>
         </div>
       </div>
 
