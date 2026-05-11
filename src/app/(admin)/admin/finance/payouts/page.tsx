@@ -4,13 +4,51 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Versements" };
 
-export default async function PayoutsPage() {
+export default async function PayoutsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
+  const params = await searchParams;
+
+  // Validation defensive — new Date("foo") retourne Invalid Date qui plante Prisma
+  function parseSafe(s: string | undefined): Date | null {
+    if (!s) return null;
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  let from = parseSafe(params.from);
+  let to = parseSafe(params.to);
+  if (from && to && from > to) [from, to] = [to, from];
+
+  const where: Record<string, unknown> = {};
+  if (from || to) {
+    const range: Record<string, Date> = {};
+    if (from) range.gte = from;
+    if (to) {
+      const end = new Date(to);
+      end.setDate(end.getDate() + 1);
+      range.lte = end;
+    }
+    where.initiatedAt = range;
+  }
+
   const payouts = await prisma.payout.findMany({
+    where,
     orderBy: { initiatedAt: "desc" },
     take: 200,
     include: {
       payments: {
-        select: { id: true, amount: true, currency: true, type: true, processingFee: true, netAmount: true },
+        select: {
+          id: true,
+          amount: true,
+          currency: true,
+          type: true,
+          processingFee: true,
+          netAmount: true,
+          // Inclut le client pour permettre la recherche cote client
+          client: { select: { fullName: true, companyName: true } },
+        },
       },
     },
   });
@@ -42,12 +80,18 @@ export default async function PayoutsPage() {
     feeTotal: Number(p.feeTotal),
     paymentCount: p.payments.length,
     paymentSum: p.payments.reduce((s, x) => s + Number(x.netAmount ?? x.amount), 0),
+    // Noms clients agreges pour la recherche cote client (search libre)
+    clientNames: p.payments
+      .map((x) => [x.client?.fullName, x.client?.companyName].filter(Boolean).join(" "))
+      .filter(Boolean)
+      .join(" | "),
   }));
 
   return (
     <PayoutsView
       payouts={data}
       kpis={{ totalPaid, totalPending, totalFailed, countPaid, countPending, countFailed, count: data.length }}
+      dateRange={{ from: from ? from.toISOString().slice(0, 10) : "", to: to ? to.toISOString().slice(0, 10) : "" }}
     />
   );
 }

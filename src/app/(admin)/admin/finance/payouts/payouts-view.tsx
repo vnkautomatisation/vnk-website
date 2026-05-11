@@ -1,12 +1,17 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Banknote, Search, ArrowDownToLine, CheckCircle2, Clock, XCircle, ExternalLink, ArrowUpRight,
+  Calendar, Eye, X,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { PayoutDetailDialog } from "./payout-detail-dialog";
 
 type Payout = {
   id: number;
@@ -26,6 +31,7 @@ type Payout = {
   feeTotal: number;
   paymentCount: number;
   paymentSum: number;
+  clientNames: string;
 };
 
 type Kpis = {
@@ -40,26 +46,73 @@ type Kpis = {
 
 type StatusFilter = "all" | "paid" | "pending" | "in_transit" | "failed" | "canceled";
 
-const STATUS_TABS: { key: StatusFilter; label: string }[] = [
-  { key: "all", label: "Tous" },
-  { key: "paid", label: "Versés" },
-  { key: "in_transit", label: "En transit" },
-  { key: "pending", label: "En attente" },
-  { key: "failed", label: "Échoués" },
-  { key: "canceled", label: "Annulés" },
+const STATUS_TABS: { key: StatusFilter; label: string; tooltip: string }[] = [
+  { key: "all", label: "Tous", tooltip: "Tous les versements" },
+  { key: "paid", label: "Versés", tooltip: "Fonds reçus en banque" },
+  { key: "in_transit", label: "En transit", tooltip: "Versement initié, en route vers la banque" },
+  { key: "pending", label: "En attente", tooltip: "Versement créé, pas encore initié" },
+  { key: "failed", label: "Échoués", tooltip: "Versement échoué — fonds retournés dans votre solde" },
+  { key: "canceled", label: "Annulés", tooltip: "Versement annulé avant exécution" },
 ];
 
-const STATUS_META: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
-  paid: { label: "Versé", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
-  in_transit: { label: "En transit", color: "bg-blue-100 text-blue-700", icon: ArrowDownToLine },
-  pending: { label: "En attente", color: "bg-amber-100 text-amber-700", icon: Clock },
-  failed: { label: "Échoué", color: "bg-red-100 text-red-700", icon: XCircle },
-  canceled: { label: "Annulé", color: "bg-gray-100 text-gray-700", icon: XCircle },
+const STATUS_META: Record<string, { label: string; color: string; icon: typeof CheckCircle2; tooltip: string }> = {
+  paid: { label: "Versé", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2, tooltip: "Fonds reçus en banque" },
+  in_transit: { label: "En transit", color: "bg-blue-100 text-blue-700", icon: ArrowDownToLine, tooltip: "En route vers la banque" },
+  pending: { label: "En attente", color: "bg-amber-100 text-amber-700", icon: Clock, tooltip: "Versement créé, pas encore initié" },
+  failed: { label: "Échoué", color: "bg-red-100 text-red-700", icon: XCircle, tooltip: "Versement échoué — vérifier les informations bancaires" },
+  canceled: { label: "Annulé", color: "bg-gray-100 text-gray-700", icon: XCircle, tooltip: "Versement annulé" },
 };
 
-export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }) {
+// Presets de periode
+function getPresetRange(preset: string): { from: string; to: string } | null {
+  const now = new Date();
+  const toIso = (d: Date) => d.toISOString().slice(0, 10);
+  switch (preset) {
+    case "30d": {
+      const f = new Date(now); f.setDate(f.getDate() - 30);
+      return { from: toIso(f), to: toIso(now) };
+    }
+    case "thisMonth": {
+      const f = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { from: toIso(f), to: toIso(now) };
+    }
+    case "lastMonth": {
+      const f = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const t = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { from: toIso(f), to: toIso(t) };
+    }
+    case "thisQuarter": {
+      const q = Math.floor(now.getMonth() / 3);
+      const f = new Date(now.getFullYear(), q * 3, 1);
+      return { from: toIso(f), to: toIso(now) };
+    }
+    case "thisYear": {
+      const f = new Date(now.getFullYear(), 0, 1);
+      return { from: toIso(f), to: toIso(now) };
+    }
+    default:
+      return null;
+  }
+}
+
+export function PayoutsView({
+  payouts,
+  kpis,
+  dateRange,
+}: {
+  payouts: Payout[];
+  kpis: Kpis;
+  dateRange: { from: string; to: string };
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [from, setFrom] = useState(dateRange.from);
+  const [to, setTo] = useState(dateRange.to);
+
+  // Modal détail
+  const [detailPayoutId, setDetailPayoutId] = useState<number | null>(null);
 
   // Sticky scroll
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -72,6 +125,35 @@ export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }
     return () => obs.disconnect();
   }, []);
 
+  // URL update pour dates
+  const updateUrl = (overrides: Partial<{ from: string; to: string }>) => {
+    const p = new URLSearchParams(searchParams.toString());
+    Object.entries(overrides).forEach(([k, v]) => {
+      if (v === undefined || v === "") p.delete(k);
+      else p.set(k, v);
+    });
+    router.push(`/admin/finance/payouts?${p.toString()}`);
+  };
+
+  const applyDates = () => updateUrl({ from, to });
+  const clearDates = () => { setFrom(""); setTo(""); updateUrl({ from: "", to: "" }); };
+  const applyPreset = (preset: string) => {
+    const r = getPresetRange(preset);
+    if (!r) return;
+    setFrom(r.from); setTo(r.to);
+    updateUrl({ from: r.from, to: r.to });
+  };
+
+  // Détection preset actif
+  const activePreset = useMemo(() => {
+    if (!dateRange.from && !dateRange.to) return "noFilter";
+    for (const k of ["30d", "thisMonth", "lastMonth", "thisQuarter", "thisYear"]) {
+      const r = getPresetRange(k);
+      if (r && r.from === dateRange.from && r.to === dateRange.to) return k;
+    }
+    return "custom";
+  }, [dateRange.from, dateRange.to]);
+
   const filtered = useMemo(() => {
     let result = payouts;
     if (statusFilter !== "all") result = result.filter((p) => p.status === statusFilter);
@@ -81,7 +163,8 @@ export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }
         p.stripePayoutId.toLowerCase().includes(q) ||
         (p.destinationLast4?.includes(q) ?? false) ||
         (p.destinationBank?.toLowerCase().includes(q) ?? false) ||
-        (p.description?.toLowerCase().includes(q) ?? false)
+        (p.description?.toLowerCase().includes(q) ?? false) ||
+        p.clientNames.toLowerCase().includes(q)
       );
     }
     return result;
@@ -92,15 +175,22 @@ export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }
       key: "status",
       header: "Statut",
       accessor: (p) => {
-        const m = STATUS_META[p.status] ?? { label: p.status, color: "bg-gray-100 text-gray-700", icon: Clock };
+        const m = STATUS_META[p.status] ?? { label: p.status, color: "bg-gray-100 text-gray-700", icon: Clock, tooltip: p.status };
         const Icon = m.icon;
-        return <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium", m.color)}><Icon className="h-3 w-3" />{m.label}</span>;
+        return (
+          <span
+            className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium", m.color)}
+            title={m.tooltip}
+          >
+            <Icon className="h-3 w-3" />{m.label}
+          </span>
+        );
       },
     },
     {
       key: "arrival",
       header: "Date arrivée",
-      accessor: (p) => p.arrivalDate ? <span className="text-sm">{formatDate(new Date(p.arrivalDate))}</span> : "—",
+      accessor: (p) => p.arrivalDate ? <span className="text-sm">{formatDate(new Date(p.arrivalDate))}</span> : <span className="text-xs text-muted-foreground italic">—</span>,
       sortable: true, sortBy: (p) => p.arrivalDate ?? "",
     },
     {
@@ -141,7 +231,9 @@ export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }
     {
       key: "method",
       header: "Méthode",
-      accessor: (p) => <span className="text-xs">{p.method === "instant" ? "Instantané" : p.method === "standard" ? "Standard" : p.method ?? "—"}</span>,
+      accessor: (p) => <span className="text-xs" title={p.method === "instant" ? "Versement instantané — frais supplémentaires" : p.method === "standard" ? "Versement standard — gratuit" : ""}>
+        {p.method === "instant" ? "Instantané" : p.method === "standard" ? "Standard" : p.method ?? "—"}
+      </span>,
       hiddenOnMobile: true,
     },
     {
@@ -160,7 +252,9 @@ export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }
           href={`https://dashboard.stripe.com/payouts/${p.stripePayoutId}`}
           target="_blank"
           rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
           className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          title="Ouvrir le versement sur la plateforme de paiement"
         >
           <span className="font-mono truncate max-w-[80px]">{p.stripePayoutId.slice(0, 14)}…</span>
           <ExternalLink className="h-3 w-3" />
@@ -169,15 +263,16 @@ export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }
       hiddenOnMobile: true,
     },
     {
-      key: "drilldown",
+      key: "actions",
       header: "",
       accessor: (p) => (
-        <Link
-          href={`/admin/finance/payments?payoutId=${p.stripePayoutId}`}
-          className="text-xs text-[#0F2D52] hover:underline inline-flex items-center gap-1"
+        <button
+          onClick={(e) => { e.stopPropagation(); setDetailPayoutId(p.id); }}
+          className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+          title="Voir détail du versement"
         >
-          Voir détails <ArrowUpRight className="h-3 w-3" />
-        </Link>
+          <Eye className="h-3.5 w-3.5" />
+        </button>
       ),
     },
   ];
@@ -193,7 +288,8 @@ export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }
               Versements
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
-              Transferts vers votre compte bancaire · {payouts.length} versements
+              Transferts vers votre compte bancaire · {kpis.count} versement{kpis.count > 1 ? "s" : ""}
+              {dateRange.from && ` · ${dateRange.from} → ${dateRange.to}`}
             </p>
           </div>
           <Link href="/admin/finance/settlements" className="text-xs text-white/80 hover:text-white inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur">
@@ -248,16 +344,78 @@ export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }
             )}
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Référence, banque, 4 derniers chiffres…" className="pl-9 h-9" />
+
+        {/* Première ligne : presets periode */}
+        <div className="flex flex-wrap items-center gap-1 mb-2">
+          <span className="text-[10px] text-muted-foreground mr-1">Période :</span>
+          {[
+            { k: "noFilter", l: "Tous" },
+            { k: "30d", l: "30 jours" },
+            { k: "thisMonth", l: "Ce mois" },
+            { k: "lastMonth", l: "Mois dernier" },
+            { k: "thisQuarter", l: "Ce trimestre" },
+            { k: "thisYear", l: "Cette année" },
+          ].map((p) => (
+            <button
+              key={p.k}
+              onClick={() => p.k === "noFilter" ? clearDates() : applyPreset(p.k)}
+              className={cn(
+                "px-2 py-1 rounded text-[10px] font-medium border transition-colors",
+                activePreset === p.k
+                  ? "bg-[#0F2D52] text-white border-[#0F2D52]"
+                  : "bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
+              )}
+            >
+              {p.l}
+            </button>
+          ))}
+          {activePreset === "custom" && (
+            <span className="px-2 py-1 rounded text-[10px] font-medium border bg-amber-50 text-amber-800 border-amber-200">
+              Personnalisé
+            </span>
+          )}
+        </div>
+
+        {/* Deuxième ligne : recherche + dates + tabs statut */}
+        <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <Label className="text-[10px]">Du</Label>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 w-36" />
           </div>
-          <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto">
+          <div>
+            <Label className="text-[10px]">Au</Label>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 w-36" />
+          </div>
+          <Button onClick={applyDates} size="sm" className="h-9">
+            <Calendar className="h-3.5 w-3.5 mr-1.5" />
+            Appliquer
+          </Button>
+          {(dateRange.from || dateRange.to) && (
+            <Button onClick={clearDates} size="sm" variant="ghost" className="h-9">
+              <X className="h-3.5 w-3.5 mr-1" />
+              Effacer
+            </Button>
+          )}
+
+          <div className="relative flex-1 min-w-[180px] max-w-xs">
+            <Label className="text-[10px]">Recherche</Label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Référence, banque, client…"
+                className="h-9 pl-8 text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto ml-auto">
             {STATUS_TABS.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setStatusFilter(tab.key)}
+                title={tab.tooltip}
                 className={cn(
                   "px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap",
                   statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -278,8 +436,27 @@ export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }
         searchPlaceholder=""
         exportFilename="versements"
         storageKey="admin-finance-payouts"
-        emptyMessage="Aucun versement enregistré pour le moment. Les versements apparaîtront automatiquement dès que vos premiers fonds seront débloqués."
+        onRowClick={(p) => setDetailPayoutId(p.id)}
+        emptyMessage={
+          searchQuery || statusFilter !== "all" || dateRange.from || dateRange.to
+            ? "Aucun versement ne correspond aux filtres."
+            : "Aucun versement enregistré pour le moment. Les versements apparaîtront automatiquement dès que vos premiers fonds seront débloqués."
+        }
       />
+
+      {/* Modal détail */}
+      <PayoutDetailDialog
+        payoutId={detailPayoutId}
+        open={detailPayoutId !== null}
+        onOpenChange={(o) => { if (!o) setDetailPayoutId(null); }}
+      />
+
+      {/* Note pédagogique */}
+      <div className="rounded-lg border bg-blue-50 p-3 text-xs text-blue-900 space-y-1">
+        <p className="font-semibold">Comprendre les versements</p>
+        <p>Un versement regroupe plusieurs paiements clients dans un seul transfert vers votre compte bancaire (ex : tous les paiements reçus lundi → un versement mercredi). Cliquez sur un versement pour voir la liste des paiements composant le montant.</p>
+        <p className="pt-1"><strong>Cycle</strong> : Paiement client → Règlement (fonds disponibles) → Versement (vers votre banque). Au Canada, le délai standard est de 2 à 5 jours ouvrés.</p>
+      </div>
     </div>
   );
 }

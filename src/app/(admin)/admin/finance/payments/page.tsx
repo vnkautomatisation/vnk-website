@@ -4,9 +4,19 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Tous les paiements" };
 
-export default async function PaymentsPage() {
+export default async function PaymentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ payoutId?: string }>;
+}) {
+  const params = await searchParams;
+  // Si on arrive depuis la page Versements avec un drill-down, on filtre par versement
+  const where: Record<string, unknown> = {};
+  if (params.payoutId) where.stripePayoutId = params.payoutId;
+
   const [payments, accountants] = await Promise.all([
     prisma.payment.findMany({
+      where,
       orderBy: { paidAt: "desc" },
       take: 1000,
       include: {
