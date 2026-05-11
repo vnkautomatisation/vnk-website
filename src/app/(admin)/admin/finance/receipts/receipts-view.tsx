@@ -168,7 +168,7 @@ export function ReceiptsView({ receipts, kpis }: {
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              title="Reçu Stripe officiel"
+              title="Reçu officiel hébergé par le processeur de paiement"
             >
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
@@ -199,7 +199,7 @@ export function ReceiptsView({ receipts, kpis }: {
               Reçus
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
-              Reçus de paiement émis aux clients · PDF VNK officiel + lien Stripe (si disponible)
+              Reçus de paiement émis aux clients · PDF VNK officiel + reçu de la plateforme (si disponible)
             </p>
           </div>
         </div>
@@ -217,9 +217,9 @@ export function ReceiptsView({ receipts, kpis }: {
           <p className="text-[10px] text-muted-foreground">{kpis.total > 0 ? Math.round((kpis.sentByEmail / kpis.total) * 100) : 0}% confirmés</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Avec lien Stripe</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Avec reçu plateforme</p>
           <p className="text-lg font-bold text-blue-600 tabular-nums">{kpis.withStripeUrl}</p>
-          <p className="text-[10px] text-muted-foreground">reçu hébergé Stripe</p>
+          <p className="text-[10px] text-muted-foreground">reçu officiel disponible</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Montant total</p>

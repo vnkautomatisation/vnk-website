@@ -48,7 +48,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const METHOD_LABELS: Record<string, string> = {
-  stripe: "Carte (Stripe)",
+  stripe: "Carte de crédit",
   interac: "Interac",
   cheque: "Chèque",
   virement: "Virement bancaire",
@@ -288,7 +288,7 @@ export function PaymentDetailDialog({
   };
 
   const processStripeRefund = async (refundId: number) => {
-    if (!confirm("Exécuter le remboursement via Stripe ? L'argent sera vraiment retourné au client.")) return;
+    if (!confirm("Émettre le remboursement vers la carte du client ? L'argent sera vraiment retourné.")) return;
     setProcessing(refundId);
     try {
       const res = await fetch(`/api/refunds/${refundId}/process-stripe`, {
@@ -298,7 +298,7 @@ export function PaymentDetailDialog({
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Erreur");
-      toast.success("Remboursement Stripe émis");
+      toast.success("Remboursement émis vers la carte du client");
       await reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erreur");
@@ -360,7 +360,7 @@ export function PaymentDetailDialog({
                       Modifier
                     </button>
                     {p.paymentMethod && <span>· {METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod}</span>}
-                    <span>· {isStripe ? "Stripe" : "Manuel"}</span>
+                    <span>· {isStripe ? "Carte" : "Manuel"}</span>
                   </>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 w-full mt-1 bg-white/10 rounded p-1.5">
@@ -480,22 +480,22 @@ export function PaymentDetailDialog({
                 {p.paidAt && <Row label="Payé" value={formatDateTime(new Date(p.paidAt))} />}
                 {p.settledAt && (
                   <Row
-                    label={<span title="Date à laquelle Stripe a rendu les fonds disponibles dans le solde">Réglé (Stripe)</span>}
+                    label={<span title="Date à laquelle les fonds sont disponibles dans votre solde de la plateforme de paiement">Réglé</span>}
                     value={formatDate(new Date(p.settledAt))}
                   />
                 )}
                 {p.payoutAt && (
                   <Row
-                    label={<span title="Date à laquelle Stripe a versé les fonds vers votre banque">Versé en banque</span>}
+                    label={<span title="Date à laquelle l'argent arrive sur votre compte bancaire">Versé en banque</span>}
                     value={formatDate(new Date(p.payoutAt))}
                   />
                 )}
                 {!p.settledAt && !p.payoutAt && isStripe && (
-                  <p className="px-3 py-2 text-[10px] italic text-muted-foreground">Dates de règlement/versement non encore reçues de Stripe</p>
+                  <p className="px-3 py-2 text-[10px] italic text-muted-foreground">Dates de règlement/versement pas encore reçues (généralement +2 à +5 jours après le paiement)</p>
                 )}
               </Section>
 
-              {/* Section Carte (si paiement Stripe avec card details) */}
+              {/* Section Carte (si paiement par carte avec détails complets) */}
               {hasCard && (
                 <Section title="Identifiants carte" icon={CreditCard}>
                   <Row label="Marque" value={CARD_BRAND_LABELS[p.cardBrand!] ?? p.cardBrand} />
@@ -505,9 +505,9 @@ export function PaymentDetailDialog({
                 </Section>
               )}
 
-              {/* Section Frais Stripe (si applicable) */}
+              {/* Section Frais de traitement (si applicable) */}
               {hasFees && (
-                <Section title="Frais Stripe & net" icon={Coins}>
+                <Section title="Frais de traitement & net" icon={Coins}>
                   <Row label="Montant brut" value={<span className="tabular-nums">{Number(p.amount).toFixed(2)} {p.currency.toUpperCase()}</span>} />
                   <Row label="Frais traitement" value={<span className="tabular-nums text-red-600">−{Number(p.processingFee).toFixed(2)}</span>} />
                   <Row label="Net reçu" value={<span className="tabular-nums font-semibold text-emerald-700">{Number(p.netAmount).toFixed(2)}</span>} />
@@ -531,36 +531,38 @@ export function PaymentDetailDialog({
                 </Section>
               )}
 
-              {/* Section Identifiants Stripe (si paiement Stripe) */}
+              {/* Section Référence transaction (si paiement carte) */}
               {isStripe && (
-                <Section title="Identifiants Stripe" icon={ExternalLink} action={
+                <Section title="Références techniques" icon={ExternalLink} action={
                   p.stripePaymentIntentId && (
                     <a
                       href={`https://dashboard.stripe.com/payments/${p.stripePaymentIntentId}`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                      title="Ouvrir cette transaction sur la plateforme de paiement"
                     >
-                      Ouvrir Stripe <ExternalLink className="h-2.5 w-2.5" />
+                      Voir détails plateforme <ExternalLink className="h-2.5 w-2.5" />
                     </a>
                   )
                 }>
-                  {p.stripePaymentIntentId && <Row label="Payment Intent" value={p.stripePaymentIntentId} mono />}
-                  {p.stripeChargeId && <Row label="Charge" value={p.stripeChargeId} mono />}
-                  {p.stripeBalanceTxId && <Row label="Balance Tx" value={p.stripeBalanceTxId} mono />}
+                  {p.stripePaymentIntentId && <Row label="Référence paiement" value={p.stripePaymentIntentId} mono />}
+                  {p.stripeChargeId && <Row label="Référence transaction" value={p.stripeChargeId} mono />}
+                  {p.stripeBalanceTxId && <Row label="Référence solde" value={p.stripeBalanceTxId} mono />}
                   {p.stripePayoutId && (
-                    <Row label="Versement" value={
+                    <Row label="Référence versement" value={
                       <a
                         href={`https://dashboard.stripe.com/payouts/${p.stripePayoutId}`}
                         target="_blank"
                         rel="noreferrer"
                         className="font-mono text-[10px] hover:underline truncate inline-block max-w-[200px]"
+                        title="Ouvrir le détail du versement sur la plateforme de paiement"
                       >
                         {p.stripePayoutId}
                       </a>
                     } />
                   )}
-                  {p.stripeReceiptNumber && <Row label="N° reçu Stripe" value={p.stripeReceiptNumber} mono />}
+                  {p.stripeReceiptNumber && <Row label="N° reçu officiel" value={p.stripeReceiptNumber} mono />}
                   {p.stripeReceiptEmail && <Row label="Envoyé à" value={p.stripeReceiptEmail} />}
                 </Section>
               )}
@@ -737,7 +739,7 @@ export function PaymentDetailDialog({
                           onClick={() => processStripeRefund(r.id)}
                         >
                           <ExternalLink className="h-3 w-3 mr-1.5" />
-                          {processing === r.id ? "Traitement…" : "Exécuter via Stripe"}
+                          {processing === r.id ? "Traitement…" : "Émettre le remboursement"}
                         </Button>
                       )}
                     </div>
@@ -745,14 +747,14 @@ export function PaymentDetailDialog({
                 </Section>
               )}
 
-              {/* Si paiement manuel sans aucune activité Stripe — indication */}
+              {/* Si paiement manuel sans aucun paiement en ligne — indication */}
               {!isStripe && data.orderEvents.length === 0 && data.refunds.length === 0 && (
                 <div className="rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
                   <p className="inline-flex items-center gap-2 font-medium text-foreground mb-1">
                     <Banknote className="h-3.5 w-3.5" />
                     Paiement manuel
                   </p>
-                  <p>Ce paiement a été saisi manuellement par l&apos;admin. Aucune trace Stripe — vérifiez la réception en banque via votre relevé puis utilisez le bouton <strong>Confirmer reçu</strong> ci-dessus.</p>
+                  <p>Ce paiement a été saisi manuellement par l&apos;admin. Pas de paiement en ligne associé — vérifiez la réception en banque via votre relevé puis utilisez le bouton <strong>Confirmer reçu</strong> ci-dessus.</p>
                 </div>
               )}
 

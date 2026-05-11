@@ -73,7 +73,7 @@ const COUNTRY_FLAGS: Record<string, string> = {
 };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  stripe: "Carte (Stripe)",
+  stripe: "Carte de crédit",
   card: "Carte de crédit",
   interac: "Interac",
   cheque: "Chèque",

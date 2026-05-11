@@ -154,7 +154,7 @@ export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }
     },
     {
       key: "stripe",
-      header: "Stripe",
+      header: "Référence",
       accessor: (p) => (
         <a
           href={`https://dashboard.stripe.com/payouts/${p.stripePayoutId}`}
@@ -193,7 +193,7 @@ export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }
               Versements
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
-              Transferts Stripe vers votre compte bancaire · {payouts.length} versements
+              Transferts vers votre compte bancaire · {payouts.length} versements
             </p>
           </div>
           <Link href="/admin/finance/settlements" className="text-xs text-white/80 hover:text-white inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur">
@@ -251,7 +251,7 @@ export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="ID Stripe, banque, last4…" className="pl-9 h-9" />
+            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Référence, banque, 4 derniers chiffres…" className="pl-9 h-9" />
           </div>
           <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto">
             {STATUS_TABS.map((tab) => (
@@ -278,7 +278,7 @@ export function PayoutsView({ payouts, kpis }: { payouts: Payout[]; kpis: Kpis }
         searchPlaceholder=""
         exportFilename="versements"
         storageKey="admin-finance-payouts"
-        emptyMessage="Aucun versement enregistré pour le moment. Les versements apparaîtront automatiquement dès que Stripe débloquera vos premiers fonds."
+        emptyMessage="Aucun versement enregistré pour le moment. Les versements apparaîtront automatiquement dès que vos premiers fonds seront débloqués."
       />
     </div>
   );

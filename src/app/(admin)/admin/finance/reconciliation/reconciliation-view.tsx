@@ -189,7 +189,7 @@ export function ReconciliationView({
     },
     {
       key: "stripe",
-      header: "Stripe ID",
+      header: "Référence",
       accessor: (r) => r.stripePaymentIntentId ? (
         <span className="font-mono text-[10px] text-muted-foreground truncate max-w-[140px] block">{r.stripePaymentIntentId}</span>
       ) : "—",
@@ -271,7 +271,7 @@ export function ReconciliationView({
         <div>
           <p className="font-semibold">Workflow réconciliation</p>
           <p className="mt-0.5">
-            1. Filtrer par méthode (ex: Stripe pour matcher le relevé Stripe)
+            1. Filtrer par méthode (ex : carte pour matcher le relevé de la plateforme)
             · 2. Vérifier que la somme correspond au virement reçu en banque
             · 3. Cocher les paiements rapprochés et cliquer <strong>Réconcilier la sélection</strong>
             · 4. Une fois exportés vers le logiciel comptable (Sage/QuickBooks/Acomba), ils disparaissent d&apos;ici.
@@ -312,7 +312,7 @@ export function ReconciliationView({
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Client, facture, Stripe ID..."
+            placeholder="Client, facture, référence..."
             className="pl-8 h-8 text-sm"
           />
         </div>
