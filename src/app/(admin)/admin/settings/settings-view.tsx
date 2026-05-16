@@ -1,7 +1,7 @@
 "use client";
 // Section Paramètres — 15 onglets en cartes style VNK
 // Chaque catégorie s'affiche comme une carte cliquable qui ouvre l'édition
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import type { Setting } from "@prisma/client";
 import { toast } from "sonner";
@@ -29,6 +29,9 @@ import {
   Eye,
   EyeOff,
   Copy,
+  Database,
+  Activity,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +43,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { updateSettingsAction, testConnectionAction } from "@/app/actions/settings";
+import { TabIntegrations } from "../profile/components/tab-integrations";
+import { TabAutomatisations } from "../profile/components/tab-automatisations";
+import { TabNotifications } from "../profile/components/tab-notifications";
+import Link from "next/link";
+import { ChevronLeft, FileText, Zap, ArrowRight } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════
 // CATÉGORIES — définies ici pour l'icône et l'ordre d'affichage
@@ -51,34 +59,78 @@ type CategoryMeta = {
   accent: string; // tailwind bg-*
 };
 
-const CATEGORIES: CategoryMeta[] = [
+type CategoryMetaExtended = CategoryMeta & {
+  custom?: "integrations" | "automations" | "email_templates" | "notifications";
+  href?: string; // si défini → la carte navigue vers une autre page au lieu d'ouvrir l'éditeur inline
+  badgeLabel?: string; // libellé custom du badge module
+};
+
+const CATEGORIES: CategoryMetaExtended[] = [
   { key: "general", icon: LayoutGrid, accent: "bg-blue-500" },
   { key: "company", icon: Building2, accent: "bg-indigo-500" },
   { key: "portal", icon: Briefcase, accent: "bg-purple-500" },
-  { key: "billing", icon: Receipt, accent: "bg-emerald-500" },
+  { key: "catalogs", icon: LayoutGrid, accent: "bg-amber-500", href: "/admin/settings/catalogs", badgeLabel: "Services · Codes promo · Listes" },
+  { key: "billing", icon: Receipt, accent: "bg-emerald-500", href: "/admin/settings/finance", badgeLabel: "Banque · Taxes · Loi 25 · Mentions" },
   { key: "signature", icon: FileSignature, accent: "bg-violet-500" },
   { key: "emails", icon: Mail, accent: "bg-sky-500" },
-  { key: "integrations", icon: Plug, accent: "bg-orange-500" },
-  { key: "system", icon: Server, accent: "bg-slate-500" },
-  { key: "users", icon: Users, accent: "bg-rose-500" },
-  { key: "appearance", icon: Palette, accent: "bg-pink-500" },
+  { key: "email_templates", icon: FileText, accent: "bg-sky-600", href: "/admin/settings/templates", badgeLabel: "Modèles emails + PDF" },
+  { key: "notifications", icon: Bell, accent: "bg-yellow-500", custom: "notifications" },
+  { key: "integrations", icon: Plug, accent: "bg-orange-500", custom: "integrations" },
+  { key: "automations", icon: Zap, accent: "bg-orange-600", custom: "automations" },
+  { key: "system", icon: Server, accent: "bg-slate-500", href: "/admin/settings/maintenance", badgeLabel: "Maintenance · Incidents · Annonce" },
+  { key: "users", icon: Users, accent: "bg-rose-500", href: "/admin/settings/team", badgeLabel: "Utilisateurs · Rôles · Postes" },
+  { key: "appearance", icon: Palette, accent: "bg-pink-500", href: "/admin/settings/branding", badgeLabel: "Logos · Couleurs · Polices" },
   { key: "seo", icon: Search, accent: "bg-amber-500" },
-  { key: "notifications", icon: Bell, accent: "bg-yellow-500" },
-  { key: "legal", icon: Scale, accent: "bg-red-500" },
-  { key: "blog", icon: Newspaper, accent: "bg-teal-500" },
+  { key: "legal", icon: Scale, accent: "bg-red-500", href: "/admin/settings/finance", badgeLabel: "Voir Finance & Loi 25" },
+  { key: "blog", icon: Newspaper, accent: "bg-teal-500", href: "/admin/settings/content", badgeLabel: "Blog · FAQ · Témoignages" },
   { key: "analytics", icon: BarChart3, accent: "bg-cyan-500" },
+  { key: "webhooks", icon: Plug, accent: "bg-orange-600", href: "/admin/settings/webhooks", badgeLabel: "Sortants + entrants debug" },
+  { key: "diagnostics", icon: Activity, accent: "bg-indigo-600", href: "/admin/settings/diagnostics", badgeLabel: "Santé · DB · Intégrations" },
+  { key: "backup", icon: Database, accent: "bg-cyan-600", href: "/admin/settings/backup", badgeLabel: "Export · Import JSON" },
 ];
 
 // ═══════════════════════════════════════════════════════════
 
+export type OverviewMetrics = {
+  adminsActive: number;
+  roles: number;
+  positions: number;
+  catalogItems: number;
+  contentPublished: number;
+  posts: number;
+  faqs: number;
+  testimonials: number;
+  emailTpl: number;
+  pdfTpl: number;
+  services: number;
+  promos: number;
+  logosUploaded: number;
+  fiscalDone: boolean;
+  rprpDone: boolean;
+  integrationsEnabled: number;
+};
+
 export function SettingsView({
   settingsByCategory,
+  overview,
 }: {
   settingsByCategory: Record<string, Setting[]>;
+  overview?: OverviewMetrics;
 }) {
   const t = useTranslations("settings");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Sticky scroll detection (pattern dashboard finance)
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // Filtrer categories par recherche
   const filteredCategories = searchQuery
@@ -100,6 +152,10 @@ export function SettingsView({
 
   if (activeCategory) {
     const meta = CATEGORIES.find((c) => c.key === activeCategory)!;
+    // Catégories à rendu personnalisé (composants spécialisés au lieu du formulaire générique)
+    if (meta.custom) {
+      return <CustomCategoryView meta={meta} onBack={() => setActiveCategory(null)} />;
+    }
     const settings = settingsByCategory[activeCategory] ?? [];
     return (
       <CategoryEditor
@@ -115,21 +171,108 @@ export function SettingsView({
       {/* ── Header ───────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
             {t("page_title")}
           </h1>
           <p className="text-muted-foreground mt-1">{t("page_subtitle")}</p>
         </div>
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Rechercher un parametre..."
-            className="pl-9"
-          />
+        <div className="flex gap-2 items-end">
+          <Link
+            href="/admin/settings/activity"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg border bg-card text-sm font-medium hover:bg-muted shrink-0"
+          >
+            <Users className="h-4 w-4" />
+            Activité équipe
+          </Link>
+          <Link
+            href="/admin/settings/onboarding"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-sm font-medium hover:opacity-90 shrink-0"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M11.9 7.6c-.4 0-.8.3-.9.7l-.6 2.4-2.4.6c-.4.1-.7.5-.7.9s.3.8.7.9l2.4.6.6 2.4c.1.4.5.7.9.7s.8-.3.9-.7l.6-2.4 2.4-.6c.4-.1.7-.5.7-.9s-.3-.8-.7-.9l-2.4-.6-.6-2.4c-.1-.4-.5-.7-.9-.7Z"/></svg>
+            Configuration guidée
+          </Link>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher un parametre..."
+              className="pl-9"
+            />
+          </div>
         </div>
       </div>
+
+      {/* ── Overview cockpit no-code ──────────────────────── */}
+      {overview && !searchQuery && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <Link href="/admin/settings/team" className="rounded-lg border bg-card p-3 vnk-card-hover">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="h-3.5 w-3.5 text-rose-500" />
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Équipe</span>
+            </div>
+            <p className="text-xl font-bold">{overview.adminsActive}</p>
+            <p className="text-[10px] text-muted-foreground">{overview.roles} rôle{overview.roles > 1 ? "s" : ""} · {overview.positions} poste{overview.positions > 1 ? "s" : ""}</p>
+          </Link>
+          <Link href="/admin/settings/branding" className="rounded-lg border bg-card p-3 vnk-card-hover">
+            <div className="flex items-center gap-2 mb-1">
+              <Palette className="h-3.5 w-3.5 text-pink-500" />
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Branding</span>
+            </div>
+            <p className="text-xl font-bold">{overview.logosUploaded}<span className="text-sm text-muted-foreground">/6</span></p>
+            <p className="text-[10px] text-muted-foreground">logos téléversés</p>
+          </Link>
+          <Link href="/admin/settings/catalogs" className="rounded-lg border bg-card p-3 vnk-card-hover">
+            <div className="flex items-center gap-2 mb-1">
+              <LayoutGrid className="h-3.5 w-3.5 text-amber-500" />
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Catalogues</span>
+            </div>
+            <p className="text-xl font-bold">{overview.catalogItems}</p>
+            <p className="text-[10px] text-muted-foreground">{overview.services} service{overview.services > 1 ? "s" : ""} · {overview.promos} promo{overview.promos > 1 ? "s" : ""}</p>
+          </Link>
+          <Link href="/admin/settings/content" className="rounded-lg border bg-card p-3 vnk-card-hover">
+            <div className="flex items-center gap-2 mb-1">
+              <Newspaper className="h-3.5 w-3.5 text-teal-500" />
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Contenu</span>
+            </div>
+            <p className="text-xl font-bold">{overview.contentPublished}</p>
+            <p className="text-[10px] text-muted-foreground">{overview.posts} blog · {overview.faqs} FAQ · {overview.testimonials} avis</p>
+          </Link>
+          <Link href="/admin/settings/templates" className="rounded-lg border bg-card p-3 vnk-card-hover">
+            <div className="flex items-center gap-2 mb-1">
+              <FileText className="h-3.5 w-3.5 text-sky-600" />
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Modèles</span>
+            </div>
+            <p className="text-xl font-bold">{overview.emailTpl + overview.pdfTpl}</p>
+            <p className="text-[10px] text-muted-foreground">{overview.emailTpl} email · {overview.pdfTpl} PDF</p>
+          </Link>
+          <Link href="/admin/settings/finance" className="rounded-lg border bg-card p-3 vnk-card-hover">
+            <div className="flex items-center gap-2 mb-1">
+              <Receipt className="h-3.5 w-3.5 text-emerald-500" />
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Conformité</span>
+            </div>
+            <p className="text-xl font-bold inline-flex items-center gap-1">
+              {(overview.fiscalDone ? 1 : 0) + (overview.rprpDone ? 1 : 0)}<span className="text-sm text-muted-foreground">/2</span>
+            </p>
+            <p className="text-[10px] text-muted-foreground">{overview.fiscalDone ? "✓" : "○"} fiscal · {overview.rprpDone ? "✓" : "○"} Loi 25</p>
+          </Link>
+        </div>
+      )}
+
+      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+      <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <SettingsIcon className="h-4 w-4" />
+              {t("page_title")}
+            </span>
+            <span className="text-muted-foreground">{filteredCategories.length} catégorie{filteredCategories.length > 1 ? "s" : ""}</span>
+            {searchQuery && <span className="text-muted-foreground">Recherche : <span className="font-semibold">«&nbsp;{searchQuery}&nbsp;»</span></span>}
+          </div>
+        </div>
+      )}
 
       {/* ── Grille de catégories ──────────────────────────── */}
       {filteredCategories.length === 0 && searchQuery ? (
@@ -141,17 +284,11 @@ export function SettingsView({
         {filteredCategories.map((cat) => {
           const Icon = cat.icon;
           const count = settingsByCategory[cat.key]?.length ?? 0;
-          return (
-            <button
-              key={cat.key}
-              onClick={() => setActiveCategory(cat.key)}
-              className={cn(
-                "group text-left",
-                "rounded-xl border bg-card p-5",
-                "vnk-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              )}
-              aria-label={t(`categories.${cat.key}`)}
-            >
+          const isCustom = !!cat.custom;
+          const hasHref = !!cat.href;
+
+          const inner = (
+            <>
               <div className="flex items-start justify-between">
                 <div
                   className={cn(
@@ -172,10 +309,44 @@ export function SettingsView({
               </p>
 
               <div className="mt-4 flex items-center justify-between">
-                <Badge variant="secondary" className="text-[10px]">
-                  {count} {count > 1 ? "paramètres" : "paramètre"}
-                </Badge>
+                {hasHref ? (
+                  <Badge className="text-[10px] bg-[#0F2D52] hover:bg-[#0F2D52]/90 text-white">
+                    {cat.badgeLabel ?? "Module avancé"}
+                  </Badge>
+                ) : isCustom ? (
+                  <Badge className="text-[10px] bg-[#0F2D52] hover:bg-[#0F2D52]/90 text-white">
+                    Module avancé
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-[10px]">
+                    {count} {count > 1 ? "paramètres" : "paramètre"}
+                  </Badge>
+                )}
               </div>
+            </>
+          );
+
+          const sharedClass = cn(
+            "group text-left",
+            "rounded-xl border bg-card p-5",
+            "vnk-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          );
+
+          if (hasHref) {
+            return (
+              <Link key={cat.key} href={cat.href!} className={sharedClass} aria-label={t(`categories.${cat.key}`)}>
+                {inner}
+              </Link>
+            );
+          }
+          return (
+            <button
+              key={cat.key}
+              onClick={() => setActiveCategory(cat.key)}
+              className={sharedClass}
+              aria-label={t(`categories.${cat.key}`)}
+            >
+              {inner}
             </button>
           );
         })}
@@ -187,12 +358,11 @@ export function SettingsView({
           <AlertCircle className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
           <div className="text-sm text-muted-foreground">
             <p className="font-medium text-foreground mb-1">
-              Modifier un paramètre sans toucher au code
+              Configuration du portail
             </p>
             <p>
-              Cette section vous permet de configurer tout le site sans éditer
-              les fichiers. Les modifications sont appliquées en temps réel. Les
-              changements sont tracés dans le journal d&apos;audit.
+              Toutes les modifications sont appliquées immédiatement et
+              enregistrées dans l&apos;historique d&apos;activité.
             </p>
           </div>
         </CardContent>
@@ -520,4 +690,95 @@ function SettingField({
       onChange={(e) => onChange(e.target.value)}
     />
   );
+}
+
+// ═══════════════════════════════════════════════════════════
+// CUSTOM CATEGORY — rend un composant spécialisé au lieu du
+// formulaire générique (Intégrations, Automatisations, etc.)
+// ═══════════════════════════════════════════════════════════
+
+function CustomCategoryView({
+  meta,
+  onBack,
+}: {
+  meta: CategoryMetaExtended;
+  onBack: () => void;
+}) {
+  const t = useTranslations("settings");
+  const Icon = meta.icon;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start gap-4">
+        <button
+          onClick={onBack}
+          className="mt-1 text-muted-foreground hover:text-foreground"
+          aria-label="Retour"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <div
+          className={cn(
+            "h-12 w-12 rounded-lg flex items-center justify-center text-white shrink-0",
+            meta.accent
+          )}
+        >
+          <Icon className="h-6 w-6" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {t(`categories.${meta.key}`)}
+          </h1>
+          <p className="text-muted-foreground text-sm mt-0.5">
+            {t(`categories.${meta.key}_desc`)}
+          </p>
+        </div>
+      </div>
+
+      {/* Contenu spécialisé selon le type */}
+      {meta.custom === "integrations" && <TabIntegrations />}
+      {meta.custom === "automations" && <TabAutomatisations />}
+      {meta.custom === "notifications" && <NotificationsWrapper />}
+      {meta.custom === "email_templates" && (
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+              <p className="font-semibold mb-1">Personnalisation des courriels</p>
+              <p className="text-xs">
+                Modifiez le contenu des courriels envoyés automatiquement à vos clients
+                (devis, factures, rappels, confirmations de signature, etc.). Vous pouvez
+                utiliser des variables dynamiques comme <code className="bg-blue-100 px-1 rounded">{`{{nom_client}}`}</code> ou <code className="bg-blue-100 px-1 rounded">{`{{montant}}`}</code>.
+              </p>
+            </div>
+            <Button asChild className="w-full sm:w-auto">
+              <Link href="/admin/message-templates" className="flex items-center gap-2">
+                Ouvrir l&apos;éditeur de modèles
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ── Wrapper qui charge l'admin courant pour TabNotifications ──
+function NotificationsWrapper() {
+  const [admin, setAdmin] = useState<Parameters<typeof TabNotifications>[0]["admin"] | null>(null);
+  useEffect(() => {
+    fetch("/api/profile/me", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setAdmin(d?.admin ?? null))
+      .catch(() => setAdmin(null));
+  }, []);
+  if (!admin) {
+    return (
+      <div className="flex items-center justify-center py-12 text-muted-foreground">
+        <Save className="h-5 w-5 animate-pulse" />
+      </div>
+    );
+  }
+  return <TabNotifications admin={admin} />;
 }

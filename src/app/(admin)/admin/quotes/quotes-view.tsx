@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -329,6 +329,17 @@ export function QuotesView({
     else setSelectedIds(new Set(allIds));
   };
 
+  // Sticky scroll detection (pattern dashboard finance)
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   // ── Filtrage ──────────────────────────────────────────
   const filtered = useMemo(() => {
     let result = quotes;
@@ -492,12 +503,29 @@ export function QuotesView({
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Total devis" value={quotes.length} icon={FileText} accent="bg-blue-500" />
         <StatCard label="En attente" value={pendingCount} icon={Clock} accent="bg-amber-500" deltaLabel={pendingCount > 0 ? formatCurrency(totalPendingTtc) : undefined} />
         <StatCard label="Acceptés" value={acceptedCount} icon={CheckCircle2} accent="bg-emerald-500" deltaLabel={acceptedCount > 0 ? formatCurrency(totalAcceptedTtc) : undefined} />
         <StatCard label="Pipeline TTC" value={formatCurrency(totalPendingTtc + totalAcceptedTtc)} icon={DollarSign} accent="bg-violet-500" />
       </div>
+
+      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+      <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <FileText className="h-4 w-4" />
+              Devis
+            </span>
+            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="text-muted-foreground">En attente <span className="font-semibold text-amber-600">{pendingCount}</span></span>
+            <span className="text-muted-foreground">Acceptés <span className="font-semibold text-emerald-600">{acceptedCount}</span></span>
+            <span className="ml-auto text-muted-foreground">Pipeline <span className="font-semibold text-violet-600">{formatCurrency(totalPendingTtc + totalAcceptedTtc)}</span></span>
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">

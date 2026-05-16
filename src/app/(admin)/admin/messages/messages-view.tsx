@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -157,6 +158,9 @@ function isSnoozeActive(c: Conversation): boolean {
   return !!c.chatSnoozedUntil && new Date(c.chatSnoozedUntil) > new Date();
 }
 
+// Windowing : nombre de messages rendus initialement (et incrément du "Charger plus")
+const PAGE_SIZE_MESSAGES = 80;
+
 export function MessagesView({
   conversations,
   templates,
@@ -174,6 +178,17 @@ export function MessagesView({
   const [filter, setFilter] = useState<FilterMode>("all");
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
+  // Sticky scroll detection (pattern dashboard finance)
+  const stickyBarSentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el = stickyBarSentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   useEffect(() => {
     const cid = searchParams.get("clientId");
     if (cid) {
@@ -189,6 +204,9 @@ export function MessagesView({
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
+  // Windowing : ne render que les N derniers messages pour eviter 3000 noeuds DOM
+  // (pas de virtualisation lib). "Charger plus" remonte de PAGE_SIZE_MESSAGES.
+  const [displayLimit, setDisplayLimit] = useState(PAGE_SIZE_MESSAGES);
   const [newMsg, setNewMsg] = useState("");
   const [pendingAtts, setPendingAtts] = useState<MessageAttachment[]>([]);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -205,7 +223,6 @@ export function MessagesView({
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [templateQuery, setTemplateQuery] = useState("");
-  const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -346,13 +363,10 @@ export function MessagesView({
     setActiveTab("messages");
     setThreadSearch("");
     setThreadSearchOpen(false);
+    setDisplayLimit(PAGE_SIZE_MESSAGES);  // reset window a la fin de l'historique
   }, [selectedId, loadMessages]);
 
-  useEffect(() => {
-    if (scrollRef.current && activeTab === "messages") {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, activeTab]);
+  // Auto-scroll vers le bas géré par Virtuoso (followOutput) — pas besoin d'useEffect manuel.
 
   // SSE realtime sur conversation ouverte (remplace polling 5s)
   useMessageStream({
@@ -586,18 +600,61 @@ export function MessagesView({
     toast.success("PDF prêt à imprimer");
   }, [selected, messages]);
 
+  // Liste de messages visibles : recherche thread => pas de window (on cherche dans tout) ;
+  // sinon => derniers `displayLimit` messages seulement (gain perf sur convos longues).
+  const visibleMessages = useMemo(() => {
+    if (threadSearch) {
+      return messages.filter((m) => !m.deletedAt && m.content?.toLowerCase().includes(threadSearch.toLowerCase()));
+    }
+    // Window : derniers N messages
+    return displayLimit >= messages.length ? messages : messages.slice(messages.length - displayLimit);
+  }, [messages, threadSearch, displayLimit]);
+
+  const totalNonDeleted = useMemo(() => messages.filter((m) => !m.deletedAt).length, [messages]);
+  const hiddenOlderCount = useMemo(() => {
+    if (threadSearch) return 0;
+    return Math.max(0, messages.length - displayLimit);
+  }, [messages, threadSearch, displayLimit]);
+
   const groupedMessages = useMemo(() => {
-    const filteredBySearch = threadSearch
-      ? messages.filter((m) => !m.deletedAt && m.content?.toLowerCase().includes(threadSearch.toLowerCase()))
-      : messages;
-    return filteredBySearch.reduce<{ date: string; msgs: Message[] }[]>((acc, msg) => {
+    return visibleMessages.reduce<{ date: string; msgs: Message[] }[]>((acc, msg) => {
       const date = formatMsgDate(msg.createdAt);
       const last = acc[acc.length - 1];
       if (last && last.date === date) last.msgs.push(msg);
       else acc.push({ date, msgs: [msg] });
       return acc;
     }, []);
-  }, [messages, threadSearch]);
+  }, [visibleMessages]);
+
+  // Flat virtualItems pour Virtuoso : date dividers + messages dans un seul tableau plat
+  type VirtItem = { type: "date"; key: string; date: string } | { type: "msg"; key: string; msg: Message };
+  const virtualItems = useMemo<VirtItem[]>(() => {
+    const out: VirtItem[] = [];
+    let lastDate = "";
+    for (const msg of visibleMessages) {
+      const d = formatMsgDate(msg.createdAt);
+      if (d !== lastDate) {
+        out.push({ type: "date", key: `date-${d}`, date: d });
+        lastDate = d;
+      }
+      out.push({ type: "msg", key: `msg-${msg.id}`, msg });
+    }
+    return out;
+  }, [visibleMessages]);
+
+  // Virtuoso handle pour scroll programmatique
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const [atBottom, setAtBottom] = useState(true);
+  const scrollToBottom = useCallback(() => {
+    virtuosoRef.current?.scrollToIndex({ index: virtualItems.length - 1, behavior: "smooth", align: "end" });
+  }, [virtualItems.length]);
+
+  // Charger N messages plus anciens — Virtuoso gere la preservation de scroll automatiquement.
+  const loadMoreOlder = useCallback(() => {
+    setDisplayLimit((l) => l + PAGE_SIZE_MESSAGES);
+  }, []);
+
+  // L'auto-load au scroll vers le haut est géré par Virtuoso (startReached) — pas besoin d'IntersectionObserver.
 
   const filesCount = useMemo(() => messages.reduce((s, m) => !m.deletedAt ? s + getAttachments(m).length : s, 0), [messages]);
   const linksCount = useMemo(() => {
@@ -618,9 +675,17 @@ export function MessagesView({
   }, []);
 
   return (
-    <div className="space-y-4 lg:h-[calc(100dvh-6.5rem)] lg:flex lg:flex-col">
-      {/* Hero VNK navy */}
-      <div className="rounded-2xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] p-5 sm:p-6 text-white shadow-md relative overflow-hidden shrink-0">
+    <div className={cn(
+      "space-y-4 lg:h-[calc(100dvh-6.5rem)] lg:flex lg:flex-col",
+      // Conv ouverte sur mobile + tablette (<lg) : full viewport en flex column,
+      // hauteur calculee pour compter le topbar (64px) + padding du <main> (16-24px).
+      selectedId && "h-[calc(100dvh-6rem)] sm:h-[calc(100dvh-6.5rem)] flex flex-col lg:h-[calc(100dvh-6.5rem)]",
+    )}>
+      {/* Hero VNK navy — caché sur mobile + tablet quand conversation active */}
+      <div className={cn(
+        "rounded-2xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] p-5 sm:p-6 text-white shadow-md relative overflow-hidden shrink-0",
+        selectedId && "hidden lg:block",
+      )}>
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24" />
         <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -652,20 +717,47 @@ export function MessagesView({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 shrink-0">
+      <div className={cn(
+        "grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0",
+        selectedId && "hidden lg:grid",
+      )}>
         <StatCard label="Conversations" value={kpis.totalConversations} icon={Users} accent="bg-indigo-500" />
         <StatCard label="Total messages" value={kpis.totalMessages} icon={MessageSquare} accent="bg-blue-500" />
         <StatCard label="Aujourd'hui" value={kpis.todayMessages} icon={Calendar} accent="bg-emerald-500" />
         <StatCard label="Non lus" value={kpis.totalUnread} icon={Inbox} accent="bg-red-500" />
       </div>
 
+      {/* Sentinel + Sticky compact bar — caché sur mobile + tablet quand conv ouverte */}
+      <div ref={stickyBarSentinelRef} aria-hidden className={cn("h-px -mt-3", selectedId && "hidden lg:block")} />
+      {scrolled && (
+        <div className={cn(
+          "sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b",
+          selectedId && "hidden lg:block",
+        )}>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <MessageSquare className="h-4 w-4" />
+              Messages
+            </span>
+            <span className="text-muted-foreground">Conversations <span className="font-semibold text-indigo-600">{kpis.totalConversations}</span></span>
+            <span className="text-muted-foreground">Total <span className="font-semibold text-blue-600">{kpis.totalMessages}</span></span>
+            <span className="text-muted-foreground">Aujourd&apos;hui <span className="font-semibold text-emerald-600">{kpis.todayMessages}</span></span>
+            {kpis.totalUnread > 0 && <span className="ml-auto text-muted-foreground">Non lus <span className="font-semibold text-red-600">{kpis.totalUnread}</span></span>}
+          </div>
+        </div>
+      )}
+
       <div className={cn(
-        "grid gap-4 min-h-[600px] lg:flex-1 lg:min-h-0",
-        "md:grid-cols-[340px_1fr]",
-        selectedId ? "grid-cols-1" : "grid-cols-1"
+        "gap-4 lg:flex-1 lg:min-h-0 lg:grid lg:grid-cols-[340px_1fr]",
+        // Conv ouverte (<lg) : flex column fullscreen → chat Card prend toute la hauteur.
+        // Sans conv (<lg) : grid 1 col, sidebar list visible en grand.
+        // Desktop (lg+) : toujours grid 340px + chat.
+        selectedId
+          ? "flex flex-col flex-1 min-h-0"
+          : "grid grid-cols-1 min-h-[600px] md:grid-cols-[340px_1fr]",
       )}>
-        {/* Sidebar conversations */}
-        <Card className={cn("overflow-hidden flex flex-col", selectedId && "hidden md:flex")}>
+        {/* Sidebar conversations — cachee sur <lg quand conv ouverte */}
+        <Card className={cn("overflow-hidden flex flex-col", selectedId && "hidden lg:flex")}>
           <div className="p-3 border-b space-y-2 shrink-0">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -778,11 +870,12 @@ export function MessagesView({
           </ul>
         </Card>
 
-        {/* Zone conversation */}
+        {/* Zone conversation — fullscreen sur <lg quand conv ouverte */}
         <Card
           className={cn(
-            "overflow-hidden flex flex-col relative",
-            !selectedId && "hidden md:flex",
+            "overflow-hidden flex flex-col relative min-h-0",
+            !selectedId && "hidden lg:flex",
+            selectedId && "flex-1",
             dragOver && "ring-2 ring-[#0F2D52]"
           )}
           onDragOver={(e) => { if (selectedId && activeTab === "messages") { e.preventDefault(); setDragOver(true); } }}
@@ -809,7 +902,7 @@ export function MessagesView({
             <>
               {/* Header */}
               <div className="flex items-center gap-2 p-3 border-b shrink-0">
-                <Button variant="ghost" size="sm" className="md:hidden h-8 w-8 p-0" onClick={() => setSelectedId(null)} aria-label="Retour">
+                <Button variant="ghost" size="sm" className="lg:hidden h-8 w-8 p-0" onClick={() => setSelectedId(null)} aria-label="Retour">
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <button
@@ -830,7 +923,7 @@ export function MessagesView({
                       <p className="font-semibold text-sm truncate">{selected.fullName}</p>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">
-                      {selected.companyName ?? selected.email} · {messages.filter((m) => !m.deletedAt).length} message(s)
+                      {selected.companyName ?? selected.email} · {totalNonDeleted} message(s)
                     </p>
                   </div>
                 </button>
@@ -894,43 +987,78 @@ export function MessagesView({
                 <ConversationLinksTab messages={messages as MsgLite[]} onJumpToMessage={jumpToMessage} />
               ) : (
                 <>
-                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-1">
+                  <div className="flex-1 min-h-0 min-w-0 relative overflow-hidden">
                     {loadingMsgs ? (
-                      <div className="flex items-center justify-center h-full">
+                      <div className="absolute inset-0 flex items-center justify-center">
                         <p className="text-sm text-muted-foreground">Chargement…</p>
                       </div>
-                    ) : groupedMessages.length === 0 ? (
-                      <div className="flex items-center justify-center h-full">
-                        <p className="text-sm text-muted-foreground">{threadSearch ? "Aucun résultat" : "Aucun message"}</p>
+                    ) : virtualItems.length === 0 ? (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <p className="text-sm text-muted-foreground">{threadSearch ? "Aucun résultat" : "Aucun message — démarrez la conversation."}</p>
                       </div>
                     ) : (
-                      groupedMessages.map((group) => (
-                        <div key={group.date}>
-                          <div className="flex items-center gap-3 my-4">
-                            <div className="flex-1 h-px bg-border" />
-                            <span className="text-[10px] text-muted-foreground font-medium uppercase">{group.date}</span>
-                            <div className="flex-1 h-px bg-border" />
-                          </div>
-                          {group.msgs.map((msg, idx) => (
-                            <MessageBubble
-                              key={msg.id}
-                              msg={msg}
-                              isLast={idx === group.msgs.length - 1}
-                              searchHighlight={threadSearch}
-                              onReply={() => setReplyingTo(msg)}
-                              onEdit={() => openEdit(msg)}
-                              onDelete={() => setDeleteMsg(msg)}
-                              onReact={(emoji) => handleToggleReaction(msg.id, emoji)}
-                              allMessages={messages}
-                            />
-                          ))}
-                        </div>
-                      ))
+                      <Virtuoso
+                        ref={virtuosoRef}
+                        data={virtualItems}
+                        className="!h-full"
+                        initialTopMostItemIndex={virtualItems.length - 1}
+                        followOutput="smooth"
+                        atBottomThreshold={120}
+                        atBottomStateChange={setAtBottom}
+                        startReached={() => { if (hiddenOlderCount > 0) loadMoreOlder(); }}
+                        increaseViewportBy={{ top: 400, bottom: 200 }}
+                        components={{
+                          Header: hiddenOlderCount > 0 ? () => (
+                            <div className="flex justify-center py-2 text-[10px] text-muted-foreground">
+                              <span className="inline-flex items-center gap-1">
+                                <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground/30 animate-pulse" />
+                                Chargement des messages plus anciens… ({hiddenOlderCount} restants)
+                              </span>
+                            </div>
+                          ) : undefined,
+                        }}
+                        itemContent={(_index, item) => {
+                          if (item.type === "date") {
+                            return (
+                              <div className="flex items-center gap-3 my-3 px-3 sm:px-4">
+                                <div className="flex-1 h-px bg-border" />
+                                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{item.date}</span>
+                                <div className="flex-1 h-px bg-border" />
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="px-3 sm:px-4">
+                              <MessageBubble
+                                msg={item.msg}
+                                isLast={_index === virtualItems.length - 1}
+                                searchHighlight={threadSearch}
+                                onReply={() => setReplyingTo(item.msg)}
+                                onEdit={() => openEdit(item.msg)}
+                                onDelete={() => setDeleteMsg(item.msg)}
+                                onReact={(emoji) => handleToggleReaction(item.msg.id, emoji)}
+                                allMessages={messages}
+                              />
+                            </div>
+                          );
+                        }}
+                      />
+                    )}
+                    {/* Floating scroll-to-bottom button — visible si l'utilisateur a scrollé vers le haut */}
+                    {!atBottom && virtualItems.length > 0 && !loadingMsgs && (
+                      <button
+                        type="button"
+                        onClick={scrollToBottom}
+                        className="absolute bottom-4 right-4 h-9 w-9 rounded-full bg-[#0F2D52] text-white shadow-lg flex items-center justify-center hover:bg-[#15406d] transition-all"
+                        aria-label="Aller au dernier message"
+                      >
+                        <ArrowLeft className="h-4 w-4 -rotate-90" />
+                      </button>
                     )}
                   </div>
 
-                  {/* COMPOSER */}
-                  <div className="border-t p-3 shrink-0 bg-card space-y-2 relative">
+                  {/* COMPOSER — compact mobile, plus aere desktop */}
+                  <div className="border-t p-2 sm:p-3 shrink-0 bg-card space-y-1.5 sm:space-y-2 relative">
                     {/* Reply quote */}
                     {replyingTo && (
                       <div className="flex items-start gap-2 rounded-lg border-l-2 border-[#0F2D52] bg-muted/40 px-2 py-1.5">
@@ -967,11 +1095,11 @@ export function MessagesView({
                       </div>
                     )}
 
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                       <button
                         onClick={() => setChannel("chat")}
                         className={cn(
-                          "flex items-center gap-1 text-xs px-2.5 py-1 rounded-md transition-colors",
+                          "flex items-center gap-1 text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md transition-colors",
                           channel === "chat" ? "bg-emerald-100 text-emerald-700 font-medium" : "text-muted-foreground hover:bg-muted"
                         )}
                       >
@@ -980,7 +1108,7 @@ export function MessagesView({
                       <button
                         onClick={() => setChannel("email")}
                         className={cn(
-                          "flex items-center gap-1 text-xs px-2.5 py-1 rounded-md transition-colors",
+                          "flex items-center gap-1 text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md transition-colors",
                           channel === "email" ? "bg-blue-100 text-blue-700 font-medium" : "text-muted-foreground hover:bg-muted"
                         )}
                       >
@@ -989,7 +1117,7 @@ export function MessagesView({
                       <button
                         onClick={() => setInternalNote((v) => !v)}
                         className={cn(
-                          "flex items-center gap-1 text-xs px-2.5 py-1 rounded-md transition-colors",
+                          "flex items-center gap-1 text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md transition-colors",
                           internalNote ? "bg-amber-100 text-amber-700 font-medium" : "text-muted-foreground hover:bg-muted"
                         )}
                         title="Note visible admin seulement"
@@ -999,7 +1127,7 @@ export function MessagesView({
                       <button
                         type="button"
                         onClick={insertMention}
-                        className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-md text-muted-foreground hover:bg-muted transition-colors"
+                        className="flex items-center gap-1 text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md text-muted-foreground hover:bg-muted transition-colors"
                         title={`Mentionner ${selected.fullName}`}
                       >
                         <AtSign className="h-3 w-3" />Mention
@@ -1067,14 +1195,14 @@ export function MessagesView({
                       />
 
                       <button type="button" onClick={() => imageInputRef.current?.click()}
-                        className="h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
                         aria-label="Joindre une ou plusieurs images">
-                        <ImageIcon className="h-5 w-5" />
+                        <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                       </button>
                       <button type="button" onClick={() => fileInputRef.current?.click()}
-                        className="h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
                         aria-label="Joindre des fichiers">
-                        <Paperclip className="h-5 w-5" />
+                        <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
                       </button>
                       <EmojiPicker onSelect={insertEmoji} />
                       <VoiceRecorderButton onRecorded={handleVoiceRecorded} />
@@ -1093,10 +1221,10 @@ export function MessagesView({
                         placeholder={
                           internalNote ? "Note interne…" :
                           pendingAtts.length > 0 ? "Légende (optionnel)…" :
-                          replyingTo ? "Répondre… ('/' pour template)" : "Écrivez un message… ('/' pour template)"
+                          replyingTo ? "Répondre…" : "Message…"
                         }
                         className={cn(
-                          "flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-sm min-h-[40px] max-h-[120px] focus:outline-none focus:ring-2",
+                          "flex-1 min-w-0 resize-none rounded-lg border bg-background px-2.5 py-1.5 sm:px-3 sm:py-2 text-[12px] sm:text-[13px] min-h-[36px] sm:min-h-[40px] max-h-[120px] focus:outline-none focus:ring-2",
                           internalNote ? "focus:ring-amber-400 border-amber-200" : "focus:ring-ring"
                         )}
                         rows={1}
@@ -1107,21 +1235,21 @@ export function MessagesView({
                         size="sm"
                         onClick={() => setScheduleOpen(true)}
                         disabled={sending || (!newMsg.trim() && pendingAtts.length === 0) || internalNote}
-                        className="h-9 w-9 p-0 shrink-0"
+                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 shrink-0"
                         title="Programmer l'envoi"
                       >
-                        <Clock className="h-4 w-4" />
+                        <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         onClick={handleSend}
                         disabled={sending || (!newMsg.trim() && pendingAtts.length === 0)}
                         size="sm"
                         className={cn(
-                          "h-9 w-9 p-0 shrink-0",
+                          "h-8 w-8 sm:h-9 sm:w-9 p-0 shrink-0",
                           internalNote ? "bg-amber-500 hover:bg-amber-600" : "bg-[#0F2D52] hover:bg-[#1a3a66]"
                         )}
                       >
-                        <Send className="h-4 w-4" />
+                        <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                     <p className="text-[10px] text-muted-foreground hidden sm:block">
@@ -1175,6 +1303,55 @@ export function MessagesView({
 }
 
 // ─── MessageBubble ────────────────────────────────────────
+// Detecte un message systeme/notification (genere automatiquement par le workflow)
+// — Strip leading non-letters (emojis, symboles, espaces) puis test sur le keyword.
+const SYSTEM_KEYWORDS = /^(NOUVELLE DEMANDE|NOUVEAU DEVIS|NOUVEAU CONTRAT|NOUVEAU MANDAT|NOUVELLE FACTURE|FACTURE|CONTRAT|MANDAT|DEVIS|RDV|RENDEZ-VOUS|PAIEMENT|REMBOURSEMENT|SIGNATURE|DOCUMENT)\b/i;
+function isSystemMessage(content: string | null): boolean {
+  if (!content) return false;
+  // Strip whitespace, emojis et tout caractère non-lettre du début
+  const stripped = content.trim().replace(/^[^\p{L}]+/u, "");
+  return SYSTEM_KEYWORDS.test(stripped);
+}
+
+// Extrait un resume one-line d'un message systeme (premiere ligne sans emoji/symbole)
+function systemMessageSummary(content: string): string {
+  const firstLine = content.split("\n")[0].trim();
+  return firstLine.replace(/^[^\p{L}]+/u, "");
+}
+
+// Detecte une action liee a un message systeme.
+// 1. D'abord : numero d'entite formel (CT-XXX, F-XXX, DEV-XXX, MAN-XXX, REM-XXX) → ouvre filtre exact
+// 2. Sinon : mots-cles dans le texte → navigue vers la page admin correspondante
+type SystemAction = { route: string; label: string };
+function detectSystemAction(content: string): SystemAction | null {
+  // 1. Numero d'entite formel
+  const m = content.match(/\b(CT|F|DEV|MAN|REM)-(\d{4})-(\d+)\b/i);
+  if (m) {
+    const fullNumber = m[0].toUpperCase();
+    const prefix = m[1].toUpperCase();
+    const q = `?search=${encodeURIComponent(fullNumber)}`;
+    switch (prefix) {
+      case "CT":  return { route: `/admin/contracts${q}`, label: "Voir le contrat" };
+      case "F":   return { route: `/admin/invoices${q}`, label: "Voir la facture" };
+      case "DEV": return { route: `/admin/quotes${q}`, label: "Voir le devis" };
+      case "MAN": return { route: `/admin/mandates${q}`, label: "Voir le mandat" };
+      case "REM": return { route: `/admin/refunds${q}`, label: "Voir le remboursement" };
+    }
+  }
+  // 2. Mots-cles (pour les events sans numero formel : demandes projet, signatures, paiements...)
+  if (/nouvelle demande|demande de projet/i.test(content)) return { route: "/admin/requests", label: "Voir la demande" };
+  if (/contrat/i.test(content))                            return { route: "/admin/contracts", label: "Voir les contrats" };
+  if (/facture/i.test(content))                            return { route: "/admin/invoices", label: "Voir les factures" };
+  if (/devis/i.test(content))                              return { route: "/admin/quotes", label: "Voir les devis" };
+  if (/mandat/i.test(content))                             return { route: "/admin/mandates", label: "Voir les mandats" };
+  if (/remboursement/i.test(content))                      return { route: "/admin/refunds", label: "Voir les remboursements" };
+  if (/rdv|rendez-?vous/i.test(content))                   return { route: "/admin/calendar", label: "Voir le calendrier" };
+  if (/paiement/i.test(content))                           return { route: "/admin/finance/payments", label: "Voir les paiements" };
+  if (/signature/i.test(content))                          return { route: "/admin/contracts", label: "Voir le contrat" };
+  if (/document/i.test(content))                           return { route: "/admin/documents", label: "Voir le document" };
+  return null;
+}
+
 function MessageBubble({
   msg, isLast, searchHighlight, onReply, onEdit, onDelete, onReact, allMessages,
 }: {
@@ -1194,14 +1371,69 @@ function MessageBubble({
   const replyTarget = msg.replyTo ?? (msg.replyToId ? allMessages.find((m) => m.id === msg.replyToId) ?? null : null);
   const reactions = msg.reactions ?? {};
   const reactionEntries = Object.entries(reactions).filter(([, who]) => who.length > 0);
+  const isSystem = !isInternal && isSystemMessage(msg.content);
+  const [systemExpanded, setSystemExpanded] = useState(false);
 
   const ageMs = Date.now() - new Date(msg.createdAt).getTime();
   const canEditDelete = isAdmin && !msg.deletedAt && ageMs < 24 * 60 * 60 * 1000;
 
+  // Message systeme — pilule compacte qui wrap proprement en responsive (titre / temps / action)
+  if (isSystem && msg.content && !msg.deletedAt) {
+    const summary = systemMessageSummary(msg.content);
+    const action = detectSystemAction(msg.content);
+    // hasMore : le contenu a plus de details que la premiere ligne (sinon le bouton "+" affiche la meme chose)
+    const otherLines = msg.content.split("\n").slice(1).join("\n").trim();
+    const hasMore = otherLines.length > 0;
+    return (
+      <div className="my-1 flex justify-center min-w-0">
+        <div className="max-w-full min-w-0 flex flex-col items-center gap-1">
+          {/* Pilule : flex-wrap pour s'adapter en responsive (2 lignes si necessaire) */}
+          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 px-3 py-1.5 rounded-2xl bg-muted/40 text-[11px] text-muted-foreground max-w-full">
+            {hasMore ? (
+              <button
+                type="button"
+                onClick={() => setSystemExpanded((v) => !v)}
+                className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors min-w-0 max-w-full"
+                aria-label={systemExpanded ? "Réduire" : "Développer"}
+              >
+                <span className="font-semibold text-[#0F2D52] break-words [overflow-wrap:anywhere]">{summary}</span>
+                <span className="opacity-60 shrink-0">·</span>
+                <span className="shrink-0">{formatMsgTime(msg.createdAt)}</span>
+                <span className="opacity-60 shrink-0">{systemExpanded ? "−" : "+"}</span>
+              </button>
+            ) : (
+              // Pas d'expand bouton si le message tient sur une seule ligne (rien de plus a montrer)
+              <span className="inline-flex items-center gap-1.5 min-w-0 max-w-full">
+                <span className="font-semibold text-[#0F2D52] break-words [overflow-wrap:anywhere]">{summary}</span>
+                <span className="opacity-60 shrink-0">·</span>
+                <span className="shrink-0">{formatMsgTime(msg.createdAt)}</span>
+              </span>
+            )}
+            {action && (
+              <a
+                href={action.route}
+                className="text-[#0F2D52] font-semibold hover:underline inline-flex items-center gap-1 shrink-0"
+                aria-label={action.label}
+              >
+                {action.label}
+                <ArrowLeft className="h-2.5 w-2.5 rotate-180" />
+              </a>
+            )}
+          </div>
+          {systemExpanded && hasMore && (
+            <pre className="text-left text-[11px] font-sans whitespace-pre-wrap [overflow-wrap:anywhere] mt-1 px-2 py-1.5 bg-background/60 rounded border max-w-full w-full">
+              {msg.content}
+            </pre>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (msg.deletedAt) {
     return (
-      <div className={cn("flex mb-2", isAdmin ? "justify-end" : "justify-start")}>
-        <div className="max-w-[75%] rounded-2xl px-3 py-2 bg-muted/40 border border-dashed">
+      <div className={cn("flex mb-0.5 min-w-0", isAdmin ? "justify-end" : "justify-start")}>
+        <div className="max-w-[85%] md:max-w-[480px] rounded-2xl px-2.5 py-1.5 bg-muted/40 border border-dashed">
           <p className="text-xs italic text-muted-foreground">Message supprimé</p>
           <span className="text-[10px] text-muted-foreground">{formatMsgTime(msg.createdAt)}</span>
         </div>
@@ -1212,8 +1444,9 @@ function MessageBubble({
   const isScheduled = msg.scheduledFor && new Date(msg.scheduledFor) > new Date();
 
   return (
-    <div className={cn("group flex mb-2", isAdmin ? "justify-end" : "justify-start")}>
-      <div className="max-w-[75%] flex flex-col items-stretch">
+    <div className={cn("group flex mb-0.5 min-w-0", isAdmin ? "justify-end" : "justify-start")}>
+      {/* Bulle bornee : 85% mobile (responsive), 480px max desktop — toutes les bulles ont la meme largeur max */}
+      <div className="max-w-[85%] md:max-w-[480px] min-w-0 flex flex-col items-stretch">
         {isInternal && (
           <div className="text-[10px] font-semibold text-amber-700 mb-0.5 self-end flex items-center gap-1">
             <StickyNote className="h-3 w-3" />Note interne
@@ -1230,7 +1463,7 @@ function MessageBubble({
           )}
 
           <div id={`msg-${msg.id}`} className={cn(
-            "rounded-2xl px-3 py-2 space-y-1.5",
+            "rounded-2xl px-2.5 py-1.5 space-y-1 min-w-0 overflow-hidden",
             isInternal ? "bg-amber-50 border border-amber-200 rounded-br-md text-amber-900"
             : isAdmin ? "bg-[#0F2D52] text-white rounded-br-md"
             : "bg-muted rounded-bl-md"
@@ -1266,7 +1499,7 @@ function MessageBubble({
             )}
 
             {msg.content && (
-              <p className="text-sm whitespace-pre-wrap break-words px-1">
+              <p className="text-[12px] sm:text-[13px] leading-snug whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                 {searchHighlight ? highlightSearch(msg.content, searchHighlight) : msg.content}
               </p>
             )}

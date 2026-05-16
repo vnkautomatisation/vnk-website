@@ -8,6 +8,41 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { createWorkflowEvent, type WorkflowEventType } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { deleteOutlookEvent, updateOutlookEvent } from "@/lib/integrations/microsoft";
+import { deleteGoogleEvent, updateGoogleEvent } from "@/lib/integrations/google";
+import { triggerZap } from "@/lib/integrations/zapier";
+import { notifyAppointmentCancelled } from "@/lib/integrations/slack";
+
+// Helper: dispatch update event externe selon prefixe
+async function updateExternalMeeting(
+  meetingId: string | null,
+  patch: { subject?: string; body?: string; startISO?: string; endISO?: string; timezone?: string; attendees?: { email: string; name?: string }[] }
+): Promise<void> {
+  if (!meetingId) return;
+  try {
+    if (meetingId.startsWith("ms:")) {
+      await updateOutlookEvent(meetingId.slice(3), patch);
+    } else if (meetingId.startsWith("gg:")) {
+      await updateGoogleEvent(meetingId.slice(3), patch);
+    }
+  } catch (err) {
+    console.error("[appointments] external meeting update failed:", err);
+  }
+}
+
+// Helper: dispatch suppression selon le prefixe du meetingId
+async function deleteExternalMeeting(meetingId: string | null): Promise<void> {
+  if (!meetingId) return;
+  try {
+    if (meetingId.startsWith("ms:")) {
+      await deleteOutlookEvent(meetingId.slice(3));
+    } else if (meetingId.startsWith("gg:")) {
+      await deleteGoogleEvent(meetingId.slice(3));
+    }
+  } catch (err) {
+    console.error("[appointments] external meeting delete failed:", err);
+  }
+}
 
 const updateSchema = z.object({
   appointmentDate: z.string().optional(),
@@ -103,10 +138,45 @@ export async function PATCH(
     data,
   });
 
+  // ── Sync update event externe (Outlook/Google) si changement de date/heure/sujet ──
+  const dateChanged = parsed.data.appointmentDate || parsed.data.startTime || parsed.data.endTime;
+  if (!isCancellation && dateChanged && existing.meetingId) {
+    const isoDate = (appointment.appointmentDate ?? existing.appointmentDate).toISOString().slice(0, 10);
+    const startISO = `${isoDate}T${appointment.startTime}:00`;
+    const endISO = `${isoDate}T${appointment.endTime}:00`;
+    void updateExternalMeeting(existing.meetingId, {
+      subject: appointment.subject ?? undefined,
+      body: appointment.notesAdmin ?? undefined,
+      startISO,
+      endISO,
+      timezone: "America/Toronto",
+      attendees: appointment.clientEmail
+        ? [{ email: appointment.clientEmail, name: appointment.clientName }]
+        : undefined,
+    });
+  }
+
   if (isCancellation && existing.slotId) {
     await prisma.availabilitySlot.update({
       where: { id: existing.slotId },
       data: { status: "available" },
+    });
+  }
+
+  // ── Supprimer la reunion en ligne (Teams/Meet) si annulation ──
+  if (isCancellation) {
+    await deleteExternalMeeting(existing.meetingId);
+    const isoDate = existing.appointmentDate.toISOString().slice(0, 10);
+    void notifyAppointmentCancelled({
+      clientName: existing.clientName,
+      date: isoDate,
+      startTime: existing.startTime,
+      reason: existing.cancellationReason,
+    });
+    void triggerZap("appointments.cancelled", {
+      id: existing.id, clientId: existing.clientId,
+      date: existing.appointmentDate, startTime: existing.startTime,
+      subject: existing.subject,
     });
   }
 
@@ -160,6 +230,9 @@ export async function DELETE(
       data: { status: "available" },
     });
   }
+
+  // ── Supprimer la reunion en ligne (Teams/Meet) associee ──
+  await deleteExternalMeeting(appt.meetingId);
 
   await prisma.appointment.delete({ where: { id: appointmentId } });
 

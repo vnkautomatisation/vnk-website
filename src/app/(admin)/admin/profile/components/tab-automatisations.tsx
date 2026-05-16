@@ -17,20 +17,20 @@ type AutomationToggle = {
 const AUTOMATIONS: AutomationToggle[] = [
   {
     key: "auto_invoice",
-    title: "Generer facture apres signature",
-    description: "Cree automatiquement une facture quand le contrat est signe",
+    title: "Générer la facture après signature",
+    description: "Crée automatiquement une facture lorsque le contrat est signé",
     icon: Receipt,
   },
   {
     key: "auto_notify",
-    title: "Notifier client a chaque etape",
+    title: "Notifier le client à chaque étape",
     description: "Messages automatiques dans la messagerie du portail",
     icon: MessageSquare,
   },
   {
     key: "auto_reminder",
-    title: "Rappels factures en retard",
-    description: "Rappel automatique apres la date d'echeance",
+    title: "Rappels des factures en retard",
+    description: "Rappel automatique après la date d'échéance",
     icon: Bell,
   },
 ];
@@ -44,11 +44,11 @@ export function TabAutomatisations() {
 
   const handleToggle = (key: string, value: boolean) => {
     setToggles((prev) => ({ ...prev, [key]: value }));
-    toast.success(value ? "Automatisation activee" : "Automatisation desactivee");
+    toast.success(value ? "Automatisation activée" : "Automatisation désactivée");
   };
 
   const handleSendReminders = () => {
-    toast.success("Rappels envoyes aux clients avec factures en retard");
+    toast.success("Rappels envoyés aux clients avec factures en retard");
   };
 
   return (

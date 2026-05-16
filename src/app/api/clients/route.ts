@@ -8,6 +8,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { notifyClientCreated } from "@/lib/integrations/slack";
+import { triggerZap } from "@/lib/integrations/zapier";
 
 const createClientSchema = z.object({
   fullName: z.string().min(1).max(255),
@@ -105,6 +107,17 @@ export async function POST(req: Request) {
     action: "create",
     entityType: "clients",
     entityId: client.id,
+  });
+
+  // Notifications externes (non bloquantes)
+  void notifyClientCreated({
+    clientName: client.fullName,
+    email: client.email,
+    companyName: client.companyName,
+  });
+  void triggerZap("clients.created", {
+    id: client.id, fullName: client.fullName, email: client.email,
+    companyName: client.companyName, phone: client.phone, createdAt: client.createdAt.toISOString(),
   });
 
   // Event

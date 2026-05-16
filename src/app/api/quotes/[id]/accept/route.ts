@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { acceptQuote } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
 import { logSignatureEvent } from "@/lib/request-context";
+import { notifyQuoteAccepted } from "@/lib/integrations/slack";
+import { triggerZap } from "@/lib/integrations/zapier";
 import crypto from "crypto";
 
 const bodySchema = z.object({
@@ -70,6 +72,24 @@ export async function POST(
     quoteId,
     session.user.role === "client" ? "client" : "admin"
   );
+
+  // Notifications externes (non bloquantes)
+  const cli = await prisma.client.findUnique({
+    where: { id: quote.clientId },
+    select: { fullName: true, companyName: true },
+  });
+  const clientName = cli?.companyName ?? cli?.fullName ?? "Client";
+  void notifyQuoteAccepted({
+    quoteNumber: quote.quoteNumber,
+    amount: Number(quote.amountTtc),
+    currency: quote.currency,
+    clientName,
+  });
+  void triggerZap("quotes.accepted", {
+    id: quote.id, quoteNumber: quote.quoteNumber, amount: Number(quote.amountTtc),
+    currency: quote.currency, clientId: quote.clientId, clientName,
+    contractId: result.contract?.id ?? null,
+  });
 
   revalidateAdminViews();
 

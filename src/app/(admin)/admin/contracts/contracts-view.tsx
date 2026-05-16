@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -249,6 +249,24 @@ export function ContractsView({
     } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
   };
 
+  // ── Envoyer pour signature légale (Dropbox Sign) ──────────
+  const handleSendForEsign = async (c: Contract) => {
+    const ok = await confirm({
+      title: "Envoyer pour signature légale ?",
+      description: `Le client recevra un courriel de Dropbox Sign avec un lien de signature électronique. Une fois signé, le PDF final sera automatiquement enregistré dans le portail.`,
+      confirmLabel: "Envoyer pour signature",
+    });
+    if (!ok) return;
+    const res = await fetch(`/api/contracts/${c.id}/send-for-esign`, { method: "POST" });
+    if (res.ok) {
+      toast.success(`Demande de signature envoyée à ${c.clientName}`);
+      router.refresh();
+    } else {
+      const d = await res.json();
+      toast.error(d.error || "Erreur — vérifiez que l'intégration Dropbox Sign est configurée dans Profil > Intégrations.");
+    }
+  };
+
   // Bulk
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
@@ -278,6 +296,17 @@ export function ContractsView({
     if (allIds.every((id) => selectedIds.has(id))) setSelectedIds(new Set());
     else setSelectedIds(new Set(allIds));
   };
+
+  // Sticky scroll detection (pattern dashboard finance)
+  const stickyBarSentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el = stickyBarSentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // Filter
   const filtered = useMemo(() => {
@@ -326,6 +355,7 @@ export function ContractsView({
     ];
     if (c.status === "pending" || c.status === "draft") {
       a.push({ label: "Envoyer au client", icon: <Send className="h-3.5 w-3.5" />, onClick: () => handleSendToClient(c) });
+      a.push({ label: "Envoyer pour signature légale", icon: <PenTool className="h-3.5 w-3.5" />, onClick: () => handleSendForEsign(c) });
     }
     if (c.status === "pending" && !c.adminSignatureData) {
       a.push({ label: "Signer (admin)", icon: <PenTool className="h-3.5 w-3.5" />, onClick: () => setSigningContract(c) });
@@ -450,12 +480,29 @@ export function ContractsView({
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Total contrats" value={kpis.total} icon={FileSignature} accent="bg-indigo-500" />
         <StatCard label="En attente" value={kpis.pendingCount} icon={Clock} accent="bg-amber-500" />
         <StatCard label="Signés" value={kpis.signedCount} icon={CheckCircle2} accent="bg-emerald-500" deltaLabel={`${kpis.signedThisMonth} ce mois`} />
         <StatCard label="Valeur signée" value={formatCurrency(kpis.totalValue)} icon={DollarSign} accent="bg-blue-500" />
       </div>
+
+      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+      <div ref={stickyBarSentinelRef} aria-hidden className="h-px -mt-3" />
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <FileSignature className="h-4 w-4" />
+              Contrats
+            </span>
+            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="text-muted-foreground">En attente <span className="font-semibold text-amber-600">{kpis.pendingCount}</span></span>
+            <span className="text-muted-foreground">Signés <span className="font-semibold text-emerald-600">{kpis.signedCount}</span></span>
+            <span className="ml-auto text-muted-foreground">Valeur <span className="font-semibold text-blue-600">{formatCurrency(kpis.totalValue)}</span></span>
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">

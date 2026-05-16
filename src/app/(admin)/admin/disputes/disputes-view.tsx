@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -363,6 +363,17 @@ export function DisputesView({
     else setSelectedIds(new Set(allIds));
   };
 
+  // Sticky scroll detection (pattern dashboard finance)
+  const stickyBarSentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el = stickyBarSentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   const filtered = useMemo(() => {
     let r = disputes;
     if (statusFilter !== "all") r = r.filter((d) => d.status === statusFilter);
@@ -536,12 +547,30 @@ export function DisputesView({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Total litiges" value={kpis.total} icon={Scale} accent="bg-indigo-500" />
         <StatCard label="Ouverts" value={kpis.open} icon={Clock} accent="bg-amber-500" deltaLabel={`${formatCurrency(kpis.totalAtStake)} en jeu`} />
         <StatCard label="Gagnés" value={kpis.won} icon={Award} accent="bg-emerald-500" />
         <StatCard label="Perdus" value={kpis.lost} icon={XCircle} accent="bg-red-500" />
       </div>
+
+      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+      <div ref={stickyBarSentinelRef} aria-hidden className="h-px -mt-3" />
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <Scale className="h-4 w-4" />
+              Litiges
+            </span>
+            <span className="font-semibold">{filtered.length} affichés</span>
+            {kpis.open > 0 && <span className="text-muted-foreground">Ouverts <span className="font-semibold text-amber-600">{kpis.open}</span></span>}
+            <span className="text-muted-foreground">Gagnés <span className="font-semibold text-emerald-600">{kpis.won}</span></span>
+            {kpis.lost > 0 && <span className="text-muted-foreground">Perdus <span className="font-semibold text-red-600">{kpis.lost}</span></span>}
+            {kpis.totalAtStake > 0 && <span className="ml-auto text-muted-foreground">En jeu <span className="font-semibold">{formatCurrency(kpis.totalAtStake)}</span></span>}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">

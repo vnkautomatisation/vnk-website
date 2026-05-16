@@ -1,0 +1,20 @@
+// Settings · API — tokens d'accès personnels.
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { ApiTokensView } from "./api-tokens-view";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "API tokens — VNK" };
+
+export default async function ApiTokensPage() {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
+
+  const tokens = await prisma.adminApiToken.findMany({
+    where: { adminId: session.user.adminId! },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return <ApiTokensView tokens={JSON.parse(JSON.stringify(tokens))} />;
+}

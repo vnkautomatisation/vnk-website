@@ -20,7 +20,10 @@ export default function middleware(request: NextRequest) {
       url.searchParams.set("redirect", pathname);
       return NextResponse.redirect(url);
     }
-    return NextResponse.next();
+    // Forward le pathname dans un header pour que request.ts détecte le contexte admin
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", pathname);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // ── /portail/login : pas de prefixe locale, pas d'auth ──

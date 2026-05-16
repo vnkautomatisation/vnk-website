@@ -55,8 +55,9 @@ export function AdminTopbar({
 
   return (
     <header className="sticky top-0 z-30 bg-[#0F2D52]/95 backdrop-blur-md shadow-lg">
-      <div className="h-[64px] pl-14 pr-4 sm:px-6 flex items-center justify-between">
-        {/* Logo — identique au portail (pl-14 mobile pour laisser place au hamburger fixed) */}
+      <div className="h-[64px] pl-14 pr-4 sm:pr-6 lg:pl-6 flex items-center justify-between">
+        {/* Logo — pl-14 jusqu'a lg pour laisser place au hamburger fixed (qui occupe ~48px) ;
+            pl-6 a partir de lg ou la sidebar prend le relais (plus de hamburger). */}
         <NextLink href="/admin" className="flex items-center gap-3 group shrink-0">
           <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
             <span className="text-white font-bold text-[10px] sm:text-sm">VNK</span>

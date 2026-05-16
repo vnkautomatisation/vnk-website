@@ -1,0 +1,27 @@
+// Settings · Charte graphique — logos, couleurs, polices.
+// Vue server qui charge tous les paramètres de la catégorie appearance + custom CSS.
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { BrandingView } from "./branding-view";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Charte graphique — VNK" };
+
+export default async function BrandingPage() {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    redirect("/admin/login");
+  }
+
+  const rows = await prisma.setting.findMany({
+    where: { category: "appearance" },
+    orderBy: { key: "asc" },
+  });
+
+  // Construire un map key → value pour passage facile
+  const settings: Record<string, string | null> = {};
+  for (const r of rows) settings[r.key] = r.value;
+
+  return <BrandingView initial={settings} />;
+}

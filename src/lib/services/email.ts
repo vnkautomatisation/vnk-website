@@ -1,7 +1,8 @@
-// Email service — SMTP via nodemailer, config depuis Settings
+// Email service — SendGrid API en priorité (si configuré), sinon SMTP via nodemailer
 import "server-only";
 import { getSetting } from "@/lib/settings";
 import { prisma } from "@/lib/prisma";
+import { getIntegrationCredentials } from "@/lib/integrations/credentials";
 
 type EmailAttachment = {
   filename: string;
@@ -19,10 +20,17 @@ type EmailParams = {
 };
 
 export async function sendEmail(params: EmailParams) {
+  // ─── 1. Tenter SendGrid si l'intégration est activée ───
+  const sgCreds = await getIntegrationCredentials("sendgrid");
+  if (sgCreds?.api_key && sgCreds?.from_email) {
+    return sendViaSendGrid(params, sgCreds);
+  }
+
+  // ─── 2. Fallback SMTP ───
   const host = await getSetting<string>("emails", "smtp_host");
   if (!host) {
-    console.warn("[email] SMTP non configuré — email ignoré");
-    return { ok: false, error: "SMTP non configuré" };
+    console.warn("[email] Aucun fournisseur courriel configuré — email ignoré");
+    return { ok: false, error: "Courriel non configuré (ni SendGrid ni SMTP)" };
   }
 
   const port = Number((await getSetting<number>("emails", "smtp_port")) ?? 587);
@@ -63,6 +71,60 @@ export async function sendEmail(params: EmailParams) {
       ok: false,
       error: err instanceof Error ? err.message : "Erreur inconnue",
     };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SendGrid v3 API
+// ═══════════════════════════════════════════════════════════
+
+async function sendViaSendGrid(
+  params: EmailParams,
+  creds: Record<string, string>
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const personalizations: Record<string, unknown>[] = [{
+      to: [{ email: params.to }],
+      ...(params.bcc ? { bcc: [{ email: params.bcc }] } : {}),
+    }];
+
+    const payload: Record<string, unknown> = {
+      personalizations,
+      from: { email: creds.from_email, name: creds.from_name ?? "VNK" },
+      subject: params.subject,
+      content: [
+        ...(params.text ? [{ type: "text/plain", value: params.text }] : []),
+        { type: "text/html", value: params.html },
+      ],
+    };
+
+    if (params.attachments?.length) {
+      payload.attachments = params.attachments.map((a) => ({
+        filename: a.filename,
+        type: a.contentType ?? "application/octet-stream",
+        content: typeof a.content === "string"
+          ? Buffer.from(a.content).toString("base64")
+          : a.content.toString("base64"),
+      }));
+    }
+
+    const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${creds.api_key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.status === 202 || res.ok) {
+      return { ok: true };
+    }
+    const errText = await res.text();
+    return { ok: false, error: `SendGrid ${res.status} : ${errText}` };
+  } catch (err) {
+    console.error("[email] SendGrid send failed:", err);
+    return { ok: false, error: err instanceof Error ? err.message : "Erreur SendGrid" };
   }
 }
 

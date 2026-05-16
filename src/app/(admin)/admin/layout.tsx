@@ -10,6 +10,7 @@ import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminTopbar } from "@/components/admin/admin-topbar";
 import { CommandPalette } from "@/components/admin/command-palette";
 import { EntityPanelsRoot } from "@/components/admin/entity-panels-host";
+import { AdminThemeProvider } from "@/components/admin/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const getAdmin = cache(async (adminId: number) =>
@@ -64,6 +65,7 @@ export default async function AdminLayout({
 
   return (
     <TooltipProvider delayDuration={300}>
+      <AdminThemeProvider>
       <EntityPanelsRoot>
         <div className="min-h-screen bg-muted/40">
           <CommandPalette />
@@ -89,6 +91,7 @@ export default async function AdminLayout({
           </main>
         </div>
       </EntityPanelsRoot>
+      </AdminThemeProvider>
     </TooltipProvider>
   );
 }

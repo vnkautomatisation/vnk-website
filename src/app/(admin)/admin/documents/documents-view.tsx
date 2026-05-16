@@ -359,6 +359,17 @@ export function DocumentsView({
     else setSelectedIds(new Set(allIds));
   };
 
+  // Sticky scroll detection (pattern dashboard finance)
+  const stickyBarSentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el = stickyBarSentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   // Filter
   const filtered = useMemo(() => {
     let result = documents;
@@ -588,12 +599,30 @@ export function DocumentsView({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Total documents" value={kpis.total} icon={FileText} accent="bg-blue-500" />
         <StatCard label="Ce mois" value={kpis.thisMonth} icon={Calendar} accent="bg-indigo-500" />
         <StatCard label="Non lus" value={kpis.unread} icon={EyeOff} accent="bg-amber-500" />
         <StatCard label="Espace utilisé" value={fmtBytes(kpis.totalStorageBytes)} icon={HardDrive} accent="bg-emerald-500" deltaLabel={`${kpis.uniqueClients} client${kpis.uniqueClients > 1 ? "s" : ""}`} />
       </div>
+
+      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+      <div ref={stickyBarSentinelRef} aria-hidden className="h-px -mt-3" />
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <FileText className="h-4 w-4" />
+              Documents
+            </span>
+            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="text-muted-foreground">Total <span className="font-semibold text-blue-600">{kpis.total}</span></span>
+            <span className="text-muted-foreground">Ce mois <span className="font-semibold text-indigo-600">{kpis.thisMonth}</span></span>
+            {kpis.unread > 0 && <span className="text-muted-foreground">Non lus <span className="font-semibold text-amber-600">{kpis.unread}</span></span>}
+            <span className="ml-auto text-muted-foreground">{fmtBytes(kpis.totalStorageBytes)} · {kpis.uniqueClients} client{kpis.uniqueClients > 1 ? "s" : ""}</span>
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">

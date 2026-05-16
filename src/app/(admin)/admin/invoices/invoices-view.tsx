@@ -562,7 +562,7 @@ export function InvoicesView({
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Total impayé" value={formatCurrency(kpis.unpaidTotal)} icon={Clock} accent="bg-amber-500" deltaLabel={`${kpis.unpaidCount} facture${kpis.unpaidCount > 1 ? "s" : ""}`} />
         <StatCard label="En retard" value={formatCurrency(kpis.overdueTotal)} icon={AlertTriangle} accent="bg-red-500" deltaLabel={`${kpis.overdueCount} facture${kpis.overdueCount > 1 ? "s" : ""}`} />
         <StatCard label="Encaissé ce mois" value={formatCurrency(kpis.paidThisMonth)} icon={CheckCircle2} accent="bg-emerald-500" />
@@ -570,36 +570,27 @@ export function InvoicesView({
       </div>
 
       {/* Sentinel — détecte quand les KPIs quittent le viewport */}
+      {/* Sentinel — détecte fin des KPI */}
       <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
 
-      {/* Toolbar — sticky au scroll, avec récap KPI compact qui apparaît seulement quand scrolled */}
-      <div
-        className={cn(
-          "sticky top-[64px] z-20 bg-background -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 transition-shadow",
-          scrolled && "shadow-sm border-b"
-        )}
-      >
-        {scrolled && (
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs mb-2 pt-1">
+      {/* Sticky compact bar — KPI seulement (pattern dashboard finance) */}
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <Receipt className="h-4 w-4" />
               Factures
             </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Impayé :</span>
-              <span className="font-bold text-amber-600">{formatCurrency(kpis.unpaidTotal)}</span>
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">En retard :</span>
-              <span className="font-bold text-red-600">{formatCurrency(kpis.overdueTotal)}</span>
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Encaissé ce mois :</span>
-              <span className="font-bold text-emerald-600">{formatCurrency(kpis.paidThisMonth)}</span>
-            </span>
-            <span className="ml-auto text-muted-foreground">{filtered.length} affichées</span>
+            <span className="font-semibold">{filtered.length} affichées</span>
+            <span className="text-muted-foreground">Impayé <span className="font-semibold text-amber-600">{formatCurrency(kpis.unpaidTotal)}</span></span>
+            <span className="text-muted-foreground">En retard <span className="font-semibold text-red-600">{formatCurrency(kpis.overdueTotal)}</span></span>
+            <span className="ml-auto text-muted-foreground">Encaissé ce mois <span className="font-semibold text-emerald-600">{formatCurrency(kpis.paidThisMonth)}</span></span>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Filtres en flow normal */}
+      <div>
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

@@ -29,26 +29,251 @@ model Admin {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
 
-  auditLogs     AuditLog[]
-  sessions      AdminSession[]
+  // ── Identité étendue ─────────────────────────────────
+  title             String?   // Titre/poste (ex: "Fondateur & developpeur")
+  phone             String?
+  phoneVerifiedAt   DateTime? @map("phone_verified_at")
+  bio               String?   // 280 caracteres max
+  emailSignature    String?   @map("email_signature") // Signature mail pro
+  presenceStatus    String?   @map("presence_status") // active | meeting | vacation | focus | offline
+  presenceMessage   String?   @map("presence_message")
+  presenceUntil     DateTime? @map("presence_until")
+
+  // ── Preferences UI/UX ────────────────────────────────
+  timezone          String?   @default("America/Toronto")
+  locale            String?   @default("fr-CA") // fr-CA | en-CA
+  theme             String?   @default("light")  // light | dark | auto
+  accentColor       String?   @map("accent_color") // hex pour avatar fallback
+  defaultLanding    String?   @map("default_landing") // dashboard | requests | calendar | messages
+  notificationPrefs Json?     @map("notification_prefs") // {email:{...}, slack:{...}, push:{...}}
+  shortcuts         Json?     // {save:"cmd+s", search:"cmd+k"}
+
+  // ── Securite renforcee ───────────────────────────────
+  passwordChangedAt   DateTime? @map("password_changed_at")
+  passwordHistory     Json?     @map("password_history") // [{hash, changedAt}]
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+  loginAlertsEnabled  Boolean   @default(true) @map("login_alerts_enabled")
+  recoveryEmail       String?   @map("recovery_email")
+  lastPasswordIp      String?   @map("last_password_ip")
+
+  // ── Loi 25 / Confidentialite ─────────────────────────
+  dataExportRequestedAt DateTime? @map("data_export_requested_at")
+  dataExportReadyAt     DateTime? @map("data_export_ready_at")
+  marketingOptIn        Boolean   @default(false) @map("marketing_opt_in")
+  analyticsOptIn        Boolean   @default(true)  @map("analytics_opt_in")
+
+  // Marqueur d'invalidation globale (force la déconnexion de toutes les sessions
+  // dont le JWT a été émis AVANT cette date).
+  sessionsInvalidatedAt DateTime? @map("sessions_invalidated_at")
+
+  // ── Onboarding ───────────────────────────────────────
+  onboardingDone    Boolean   @default(false) @map("onboarding_done")
+  onboardingSteps   Json?     @map("onboarding_steps") // {profile:true, twoFa:false, ...}
+
+  // ── Identité étendue (poste, département, équipe) ──
+  positionId        Int?     @map("position_id")
+  roleId            Int?     @map("role_id")
+  department        String?  // « Comptabilité », « Ventes », « Technique »
+  startDate         DateTime? @map("start_date") @db.Date
+  endDate           DateTime? @map("end_date") @db.Date
+  internalNotes     String?  @map("internal_notes")
+
+  auditLogs        AuditLog[]
+  sessions         AdminSession[]
   assignedPayments Payment[] @relation("AssignedPayments")
+  backupCodes      AdminBackupCode[]
+  trustedDevices   AdminTrustedDevice[]
+  apiTokens        AdminApiToken[]
+  securityEvents   AdminSecurityEvent[]
+
+  position         Position? @relation(fields: [positionId], references: [id])
+  customRole       Role?     @relation(fields: [roleId], references: [id])
 
   @@map("admins")
 }
 
+// ── Rôles personnalisables avec matrice de permissions ──────
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // "Comptable", "Vendeur senior", etc.
+  description String?
+  // Matrice JSON : { "clients": ["read","write"], "invoices": ["read","write","delete"], ... }
+  permissions Json     @default("{}")
+  // Système = créé au seed, non supprimable
+  isSystem    Boolean  @default(false) @map("is_system")
+  // Couleur pour l'UI (badge)
+  color       String?  @default("#0F2D52")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admins      Admin[]
+  positions   Position[]
+
+  @@map("roles")
+}
+
+// ── Postes prédéfinis (templates de profils) ────────────────
+model Position {
+  id              Int      @id @default(autoincrement())
+  name            String   @unique // "Comptable", "Vendeur", "Technicien"
+  description     String?
+  defaultRoleId   Int?     @map("default_role_id")
+  // Préférences par défaut héritées par l'employé
+  defaultDepartment String? @map("default_department")
+  // Couleur pour le badge sur les listes admins
+  color           String?  @default("#0F2D52")
+  isSystem        Boolean  @default(false) @map("is_system")
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  defaultRole     Role?    @relation(fields: [defaultRoleId], references: [id])
+  admins          Admin[]
+
+  @@map("positions")
+}
+
+// ── Abonnements Web Push (notifications navigateur) ──
+model PushSubscription {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  endpoint     String   @unique @db.Text
+  p256dh       String   @db.Text // clé publique du destinataire
+  authKey      String   @map("auth_key") @db.Text
+  userAgent    String?  @map("user_agent") @db.Text
+  label        String?  // ex : "Chrome bureau"
+  lastUsedAt   DateTime? @map("last_used_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([adminId])
+  @@map("push_subscriptions")
+}
+
+// ── CatalogItem : registre générique pour catalogues simples ──
+// Couvre : client_tag, client_source, industry, expense_category,
+// workflow_status, currency, payment_method, contact_method.
+// Évite de multiplier les tables pour des listes plates.
+model CatalogItem {
+  id          Int      @id @default(autoincrement())
+  type        String   // ex : "client_tag", "industry", "workflow_status"
+  key         String   // slug identifiant
+  name        String   // libellé affiché
+  description String?
+  color       String?  @default("#0F2D52")
+  icon        String?  // nom Lucide ou emoji
+  metadata    Json?    // données type-spécifiques (code ISO devise, taux, etc.)
+  parentId    Int?     @map("parent_id") // pour catégories hiérarchiques
+  isSystem    Boolean  @default(false) @map("is_system")
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([type, key])
+  @@index([type, isActive, sortOrder])
+  @@map("catalog_items")
+}
+
 model AdminSession {
-  id         String   @id @default(cuid())
-  adminId    Int      @map("admin_id")
-  token      String   @unique
-  userAgent  String?  @map("user_agent")
-  ipAddress  String?  @map("ip_address")
-  expiresAt  DateTime @map("expires_at")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id           String   @id @default(cuid())
+  adminId      Int      @map("admin_id")
+  token        String   @unique
+  userAgent    String?  @map("user_agent")
+  ipAddress    String?  @map("ip_address")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // ── Enrichissements 2026 ─────────────────────────────
+  lastActiveAt DateTime? @map("last_active_at")
+  browser      String?
+  os           String?
+  deviceType   String?  @map("device_type") // desktop | mobile | tablet
+  country      String?
+  city         String?
+  label        String?  // libelle personnalise ("Macbook bureau")
+  isCurrent    Boolean  @default(false) @map("is_current")
 
   admin      Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
   @@index([token])
+  @@index([adminId, lastActiveAt])
   @@map("admin_sessions")
+}
+
+// ── 2FA: codes de recuperation one-time ────────────────
+model AdminBackupCode {
+  id        Int      @id @default(autoincrement())
+  adminId   Int      @map("admin_id")
+  codeHash  String   @map("code_hash") // SHA-256 du code
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("admin_backup_codes")
+}
+
+// ── Appareils de confiance (skip 2FA pendant N jours) ──
+model AdminTrustedDevice {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  fingerprint  String   // hash UA+IP+screen
+  label        String   // "Macbook M3", "iPhone 17"
+  lastUsedAt   DateTime @default(now()) @map("last_used_at")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  admin        Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@unique([adminId, fingerprint])
+  @@index([adminId])
+  @@map("admin_trusted_devices")
+}
+
+// ── Tokens API personnels ──────────────────────────────
+model AdminApiToken {
+  id          Int      @id @default(autoincrement())
+  adminId     Int      @map("admin_id")
+  name        String   // "Integration Zapier maison"
+  tokenHash   String   @unique @map("token_hash") // SHA-256
+  prefix      String   // 8 premiers chars affiches "vnk_pa_xxxxxxxx"
+  scopes      Json     // ["read:clients","write:invoices"]
+  lastUsedAt  DateTime? @map("last_used_at")
+  lastUsedIp  String?  @map("last_used_ip")
+  expiresAt   DateTime? @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  admin       Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([prefix])
+  @@map("admin_api_tokens")
+}
+
+// ── Security events feed (timeline securite) ───────────
+model AdminSecurityEvent {
+  id          Int      @id @default(autoincrement())
+  adminId     Int      @map("admin_id")
+  type        String   // login_success | login_failed | password_changed | 2fa_enabled | 2fa_disabled | session_revoked | trusted_device_added | api_token_created | api_token_revoked | data_export | suspicious_login | breach_detected | passkey_added | passkey_removed
+  severity    String   @default("info") // info | success | warning | critical
+  message     String
+  metadata    Json?    // contexte additionnel
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  country     String?
+  city        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  admin       Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, createdAt])
+  @@index([type])
+  @@index([severity])
+  @@map("admin_security_events")
 }
 
 // ════════════════════════════════════════════════════════════

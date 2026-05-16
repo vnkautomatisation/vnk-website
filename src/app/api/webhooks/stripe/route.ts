@@ -5,6 +5,8 @@ import { markInvoicePaid, createWorkflowEvent } from "@/lib/workflow";
 import { getSetting } from "@/lib/settings";
 import { logOrderEvent } from "@/lib/request-context";
 import { verifyWebhookSignature, getEnrichedChargeData, getPayoutData } from "@/lib/services/stripe";
+import { notifyInvoicePaid } from "@/lib/integrations/slack";
+import { triggerZap } from "@/lib/integrations/zapier";
 
 export async function POST(req: Request) {
   const signature = req.headers.get("stripe-signature");
@@ -119,6 +121,35 @@ export async function POST(req: Request) {
           invoiceId: invoiceId ? Number(invoiceId) : undefined,
           metadata: { source: "stripe_webhook" },
         }).catch(() => {});
+
+        // Notifications Slack + Zapier (non bloquantes)
+        if (invoiceId) {
+          const fullInv = await prisma.invoice.findUnique({
+            where: { id: Number(invoiceId) },
+            include: { client: { select: { fullName: true, companyName: true } } },
+          });
+          if (fullInv) {
+            const clientName = fullInv.client?.companyName ?? fullInv.client?.fullName ?? "Client";
+            void notifyInvoicePaid({
+              invoiceNumber: fullInv.invoiceNumber,
+              amount: Number(fullInv.amountTtc),
+              currency: fullInv.currency,
+              clientName,
+            });
+            void triggerZap("invoices.paid", {
+              id: fullInv.id, invoiceNumber: fullInv.invoiceNumber, amount: Number(fullInv.amountTtc),
+              currency: fullInv.currency, clientId: fullInv.clientId, clientName, paidAt: new Date().toISOString(),
+            });
+            void triggerZap("payments.received", {
+              invoiceId: fullInv.id, invoiceNumber: fullInv.invoiceNumber,
+              amount: pi.amount ? pi.amount / 100 : 0,
+              currency: (pi.currency ?? "cad").toUpperCase(),
+              clientId: fullInv.clientId, clientName,
+              method: "stripe", stripeIntentId: pi.id,
+              paidAt: new Date().toISOString(),
+            });
+          }
+        }
         break;
       }
 

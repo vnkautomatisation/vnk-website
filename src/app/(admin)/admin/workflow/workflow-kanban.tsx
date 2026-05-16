@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -214,6 +214,17 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
   const [searchQuery, setSearchQuery] = useState("");
   const [alertsOnly, setAlertsOnly] = useState(false);
   const [busyClientId, setBusyClientId] = useState<number | null>(null);
+
+  // Sticky scroll detection (pattern dashboard finance)
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
   const [activityOpen, setActivityOpen] = useState(false);
   const [draggedClientId, setDraggedClientId] = useState<number | null>(null);
   const [draggedFromStep, setDraggedFromStep] = useState<Step | null>(null);
@@ -567,8 +578,8 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-3">
-            <Workflow className="h-6 w-6" />
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2 sm:gap-3">
+            <Workflow className="h-5 w-5 sm:h-6 sm:w-6" />
             Pipeline workflow
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -589,7 +600,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Total clients" value={clients.length} icon={UserPlus} accent="bg-blue-500" />
         <StatCard
           label="Forecast pipeline"
@@ -601,6 +612,23 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
         <StatCard label="Alertes" value={alertCount} icon={AlertTriangle} accent="bg-red-500" />
         <StatCard label="Impayé total" value={formatCurrency(overdueTotal)} icon={CreditCard} accent="bg-amber-500" />
       </div>
+
+      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+      <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <Activity className="h-4 w-4" />
+              Workflow
+            </span>
+            <span className="font-semibold">{filtered.length}/{clients.length} clients</span>
+            <span className="text-muted-foreground">Pipeline <span className="font-semibold text-violet-600">{formatCurrency(pipelineForecast)}</span></span>
+            {alertCount > 0 && <span className="text-muted-foreground">Alertes <span className="font-semibold text-red-600">{alertCount}</span></span>}
+            <span className="ml-auto text-muted-foreground">Impayé <span className="font-semibold text-amber-600">{formatCurrency(overdueTotal)}</span></span>
+          </div>
+        </div>
+      )}
 
       {/* Stats conversion */}
       <div className="rounded-lg border bg-card p-3">

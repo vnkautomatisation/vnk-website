@@ -353,14 +353,14 @@ export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
         </button>
       </aside>
 
-      {/* Mobile/tablet portrait hamburger (< 1024px) */}
+      {/* Mobile/tablet portrait hamburger (< 1024px) — contraste fort pour bien etre visible sur le navy */}
       <button
         type="button"
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-[18px] left-4 z-40 flex h-9 w-9 items-center justify-center rounded-md bg-white/10 text-white hover:bg-white/20 transition-colors"
+        className="lg:hidden fixed top-[14px] left-3 z-40 flex h-9 w-9 items-center justify-center rounded-md bg-white/20 hover:bg-white/30 text-white ring-1 ring-white/40 backdrop-blur-sm shadow-md transition-colors"
         aria-label="Menu"
       >
-        <Menu className="h-5 w-5" />
+        <Menu className="h-5 w-5" strokeWidth={2.5} />
       </button>
 
       {/* Mobile drawer */}
@@ -385,6 +385,7 @@ export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
               t={t}
               counts={counts}
               compact={false}
+              inMobileDrawer
               openGroups={openGroups}
               toggleGroup={toggleGroup}
               onNavigate={() => setMobileOpen(false)}
@@ -401,6 +402,7 @@ function SidebarContent({
   t,
   counts = {},
   compact,
+  inMobileDrawer = false,
   openGroups,
   toggleGroup,
   onNavigate,
@@ -409,6 +411,7 @@ function SidebarContent({
   t: (key: string) => string;
   counts?: SidebarCounts;
   compact: boolean;
+  inMobileDrawer?: boolean;
   openGroups: string[];
   toggleGroup: (key: string) => void;
   onNavigate?: () => void;
@@ -424,6 +427,7 @@ function SidebarContent({
             t={t}
             counts={counts}
             compact={compact}
+            inMobileDrawer={inMobileDrawer}
             depth={0}
             openGroups={openGroups}
             toggleGroup={toggleGroup}
@@ -442,6 +446,7 @@ function NavRow({
   t,
   counts = {},
   compact,
+  inMobileDrawer = false,
   depth,
   openGroups,
   toggleGroup,
@@ -452,6 +457,7 @@ function NavRow({
   t: (key: string) => string;
   counts?: SidebarCounts;
   compact: boolean;
+  inMobileDrawer?: boolean;
   depth: number;
   openGroups: string[];
   toggleGroup: (key: string) => void;
@@ -465,6 +471,7 @@ function NavRow({
         t={t}
         counts={counts}
         compact={compact}
+        inMobileDrawer={inMobileDrawer}
         depth={depth}
         isOpen={openGroups.includes(entry.key)}
         onToggle={() => toggleGroup(entry.key)}
@@ -493,6 +500,7 @@ function GroupRow({
   t,
   counts = {},
   compact,
+  inMobileDrawer = false,
   depth,
   isOpen,
   onToggle,
@@ -505,6 +513,7 @@ function GroupRow({
   t: (key: string) => string;
   counts?: SidebarCounts;
   compact: boolean;
+  inMobileDrawer?: boolean;
   depth: number;
   isOpen: boolean;
   onToggle: () => void;
@@ -534,8 +543,9 @@ function GroupRow({
   };
   useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
 
-  // Flyout actif si : compact OU (groupe fermé en mode normal)
-  const flyoutEligible = compact || !isOpen;
+  // Flyout actif si : compact OU (groupe fermé en mode normal desktop).
+  // JAMAIS de flyout sur mobile drawer : on n'a pas la place a droite, accordion inline a la place.
+  const flyoutEligible = !inMobileDrawer && (compact || !isOpen);
 
   // Indentation par niveau (level 0 = racine, level 1 = enfant d'un groupe, etc.)
   const indentClass = depth === 0 ? "" : depth === 1 ? "ml-2" : "ml-4";
@@ -588,6 +598,7 @@ function GroupRow({
               t={t}
               counts={counts}
               compact={false}
+              inMobileDrawer={inMobileDrawer}
               depth={depth + 1}
               openGroups={openGroups}
               toggleGroup={toggleGroup}

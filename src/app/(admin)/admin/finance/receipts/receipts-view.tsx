@@ -342,16 +342,13 @@ export function ReceiptsView({
         </div>
       </div>
 
-      {/* Sentinel + sticky bar */}
+      {/* Sentinel — détecte fin des KPI */}
       <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
-      <div
-        className={cn(
-          "sticky top-[64px] z-20 bg-background -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 transition-shadow",
-          scrolled && "shadow-sm border-b backdrop-blur"
-        )}
-      >
-        {scrolled && (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs mb-2 pt-1">
+
+      {/* Sticky compact bar — KPI seulement (pattern dashboard finance) */}
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <Receipt className="h-4 w-4" />
               Reçus
@@ -360,8 +357,11 @@ export function ReceiptsView({
             <span className="text-muted-foreground">{kpis.sentByEmail}/{kpis.total} envoyés</span>
             <span className="text-muted-foreground">Total <span className="font-semibold">{formatCurrency(kpis.totalAmount)}</span></span>
           </div>
-        )}
+        </div>
+      )}
 
+      {/* Filtres en flow normal */}
+      <div>
         {/* Première ligne : presets periode */}
         <div className="flex flex-wrap items-center gap-1 mb-2">
           <span className="text-[10px] text-muted-foreground mr-1">Période :</span>

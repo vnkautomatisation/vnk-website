@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -154,6 +154,17 @@ export function CalendarView({
   const [bulkOpen, setBulkOpen] = useState(false);
   const [presetSlotId, setPresetSlotId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false); // anti-double-clic sur modaux
+
+  // Sticky scroll detection (pattern dashboard finance)
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -509,12 +520,29 @@ export function CalendarView({
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Disponibles" value={availableCount} icon={Clock} accent="bg-emerald-500" />
         <StatCard label="Réservés" value={bookedCount} icon={CheckCircle2} accent="bg-blue-500" />
         <StatCard label="À venir" value={upcomingAppts} icon={CalendarIcon} accent="bg-violet-500" />
         <StatCard label="Annulés" value={cancelledCount} icon={X} accent="bg-red-500" />
       </div>
+
+      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+      <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <CalendarIcon className="h-4 w-4" />
+              Calendrier
+            </span>
+            <span className="text-muted-foreground">Disponibles <span className="font-semibold text-emerald-600">{availableCount}</span></span>
+            <span className="text-muted-foreground">Réservés <span className="font-semibold text-blue-600">{bookedCount}</span></span>
+            <span className="text-muted-foreground">À venir <span className="font-semibold text-violet-600">{upcomingAppts}</span></span>
+            {cancelledCount > 0 && <span className="text-muted-foreground">Annulés <span className="font-semibold text-red-600">{cancelledCount}</span></span>}
+          </div>
+        </div>
+      )}
 
       {/* Toolbar : navigation + toggle vue */}
       <div className="flex items-center justify-between gap-2 flex-wrap shrink-0">

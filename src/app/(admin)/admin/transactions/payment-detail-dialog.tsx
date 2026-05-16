@@ -636,21 +636,20 @@ export function PaymentDetailDialog({
                   <>
                     <div className="px-3 py-2 space-y-1.5">
                       <Label className="text-[10px]">Catégorie comptable</Label>
-                      <Input
-                        value={editCategory}
-                        onChange={(e) => setEditCategory(e.target.value)}
-                        placeholder="services_recurrents, acompte, solde…"
-                        list="cat-suggestions-modal"
-                        className="h-8 text-xs"
-                      />
-                      <datalist id="cat-suggestions-modal">
-                        <option value="services_recurrents" />
-                        <option value="services_unique" />
-                        <option value="acompte" />
-                        <option value="solde" />
-                        <option value="frais" />
-                        <option value="autre" />
-                      </datalist>
+                      <Select value={editCategory || "none"} onValueChange={(v) => setEditCategory(v === "none" ? "" : v)}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Sélectionner une catégorie" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none" className="text-xs">Non catégorisé</SelectItem>
+                          <SelectItem value="services_recurrents" className="text-xs">Services récurrents</SelectItem>
+                          <SelectItem value="services_unique" className="text-xs">Services uniques</SelectItem>
+                          <SelectItem value="acompte" className="text-xs">Acompte</SelectItem>
+                          <SelectItem value="solde" className="text-xs">Solde</SelectItem>
+                          <SelectItem value="frais" className="text-xs">Frais</SelectItem>
+                          <SelectItem value="autre" className="text-xs">Autre</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="px-3 py-2 space-y-1.5">
                       <Label className="text-[10px]">Notes comptable</Label>

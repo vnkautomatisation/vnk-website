@@ -1,20 +1,30 @@
-// Stripe service wrapper — lit les clés depuis Settings
+// Stripe service wrapper — lit les clés depuis Integration.credentials (UI), puis Settings, puis ENV
 import "server-only";
-import { getSetting } from "@/lib/settings";
+import { getIntegrationCredential } from "@/lib/integrations/credentials";
 
 // Note : l'import de Stripe est lazy pour éviter d'exiger la clé à l'init
+// Le client est invalidé en cas de changement de credentials (via cache TTL)
 let _stripeClient: unknown = null;
+let _stripeKey: string | null = null;
 
 export async function getStripe() {
-  if (_stripeClient) return _stripeClient;
-  const secretKey = process.env.STRIPE_SECRET_KEY
-    ?? await getSetting<string>("integrations", "stripe_secret_key");
+  const { value: secretKey } = await getIntegrationCredential("stripe", "secret_key", "STRIPE_SECRET_KEY");
   if (!secretKey) return null;
+
+  // Réinitialise le client si la clé a changé (utilisateur a mis à jour l'intégration)
+  if (_stripeClient && _stripeKey === secretKey) return _stripeClient;
+
   const Stripe = (await import("stripe")).default;
   _stripeClient = new Stripe(secretKey, {
     apiVersion: "2024-12-18.acacia" as any,
   });
+  _stripeKey = secretKey;
   return _stripeClient;
+}
+
+export function resetStripeClient() {
+  _stripeClient = null;
+  _stripeKey = null;
 }
 
 export async function createPaymentIntent(params: {
@@ -100,7 +110,7 @@ export async function verifyWebhookSignature(
 ) {
   const stripe = (await getStripe()) as any;
   if (!stripe) throw new Error("Stripe non configuré");
-  const secret = await getSetting<string>("integrations", "stripe_webhook_secret");
+  const { value: secret } = await getIntegrationCredential("stripe", "webhook_secret", "STRIPE_WEBHOOK_SECRET");
   if (!secret) throw new Error("Webhook secret manquant");
   return stripe.webhooks.constructEvent(rawBody, signature, secret);
 }

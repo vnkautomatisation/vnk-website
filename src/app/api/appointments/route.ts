@@ -1,5 +1,5 @@
 // GET /api/appointments — liste RDV (admin: tous, client: les siens)
-// POST /api/appointments — creer un RDV (admin)
+// POST /api/appointments — creer un RDV (admin) + auto-creation Teams meeting si MS connecte
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
@@ -7,6 +7,10 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { createWorkflowEvent } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { createOutlookEvent, getMicrosoftStatus } from "@/lib/integrations/microsoft";
+import { createGoogleEvent, getGoogleStatus } from "@/lib/integrations/google";
+import { notifyAppointmentBooked } from "@/lib/integrations/slack";
+import { triggerZap } from "@/lib/integrations/zapier";
 
 const schema = z.object({
   slotId: z.number().optional(),
@@ -72,6 +76,66 @@ export async function POST(req: NextRequest) {
     endTime = `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
   }
 
+  let meetingLink = parsed.data.meetingLink;
+  let meetingId: string | null = null;
+  let meetingProvider: string | null = null;
+
+  // ── Auto-generation reunion en ligne (Microsoft Teams en priorite, Google Meet en fallback) ──
+  if (parsed.data.meetingType === "video" && !meetingLink) {
+    const isoDate = new Date(parsed.data.appointmentDate).toISOString().slice(0, 10);
+    const startISO = `${isoDate}T${startTime}:00`;
+    const endISO = `${isoDate}T${endTime}:00`;
+    const attendees = parsed.data.clientEmail
+      ? [{ email: parsed.data.clientEmail, name: parsed.data.clientName }]
+      : [];
+    const subject = parsed.data.subject || `Rendez-vous avec ${parsed.data.clientName}`;
+
+    // 1. Essayer Microsoft Teams
+    try {
+      const msStatus = await getMicrosoftStatus();
+      if (msStatus.connected) {
+        const event = await createOutlookEvent({
+          subject, body: parsed.data.notesAdmin ?? "",
+          startISO, endISO, timezone: "America/Toronto",
+          attendees, isOnlineMeeting: true,
+        });
+        if (event.joinUrl) {
+          meetingLink = event.joinUrl;
+          // Prefixe pour identifier le provider au DELETE/CANCEL
+          meetingId = `ms:${event.eventId}`;
+          meetingProvider = "microsoft";
+        }
+      }
+    } catch (err) {
+      console.error("[appointments] Teams meeting auto-gen failed:", err);
+    }
+
+    // 2. Sinon Google Meet
+    if (!meetingLink) {
+      try {
+        const gStatus = await getGoogleStatus();
+        if (gStatus.connected) {
+          // Google Calendar accepte ISO avec offset, on l'ajoute pour America/Toronto (-04:00 ete / -05:00 hiver)
+          const startWithOffset = new Date(`${startISO}-04:00`).toISOString();
+          const endWithOffset = new Date(`${endISO}-04:00`).toISOString();
+          const event = await createGoogleEvent({
+            subject, body: parsed.data.notesAdmin ?? "",
+            startISO: startWithOffset, endISO: endWithOffset, timezone: "America/Toronto",
+            attendees, withMeet: true,
+          });
+          if (event.joinUrl) {
+            meetingLink = event.joinUrl;
+            meetingId = `gg:${event.eventId}`;
+            meetingProvider = "google";
+          }
+        }
+      } catch (err) {
+        console.error("[appointments] Google Meet auto-gen failed:", err);
+      }
+    }
+  }
+  void meetingProvider; // tracking uniquement
+
   const appointment = await prisma.appointment.create({
     data: {
       slotId: parsed.data.slotId,
@@ -84,7 +148,8 @@ export async function POST(req: NextRequest) {
       durationMin: parsed.data.durationMin,
       subject: parsed.data.subject,
       meetingType: parsed.data.meetingType,
-      meetingLink: parsed.data.meetingLink,
+      meetingLink,
+      meetingId,
       notesAdmin: parsed.data.notesAdmin,
       status: "confirmed",
     },
@@ -112,6 +177,24 @@ export async function POST(req: NextRequest) {
     action: "create",
     entityType: "appointments",
     entityId: appointment.id,
+  });
+
+  // Notifications externes (non bloquantes)
+  void notifyAppointmentBooked({
+    clientName: parsed.data.clientName,
+    subject: parsed.data.subject,
+    date: parsed.data.appointmentDate,
+    startTime,
+    meetingLink,
+  });
+  void triggerZap("appointments.booked", {
+    id: appointment.id,
+    clientName: parsed.data.clientName,
+    clientEmail: parsed.data.clientEmail,
+    date: parsed.data.appointmentDate,
+    startTime, endTime,
+    meetingLink, meetingType: parsed.data.meetingType,
+    subject: parsed.data.subject,
   });
 
   revalidateAdminViews();

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,25 +18,26 @@ import { Calendar, Clock, Globe, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DAYS = [
-  { key: "lun", label: "Lundi" },
-  { key: "mar", label: "Mardi" },
-  { key: "mer", label: "Mercredi" },
-  { key: "jeu", label: "Jeudi" },
-  { key: "ven", label: "Vendredi" },
-  { key: "sam", label: "Samedi" },
-  { key: "dim", label: "Dimanche" },
-];
+  { key: "lun", i18nKey: "day_mon" },
+  { key: "mar", i18nKey: "day_tue" },
+  { key: "mer", i18nKey: "day_wed" },
+  { key: "jeu", i18nKey: "day_thu" },
+  { key: "ven", i18nKey: "day_fri" },
+  { key: "sam", i18nKey: "day_sat" },
+  { key: "dim", i18nKey: "day_sun" },
+] as const;
 
 const DURATIONS = [
   { value: "15", label: "15 min" },
   { value: "30", label: "30 min" },
   { value: "45", label: "45 min" },
-  { value: "60", label: "1 heure" },
+  { value: "60", label: "60 min" },
 ];
 
 type DaySchedule = { enabled: boolean; start: string; end: string };
 
 export function TabDisponibilites() {
+  const t = useTranslations("admin.profile.availability");
   const [days, setDays] = useState<Record<string, DaySchedule>>({
     lun: { enabled: true, start: "09:00", end: "17:00" },
     mar: { enabled: true, start: "09:00", end: "17:00" },
@@ -70,12 +72,12 @@ export function TabDisponibilites() {
       }
       return next;
     });
-    toast.success("Horaires copies a tous les jours actifs");
+    toast.success(t("copied_toast"));
   };
 
   const handleSave = () => {
     // TODO: sauvegarder dans settings BD
-    toast.success("Disponibilites enregistrees");
+    toast.success(t("saved_toast"));
   };
 
   return (
@@ -87,14 +89,14 @@ export function TabDisponibilites() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Heures de travail
+                {t("work_hours_title")}
               </CardTitle>
               <Button variant="outline" size="sm" onClick={copyToAll} className="gap-1.5">
                 <Copy className="h-3 w-3" />
-                Copier a tous
+                {t("copy_to_all")}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Cliquez sur un jour pour l&apos;activer ou desactiver</p>
+            <p className="text-xs text-muted-foreground">{t("copy_hint")}</p>
           </CardHeader>
           <CardContent className="space-y-2">
             {DAYS.map((day) => {
@@ -111,7 +113,7 @@ export function TabDisponibilites() {
                     checked={s.enabled}
                     onCheckedChange={(v) => updateDay(day.key, "enabled", v)}
                   />
-                  <span className="text-sm font-medium w-20">{day.label}</span>
+                  <span className="text-sm font-medium w-20">{t(day.i18nKey as "day_mon")}</span>
                   {s.enabled ? (
                     <div className="flex items-center gap-2 flex-1">
                       <Input
@@ -120,7 +122,7 @@ export function TabDisponibilites() {
                         onChange={(e) => updateDay(day.key, "start", e.target.value)}
                         className="w-28 h-8 text-sm"
                       />
-                      <span className="text-muted-foreground text-xs">a</span>
+                      <span className="text-muted-foreground text-xs">{t("from_to_separator")}</span>
                       <Input
                         type="time"
                         value={s.end}
@@ -129,7 +131,7 @@ export function TabDisponibilites() {
                       />
                     </div>
                   ) : (
-                    <span className="text-xs text-muted-foreground">Desactive</span>
+                    <span className="text-xs text-muted-foreground">{t("disabled")}</span>
                   )}
                 </div>
               );
@@ -137,7 +139,7 @@ export function TabDisponibilites() {
           </CardContent>
         </Card>
 
-        <Button onClick={handleSave}>Enregistrer les disponibilites</Button>
+        <Button onClick={handleSave}>{t("save_button")}</Button>
       </div>
 
       {/* Options sidebar */}
@@ -147,7 +149,7 @@ export function TabDisponibilites() {
             <div>
               <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
                 <Globe className="h-3 w-3 inline mr-1" />
-                Fuseau horaire
+                {t("timezone_label")}
               </Label>
               <Select value={timezone} onValueChange={setTimezone}>
                 <SelectTrigger className="mt-1.5 h-9"><SelectValue /></SelectTrigger>
@@ -165,7 +167,7 @@ export function TabDisponibilites() {
 
         <Card>
           <CardContent className="p-4">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Duree des appels</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{t("duration_label")}</Label>
             <div className="grid grid-cols-2 gap-2 mt-2">
               {DURATIONS.map((d) => (
                 <button

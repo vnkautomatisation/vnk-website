@@ -193,8 +193,8 @@ export function FinanceView({
       <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-5 text-white">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <TrendingUp className="h-6 w-6" />
+            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />
               Tableau de bord finance
             </h1>
             <p className="text-white/70 text-sm mt-1">

@@ -9,6 +9,8 @@ import { createWorkflowEvent } from "@/lib/workflow";
 import { calculateTaxes, generateDocumentNumber } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { notifyInvoiceCreated } from "@/lib/integrations/slack";
+import { triggerZap } from "@/lib/integrations/zapier";
 
 const createSchema = z.object({
   clientId: z.number().int().positive(),
@@ -113,6 +115,25 @@ export async function POST(req: Request) {
     action: "create",
     entityType: "invoices",
     entityId: invoice.id,
+  });
+
+  // Notifications externes (non bloquantes)
+  const cli = await prisma.client.findUnique({
+    where: { id: invoice.clientId },
+    select: { fullName: true, companyName: true },
+  });
+  const clientName = cli?.companyName ?? cli?.fullName ?? "Client";
+  void notifyInvoiceCreated({
+    invoiceNumber: invoice.invoiceNumber,
+    amount: Number(invoice.amountTtc),
+    currency: invoice.currency,
+    clientName,
+    dueDate: invoice.dueDate ? invoice.dueDate.toISOString().slice(0, 10) : null,
+  });
+  void triggerZap("invoices.created", {
+    id: invoice.id, invoiceNumber: invoice.invoiceNumber, amount: Number(invoice.amountTtc),
+    currency: invoice.currency, clientId: invoice.clientId, clientName,
+    dueDate: invoice.dueDate?.toISOString() ?? null,
   });
 
   revalidateAdminViews();

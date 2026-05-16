@@ -6,6 +6,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createWorkflowEvent } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { notifyNewRequest } from "@/lib/integrations/slack";
+import { triggerZap } from "@/lib/integrations/zapier";
 
 const createSchema = z.object({
   serviceType: z.string().min(1),
@@ -81,6 +83,18 @@ export async function POST(req: Request) {
     triggeredBy: session.user.role,
     metadata: { requestId: request.id, urgency: parsed.data.urgencyLevel },
   });
+
+  // Notifications externes (non bloquantes)
+  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { fullName: true, companyName: true } });
+  const clientName = client?.companyName ?? client?.fullName ?? "Client inconnu";
+  void notifyNewRequest({
+    clientName,
+    title,
+    serviceType: parsed.data.serviceType,
+    urgency: parsed.data.urgencyLevel,
+    requestId: request.id,
+  });
+  void triggerZap("requests.created", { id: request.id, clientId, title, serviceType: parsed.data.serviceType, urgency: parsed.data.urgencyLevel });
 
   revalidateAdminViews();
 

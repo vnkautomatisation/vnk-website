@@ -59,6 +59,11 @@
     --chart-3: 160 60% 45%;
     --chart-4: 32 80% 55%;
     --chart-5: 280 65% 60%;
+
+    /* Couleur d'accent personnalisable par l'admin (Profil > Préférences > Apparence).
+       Surchargée dynamiquement par AdminThemeProvider via style="--vnk-accent: #xxx".
+       Utilisée par les classes utilitaires .vnk-accent-bg, .vnk-accent-text, .vnk-accent-ring. */
+    --vnk-accent: #0F2D52;
   }
 
   .dark {
@@ -90,6 +95,14 @@
     --input: 217 33% 18%;
     --ring: 213 69% 60%;
   }
+}
+
+/* Utilitaires VNK accent — appliqués selon admin.accentColor */
+@layer utilities {
+  .vnk-accent-bg { background-color: var(--vnk-accent); }
+  .vnk-accent-text { color: var(--vnk-accent); }
+  .vnk-accent-ring { --tw-ring-color: var(--vnk-accent); }
+  .vnk-accent-border { border-color: var(--vnk-accent); }
 }
 
 @layer base {

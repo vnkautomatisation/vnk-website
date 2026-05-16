@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -98,6 +98,17 @@ export function RequestsView({
 
   // Bulk select
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // Sticky scroll detection (pattern dashboard finance)
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // Listes distinctes
   const availableServices = useMemo(() => {
@@ -355,12 +366,35 @@ export function RequestsView({
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Total" value={kpis.total} icon={Inbox} accent="bg-blue-500" />
         <StatCard label="Nouvelles" value={kpis.newCount} icon={Sparkles} accent="bg-indigo-500" />
         <StatCard label="En traitement" value={kpis.inProgress} icon={Loader2} accent="bg-amber-500" />
         <StatCard label="Converties" value={kpis.converted} icon={CheckCircle2} accent="bg-emerald-500" />
       </div>
+
+      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+      <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <Inbox className="h-4 w-4" />
+              Demandes
+            </span>
+            <span className="font-semibold">{filtered.length} affichées</span>
+            <span className="text-muted-foreground">Nouvelles <span className="font-semibold text-indigo-600">{kpis.newCount}</span></span>
+            <span className="text-muted-foreground">En traitement <span className="font-semibold text-amber-600">{kpis.inProgress}</span></span>
+            <span className="text-muted-foreground">Converties <span className="font-semibold text-emerald-600">{kpis.converted}</span></span>
+            {kpis.criticalCount > 0 && (
+              <span className="ml-auto inline-flex items-center gap-1 text-red-600 font-semibold">
+                <AlertTriangle className="h-3 w-3" />
+                {kpis.criticalCount} critique{kpis.criticalCount > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">

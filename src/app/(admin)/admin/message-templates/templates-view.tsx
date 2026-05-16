@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -243,6 +243,17 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
     return Array.from(set).sort();
   }, [templates]);
 
+  // Sticky scroll detection (pattern dashboard finance)
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   const filtered = useMemo(() => {
     let r = templates;
     if (search) {
@@ -307,12 +318,29 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Total templates" value={templates.length} icon={Zap} accent="bg-indigo-500" deltaLabel={systemCount > 0 ? `${systemCount} par défaut` : undefined} />
         <StatCard label="Utilisations" value={totalUses} icon={BarChart3} accent="bg-blue-500" />
         <StatCard label="Utilisés (7j)" value={recentlyUsed} icon={Eye} accent="bg-emerald-500" />
         <StatCard label="Étiquettes" value={allTags.length} icon={Tag} accent="bg-amber-500" />
       </div>
+
+      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+      <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <Zap className="h-4 w-4" />
+              Templates
+            </span>
+            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="text-muted-foreground">Total <span className="font-semibold text-indigo-600">{templates.length}</span></span>
+            <span className="text-muted-foreground">Utilisations <span className="font-semibold text-blue-600">{totalUses}</span></span>
+            <span className="ml-auto text-muted-foreground">7 derniers jours <span className="font-semibold text-emerald-600">{recentlyUsed}</span></span>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">

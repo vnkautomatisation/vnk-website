@@ -1,0 +1,31 @@
+// GET /api/oauth/google/start
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { buildAuthorizeUrl } from "@/lib/integrations/google";
+import crypto from "crypto";
+import { cookies } from "next/headers";
+
+export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+
+  try {
+    const state = crypto.randomBytes(32).toString("hex");
+    const c = await cookies();
+    c.set("g_oauth_state", state, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 600,
+      path: "/",
+    });
+    const origin = new URL(req.url).origin;
+    const url = await buildAuthorizeUrl(state, origin);
+    return NextResponse.redirect(url);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erreur";
+    return NextResponse.redirect(new URL(`/admin/profile?tab=integrations&g_error=${encodeURIComponent(msg)}`, req.url));
+  }
+}

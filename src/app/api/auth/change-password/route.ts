@@ -1,4 +1,4 @@
-// API · Changement de mot de passe (client ou admin)
+// API · Changement de mot de passe (client ou admin) — avec HIBP check
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -6,11 +6,14 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { captureRequestContext } from "@/lib/request-context";
 import { logAudit } from "@/lib/audit";
+import { checkPasswordBreached } from "@/lib/security/hibp";
+import { logSecurityEvent } from "@/lib/security/security-events";
 
 const schema = z.object({
   currentPassword: z.string().min(1, "Mot de passe actuel requis"),
   newPassword: z.string().min(8, "Minimum 8 caractères"),
   confirmPassword: z.string(),
+  bypassBreachCheck: z.boolean().optional(), // user a vu le warning et veut quand meme proceder
 }).refine(d => d.newPassword === d.confirmPassword, {
   message: "Les mots de passe ne correspondent pas",
   path: ["confirmPassword"],
@@ -68,14 +71,67 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── HIBP k-anonymity breach check ────────────────────────
+    if (!parsed.data.bypassBreachCheck) {
+      const breach = await checkPasswordBreached(newPassword);
+      if (breach.breached) {
+        return NextResponse.json(
+          {
+            error: "breach_detected",
+            breachCount: breach.count,
+            message: `Ce mot de passe a ete vu dans ${breach.count.toLocaleString("fr-CA")} fuites de donnees publiques. Choisissez-en un autre ou confirmez l'utilisation a vos risques.`,
+          },
+          { status: 422 }
+        );
+      }
+    }
+
     // Hash new password
     const newHash = await bcrypt.hash(newPassword, 12);
+    const ctx = captureRequestContext(request);
 
     // Update
     if (role === "admin") {
+      // Conserver les 5 derniers hash pour empecher reutilisation
+      const current = await prisma.admin.findUnique({
+        where: { id: entityId },
+        select: { passwordHistory: true },
+      });
+      const history = (Array.isArray(current?.passwordHistory) ? current!.passwordHistory : []) as Array<{ hash: string; changedAt: string }>;
+      const newHistory = [{ hash: currentHash, changedAt: new Date().toISOString() }, ...history].slice(0, 5);
+
+      // Verifier reutilisation
+      for (const past of history.slice(0, 5)) {
+        if (await bcrypt.compare(newPassword, past.hash)) {
+          return NextResponse.json(
+            { error: "Vous avez deja utilise ce mot de passe recemment. Choisissez-en un nouveau." },
+            { status: 422 }
+          );
+        }
+      }
+
       await prisma.admin.update({
         where: { id: entityId },
-        data: { passwordHash: newHash },
+        data: {
+          passwordHash: newHash,
+          passwordChangedAt: new Date(),
+          passwordHistory: newHistory as never,
+          lastPasswordIp: ctx.ipAddress,
+        },
+      });
+
+      if (parsed.data.bypassBreachCheck) {
+        await logSecurityEvent({
+          adminId: entityId,
+          type: "password_breach_detected",
+          severity: "critical",
+          message: "Mot de passe change malgre presence dans fuites publiques (HIBP)",
+        });
+      }
+      await logSecurityEvent({
+        adminId: entityId,
+        type: "password_changed",
+        message: "Mot de passe change",
       });
     } else {
       await prisma.client.update({
@@ -84,7 +140,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const ctx = captureRequestContext(request);
     await logAudit({
       adminId: role === "admin" ? entityId : null,
       action: "update",

@@ -16,6 +16,21 @@ import {
   CreditCard,
   FolderOpen,
   ArrowRight,
+  Shield,
+  LayoutGrid,
+  Palette,
+  Newspaper,
+  Wrench,
+  Database,
+  Activity,
+  Sparkles,
+  Wallet,
+  Zap,
+  Mail,
+  Webhook,
+  Key,
+  Bell,
+  FlaskConical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +45,7 @@ type ResultItem = {
 
 // Pages admin statiques
 const ADMIN_PAGES: ResultItem[] = [
+  // Pages métier principales
   { id: "p-dashboard", label: "Tableau de bord", icon: LayoutDashboard, href: "/admin", group: "Pages" },
   { id: "p-clients", label: "Clients", icon: Users, href: "/admin/clients", group: "Pages" },
   { id: "p-mandates", label: "Mandats", icon: Briefcase, href: "/admin/mandates", group: "Pages" },
@@ -40,9 +56,34 @@ const ADMIN_PAGES: ResultItem[] = [
   { id: "p-messages", label: "Messages", icon: MessageSquare, href: "/admin/messages", group: "Pages" },
   { id: "p-documents", label: "Documents", icon: FolderOpen, href: "/admin/documents", group: "Pages" },
   { id: "p-finance", label: "Finance", icon: BarChart3, href: "/admin/finance", group: "Pages" },
+  { id: "p-statistics", label: "Statistiques", description: "KPIs, graphiques, top clients", icon: BarChart3, href: "/admin/statistics", group: "Pages" },
   { id: "p-transactions", label: "Transactions", icon: CreditCard, href: "/admin/transactions", group: "Pages" },
-  { id: "p-settings", label: "Parametres", icon: Settings, href: "/admin/settings", group: "Pages" },
   { id: "p-profile", label: "Mon profil", icon: Users, href: "/admin/profile", group: "Pages" },
+  // Paramètres no-code
+  { id: "s-settings", label: "Paramètres", icon: Settings, href: "/admin/settings", group: "Paramètres" },
+  { id: "s-onboarding", label: "Configuration guidée", description: "Assistant 6 étapes", icon: Sparkles, href: "/admin/settings/onboarding", group: "Paramètres" },
+  { id: "s-team", label: "Utilisateurs · Rôles · Postes", description: "Gérer l'équipe et permissions", icon: Users, href: "/admin/settings/team", group: "Paramètres" },
+  { id: "s-branding", label: "Charte graphique", description: "Logos, couleurs, polices", icon: Palette, href: "/admin/settings/branding", group: "Paramètres" },
+  { id: "s-catalogs", label: "Catalogues", description: "Services, codes promo, étiquettes...", icon: LayoutGrid, href: "/admin/settings/catalogs", group: "Paramètres" },
+  { id: "s-content", label: "Contenu public", description: "Blog, FAQ, témoignages", icon: Newspaper, href: "/admin/settings/content", group: "Paramètres" },
+  { id: "s-templates", label: "Modèles emails & PDF", description: "Templates transactionnels", icon: Mail, href: "/admin/settings/templates", group: "Paramètres" },
+  { id: "s-finance", label: "Finance & Loi 25", description: "Banque, taxes, RPRP", icon: Wallet, href: "/admin/settings/finance", group: "Paramètres" },
+  { id: "s-maintenance", label: "Maintenance & Annonces", description: "Bandeau global, incidents", icon: Wrench, href: "/admin/settings/maintenance", group: "Paramètres" },
+  { id: "s-backup", label: "Sauvegarde", description: "Export / import JSON", icon: Database, href: "/admin/settings/backup", group: "Paramètres" },
+  { id: "s-diagnostics", label: "Diagnostics", description: "Santé du portail", icon: Activity, href: "/admin/settings/diagnostics", group: "Paramètres" },
+  { id: "s-activity", label: "Activité de l'équipe", description: "Journal des actions admin", icon: Users, href: "/admin/settings/activity", group: "Paramètres" },
+  { id: "s-webhooks", label: "Webhooks", description: "Sortants + entrants debug", icon: Webhook, href: "/admin/settings/webhooks", group: "Paramètres" },
+  { id: "s-security", label: "Sécurité avancée", description: "Politique, 2FA, IP whitelist", icon: Shield, href: "/admin/settings/security", group: "Paramètres" },
+  { id: "s-api", label: "Tokens API", description: "Tokens personnels d'accès REST", icon: Key, href: "/admin/settings/api", group: "Paramètres" },
+  { id: "s-push", label: "Notifications push", description: "Alertes navigateur", icon: Bell, href: "/admin/settings/push", group: "Paramètres" },
+  { id: "s-demo", label: "Mode démo", description: "Générer/purger data fictive", icon: FlaskConical, href: "/admin/settings/demo", group: "Paramètres" },
+  // Actions rapides (créer)
+  { id: "a-new-client", label: "Nouveau client", icon: Users, href: "/admin/clients?action=new", group: "Actions" },
+  { id: "a-new-quote", label: "Nouveau devis", icon: FileText, href: "/admin/quotes?action=new", group: "Actions" },
+  { id: "a-new-invoice", label: "Nouvelle facture", icon: Receipt, href: "/admin/invoices?action=new", group: "Actions" },
+  { id: "a-new-user", label: "Nouvel utilisateur", icon: Shield, href: "/admin/settings/team", group: "Actions" },
+  { id: "a-new-promo", label: "Nouveau code promo", icon: Zap, href: "/admin/settings/catalogs", group: "Actions" },
+  { id: "a-new-post", label: "Nouvel article blog", icon: Newspaper, href: "/admin/settings/content", group: "Actions" },
 ];
 
 export function CommandPalette() {
@@ -53,10 +94,18 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  // Raccourci clavier Ctrl+K
+  // Raccourci clavier personnalisable via préférences admin (défaut Cmd/Ctrl + K)
   useEffect(() => {
+    const getSearchKey = (): string => {
+      try {
+        return (localStorage.getItem("vnk-admin-shortcut-search") || "k").toLowerCase();
+      } catch {
+        return "k";
+      }
+    };
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      const searchKey = getSearchKey();
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === searchKey) {
         e.preventDefault();
         setOpen((o) => !o);
       }

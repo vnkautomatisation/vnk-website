@@ -296,16 +296,13 @@ export function ReconciliationView({
         </div>
       </div>
 
-      {/* Sentinel + sticky bar (filtres + KPI summary au scroll) */}
+      {/* Sentinel — détecte fin du contenu non sticky */}
       <div ref={sentinelRef} aria-hidden className="h-px -mt-2" />
-      <div
-        className={cn(
-          "sticky top-[64px] z-20 bg-background -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 transition-shadow",
-          scrolled && "shadow-sm border-b backdrop-blur"
-        )}
-      >
-        {scrolled && (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs mb-2 pt-1">
+
+      {/* Sticky compact bar — KPI seulement (pattern dashboard finance) */}
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <CheckCircle2 className="h-4 w-4" />
               Confirmation banque
@@ -317,9 +314,11 @@ export function ReconciliationView({
             )}
             <span className="ml-auto text-muted-foreground">{methodFilter !== "all" ? `Méthode : ${methodLabel(methodFilter)}` : "Toutes méthodes"}</span>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Filtres inline (recherche + méthode + dates) */}
+      {/* Filtres en flow normal (recherche + méthode + dates) */}
+      <div>
         <div className="flex flex-wrap items-end gap-2">
           <div className="relative flex-1 min-w-[200px] max-w-md">
             <Label className="text-[10px]">Recherche</Label>

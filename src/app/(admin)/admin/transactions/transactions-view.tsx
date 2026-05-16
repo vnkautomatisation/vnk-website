@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -121,6 +121,17 @@ export function TransactionsView({
   const [detailId, setDetailId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+
+  // Sticky scroll detection (pattern dashboard finance)
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   const filtered = useMemo(() => {
     let result = payments;
@@ -310,28 +321,6 @@ export function TransactionsView({
   // Sticky header : KPI strip + filtres + tabs status (passé au DataTable)
   const stickyHeader = (
     <div className="space-y-2">
-      {/* KPI strip horizontal compact (comme Wix Rapport de règlement) */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-3 py-2 rounded-md bg-blue-50/60 border border-blue-100 text-sm">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-xs text-muted-foreground">Montant total :</span>
-          <span className="font-bold text-[#0F2D52]">{formatCurrency(filteredTotalPaid)}</span>
-        </div>
-        <span className="text-muted-foreground/40">|</span>
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-xs text-muted-foreground">Total remboursé :</span>
-          <span className="font-semibold text-red-600">{formatCurrency(filteredTotalRefunded)}</span>
-        </div>
-        <span className="text-muted-foreground/40">|</span>
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-xs text-muted-foreground">Net :</span>
-          <span className="font-bold text-emerald-700">{formatCurrency(filteredNet)}</span>
-        </div>
-        <div className="flex-1" />
-        <span className="text-[10px] text-muted-foreground">
-          {filtered.length} sur {payments.length} · {kpis.toReconcileCount} à vérifier
-        </span>
-      </div>
-
       {/* Tabs status */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex bg-muted rounded-md p-0.5 flex-wrap">
@@ -483,7 +472,27 @@ export function TransactionsView({
         </div>
       </div>
 
-      {/* Tableau avec stickyHeader contenant KPIs + tabs + filtres */}
+      {/* Sentinel — détecte fin du Hero */}
+      <div ref={sentinelRef} aria-hidden className="h-px -mt-1" />
+
+      {/* Sticky compact bar — KPI seulement (pattern dashboard finance) */}
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <CreditCard className="h-4 w-4" />
+              Transactions
+            </span>
+            <span className="font-semibold">{filtered.length} affichées</span>
+            <span className="text-muted-foreground">Encaissé <span className="font-semibold text-[#0F2D52]">{formatCurrency(filteredTotalPaid)}</span></span>
+            <span className="text-muted-foreground">Remboursé <span className="font-semibold text-red-600">{formatCurrency(filteredTotalRefunded)}</span></span>
+            <span className="text-muted-foreground">Net <span className="font-semibold text-emerald-700">{formatCurrency(filteredNet)}</span></span>
+            <span className="ml-auto text-muted-foreground">{kpis.toReconcileCount} à vérifier</span>
+          </div>
+        </div>
+      )}
+
+      {/* Tableau avec stickyHeader contenant tabs + filtres + bulk actions */}
       <DataTable
         data={filtered}
         columns={columns}

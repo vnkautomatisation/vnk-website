@@ -9,6 +9,8 @@ import { createWorkflowEvent } from "@/lib/workflow";
 import { calculateTaxes, generateDocumentNumber } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { notifyQuoteCreated } from "@/lib/integrations/slack";
+import { triggerZap } from "@/lib/integrations/zapier";
 
 const createSchema = z.object({
   clientId: z.number().int().positive(),
@@ -108,6 +110,23 @@ export async function POST(req: Request) {
     action: "create",
     entityType: "quotes",
     entityId: quote.id,
+  });
+
+  // Notifications externes (non bloquantes)
+  const cli = await prisma.client.findUnique({
+    where: { id: quote.clientId },
+    select: { fullName: true, companyName: true },
+  });
+  const clientName = cli?.companyName ?? cli?.fullName ?? "Client";
+  void notifyQuoteCreated({
+    quoteNumber: quote.quoteNumber,
+    amount: Number(quote.amountTtc),
+    currency: quote.currency,
+    clientName,
+  });
+  void triggerZap("quotes.created", {
+    id: quote.id, quoteNumber: quote.quoteNumber, amount: Number(quote.amountTtc),
+    currency: quote.currency, clientId: quote.clientId, clientName,
   });
 
   revalidateAdminViews();

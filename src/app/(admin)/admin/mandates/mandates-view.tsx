@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -112,6 +112,17 @@ export function MandatesView({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+
+  // Sticky scroll detection (pattern dashboard finance)
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // Filtres avances
   const [filterClients, setFilterClients] = useState<Set<number>>(new Set());
@@ -462,12 +473,30 @@ export function MandatesView({
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="En cours" value={counts.active} icon={Play} accent="bg-blue-500" />
         <StatCard label="En attente" value={counts.pending} icon={Clock} accent="bg-amber-500" />
         <StatCard label="Complétés" value={counts.completed} icon={CheckCircle2} accent="bg-emerald-500" />
         <StatCard label="Total" value={counts.total} icon={Briefcase} accent="bg-violet-500" />
       </div>
+
+      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+      <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <Briefcase className="h-4 w-4" />
+              Mandats
+            </span>
+            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="text-muted-foreground">En cours <span className="font-semibold text-blue-600">{counts.active}</span></span>
+            <span className="text-muted-foreground">En attente <span className="font-semibold text-amber-600">{counts.pending}</span></span>
+            <span className="text-muted-foreground">Complétés <span className="font-semibold text-emerald-600">{counts.completed}</span></span>
+            <span className="ml-auto text-muted-foreground">Total <span className="font-semibold">{counts.total}</span></span>
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">

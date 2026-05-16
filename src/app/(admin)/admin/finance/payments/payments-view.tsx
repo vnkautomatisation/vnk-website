@@ -738,15 +738,10 @@ export function PaymentsView({
 
       <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
 
-      {/* Sticky compact bar */}
-      <div
-        className={cn(
-          "sticky top-[64px] z-20 bg-background -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 transition-shadow",
-          scrolled && "shadow-sm border-b backdrop-blur"
-        )}
-      >
-        {scrolled && (
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs mb-2 pt-1">
+      {/* Sticky compact bar — KPI seulement, rendu uniquement au scroll (pattern dashboard finance) */}
+      {scrolled && (
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <CreditCard className="h-4 w-4" />
               Tous les paiements
@@ -757,7 +752,11 @@ export function PaymentsView({
             <span className="text-muted-foreground">Net : <span className="font-semibold">{formatCurrency(kpis.totalNet)}</span></span>
             <span className="text-muted-foreground">Confirmés : <span className="font-semibold text-emerald-600">{kpis.reconciledCount}/{kpis.total}</span></span>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Filtres — en flow normal (plus dans la sticky) */}
+      <div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -996,20 +995,19 @@ export function PaymentsView({
       >
         <div className="space-y-2 pt-2">
           <Label>Catégorie</Label>
-          <Input
-            value={categoryValue}
-            onChange={(e) => setCategoryValue(e.target.value)}
-            placeholder="services_recurrents, acompte, solde, frais…"
-            list="cat-suggestions"
-          />
-          <datalist id="cat-suggestions">
-            <option value="services_recurrents" />
-            <option value="services_unique" />
-            <option value="acompte" />
-            <option value="solde" />
-            <option value="frais" />
-            <option value="autre" />
-          </datalist>
+          <Select value={categoryValue} onValueChange={setCategoryValue}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionner une catégorie" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="services_recurrents">Services récurrents</SelectItem>
+              <SelectItem value="services_unique">Services uniques</SelectItem>
+              <SelectItem value="acompte">Acompte</SelectItem>
+              <SelectItem value="solde">Solde</SelectItem>
+              <SelectItem value="frais">Frais</SelectItem>
+              <SelectItem value="autre">Autre</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </ConfirmDialog>
     </div>
