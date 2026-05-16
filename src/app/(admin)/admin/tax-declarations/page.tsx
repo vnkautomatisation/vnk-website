@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { TaxView } from "./tax-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Declarations fiscales" };
+export const metadata: Metadata = { title: "Déclarations fiscales" };
 
 export default async function TaxDeclarationsPage() {
   const yearStart = new Date(new Date().getFullYear(), 0, 1);

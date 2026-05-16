@@ -17,7 +17,7 @@ const createSchema = z.object({
 export async function GET() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const declarations = await prisma.taxDeclaration.findMany({
@@ -30,24 +30,43 @@ export async function GET() {
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Donnees invalides" }, { status: 400 });
+    return NextResponse.json({ error: "Données invalides" }, { status: 400 });
   }
 
   // Calculer le revenu et les taxes pour la periode
   const periodStart = new Date(parsed.data.periodStart);
   const periodEnd = new Date(parsed.data.periodEnd);
+  // Inclusif sur le dernier jour : on borne avec periodEnd + 1 jour exclusif
+  const periodEndExclusive = new Date(periodEnd);
+  periodEndExclusive.setDate(periodEndExclusive.getDate() + 1);
+
+  // Garde-fou : refuser une declaration qui chevauche une periode existante du meme type
+  const overlap = await prisma.taxDeclaration.findFirst({
+    where: {
+      periodType: parsed.data.periodType,
+      OR: [
+        { AND: [{ periodStart: { lte: periodEnd } }, { periodEnd: { gte: periodStart } }] },
+      ],
+    },
+  });
+  if (overlap) {
+    return NextResponse.json(
+      { error: `Période déjà couverte par la déclaration "${overlap.periodLabel}"` },
+      { status: 409 },
+    );
+  }
 
   const invoiceAggs = await prisma.invoice.aggregate({
     _sum: { amountHt: true, tpsAmount: true, tvqAmount: true },
     where: {
       status: "paid",
-      paidAt: { gte: periodStart, lte: periodEnd },
+      paidAt: { gte: periodStart, lt: periodEndExclusive },
     },
   });
 

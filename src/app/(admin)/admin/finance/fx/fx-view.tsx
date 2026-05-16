@@ -22,21 +22,33 @@ type FxRate = {
   date: string | null;
 };
 
-const CURRENCY_NAMES: Record<string, { name: string; flag: string; region: string }> = {
-  CAD: { name: "Dollar canadien", flag: "🇨🇦", region: "Canada (devise base)" },
-  USD: { name: "Dollar américain", flag: "🇺🇸", region: "États-Unis" },
-  EUR: { name: "Euro", flag: "🇪🇺", region: "Union européenne" },
-  GBP: { name: "Livre sterling", flag: "🇬🇧", region: "Royaume-Uni" },
-  CHF: { name: "Franc suisse", flag: "🇨🇭", region: "Suisse" },
-  AUD: { name: "Dollar australien", flag: "🇦🇺", region: "Australie" },
-  JPY: { name: "Yen japonais", flag: "🇯🇵", region: "Japon" },
-  CNY: { name: "Yuan chinois", flag: "🇨🇳", region: "Chine" },
-  MXN: { name: "Peso mexicain", flag: "🇲🇽", region: "Mexique" },
-  INR: { name: "Roupie indienne", flag: "🇮🇳", region: "Inde" },
-  HKD: { name: "Dollar de Hong Kong", flag: "🇭🇰", region: "Hong Kong" },
-  XOF: { name: "Franc CFA UEMOA", flag: "🌍", region: "Afrique de l'Ouest (peggué EUR)" },
-  XAF: { name: "Franc CFA CEMAC", flag: "🌍", region: "Afrique centrale (peggué EUR)" },
+// Couleur dominante adoucie par devise (SVG circle minimaliste)
+const CURRENCY_NAMES: Record<string, { name: string; color: string; region: string }> = {
+  CAD: { name: "Dollar canadien", color: "#DC2626", region: "Canada (devise base)" },
+  USD: { name: "Dollar américain", color: "#1E40AF", region: "États-Unis" },
+  EUR: { name: "Euro", color: "#1E40AF", region: "Union européenne" },
+  GBP: { name: "Livre sterling", color: "#1E40AF", region: "Royaume-Uni" },
+  CHF: { name: "Franc suisse", color: "#DC2626", region: "Suisse" },
+  AUD: { name: "Dollar australien", color: "#16A34A", region: "Australie" },
+  JPY: { name: "Yen japonais", color: "#DC2626", region: "Japon" },
+  CNY: { name: "Yuan chinois", color: "#DC2626", region: "Chine" },
+  MXN: { name: "Peso mexicain", color: "#16A34A", region: "Mexique" },
+  INR: { name: "Roupie indienne", color: "#F59E0B", region: "Inde" },
+  HKD: { name: "Dollar de Hong Kong", color: "#DC2626", region: "Hong Kong" },
+  XOF: { name: "Franc CFA UEMOA", color: "#16A34A", region: "Afrique de l'Ouest (parité fixe EUR)" },
+  XAF: { name: "Franc CFA CEMAC", color: "#16A34A", region: "Afrique centrale (parité fixe EUR)" },
 };
+
+function CurrencyDot({ code, size = 10 }: { code: string; size?: number }) {
+  const fill = CURRENCY_NAMES[code]?.color ?? "#94A3B8";
+  return (
+    <span
+      className="inline-block rounded-full align-middle shrink-0 mr-2"
+      style={{ width: size, height: size, backgroundColor: fill }}
+      aria-hidden
+    />
+  );
+}
 
 export function FxView({ rates }: { rates: FxRate[] }) {
   const router = useRouter();
@@ -108,7 +120,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
               Taux de change (FX)
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
-              Source : Banque du Canada (officiel) + ECB (fallback) ·
+              Source : Banque du Canada (officielle) + Banque centrale européenne (fallback) ·
               {lastUpdated ? ` Dernière mise à jour : ${lastUpdated}` : " Chargement…"}
             </p>
           </div>
@@ -231,7 +243,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
               return (
                 <tr key={r.currency} className="border-t hover:bg-muted/30">
                   <td className="p-2.5">
-                    <span className="text-lg mr-2">{meta?.flag ?? "🌍"}</span>
+                    <CurrencyDot code={r.currency} size={10} />
                     <span className="font-mono font-bold">{r.currency}</span>
                   </td>
                   <td className="p-2.5">

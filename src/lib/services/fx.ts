@@ -13,6 +13,11 @@ type CacheEntry = { quote: FxQuote; expiresAt: number };
 const fxCache = new Map<string, CacheEntry>();
 const TTL_MS = 24 * 60 * 60 * 1000;
 
+// Force-invalide tout le cache (utilisé par /api/fx?refresh=1)
+export function clearFxCache(): void {
+  fxCache.clear();
+}
+
 // Mapping devise → série Valet de la Banque du Canada
 // Ces séries donnent le taux X CAD = 1 unité devise
 const BOC_SERIES: Record<string, string> = {
@@ -62,22 +67,25 @@ export async function convertToCAD(
 /**
  * Récupère le taux de change actuel d'une devise vers CAD.
  * Cache 24h, fallback sur ECB pour devises non couvertes par BoC.
+ * Passer `force=true` pour ignorer le cache mémoire ET le cache Next.js (force-refresh).
  */
-export async function getRate(currency: string, date?: Date): Promise<FxQuote | null> {
+export async function getRate(currency: string, date?: Date, force = false): Promise<FxQuote | null> {
   const cur = currency.toUpperCase();
   if (cur === "CAD") return { rate: 1, source: "BOC", date: new Date().toISOString().slice(0, 10) };
 
   const dateKey = date ? date.toISOString().slice(0, 10) : "today";
   const cacheKey = `${cur}:${dateKey}`;
-  const cached = fxCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.quote;
+  if (!force) {
+    const cached = fxCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.quote;
+    }
   }
 
   // 1. Essayer Banque du Canada (taux officiels)
   const bocSeries = BOC_SERIES[cur];
   if (bocSeries) {
-    const quote = await fetchBocRate(bocSeries, date);
+    const quote = await fetchBocRate(bocSeries, date, force);
     if (quote) {
       fxCache.set(cacheKey, { quote, expiresAt: Date.now() + TTL_MS });
       return quote;
@@ -86,7 +94,7 @@ export async function getRate(currency: string, date?: Date): Promise<FxQuote | 
 
   // 2. Devises arrimées à l'EUR (XOF/XAF) — convertir via EUR/CAD
   if (EUR_PEGGED[cur]) {
-    const eurToCad = await fetchBocRate("FXEURCAD", date);
+    const eurToCad = await fetchBocRate("FXEURCAD", date, force);
     if (eurToCad) {
       const quote: FxQuote = {
         rate: eurToCad.rate * EUR_PEGGED[cur],
@@ -99,7 +107,7 @@ export async function getRate(currency: string, date?: Date): Promise<FxQuote | 
   }
 
   // 3. Fallback ECB pour les autres devises EU
-  const ecbQuote = await fetchEcbRate(cur, date);
+  const ecbQuote = await fetchEcbRate(cur, date, force);
   if (ecbQuote) {
     fxCache.set(cacheKey, { quote: ecbQuote, expiresAt: Date.now() + TTL_MS });
     return ecbQuote;
@@ -108,14 +116,14 @@ export async function getRate(currency: string, date?: Date): Promise<FxQuote | 
   return null;
 }
 
-async function fetchBocRate(series: string, date?: Date): Promise<FxQuote | null> {
+async function fetchBocRate(series: string, date?: Date, force = false): Promise<FxQuote | null> {
   try {
     let url = `https://www.bankofcanada.ca/valet/observations/${series}/json?recent=1`;
     if (date) {
       const iso = date.toISOString().slice(0, 10);
       url = `https://www.bankofcanada.ca/valet/observations/${series}/json?start_date=${iso}&end_date=${iso}`;
     }
-    const res = await fetch(url, { next: { revalidate: 3600 } });
+    const res = await fetch(url, force ? { cache: "no-store" } : { next: { revalidate: 3600 } });
     if (!res.ok) return null;
     const data = await res.json();
     const obs = data.observations?.[0];
@@ -129,14 +137,14 @@ async function fetchBocRate(series: string, date?: Date): Promise<FxQuote | null
   }
 }
 
-async function fetchEcbRate(currency: string, date?: Date): Promise<FxQuote | null> {
+async function fetchEcbRate(currency: string, date?: Date, force = false): Promise<FxQuote | null> {
   // ECB donne EUR comme base, on doit ensuite convertir EUR → CAD
   try {
     const dateParam = date ? `?startPeriod=${date.toISOString().slice(0, 10)}&endPeriod=${date.toISOString().slice(0, 10)}` : "";
     const ecbUrl = `https://data-api.ecb.europa.eu/service/data/EXR/D.${currency}.EUR.SP00.A${dateParam}?format=jsondata&lastNObservations=1`;
     const res = await fetch(ecbUrl, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 3600 },
+      ...(force ? { cache: "no-store" as const } : { next: { revalidate: 3600 } }),
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -149,7 +157,7 @@ async function fetchEcbRate(currency: string, date?: Date): Promise<FxQuote | nu
     const eurPerCurrency = obs[obsKey]?.[0];
     if (eurPerCurrency == null) return null;
     // Maintenant EUR → CAD via BoC
-    const eurToCad = await fetchBocRate("FXEURCAD");
+    const eurToCad = await fetchBocRate("FXEURCAD", undefined, force);
     if (!eurToCad) return null;
     return {
       rate: (1 / eurPerCurrency) * eurToCad.rate,

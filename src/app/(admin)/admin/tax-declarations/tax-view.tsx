@@ -6,12 +6,9 @@ import {
   FileBarChart,
   Plus,
   Search,
-  DollarSign,
-  Receipt,
-  TrendingUp,
-  Eye,
   Pencil,
   Trash2,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { StatCard } from "@/components/admin/stat-card";
 import { CreateModal } from "@/components/admin/create-modal";
 import { EditModal } from "@/components/admin/edit-modal";
 import { EntityCard } from "@/components/admin/entity-card";
@@ -52,8 +48,21 @@ type TaxDeclaration = {
 
 const TYPE_OPTIONS = [
   { value: "tps_tvq_trimestrielle", label: "Trimestrielle TPS/TVQ" },
-  { value: "annuelle_impots", label: "Annuelle impots" },
+  { value: "annuelle_impots", label: "Annuelle impôts" },
 ];
+
+function typeLabel(v: string): string {
+  return TYPE_OPTIONS.find((t) => t.value === v)?.label ?? v.replace(/_/g, " ");
+}
+
+function csvEscape(v: string | number | null): string {
+  if (v === null || v === undefined) return "";
+  const s = String(v);
+  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
 
 export function TaxView({
   declarations,
@@ -65,6 +74,7 @@ export function TaxView({
   const router = useRouter();
   const [view, setView] = useViewMode("tax-declarations", "list");
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [createOpen, setCreateOpen] = useState(false);
 
   // Sticky scroll detection (Wix pattern)
@@ -110,7 +120,7 @@ export function TaxView({
   };
 
   const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
-    if (!editDecl || !editLabel.trim()) return { success: false, error: "Periode requise" };
+    if (!editDecl || !editLabel.trim()) return { success: false, error: "Période requise" };
     try {
       const res = await fetch(`/api/tax-declarations/${editDecl.id}`, {
         method: "PATCH",
@@ -124,19 +134,19 @@ export function TaxView({
       if (res.ok) { router.refresh(); return { success: true }; }
       const data = await res.json();
       return { success: false, error: data.error || "Erreur" };
-    } catch { return { success: false, error: "Erreur reseau" }; }
+    } catch { return { success: false, error: "Erreur réseau" }; }
   };
 
   const handleDelete = async () => {
     if (!deleteDecl) return;
     const res = await fetch(`/api/tax-declarations/${deleteDecl.id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Declaration supprimee"); setDeleteDecl(null); router.refresh(); }
+    if (res.ok) { toast.success("Déclaration supprimée"); setDeleteDecl(null); router.refresh(); }
     else { const d = await res.json(); toast.error(d.error || "Erreur"); }
   };
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
     if (!newType || !newLabel.trim() || !newStart || !newEnd) {
-      return { success: false, error: "Type, periode, debut et fin requis" };
+      return { success: false, error: "Type, période, début et fin requis" };
     }
     try {
       const res = await fetch("/api/tax-declarations", {
@@ -158,36 +168,81 @@ export function TaxView({
       const data = await res.json();
       return { success: false, error: data.error || "Erreur" };
     } catch {
-      return { success: false, error: "Erreur reseau" };
+      return { success: false, error: "Erreur réseau" };
     }
   };
 
   const filtered = useMemo(() => {
-    if (!searchQuery) return declarations;
-    const q = searchQuery.toLowerCase();
-    return declarations.filter(
-      (d) =>
-        d.periodLabel.toLowerCase().includes(q) ||
-        d.periodType.toLowerCase().includes(q)
-    );
-  }, [declarations, searchQuery]);
+    let result = declarations;
+    if (statusFilter !== "all") result = result.filter((d) => d.status === statusFilter);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (d) =>
+          d.periodLabel.toLowerCase().includes(q) ||
+          typeLabel(d.periodType).toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [declarations, searchQuery, statusFilter]);
+
+  // Export CSV des déclarations filtrées
+  const exportCsv = () => {
+    const headers = [
+      "Période",
+      "Type",
+      "Début",
+      "Fin",
+      "Revenu HT",
+      "TPS collectée",
+      "TVQ collectée",
+      "Total taxes",
+      "Statut",
+      "Date soumission",
+      "Notes",
+    ];
+    const lines = [headers.map(csvEscape).join(",")];
+    filtered.forEach((d) => {
+      const statusLbl = d.status === "draft" ? "Brouillon" : d.status === "submitted" ? "Soumise" : d.status === "confirmed" ? "Confirmée" : d.status;
+      lines.push([
+        d.periodLabel,
+        typeLabel(d.periodType),
+        d.periodStart.slice(0, 10),
+        d.periodEnd.slice(0, 10),
+        d.totalRevenueHt.toFixed(2),
+        d.totalTps.toFixed(2),
+        d.totalTvq.toFixed(2),
+        d.totalTaxes.toFixed(2),
+        statusLbl,
+        d.submittedAt ? d.submittedAt.slice(0, 10) : "",
+        d.notes ?? "",
+      ].map(csvEscape).join(","));
+    });
+    const csv = lines.join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `declarations-fiscales_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Actions menu pour EntityCard
   const getActions = useCallback((d: TaxDeclaration) => {
     const editable = d.status !== "submitted" && !d.submittedAt;
     return [
-      { label: "Voir / Modifier", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEdit(d) },
       ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(d) }] : []),
       ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteDecl(d), separator: true, variant: "destructive" as const }] : []),
     ];
   }, []);
 
   const columns: Column<TaxDeclaration>[] = [
-    { key: "period", header: "Periode", accessor: (r) => r.periodLabel, sortable: true, sortBy: (r) => r.periodLabel },
+    { key: "period", header: "Période", accessor: (r) => r.periodLabel, sortable: true, sortBy: (r) => r.periodLabel },
     {
       key: "type",
       header: "Type",
-      accessor: (r) => <span className="text-xs capitalize">{r.periodType.replace(/_/g, " ")}</span>,
+      accessor: (r) => <span className="text-xs">{typeLabel(r.periodType)}</span>,
       hiddenOnMobile: true,
     },
     {
@@ -226,67 +281,103 @@ export function TaxView({
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-3">
-            <FileBarChart className="h-6 w-6" />
-            Declarations fiscales
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">Suivi des declarations TPS/TVQ et impots</p>
+    <div className="space-y-5">
+      {/* Hero VNK */}
+      <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-4 text-white">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <FileBarChart className="h-5 w-5" />
+              Déclarations fiscales
+            </h1>
+            <p className="text-white/70 text-xs mt-0.5">
+              Suivi des déclarations TPS/TVQ et impôts · {declarations.length} déclaration{declarations.length > 1 ? "s" : ""} enregistrée{declarations.length > 1 ? "s" : ""}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button onClick={exportCsv} size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              Exporter CSV
+            </Button>
+            <Button onClick={() => { resetForm(); setCreateOpen(true); }} size="sm" variant="secondary" className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold">
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Nouvelle déclaration
+            </Button>
+          </div>
         </div>
-        <Button onClick={() => { resetForm(); setCreateOpen(true); }}>
-          <Plus className="h-4 w-4" />
-          Nouvelle declaration
-        </Button>
       </div>
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        <StatCard label="Revenu brut HT" value={formatCurrency(kpis.revenueHt)} icon={TrendingUp} accent="bg-emerald-500" />
-        <StatCard label="TPS collectee" value={formatCurrency(kpis.tpsCollected)} icon={Receipt} accent="bg-blue-500" />
-        <StatCard label="TVQ collectee" value={formatCurrency(kpis.tvqCollected)} icon={DollarSign} accent="bg-indigo-500" />
-        <StatCard label="Total taxes" value={formatCurrency(kpis.totalTaxes)} icon={FileBarChart} accent="bg-amber-500" />
+      {/* KPIs (basés sur factures payées de l'année courante) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="rounded-lg border bg-card p-3">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Revenu brut HT</p>
+          <p className="text-lg font-bold text-emerald-600 tabular-nums">{formatCurrency(kpis.revenueHt)}</p>
+          <p className="text-[10px] text-muted-foreground">année courante</p>
+        </div>
+        <div className="rounded-lg border bg-card p-3">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">TPS collectée</p>
+          <p className="text-lg font-bold text-blue-600 tabular-nums">{formatCurrency(kpis.tpsCollected)}</p>
+          <p className="text-[10px] text-muted-foreground">à remettre au fédéral</p>
+        </div>
+        <div className="rounded-lg border bg-card p-3">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">TVQ collectée</p>
+          <p className="text-lg font-bold text-indigo-600 tabular-nums">{formatCurrency(kpis.tvqCollected)}</p>
+          <p className="text-[10px] text-muted-foreground">à remettre au Québec</p>
+        </div>
+        <div className="rounded-lg border bg-card p-3">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total taxes</p>
+          <p className="text-lg font-bold text-amber-600 tabular-nums">{formatCurrency(kpis.totalTaxes)}</p>
+          <p className="text-[10px] text-muted-foreground">TPS + TVQ</p>
+        </div>
       </div>
 
-      {/* Sentinel — détecte quand les KPIs quittent le viewport */}
+      {/* Sentinel + sticky bar */}
       <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
-
-      {/* Toolbar — sticky au scroll, avec récap KPI compact qui apparaît seulement quand scrolled */}
       <div
         className={cn(
           "sticky top-[64px] z-20 bg-background -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 transition-shadow",
-          scrolled && "shadow-sm border-b"
+          scrolled && "shadow-sm border-b backdrop-blur"
         )}
       >
         {scrolled && (
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs mb-2 pt-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs mb-2 pt-1">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <FileBarChart className="h-4 w-4" />
               Déclarations fiscales
             </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Revenu HT :</span>
-              <span className="font-bold text-emerald-600">{formatCurrency(kpis.revenueHt)}</span>
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">TPS :</span>
-              <span className="font-bold text-blue-600">{formatCurrency(kpis.tpsCollected)}</span>
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">TVQ :</span>
-              <span className="font-bold text-indigo-600">{formatCurrency(kpis.tvqCollected)}</span>
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Total taxes :</span>
-              <span className="font-bold text-amber-600">{formatCurrency(kpis.totalTaxes)}</span>
-            </span>
-            <span className="ml-auto text-muted-foreground">{filtered.length} affichées</span>
+            <span className="font-semibold">{filtered.length} affichées</span>
+            <span className="text-muted-foreground">Revenu HT <span className="font-semibold text-emerald-600">{formatCurrency(kpis.revenueHt)}</span></span>
+            <span className="text-muted-foreground">TPS <span className="font-semibold text-blue-600">{formatCurrency(kpis.tpsCollected)}</span></span>
+            <span className="text-muted-foreground">TVQ <span className="font-semibold text-indigo-600">{formatCurrency(kpis.tvqCollected)}</span></span>
+            <span className="ml-auto text-muted-foreground">Total taxes <span className="font-semibold text-amber-600">{formatCurrency(kpis.totalTaxes)}</span></span>
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Periode, type..." className="pl-9" />
+
+        {/* Filtres inline */}
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="relative flex-1 min-w-[200px] max-w-md">
+            <Label className="text-[10px]">Recherche</Label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Période, type…"
+                className="h-9 pl-8 text-xs"
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-[10px]">Statut</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="draft">Brouillon</SelectItem>
+                <SelectItem value="submitted">Soumise</SelectItem>
+                <SelectItem value="confirmed">Confirmée</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <ViewToggle storageKey="tax-declarations" defaultView="list" onChange={setView} />
         </div>
@@ -299,10 +390,10 @@ export function TaxView({
             <EntityCard
               key={d.id}
               title={d.periodLabel}
-              subtitle={TYPE_OPTIONS.find((t) => t.value === d.periodType)?.label ?? d.periodType.replace(/_/g, " ")}
+              subtitle={typeLabel(d.periodType)}
               icon={<FileBarChart className="h-5 w-5 text-muted-foreground" />}
               badges={[
-                { label: d.status === "draft" ? "Brouillon" : d.status === "submitted" ? "Soumise" : d.status === "confirmed" ? "Confirmee" : d.status, variant: d.status === "confirmed" ? "secondary" : "outline" },
+                { label: d.status === "draft" ? "Brouillon" : d.status === "submitted" ? "Soumise" : d.status === "confirmed" ? "Confirmée" : d.status, variant: d.status === "confirmed" ? "secondary" : "outline" },
               ]}
               stats={[
                 { label: "Revenu HT", value: formatCurrency(d.totalRevenueHt) },
@@ -318,23 +409,23 @@ export function TaxView({
             />
           ))}
           {filtered.length === 0 && (
-            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucune declaration trouvee</div>
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucune déclaration trouvée</div>
           )}
         </div>
       ) : (
         <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="declarations-fiscales" storageKey="admin-tax-declarations" />
       )}
 
-      <EditModal open={!!editDecl} onOpenChange={(o) => { if (!o) setEditDecl(null); }} title="Modifier la declaration" description={editDecl?.periodLabel} icon={Pencil} accent="bg-amber-500" onSubmit={handleEdit}>
+      <EditModal open={!!editDecl} onOpenChange={(o) => { if (!o) setEditDecl(null); }} title="Modifier la déclaration" description={editDecl?.periodLabel} icon={Pencil} accent="bg-amber-500" onSubmit={handleEdit}>
         <div className="space-y-4">
-          <div className="space-y-2"><Label>Periode *</Label><Input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Période *</Label><Input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} /></div>
           <div className="space-y-2"><Label>Statut</Label>
             <Select value={editStatus} onValueChange={setEditStatus}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="draft">Brouillon</SelectItem>
                 <SelectItem value="submitted">Soumise</SelectItem>
-                <SelectItem value="confirmed">Confirmee</SelectItem>
+                <SelectItem value="confirmed">Confirmée</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -345,18 +436,18 @@ export function TaxView({
       <ConfirmDialog
         open={!!deleteDecl}
         onOpenChange={(o) => { if (!o) setDeleteDecl(null); }}
-        title="Supprimer cette declaration ?"
-        description={`La declaration "${deleteDecl?.periodLabel}" sera supprimee definitivement.`}
+        title="Supprimer cette déclaration ?"
+        description={`La déclaration "${deleteDecl?.periodLabel}" sera supprimée définitivement.`}
         confirmLabel="Supprimer"
         onConfirm={handleDelete}
       />
 
-      <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouvelle declaration" icon={FileBarChart} accent="bg-amber-500" submitLabel="Creer la declaration" onSubmit={handleCreate}>
+      <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouvelle déclaration" icon={FileBarChart} accent="bg-amber-500" submitLabel="Créer la déclaration" onSubmit={handleCreate}>
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Type *</Label>
             <Select value={newType} onValueChange={setNewType}>
-              <SelectTrigger><SelectValue placeholder="Selectionner" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
               <SelectContent>
                 {TYPE_OPTIONS.map((t) => (
                   <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
@@ -365,12 +456,12 @@ export function TaxView({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="t-label">Periode *</Label>
+            <Label htmlFor="t-label">Période *</Label>
             <Input id="t-label" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="ex: T1 2026" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="t-start">Debut *</Label>
+              <Label htmlFor="t-start">Début *</Label>
               <Input id="t-start" type="date" value={newStart} onChange={(e) => setNewStart(e.target.value)} />
             </div>
             <div className="space-y-2">

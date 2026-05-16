@@ -11,7 +11,7 @@ const updateSchema = z.object({
   periodLabel: z.string().min(1).optional(),
   status: z.string().optional(),
   notes: z.string().nullable().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnee a mettre a jour" });
+}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnée à mettre à jour" });
 
 export async function GET(
   _req: Request,
@@ -19,12 +19,12 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
   const { id } = await params;
   const declaration = await prisma.taxDeclaration.findUnique({ where: { id: Number(id) } });
   if (!declaration) {
-    return NextResponse.json({ error: "Declaration introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Déclaration introuvable" }, { status: 404 });
   }
   return NextResponse.json({ declaration });
 }
@@ -35,17 +35,17 @@ export async function PATCH(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
   const { id } = await params;
   const declId = Number(id);
 
   const existing = await prisma.taxDeclaration.findUnique({ where: { id: declId } });
   if (!existing) {
-    return NextResponse.json({ error: "Declaration introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Déclaration introuvable" }, { status: 404 });
   }
   if (existing.status === "submitted" && existing.submittedAt) {
-    return NextResponse.json({ error: "Declaration deja soumise — non modifiable" }, { status: 409 });
+    return NextResponse.json({ error: "Déclaration déjà soumise — non modifiable" }, { status: 409 });
   }
 
   const body = await req.json();
@@ -78,18 +78,18 @@ export async function DELETE(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
   const { id } = await params;
   const declId = Number(id);
 
   const existing = await prisma.taxDeclaration.findUnique({ where: { id: declId } });
   if (!existing) {
-    return NextResponse.json({ error: "Declaration introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Déclaration introuvable" }, { status: 404 });
   }
   if (existing.status === "submitted" || existing.submittedAt) {
     return NextResponse.json(
-      { error: "Declaration soumise — impossible de supprimer" },
+      { error: "Déclaration soumise — impossible de supprimer" },
       { status: 409 }
     );
   }

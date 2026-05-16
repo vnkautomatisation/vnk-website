@@ -7,6 +7,9 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 
+const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB ?? 10);
+const MAX_DATAURL_BYTES = Math.floor(MAX_UPLOAD_MB * 1024 * 1024 * 1.4);
+
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
   category: z.string().min(1).optional(),
@@ -14,9 +17,14 @@ const updateSchema = z.object({
   tpsPaid: z.number().min(0).optional(),
   tvqPaid: z.number().min(0).optional(),
   vendor: z.string().nullable().optional(),
-  expenseDate: z.string().optional(),
+  expenseDate: z.string().optional().refine((s) => {
+    if (!s) return true;
+    const d = new Date(s);
+    return !isNaN(d.getTime()) && d <= new Date(new Date().toISOString().slice(0, 10) + "T23:59:59");
+  }, { message: "La date ne peut pas être dans le futur" }),
   notes: z.string().nullable().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnee a mettre a jour" });
+  receiptData: z.string().startsWith("data:").nullable().optional(),
+}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnée à mettre à jour" });
 
 export async function GET(
   _req: Request,
@@ -24,12 +32,12 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
   const { id } = await params;
   const expense = await prisma.expense.findUnique({ where: { id: Number(id) } });
   if (!expense) {
-    return NextResponse.json({ error: "Depense introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Dépense introuvable" }, { status: 404 });
   }
   return NextResponse.json({ expense });
 }
@@ -40,14 +48,14 @@ export async function PATCH(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
   const { id } = await params;
   const expenseId = Number(id);
 
   const existing = await prisma.expense.findUnique({ where: { id: expenseId } });
   if (!existing) {
-    return NextResponse.json({ error: "Depense introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Dépense introuvable" }, { status: 404 });
   }
 
   const body = await req.json();
@@ -56,8 +64,17 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
   }
 
-  const data: Record<string, unknown> = { ...parsed.data };
+  // Validation taille recu si fourni
+  if (parsed.data.receiptData && parsed.data.receiptData.length > MAX_DATAURL_BYTES) {
+    return NextResponse.json({ error: `Reçu trop volumineux (max ${MAX_UPLOAD_MB} Mo)` }, { status: 413 });
+  }
+
+  const { receiptData, ...rest } = parsed.data;
+  const data: Record<string, unknown> = { ...rest };
   if (typeof data.expenseDate === "string") data.expenseDate = new Date(data.expenseDate);
+  // receiptData: undefined = pas touché, null = supprimer, string = remplacer
+  if (receiptData === null) data.receiptUrl = null;
+  else if (typeof receiptData === "string") data.receiptUrl = receiptData;
 
   const updated = await prisma.expense.update({ where: { id: expenseId }, data });
 
@@ -78,14 +95,14 @@ export async function DELETE(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
   const { id } = await params;
   const expenseId = Number(id);
 
   const existing = await prisma.expense.findUnique({ where: { id: expenseId } });
   if (!existing) {
-    return NextResponse.json({ error: "Depense introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Dépense introuvable" }, { status: 404 });
   }
 
   await prisma.expense.delete({ where: { id: expenseId } });
