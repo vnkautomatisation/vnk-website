@@ -676,32 +676,30 @@ function dateCA(d) {
 function pageWidth(doc) { return doc.page.width; }
 function contentWidth(doc) { return doc.page.width - C.marginL - C.marginR; }
 
-// Dessine le logo hexagonal VNK — version améliorée (double hexagone + texte centré)
+// Badge VNK carre arrondi — matche public-nav.tsx (bg-white/10 + border-white/20 + VNK blanc)
+// r = demi-cote du carre (donc cote total = 2r), centre en (cx, cy)
 function drawHexLogo(doc, cx, cy, r, fillColor, strokeColor) {
-    // Reproduit exactement le logo SVG du site :
-    // polygon fill="rgba(255,255,255,0.12)" + stroke="rgba(255,255,255,0.7)" + text VNK blanc
-    // Le bleu vient du fond du header PDF — pas de fond rempli dans l'hexagone
+    const size = r * 2;
+    const x = cx - r;
+    const y = cy - r;
+    const radius = r * 0.35; // ratio 14/40 ≈ rounded-lg
 
-    const pts = [];
-    for (let i = 0; i < 6; i++) {
-        const a = (Math.PI / 3) * i - Math.PI / 6;
-        pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
-    }
+    // Fond white/10
+    doc.save().fillOpacity(0.10);
+    doc.roundedRect(x, y, size, size, radius);
+    doc.fillColor(fillColor || '#FFFFFF').fill();
+    doc.restore();
 
-    // Voile blanc très léger (rgba 0.12 comme le SVG du site)
-    doc.save().moveTo(pts[0][0], pts[0][1]);
-    for (let i = 1; i < 6; i++) doc.lineTo(pts[i][0], pts[i][1]);
-    doc.closePath().fillOpacity(0.12).fillColor('#FFFFFF').fill().restore();
+    // Bordure white/30
+    doc.save().lineWidth(1.5).strokeOpacity(0.30);
+    doc.roundedRect(x, y, size, size, radius);
+    doc.strokeColor(strokeColor || '#FFFFFF').stroke();
+    doc.restore();
 
-    // Contour blanc semi-transparent (0.7 comme le SVG du site), épaisseur 1.5
-    doc.save().moveTo(pts[0][0], pts[0][1]);
-    for (let i = 1; i < 6; i++) doc.lineTo(pts[i][0], pts[i][1]);
-    doc.closePath().lineWidth(1.5).strokeOpacity(0.7).strokeColor('#FFFFFF').stroke().restore();
-
-    // Texte VNK blanc centré
-    const fontSize = Math.max(7, r * 0.38);
+    // Texte VNK centre
+    const fontSize = Math.max(7, r * 0.55);
     doc.fillColor('#FFFFFF').fillOpacity(1).fontSize(fontSize).font('Helvetica-Bold')
-        .text('VNK', cx - r, cy - fontSize * 0.55, { width: r * 2, align: 'center', characterSpacing: 1.5 });
+        .text('VNK', x, cy - fontSize * 0.50, { width: size, align: 'center', characterSpacing: 1.0 });
 }
 
 // Barre de section avec accent latéral bleu

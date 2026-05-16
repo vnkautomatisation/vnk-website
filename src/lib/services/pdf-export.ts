@@ -5,10 +5,10 @@ import { PassThrough } from "stream";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PDFDocument = require("pdfkit");
 
-// Couleurs alignees avec le logo officiel VNK (vnk-logo-horizontal-light.svg)
+// Couleurs alignees avec le logo officiel VNK (badge carre arrondi, voir public-nav.tsx)
 const C = {
   brand: "#1B4F8A",       // bleu primaire VNK (text + stroke logo)
-  brandBg: "#EBF2FA",      // fond hexagone version light
+  brandBg: "#EBF2FA",      // accent bleu pale (banners, surlignages)
   navy: "#0F2D52",         // navy header (matche pdf-templates contrats/factures)
   navyDeep: "#0A1F3A",
   blueLight: "#DBEAFE",
@@ -300,45 +300,31 @@ function sanitize(s: string | null | undefined): string {
     .replace(/[\uD800-\uDFFF]/g, "");
 }
 
-// Dessine l'hexagone VNK (matche vnk-logo-horizontal-dark.svg, points 50,6 90,28 90,72 50,94 10,72 10,28)
-// Sur fond navy : fill blanc 12% opacite + stroke blanc 80% opacite + texte blanc
+// Badge VNK carre arrondi (matche public-nav.tsx : bg-white/10 + border-white/20 + VNK blanc)
+// Sur fond navy : fill blanc 10% opacite + stroke blanc 30% opacite + texte blanc
 function drawHexagonLogo(doc: CapturedDoc, cx: number, cy: number, size: number) {
-  const s = size / 88;
-  const hw = 40 * s;
-  const dy1 = 22 * s;
-  const dy2 = 44 * s;
+  const x = cx - size / 2;
+  const y = cy - size / 2;
+  const radius = size * 0.175; // ratio 14/80 = rounded-lg
   doc.save();
-  doc.lineWidth(2);
+  doc.lineWidth(1.5);
 
-  // Fill semi-transparent
-  doc.fillOpacity(0.12);
-  doc.polygon(
-    [cx, cy - dy2],
-    [cx + hw, cy - dy1],
-    [cx + hw, cy + dy1],
-    [cx, cy + dy2],
-    [cx - hw, cy + dy1],
-    [cx - hw, cy - dy1],
-  );
+  // Fond white/10
+  doc.fillOpacity(0.10);
+  doc.roundedRect(x, y, size, size, radius);
   doc.fillColor(C.white).fill();
 
-  // Stroke semi-transparent (a 0.85 opacite)
-  doc.fillOpacity(1).strokeOpacity(0.85);
-  doc.polygon(
-    [cx, cy - dy2],
-    [cx + hw, cy - dy1],
-    [cx + hw, cy + dy1],
-    [cx, cy + dy2],
-    [cx - hw, cy + dy1],
-    [cx - hw, cy - dy1],
-  );
+  // Bordure white/30
+  doc.fillOpacity(1).strokeOpacity(0.30);
+  doc.roundedRect(x, y, size, size, radius);
   doc.strokeColor(C.white).stroke();
 
-  // Texte VNK : centré sur l'hexagone, blanc plein
+  // Texte VNK centre
   doc.strokeOpacity(1).fillOpacity(1);
-  doc.fillColor(C.white).font("Helvetica-Bold").fontSize(size * 0.27)
-    .text("VNK", cx - hw, cy - size * 0.10,
-      { width: hw * 2, align: "center", lineBreak: false, characterSpacing: 1.2 });
+  const fontSize = size * 0.32;
+  doc.fillColor(C.white).font("Helvetica-Bold").fontSize(fontSize)
+    .text("VNK", x, cy - fontSize * 0.50,
+      { width: size, align: "center", lineBreak: false, characterSpacing: 0.8 });
   doc.restore();
 }
 
@@ -351,12 +337,12 @@ function drawHeader(doc: CapturedDoc, title: string, subtitle: string, intro?: s
   // Accent bleu fin (filet en bas)
   doc.rect(0, HEADER_H - 2, w, 2).fill(C.brand);
 
-  // Hexagone VNK
+  // Badge VNK
   const hexCx = 52, hexCy = HEADER_H / 2, hexSize = 46;
   drawHexagonLogo(doc, hexCx, hexCy, hexSize);
 
   // Bloc nom + tagline a droite du logo
-  const textX = hexCx + (hexSize / 88) * 40 + 14;  // bord droit hexagone + 14
+  const textX = hexCx + hexSize / 2 + 14;  // bord droit badge + 14
   doc.fillColor(C.white).font("Helvetica-Bold").fontSize(15)
     .text(COMPANY.shortName, textX, hexCy - 12, { lineBreak: false });
 
@@ -1808,6 +1794,193 @@ export async function generateTaxDeclarationsListPdf(params: {
       drawStatusBadge(doc, tx + tw - 6, rowY + 7, statusTxt.toUpperCase(), statusBg);
 
       doc.y = rowY + rowH;
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────
+// 10. AUDIT TRAIL GLOBAL — timeline immuable tous événements
+//    Conçu pour conformité Loi 25 / SOC 2 / PIPEDA.
+//    Inclut manifeste d'intégrité (count + hash global SHA-256).
+// ─────────────────────────────────────────────────────────
+type AuditTrailRow = {
+  source: string;
+  type: string;
+  label: string;
+  severity: "info" | "success" | "warning" | "error" | "critical";
+  result: "success" | "failed" | "neutral";
+  anomalies: string[];
+  clientName?: string | null;
+  adminEmail?: string | null;
+  email?: string | null;
+  ipAddress: string | null;
+  country?: string | null;
+  createdAt: Date;
+};
+
+export async function generateAuditTrailGlobalPdf(params: {
+  events: AuditTrailRow[];
+  stats: { total: number; bySeverity: Record<string, number>; anomaliesCount: number; failedCount: number };
+  filters?: { from?: string; to?: string; sources?: string[]; severity?: string[]; clientName?: string };
+  integrityHash?: string;
+  lang?: ExportLang;
+}): Promise<Buffer> {
+  const isEn = params.lang === "en";
+  const localeTag = isEn ? "en-CA" : "fr-CA";
+  const title = isEn ? "Audit trail" : "Journal d'audit";
+  const subtitle = isEn ? `${params.stats.total} events` : `${params.stats.total} événements`;
+  const intro = isEn
+    ? `Immutable timeline of all events involving the VNK system: logins, payments, signatures, consents, emails, admin actions, workflow. Document compliant with Quebec Law 25 (PIPEDA) and SOC 2 audit logging requirements. The integrity hash at the bottom of this document seals the contents — any modification would change it.`
+    : `Timeline immuable de tous les événements impliquant le système VNK : connexions, paiements, signatures, consentements, courriels, actions admin, workflow. Document conforme aux exigences de la Loi 25 (PIPEDA) et SOC 2. Le hash d'intégrité en bas de ce document scelle le contenu — toute modification le changerait.`;
+
+  return capture((doc) => {
+    drawHeader(doc, title, subtitle, intro);
+
+    const w = doc.page.width - 100;
+    const x = 50;
+
+    // ─── Bandeau filtres appliqués ─────────────────────────
+    if (params.filters) {
+      const fy = doc.y;
+      const filtersText: string[] = [];
+      if (params.filters.from || params.filters.to) {
+        filtersText.push(`${isEn ? "Period" : "Période"} : ${params.filters.from ?? "—"} → ${params.filters.to ?? "—"}`);
+      }
+      if (params.filters.sources && params.filters.sources.length > 0) {
+        filtersText.push(`${isEn ? "Sources" : "Sources"} : ${params.filters.sources.join(", ")}`);
+      }
+      if (params.filters.severity && params.filters.severity.length > 0) {
+        filtersText.push(`${isEn ? "Severity" : "Sévérité"} : ${params.filters.severity.join(", ")}`);
+      }
+      if (params.filters.clientName) {
+        filtersText.push(`${isEn ? "Client" : "Client"} : ${params.filters.clientName}`);
+      }
+      if (filtersText.length > 0) {
+        doc.roundedRect(x, fy, w, 24, 4).fillAndStroke(C.brandBg, C.border);
+        doc.fillColor(C.brand).font("Helvetica-Bold").fontSize(7.5)
+          .text((isEn ? "FILTERS APPLIED" : "FILTRES APPLIQUÉS").toUpperCase(), x + 12, fy + 5,
+            { width: w - 24, lineBreak: false, characterSpacing: 0.5 });
+        doc.fillColor(C.text).font("Helvetica").fontSize(8.5)
+          .text(filtersText.join("  ·  "), x + 12, fy + 13,
+            { width: w - 24, lineBreak: false, ellipsis: true });
+        doc.y = fy + 24 + 12;
+      }
+    }
+
+    // ─── Stats : 5 cards sévérité + anomalies ──────────────
+    const sy = doc.y;
+    const cardW = (w - 24) / 5;
+    [
+      { l: isEn ? "Critical" : "Critique", v: params.stats.bySeverity.critical, c: C.red, bg: C.redLight },
+      { l: isEn ? "Errors" : "Erreurs", v: params.stats.bySeverity.error, c: C.red, bg: C.redLight },
+      { l: isEn ? "Warnings" : "Avert.", v: params.stats.bySeverity.warning, c: C.amber, bg: C.amberLight },
+      { l: isEn ? "Anomalies" : "Anomalies", v: params.stats.anomaliesCount, c: C.amber, bg: C.amberLight },
+      { l: isEn ? "Success" : "Succès", v: params.stats.bySeverity.success, c: C.green, bg: C.greenLight },
+    ].forEach((s, i) => {
+      const xs = x + i * (cardW + 6);
+      doc.roundedRect(xs, sy, cardW, 46, 6).fill(s.bg);
+      doc.rect(xs, sy, 3, 46).fill(s.c);
+      doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7)
+        .text(s.l.toUpperCase(), xs + 10, sy + 8, { width: cardW - 18, lineBreak: false, characterSpacing: 0.4 });
+      doc.fillColor(s.c).font("Helvetica-Bold").fontSize(17)
+        .text(String(s.v), xs + 10, sy + 20, { width: cardW - 18, lineBreak: false });
+    });
+    doc.y = sy + 56;
+
+    if (params.events.length === 0) {
+      sectionTitle(doc, isEn ? "Events" : "Événements");
+      doc.fillColor(C.gray).fontSize(10)
+        .text(isEn ? "No event for this filter." : "Aucun événement pour ce filtre.",
+          x, doc.y, { align: "center", width: w });
+      return;
+    }
+
+    // ─── Timeline groupée par jour ─────────────────────────
+    sectionTitle(doc, isEn ? "Event timeline" : "Timeline des événements");
+
+    const sourceColor: Record<string, string> = {
+      login: C.brand, order: C.green, signature: C.navy, consent: C.amber,
+      email: C.gray, audit: C.red, workflow: C.brand,
+    };
+    const severityColor: Record<string, string> = {
+      critical: C.red, error: C.red, warning: C.amber, success: C.green, info: C.gray,
+    };
+
+    let lastDate = "";
+    for (const e of params.events) {
+      const dateStr = e.createdAt.toLocaleDateString(localeTag, { day: "numeric", month: "long", year: "numeric" });
+      if (dateStr !== lastDate) {
+        ensureSpace(doc, 26);
+        doc.moveDown(0.4);
+        const dy = doc.y;
+        doc.rect(x, dy + 1, 3, 11).fill(C.brand);
+        doc.fillColor(C.brand).font("Helvetica-Bold").fontSize(9.5)
+          .text(dateStr.toUpperCase(), x + 10, dy, { characterSpacing: 0.8 });
+        doc.strokeColor(C.border).lineWidth(0.4)
+          .moveTo(x, dy + 16).lineTo(x + w, dy + 16).stroke();
+        doc.y = dy + 22;
+        lastDate = dateStr;
+      }
+
+      const metaParts: string[] = [];
+      if (e.clientName) metaParts.push(`${isEn ? "Client" : "Client"} : ${sanitize(e.clientName)}`);
+      if (e.adminEmail) metaParts.push(`Admin : ${sanitize(e.adminEmail)}`);
+      if (e.email && !e.adminEmail) metaParts.push(sanitize(e.email));
+      if (e.ipAddress) metaParts.push(`IP ${e.ipAddress}`);
+      if (e.country) metaParts.push(sanitize(e.country));
+
+      const anomalyText = e.anomalies.length > 0 ? `[${e.anomalies.map((a) => {
+        if (a === "failed_login_burst") return isEn ? "burst" : "rafale";
+        if (a === "impossible_travel") return isEn ? "impossible travel" : "trajet impossible";
+        if (a === "off_hours_admin") return isEn ? "off-hours" : "hors heures";
+        if (a === "bulk_export") return isEn ? "bulk export" : "export massif";
+        if (a === "new_geo") return isEn ? "new geo" : "nouvelle géo";
+        return a;
+      }).join(", ")}]` : "";
+
+      const hasMeta = metaParts.length > 0;
+      const itemH = hasMeta ? 30 : 22;
+      ensureSpace(doc, itemH);
+      const ey = doc.y;
+      const sevColor = severityColor[e.severity] ?? C.gray;
+      const srcColor = sourceColor[e.source] ?? C.gray;
+
+      doc.circle(x + 6, ey + 7, 3.5).fill(sevColor);
+      doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7)
+        .text(e.source.toUpperCase(), x + 16, ey + 4, { width: 50, lineBreak: false, characterSpacing: 0.5 });
+      doc.fillColor(srcColor).font("Helvetica-Bold").fontSize(9)
+        .text(sanitize(e.label), x + 65, ey + 1, { width: w - 140, lineBreak: false, ellipsis: true });
+      if (anomalyText) {
+        doc.fillColor(C.red).font("Helvetica-Bold").fontSize(7)
+          .text(anomalyText, x + 65, ey + 13, { width: w - 140, lineBreak: false, ellipsis: true });
+      }
+      doc.fillColor(C.gray).font("Helvetica").fontSize(8)
+        .text(e.createdAt.toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }),
+          0, ey + 3, { width: doc.page.width - 50, align: "right", lineBreak: false });
+
+      if (hasMeta) {
+        doc.fillColor(C.gray).font("Helvetica").fontSize(7.5)
+          .text(metaParts.join("  ·  "),
+            x + 65, ey + 13 + (anomalyText ? 10 : 0), { width: w - 65, lineBreak: false, ellipsis: true });
+      }
+      doc.y = ey + itemH;
+    }
+
+    // ─── Manifeste d'intégrité ─────────────────────────────
+    ensureSpace(doc, 60);
+    doc.moveDown(1);
+    const my = doc.y;
+    doc.roundedRect(x, my, w, 50, 6).fillAndStroke(C.grayLight, C.border);
+    doc.rect(x, my, 4, 50).fill(C.navy);
+    doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(8)
+      .text((isEn ? "INTEGRITY MANIFEST" : "MANIFESTE D'INTÉGRITÉ").toUpperCase(),
+        x + 14, my + 8, { characterSpacing: 0.6 });
+    doc.fillColor(C.text).font("Helvetica").fontSize(8)
+      .text(`${isEn ? "Event count" : "Nombre d'événements"} : ${params.events.length}  ·  ${isEn ? "Export date" : "Date d'export"} : ${new Date().toLocaleString(localeTag, { dateStyle: "long", timeStyle: "long" })}`,
+        x + 14, my + 21, { width: w - 24, lineBreak: false });
+    if (params.integrityHash) {
+      doc.fillColor(C.gray).font("Courier").fontSize(7.5)
+        .text(`SHA-256 : ${params.integrityHash}`, x + 14, my + 34, { width: w - 24, lineBreak: false });
     }
   });
 }

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="VNK">
   <title>VNK</title>
   
-  <rect x="24" y="24" width="152" height="152" rx="28" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.30)" stroke-width="6"/>
+  <rect x="24" y="24" width="152" height="152" rx="28" fill="none" stroke="#FFFFFF" stroke-width="6"/>
   <text x="100" y="124" text-anchor="middle" font-size="56" font-weight="800" fill="#FFFFFF" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" letter-spacing="2">VNK</text>
 </svg>
