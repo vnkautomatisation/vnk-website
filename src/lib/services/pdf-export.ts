@@ -1304,3 +1304,510 @@ export async function generateFicheClientPdf(data: FicheClientData & { lang?: Ex
     }
   });
 }
+
+// ─────────────────────────────────────────────────────────
+// 7. DÉPENSES PROFESSIONNELLES — liste avec KPI + tableau
+// ─────────────────────────────────────────────────────────
+type ExpenseRow = {
+  expenseDate: Date;
+  category: string;       // label affiché (déjà localisé/traduit)
+  title: string;
+  vendor: string | null;
+  amount: number;         // HT
+  tpsPaid: number;
+  tvqPaid: number;
+  hasReceipt: boolean;
+};
+
+export async function generateExpensesPdf(params: {
+  expenses: ExpenseRow[];
+  kpis: { totalHt: number; totalTps: number; totalTvq: number; withReceipt: number };
+  period?: { from?: string; to?: string };          // période filtrée optionnelle
+  lang?: ExportLang;
+}): Promise<Buffer> {
+  const localeTag = params.lang === "en" ? "en-CA" : "fr-CA";
+  const isEn = params.lang === "en";
+  const title = isEn ? "Business expenses" : "Dépenses professionnelles";
+  const periodLabel = params.period?.from && params.period?.to
+    ? `${params.period.from} → ${params.period.to}`
+    : (isEn ? "All periods" : "Toutes périodes");
+  const intro = isEn
+    ? `${params.expenses.length} expense${params.expenses.length > 1 ? "s" : ""} for the selected period. Use the totals below to claim GST/QST input tax credits with the CRA and Revenu Québec. Receipts marked "Yes" are attached in the system for audit traceability.`
+    : `${params.expenses.length} dépense${params.expenses.length > 1 ? "s" : ""} pour la période sélectionnée. Les totaux ci-dessous servent à réclamer les CTI TPS et CTI TVQ auprès de l'ARC et de Revenu Québec. Les reçus marqués « Oui » sont joints dans le système pour la traçabilité d'audit.`;
+
+  return capture((doc) => {
+    drawHeader(doc, title, periodLabel, intro);
+
+    // KPI : 4 cartes
+    const w = doc.page.width - 100;
+    const sx = 50;
+    const sy = doc.y;
+    const cardW = (w - 18) / 4;
+    [
+      { l: isEn ? "Total HT" : "Total HT", v: `${params.kpis.totalHt.toFixed(2)} CAD`, c: C.navy, bg: C.grayLight },
+      { l: isEn ? "GST reclaimable" : "TPS réclamable", v: `${params.kpis.totalTps.toFixed(2)} CAD`, c: C.brand, bg: C.blueLighter },
+      { l: isEn ? "QST reclaimable" : "TVQ réclamable", v: `${params.kpis.totalTvq.toFixed(2)} CAD`, c: C.navy, bg: C.blueLighter },
+      { l: isEn ? "With receipt" : "Avec reçu", v: `${params.kpis.withReceipt} / ${params.expenses.length}`, c: C.green, bg: C.greenLight },
+    ].forEach((s, i) => {
+      const x = sx + i * (cardW + 6);
+      doc.roundedRect(x, sy, cardW, 50, 6).fill(s.bg);
+      doc.rect(x, sy, 3, 50).fill(s.c);
+      doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7)
+        .text(s.l.toUpperCase(), x + 10, sy + 9, { width: cardW - 20, lineBreak: false, characterSpacing: 0.5 });
+      doc.fillColor(s.c).font("Helvetica-Bold").fontSize(13)
+        .text(s.v, x + 10, sy + 23, { width: cardW - 20, lineBreak: false });
+    });
+    doc.y = sy + 60;
+
+    if (params.expenses.length === 0) {
+      sectionTitle(doc, isEn ? "Details" : "Détails");
+      doc.fillColor(C.gray).fontSize(10)
+        .text(isEn ? "No expense for this period." : "Aucune dépense pour cette période.",
+          50, doc.y, { align: "center", width: w });
+      return;
+    }
+
+    // Tableau — largeurs explicites somme = tw (LETTER : tw = 512pt)
+    sectionTitle(doc, isEn ? "Detail of expenses" : "Détail des dépenses");
+    const tx = 50;
+    const tw = w;
+    const fixedW = 60 + 80 + 70 + 55 + 45 + 45 + 40; // 395
+    const descW = tw - fixedW;                         // ~117
+    const cols = [
+      { label: isEn ? "Date" : "Date", w: 60 },
+      { label: isEn ? "Category" : "Catégorie", w: 80 },
+      { label: isEn ? "Description" : "Description", w: descW },
+      { label: isEn ? "Vendor" : "Fournisseur", w: 70 },
+      { label: isEn ? "HT" : "HT", w: 55 },
+      { label: isEn ? "GST" : "TPS", w: 45 },
+      { label: isEn ? "QST" : "TVQ", w: 45 },
+      { label: isEn ? "Receipt" : "Reçu", w: 40 },
+    ];
+
+    const drawHead = () => {
+      const hy = doc.y;
+      doc.rect(tx, hy, tw, 22).fill(C.navy);
+      let cx = tx + 6;
+      doc.fillColor(C.white).font("Helvetica-Bold").fontSize(7.5);
+      cols.forEach((c) => {
+        doc.text(c.label.toUpperCase(), cx, hy + 7,
+          { width: c.w - 6, lineBreak: false, characterSpacing: 0.5 });
+        cx += c.w;
+      });
+      doc.y = hy + 22;
+    };
+    ensureSpace(doc, 30);
+    drawHead();
+
+    let alt = false;
+    const rowH = 22;
+    for (const r of params.expenses) {
+      ensureSpace(doc, rowH + 2);
+      if (doc.y < HEADER_H + 30) drawHead();
+      const rowY = doc.y;
+      if (alt) doc.rect(tx, rowY, tw, rowH).fill(C.grayLight);
+      alt = !alt;
+
+      let cx = tx + 6;
+      // Date
+      doc.fillColor(C.text).font("Helvetica").fontSize(8)
+        .text(r.expenseDate.toLocaleDateString(localeTag), cx, rowY + 7,
+          { width: cols[0].w - 6, lineBreak: false });
+      cx += cols[0].w;
+      // Categorie
+      doc.fillColor(C.text).text(sanitize(r.category), cx, rowY + 7,
+        { width: cols[1].w - 6, lineBreak: false, ellipsis: true });
+      cx += cols[1].w;
+      // Description (bold)
+      doc.fillColor(C.text).font("Helvetica-Bold").text(sanitize(r.title), cx, rowY + 7,
+        { width: cols[2].w - 6, lineBreak: false, ellipsis: true });
+      cx += cols[2].w;
+      // Fournisseur
+      doc.fillColor(C.gray).font("Helvetica").text(sanitize(r.vendor) || "—", cx, rowY + 7,
+        { width: cols[3].w - 6, lineBreak: false, ellipsis: true });
+      cx += cols[3].w;
+      // HT
+      doc.fillColor(C.text).font("Helvetica-Bold").fontSize(8.5)
+        .text(r.amount.toFixed(2), cx, rowY + 7, { width: cols[4].w - 6, lineBreak: false, align: "right" });
+      cx += cols[4].w;
+      // TPS
+      doc.fillColor(C.brand).font("Helvetica").fontSize(8)
+        .text(r.tpsPaid.toFixed(2), cx, rowY + 7, { width: cols[5].w - 6, lineBreak: false, align: "right" });
+      cx += cols[5].w;
+      // TVQ
+      doc.fillColor(C.navy).text(r.tvqPaid.toFixed(2), cx, rowY + 7,
+        { width: cols[6].w - 6, lineBreak: false, align: "right" });
+      cx += cols[6].w;
+      // Reçu
+      doc.fillColor(r.hasReceipt ? C.green : C.gray).font("Helvetica-Bold").fontSize(8)
+        .text(r.hasReceipt ? (isEn ? "Yes" : "Oui") : (isEn ? "No" : "Non"),
+          cx, rowY + 7, { width: cols[7].w - 6, lineBreak: false, align: "center" });
+
+      doc.y = rowY + rowH;
+    }
+
+    // Ligne de total
+    ensureSpace(doc, 30);
+    const ty = doc.y;
+    doc.rect(tx, ty, tw, 24).fill(C.brandBg);
+    doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(9)
+      .text((isEn ? "TOTAL" : "TOTAL").toUpperCase(),
+        tx + 6, ty + 8, { width: cols[0].w + cols[1].w + cols[2].w + cols[3].w - 6, lineBreak: false, characterSpacing: 0.6 });
+    let totX = tx + cols[0].w + cols[1].w + cols[2].w + cols[3].w;
+    doc.text(params.kpis.totalHt.toFixed(2), totX, ty + 8, { width: cols[4].w - 6, lineBreak: false, align: "right" });
+    totX += cols[4].w;
+    doc.fillColor(C.brand).text(params.kpis.totalTps.toFixed(2), totX, ty + 8, { width: cols[5].w - 6, lineBreak: false, align: "right" });
+    totX += cols[5].w;
+    doc.fillColor(C.navy).text(params.kpis.totalTvq.toFixed(2), totX, ty + 8, { width: cols[6].w - 6, lineBreak: false, align: "right" });
+    doc.y = ty + 24 + 4;
+  });
+}
+
+// ─────────────────────────────────────────────────────────
+// 8. DÉCLARATION FISCALE — document formel individuel (1 page)
+// ─────────────────────────────────────────────────────────
+type TaxDeclarationData = {
+  periodType: string;        // label déjà localisé
+  periodLabel: string;
+  periodStart: Date;
+  periodEnd: Date;
+  totalRevenueHt: number;
+  totalTps: number;
+  totalTvq: number;
+  totalTaxes: number;
+  status: string;            // draft | submitted | confirmed
+  submittedAt: Date | null;
+  notes: string | null;
+  createdAt: Date;
+};
+
+export async function generateTaxDeclarationPdf(params: {
+  declaration: TaxDeclarationData;
+  expenses?: { totalHt: number; tpsPaid: number; tvqPaid: number; count: number };  // taxes payées dans la même période
+  lang?: ExportLang;
+}): Promise<Buffer> {
+  const isEn = params.lang === "en";
+  const localeTag = isEn ? "en-CA" : "fr-CA";
+  const d = params.declaration;
+  const title = isEn ? "Tax declaration" : "Déclaration fiscale";
+
+  const statusLabel = d.status === "draft" ? (isEn ? "DRAFT" : "BROUILLON")
+    : d.status === "submitted" ? (isEn ? "SUBMITTED" : "SOUMISE")
+    : d.status === "confirmed" ? (isEn ? "CONFIRMED" : "CONFIRMÉE")
+    : d.status.toUpperCase();
+  const statusColor = d.status === "confirmed" ? C.green
+    : d.status === "submitted" ? C.brand : C.amber;
+
+  const netTps = d.totalTps - (params.expenses?.tpsPaid ?? 0);
+  const netTvq = d.totalTvq - (params.expenses?.tvqPaid ?? 0);
+  const netToRemit = netTps + netTvq;
+
+  return capture((doc) => {
+    drawHeader(doc, title, sanitize(d.periodLabel),
+      isEn
+        ? `Official summary of the GST/QST tax declaration for the period covered. Includes total HT revenue, taxes collected, and (if available) reclaimable input tax credits paid on business expenses.`
+        : `Récapitulatif officiel de la déclaration fiscale TPS/TVQ pour la période couverte. Inclut le revenu HT total, les taxes collectées et (si disponible) les CTI réclamables payés sur les dépenses professionnelles.`,
+    );
+
+    const w = doc.page.width - 100;
+    const x = 50;
+
+    // ─── Bloc en-tête : Période + statut ─────────────────
+    const hy = doc.y;
+    const hh = 64;
+    doc.roundedRect(x, hy, w, hh, 6).fillAndStroke(C.grayLight, C.border);
+
+    // Statut badge en haut à droite
+    drawStatusBadge(doc, x + w - 12, hy + 10, statusLabel, statusColor);
+
+    doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7)
+      .text((isEn ? "TYPE" : "TYPE"), x + 14, hy + 10, { characterSpacing: 0.5 });
+    doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(13)
+      .text(sanitize(d.periodType), x + 14, hy + 20, { width: w - 100, lineBreak: false, ellipsis: true });
+
+    doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7)
+      .text((isEn ? "PERIOD" : "PÉRIODE"), x + 14, hy + 42, { characterSpacing: 0.5 });
+    doc.fillColor(C.text).font("Helvetica").fontSize(9)
+      .text(`${d.periodStart.toLocaleDateString(localeTag)}  →  ${d.periodEnd.toLocaleDateString(localeTag)}`,
+        x + 60, hy + 42, { lineBreak: false });
+
+    doc.y = hy + hh + 14;
+
+    // ─── Section : Taxes collectées (encaissement) ────────
+    sectionTitle(doc, isEn ? "Taxes collected (from paid invoices)" : "Taxes collectées (factures payées)");
+
+    const cy = doc.y;
+    doc.roundedRect(x, cy, w, 100, 6).fillAndStroke(C.brandBg, C.border);
+
+    // Revenu HT — gros chiffre
+    doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5)
+      .text((isEn ? "TOTAL HT REVENUE" : "REVENU TOTAL HT").toUpperCase(),
+        x + 16, cy + 12, { characterSpacing: 0.6 });
+    doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(22)
+      .text(`${d.totalRevenueHt.toFixed(2)} CAD`, x + 16, cy + 26, { lineBreak: false });
+
+    // TPS / TVQ / Total à droite
+    const rxR = x + 270;
+    const lineH = 18;
+    const rows = [
+      { l: isEn ? "GST collected" : "TPS collectée", v: d.totalTps, c: C.brand },
+      { l: isEn ? "QST collected" : "TVQ collectée", v: d.totalTvq, c: C.navy },
+      { l: isEn ? "Total taxes" : "Total taxes", v: d.totalTaxes, c: C.amber, bold: true },
+    ];
+    rows.forEach((r, i) => {
+      const ry = cy + 14 + i * lineH;
+      doc.fillColor(C.gray).font("Helvetica").fontSize(8.5)
+        .text(r.l, rxR, ry, { width: 130, lineBreak: false });
+      doc.fillColor(r.c).font(r.bold ? "Helvetica-Bold" : "Helvetica-Bold").fontSize(r.bold ? 11 : 9.5)
+        .text(`${r.v.toFixed(2)} CAD`, rxR + 130, ry, { width: 90, align: "right", lineBreak: false });
+    });
+
+    doc.y = cy + 100 + 14;
+
+    // ─── Section : Taxes payées (CTI à réclamer) ────────
+    if (params.expenses && (params.expenses.tpsPaid > 0 || params.expenses.tvqPaid > 0)) {
+      sectionTitle(doc, isEn ? "Input tax credits (from business expenses)" : "CTI réclamables (dépenses professionnelles)");
+
+      const ey = doc.y;
+      doc.roundedRect(x, ey, w, 80, 6).fillAndStroke(C.greenLight, C.border);
+
+      doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5)
+        .text((isEn ? "EXPENSES HT" : "DÉPENSES HT").toUpperCase(),
+          x + 16, ey + 12, { characterSpacing: 0.6 });
+      doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(18)
+        .text(`${params.expenses.totalHt.toFixed(2)} CAD`, x + 16, ey + 26, { lineBreak: false });
+      doc.fillColor(C.gray).font("Helvetica").fontSize(7.5)
+        .text(`${params.expenses.count} ${isEn ? "expense(s)" : "dépense(s)"}`,
+          x + 16, ey + 50, { lineBreak: false });
+
+      const erows = [
+        { l: isEn ? "GST paid" : "TPS payée", v: params.expenses.tpsPaid, c: C.brand },
+        { l: isEn ? "QST paid" : "TVQ payée", v: params.expenses.tvqPaid, c: C.navy },
+        { l: isEn ? "Total ITC" : "Total CTI", v: params.expenses.tpsPaid + params.expenses.tvqPaid, c: C.green, bold: true },
+      ];
+      erows.forEach((r, i) => {
+        const ry = ey + 14 + i * lineH;
+        doc.fillColor(C.gray).font("Helvetica").fontSize(8.5)
+          .text(r.l, rxR, ry, { width: 130, lineBreak: false });
+        doc.fillColor(r.c).font("Helvetica-Bold").fontSize(r.bold ? 11 : 9.5)
+          .text(`${r.v.toFixed(2)} CAD`, rxR + 130, ry, { width: 90, align: "right", lineBreak: false });
+      });
+
+      doc.y = ey + 80 + 14;
+
+      // ─── Bloc net à remettre ─────────────────────────
+      sectionTitle(doc, isEn ? "Net to remit" : "Net à remettre");
+      const ny = doc.y;
+      const isOwed = netToRemit >= 0;
+      const bg = isOwed ? C.amberLight : C.greenLight;
+      const accent = isOwed ? C.amber : C.green;
+      doc.roundedRect(x, ny, w, 70, 6).fillAndStroke(bg, accent);
+      doc.rect(x, ny, 4, 70).fill(accent);
+
+      doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(8)
+        .text((isOwed
+          ? (isEn ? "AMOUNT TO REMIT TO TAX AUTHORITIES" : "MONTANT À REMETTRE AUX AUTORITÉS FISCALES")
+          : (isEn ? "REFUND EXPECTED FROM TAX AUTHORITIES" : "REMBOURSEMENT ATTENDU DES AUTORITÉS FISCALES")
+        ).toUpperCase(),
+          x + 18, ny + 14, { characterSpacing: 0.5 });
+      doc.fillColor(accent).font("Helvetica-Bold").fontSize(26)
+        .text(`${Math.abs(netToRemit).toFixed(2)} CAD`, x + 18, ny + 28, { lineBreak: false });
+
+      doc.fillColor(C.gray).font("Helvetica").fontSize(8)
+        .text(`${isEn ? "Net GST" : "TPS nette"} ${netTps.toFixed(2)} CAD  ·  ${isEn ? "Net QST" : "TVQ nette"} ${netTvq.toFixed(2)} CAD`,
+          x + 18, ny + 56, { lineBreak: false });
+
+      doc.y = ny + 70 + 14;
+    }
+
+    // ─── Bloc soumission ─────────────────────────────────
+    if (d.submittedAt) {
+      ensureSpace(doc, 40);
+      const sy2 = doc.y;
+      doc.roundedRect(x, sy2, w, 34, 4).fillAndStroke(C.greenLight, C.green);
+      doc.fillColor(C.green).font("Helvetica-Bold").fontSize(8)
+        .text((isEn ? "OFFICIALLY SUBMITTED" : "SOUMISE OFFICIELLEMENT").toUpperCase(),
+          x + 14, sy2 + 8, { characterSpacing: 0.6 });
+      doc.fillColor(C.text).font("Helvetica").fontSize(9)
+        .text(d.submittedAt.toLocaleString(localeTag, { dateStyle: "long", timeStyle: "short" }),
+          x + 14, sy2 + 20, { lineBreak: false });
+      doc.y = sy2 + 34 + 14;
+    }
+
+    // ─── Notes internes ──────────────────────────────────
+    if (d.notes && d.notes.trim()) {
+      ensureSpace(doc, 60);
+      sectionTitle(doc, isEn ? "Internal notes" : "Notes internes");
+      const notesText = sanitize(d.notes);
+      const notesH = doc.heightOfString(notesText, { width: w - 24 });
+      const ny = doc.y;
+      doc.roundedRect(x, ny, w, notesH + 22, 4).fillAndStroke(C.amberLight, C.amber);
+      doc.fillColor(C.text).font("Helvetica").fontSize(8.5)
+        .text(notesText, x + 12, ny + 11, { width: w - 24 });
+      doc.y = ny + notesH + 26;
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────
+// 9. LISTE DES DÉCLARATIONS FISCALES — vue annuelle / liste
+// ─────────────────────────────────────────────────────────
+type TaxDeclListRow = {
+  periodType: string;          // label déjà localisé
+  periodLabel: string;
+  periodStart: Date;
+  periodEnd: Date;
+  totalRevenueHt: number;
+  totalTps: number;
+  totalTvq: number;
+  totalTaxes: number;
+  status: string;
+  submittedAt: Date | null;
+};
+
+export async function generateTaxDeclarationsListPdf(params: {
+  declarations: TaxDeclListRow[];
+  kpis: {
+    revenueHt: number;
+    tpsCollected: number;
+    tvqCollected: number;
+    tpsPaid: number;
+    tvqPaid: number;
+    netToRemit: number;
+    year: number;
+  };
+  lang?: ExportLang;
+}): Promise<Buffer> {
+  const isEn = params.lang === "en";
+  const localeTag = isEn ? "en-CA" : "fr-CA";
+  const title = isEn ? "Tax declarations" : "Déclarations fiscales";
+  const subtitle = isEn ? `Year ${params.kpis.year}` : `Année ${params.kpis.year}`;
+  const intro = isEn
+    ? `Annual overview of ${params.declarations.length} tax declaration${params.declarations.length > 1 ? "s" : ""}. Includes year-to-date totals (revenue, GST/QST collected and paid) and the net amount to remit or refund expected. Document to retain for accounting reconciliation and ARC / Revenu Québec audit.`
+    : `Vue annuelle de ${params.declarations.length} déclaration${params.declarations.length > 1 ? "s" : ""} fiscale${params.declarations.length > 1 ? "s" : ""}. Inclut les totaux YTD (revenu, TPS/TVQ collectées et payées) et le net à remettre ou remboursement attendu. Document à conserver pour la conciliation comptable et l'audit ARC / Revenu Québec.`;
+
+  return capture((doc) => {
+    drawHeader(doc, title, subtitle, intro);
+
+    const w = doc.page.width - 100;
+    const x = 50;
+    const isOwed = params.kpis.netToRemit >= 0;
+    const accent = isOwed ? C.amber : C.green;
+    const bg = isOwed ? C.amberLight : C.greenLight;
+
+    // ─── KPI cards (3) ─────────────────────────────────
+    const sy = doc.y;
+    const cardW = (w - 18) / 3;
+    [
+      { l: isEn ? "HT revenue" : "Revenu HT", v: params.kpis.revenueHt, c: C.green, bg: C.greenLight, sub: isEn ? "Paid invoices" : "Factures payées" },
+      { l: isEn ? "Total collected" : "Total collecté", v: params.kpis.tpsCollected + params.kpis.tvqCollected, c: C.amber, bg: C.amberLight, sub: `${isEn ? "GST" : "TPS"} ${params.kpis.tpsCollected.toFixed(2)} · ${isEn ? "QST" : "TVQ"} ${params.kpis.tvqCollected.toFixed(2)}` },
+      { l: isEn ? "Total ITC paid" : "Total CTI payés", v: params.kpis.tpsPaid + params.kpis.tvqPaid, c: C.brand, bg: C.blueLighter, sub: `${isEn ? "GST" : "TPS"} ${params.kpis.tpsPaid.toFixed(2)} · ${isEn ? "QST" : "TVQ"} ${params.kpis.tvqPaid.toFixed(2)}` },
+    ].forEach((s, i) => {
+      const xs = x + i * (cardW + 6);
+      doc.roundedRect(xs, sy, cardW, 60, 6).fill(s.bg);
+      doc.rect(xs, sy, 3, 60).fill(s.c);
+      doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7)
+        .text(s.l.toUpperCase(), xs + 10, sy + 9, { width: cardW - 20, lineBreak: false, characterSpacing: 0.5 });
+      doc.fillColor(s.c).font("Helvetica-Bold").fontSize(15)
+        .text(`${s.v.toFixed(2)} CAD`, xs + 10, sy + 21, { width: cardW - 20, lineBreak: false });
+      doc.fillColor(C.gray).font("Helvetica").fontSize(7.5)
+        .text(s.sub, xs + 10, sy + 42, { width: cardW - 20, lineBreak: false });
+    });
+    doc.y = sy + 70;
+
+    // ─── Net à remettre encadré ──────────────────────
+    const ny = doc.y;
+    doc.roundedRect(x, ny, w, 50, 6).fillAndStroke(bg, accent);
+    doc.rect(x, ny, 4, 50).fill(accent);
+    doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(8)
+      .text((isOwed
+        ? (isEn ? "NET TO REMIT TO TAX AUTHORITIES" : "NET À REMETTRE AUX AUTORITÉS FISCALES")
+        : (isEn ? "REFUND EXPECTED" : "REMBOURSEMENT ATTENDU")
+      ).toUpperCase(), x + 18, ny + 12, { characterSpacing: 0.5 });
+    doc.fillColor(accent).font("Helvetica-Bold").fontSize(22)
+      .text(`${Math.abs(params.kpis.netToRemit).toFixed(2)} CAD`, x + 18, ny + 24, { lineBreak: false });
+    doc.y = ny + 50 + 14;
+
+    if (params.declarations.length === 0) {
+      sectionTitle(doc, isEn ? "Declarations" : "Déclarations");
+      doc.fillColor(C.gray).fontSize(10)
+        .text(isEn ? "No declaration registered." : "Aucune déclaration enregistrée.",
+          x, doc.y, { align: "center", width: w });
+      return;
+    }
+
+    // ─── Table des déclarations — largeurs explicites somme = tw ─────
+    sectionTitle(doc, isEn ? "Detail of declarations" : "Détail des déclarations");
+    const tx = x;
+    const tw = w;
+    // Somme = 60+85+95+62+45+45+55+65 = 512
+    const cols = [
+      { label: isEn ? "Period" : "Période", w: 60 },
+      { label: isEn ? "Type" : "Type", w: 85 },
+      { label: isEn ? "Dates" : "Dates", w: 95 },
+      { label: isEn ? "Revenue HT" : "Revenu HT", w: 62 },
+      { label: isEn ? "GST" : "TPS", w: 45 },
+      { label: isEn ? "QST" : "TVQ", w: 45 },
+      { label: isEn ? "Total" : "Total", w: 55 },
+      { label: isEn ? "Status" : "Statut", w: 65 },
+    ];
+
+    const drawHead = () => {
+      const hy = doc.y;
+      doc.rect(tx, hy, tw, 22).fill(C.navy);
+      let cx = tx + 6;
+      doc.fillColor(C.white).font("Helvetica-Bold").fontSize(7.5);
+      cols.forEach((c) => {
+        doc.text(c.label.toUpperCase(), cx, hy + 7,
+          { width: c.w - 6, lineBreak: false, characterSpacing: 0.5 });
+        cx += c.w;
+      });
+      doc.y = hy + 22;
+    };
+    ensureSpace(doc, 30);
+    drawHead();
+
+    let alt = false;
+    const rowH = 24;
+    for (const r of params.declarations) {
+      ensureSpace(doc, rowH + 2);
+      if (doc.y < HEADER_H + 30) drawHead();
+      const rowY = doc.y;
+      if (alt) doc.rect(tx, rowY, tw, rowH).fill(C.grayLight);
+      alt = !alt;
+
+      const statusBg = r.status === "confirmed" ? C.green : r.status === "submitted" ? C.brand : C.amber;
+      const statusTxt = r.status === "draft" ? (isEn ? "Draft" : "Brouillon")
+        : r.status === "submitted" ? (isEn ? "Submitted" : "Soumise")
+        : r.status === "confirmed" ? (isEn ? "Confirmed" : "Confirmée")
+        : r.status;
+
+      let cx = tx + 6;
+      doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(9)
+        .text(sanitize(r.periodLabel), cx, rowY + 8, { width: cols[0].w - 6, lineBreak: false, ellipsis: true });
+      cx += cols[0].w;
+      doc.fillColor(C.text).font("Helvetica").fontSize(8)
+        .text(sanitize(r.periodType), cx, rowY + 8, { width: cols[1].w - 6, lineBreak: false, ellipsis: true });
+      cx += cols[1].w;
+      doc.fillColor(C.gray).fontSize(7.5)
+        .text(`${r.periodStart.toLocaleDateString(localeTag)} → ${r.periodEnd.toLocaleDateString(localeTag)}`,
+          cx, rowY + 9, { width: cols[2].w - 6, lineBreak: false });
+      cx += cols[2].w;
+      doc.fillColor(C.text).font("Helvetica-Bold").fontSize(8.5)
+        .text(r.totalRevenueHt.toFixed(2), cx, rowY + 8, { width: cols[3].w - 6, lineBreak: false, align: "right" });
+      cx += cols[3].w;
+      doc.fillColor(C.brand).font("Helvetica").fontSize(8)
+        .text(r.totalTps.toFixed(2), cx, rowY + 8, { width: cols[4].w - 6, lineBreak: false, align: "right" });
+      cx += cols[4].w;
+      doc.fillColor(C.navy).text(r.totalTvq.toFixed(2), cx, rowY + 8,
+        { width: cols[5].w - 6, lineBreak: false, align: "right" });
+      cx += cols[5].w;
+      doc.fillColor(C.amber).font("Helvetica-Bold").fontSize(8.5)
+        .text(r.totalTaxes.toFixed(2), cx, rowY + 8, { width: cols[6].w - 6, lineBreak: false, align: "right" });
+      cx += cols[6].w;
+      drawStatusBadge(doc, tx + tw - 6, rowY + 7, statusTxt.toUpperCase(), statusBg);
+
+      doc.y = rowY + rowH;
+    }
+  });
+}

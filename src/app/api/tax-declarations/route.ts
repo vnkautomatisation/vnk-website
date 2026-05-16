@@ -12,7 +12,10 @@ const createSchema = z.object({
   periodStart: z.string().min(1),
   periodEnd: z.string().min(1),
   notes: z.string().optional(),
-});
+}).refine(
+  (d) => new Date(d.periodEnd) >= new Date(d.periodStart),
+  { message: "La date de fin doit être après la date de début", path: ["periodEnd"] },
+);
 
 export async function GET() {
   const session = await auth();
@@ -36,7 +39,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Données invalides" }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.errors[0].message ?? "Données invalides" }, { status: 400 });
   }
 
   // Calculer le revenu et les taxes pour la periode

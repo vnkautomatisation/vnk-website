@@ -18,6 +18,7 @@ import {
   FileText,
   Building2,
   Tag,
+  FileDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -428,6 +429,20 @@ export function ExpensesView({
   const filteredWithReceipt = filtered.filter((e) => e.receiptUrl).length;
   const hasActiveFilter = !!(searchQuery || categoryFilter !== "all" || dateFrom || dateTo);
 
+  // Export PDF — utilise les filtres serveur (from, to, category) ; la recherche libre n'est pas envoyée
+  // Pas de window.open (qui crée un onglet vide) : on déclenche le download via un anchor invisible
+  const exportPdf = () => {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set("from", dateFrom);
+    if (dateTo) params.set("to", dateTo);
+    if (categoryFilter !== "all") params.set("category", categoryFilter);
+    const url = `/api/expenses/export/pdf${params.toString() ? `?${params.toString()}` : ""}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.rel = "noopener";
+    a.click();
+  };
+
   // Actions menu pour EntityCard
   const getActions = useCallback((e: Expense) => [
     ...(e.receiptUrl ? [{ label: "Voir le reçu", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => setPreviewExpense(e) }] : []),
@@ -595,10 +610,18 @@ export function ExpensesView({
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button onClick={exportCsv} size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
-              <Download className="h-3.5 w-3.5 mr-1.5" />
-              Exporter CSV
-            </Button>
+            <ActionTooltip label="Exporter en PDF avec KPI + tableau formaté (filtres actifs appliqués)">
+              <Button onClick={exportPdf} size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
+                <FileDown className="h-3.5 w-3.5 mr-1.5" />
+                Exporter PDF
+              </Button>
+            </ActionTooltip>
+            <ActionTooltip label="Exporter en CSV pour Excel / comptable (filtres actifs appliqués)">
+              <Button onClick={exportCsv} size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                Exporter CSV
+              </Button>
+            </ActionTooltip>
             <Button onClick={() => { resetForm(); setCreateOpen(true); }} size="sm" variant="secondary" className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold">
               <Plus className="h-3.5 w-3.5 mr-1" />
               Nouvelle dépense
