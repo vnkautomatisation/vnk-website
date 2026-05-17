@@ -12,7 +12,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { ChevronDown, Menu, X, ChevronsUpDown, ChevronsDownUp } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type NavItem = {
@@ -39,10 +39,11 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Logique POSITIVE : on stocke quels groupes sont OUVERTS.
-  // Default : tous ouverts (multi-open natif, n'importe lequel peut etre referme/rouvert).
-  // v2 = nouvelle clé pour invalider tout ancien state corrompu d'une version précédente.
-  const positiveKey = `${storageKey}.v2`;
+  // Logique ACCORDEON : un seul groupe ouvert a la fois.
+  // Ouvrir un groupe ferme automatiquement les autres. Le groupe contenant
+  // la page active reste toujours visible (force-ouvert via isGroupOpen).
+  // v3 = nouvelle cle pour invalider tout ancien state d'une version multi-open.
+  const accordionKey = `${storageKey}.v3`;
 
   const allGroupNames = useMemo(() => sections.map((s) => s.group), [sections]);
 
@@ -67,59 +68,43 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
   const activeItem = allItems.find((it) => it.href === activeHref);
   const activeGroup = sections.find((s) => s.items.some((it) => it.href === activeHref));
 
-  // Init : tous ouverts (server-stable, hydration-safe)
-  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(allGroupNames));
+  // Init : aucun groupe explicitement ouvert. Le groupe ACTIF est force-ouvert
+  // par isGroupOpen() (UX : on doit toujours voir ou on est).
+  // Server-stable (vide -> meme rendu cote serveur et client avant hydration).
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
-  // Hydratation : charger préférences user depuis localStorage
+  // Hydratation : charger preference user depuis localStorage
   useEffect(() => {
     setHydrated(true);
     try {
-      const raw = localStorage.getItem(positiveKey);
+      const raw = localStorage.getItem(accordionKey);
       if (raw) {
-        const parsed = JSON.parse(raw) as string[];
-        // Filtre : ne garder que les groupes encore existants
-        const valid = parsed.filter((g) => allGroupNames.includes(g));
-        setOpenGroups(new Set(valid));
+        const parsed = JSON.parse(raw) as string | null;
+        if (parsed && allGroupNames.includes(parsed)) setOpenGroup(parsed);
       }
     } catch { /* ignore */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [positiveKey]);
+  }, [accordionKey]);
 
-  const persist = (next: Set<string>) => {
-    try { localStorage.setItem(positiveKey, JSON.stringify(Array.from(next))); } catch { /* ignore */ }
+  const persist = (next: string | null) => {
+    try { localStorage.setItem(accordionKey, JSON.stringify(next)); } catch { /* ignore */ }
   };
 
-  // Toggle d'UN groupe — totalement indépendant des autres. Multi-open garanti.
+  // ACCORDEON : ouvrir un groupe ferme tous les autres. Re-cliquer ferme.
   const toggleGroup = (group: string) => {
-    setOpenGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(group)) next.delete(group); else next.add(group);
+    setOpenGroup((prev) => {
+      const next = prev === group ? null : group;
       persist(next);
       return next;
     });
   };
 
-  // Vrai si AU MOINS UN groupe (autre que actif) est ouvert
-  const someOpen = sections.some((s) => openGroups.has(s.group) && s !== activeGroup);
-  const toggleAll = () => {
-    if (someOpen) {
-      // Tout fermer (sauf groupe actif)
-      const next = activeGroup ? new Set<string>([activeGroup.group]) : new Set<string>();
-      setOpenGroups(next);
-      persist(next);
-    } else {
-      // Tout ouvrir
-      const next = new Set(allGroupNames);
-      setOpenGroups(next);
-      persist(next);
-    }
-  };
-
-  // Le groupe ACTIF est toujours visiblement ouvert (UX : on doit voir où on est)
+  // Le groupe ACTIF est toujours visiblement ouvert (UX : on doit voir ou on est).
+  // Sinon, seul le groupe explicitement ouvert l'est.
   const isGroupOpen = (group: string, section: NavSection) => {
     if (section === activeGroup) return true;
-    return openGroups.has(group);
+    return openGroup === group;
   };
 
   // Fermer le drawer mobile à la navigation
@@ -182,16 +167,6 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="px-3 py-2 border-b shrink-0">
-              <button
-                type="button"
-                onClick={toggleAll}
-                className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition"
-              >
-                {someOpen ? <ChevronsDownUp className="h-3 w-3" /> : <ChevronsUpDown className="h-3 w-3" />}
-                {someOpen ? "Tout replier" : "Tout déplier"}
-              </button>
-            </div>
             <nav
               aria-label={`Navigation ${moduleLabel}`}
               className="flex-1 overflow-y-auto p-2 overscroll-contain"
@@ -226,21 +201,6 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
               <ModuleIcon className="h-4 w-4" />
               {moduleLabel}
             </h2>
-          </div>
-
-          {/* Toolbar : Tout déplier / replier */}
-          <div className="px-3 py-1.5 border-b shrink-0 flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Navigation</span>
-            <button
-              type="button"
-              onClick={toggleAll}
-              className="text-[11px] text-muted-foreground hover:text-[#0F2D52] inline-flex items-center gap-1 transition"
-              aria-label={someOpen ? "Tout replier" : "Tout déplier"}
-              title={someOpen ? "Tout replier" : "Tout déplier"}
-            >
-              {someOpen ? <ChevronsDownUp className="h-3 w-3" /> : <ChevronsUpDown className="h-3 w-3" />}
-              <span>{someOpen ? "Replier" : "Déplier"}</span>
-            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto admin-sidebar-scroll p-2">
