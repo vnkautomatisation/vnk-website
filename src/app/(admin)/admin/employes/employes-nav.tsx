@@ -5,7 +5,7 @@ import {
   Users, Network, Shield, Briefcase, FileText, FileSignature,
   Clock, Calculator, CalendarDays, GitBranch, BadgeCheck, AlertTriangle,
   GraduationCap, BarChart, Award, MessageSquare, Megaphone, Cake,
-  LogOut, FileBarChart, ScrollText,
+  LogOut, FileBarChart, ScrollText, Laptop,
 } from "lucide-react";
 import { ModuleSidebarNav, type NavSection } from "@/components/admin/module-sidebar-nav";
 
@@ -43,6 +43,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/employes/permis", label: "Permis", icon: BadgeCheck },
       { href: "/admin/employes/formations", label: "Formations", icon: GraduationCap },
+      { href: "/admin/employes/equipement", label: "Équipement", icon: Laptop },
       { href: "/admin/employes/onboarding", label: "Onboarding", icon: ScrollText },
     ],
   },

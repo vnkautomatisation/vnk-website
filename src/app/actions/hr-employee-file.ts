@@ -274,6 +274,7 @@ export async function upsertEquipmentAction(input: z.infer<typeof equipmentSchem
     : await prisma.assignedEquipment.create({ data, select: { id: true } });
 
   await logAudit({ adminId: actorId, action: parsed.data.id ? "update" : "create", entityType: "assigned_equipment", entityId: row.id });
+  revalidatePath("/admin/employes/equipement");
   revalidatePath("/admin/mon-espace/equipement");
   revalidatePath("/admin/employes");
   return { success: true, data: { id: row.id } };
@@ -287,7 +288,19 @@ export async function returnEquipmentAction(input: { id: number; condition: "goo
     data: { returnedAt: new Date(), conditionOnReturn: input.condition },
   });
   await logAudit({ adminId: actorId, action: "update", entityType: "assigned_equipment", entityId: input.id, changes: { returned: true, condition: input.condition } });
+  revalidatePath("/admin/employes/equipement");
+  revalidatePath("/admin/mon-espace/equipement");
   revalidatePath("/admin/employes");
+  return { success: true };
+}
+
+export async function deleteEquipmentAction(input: { id: number }): Promise<Result> {
+  const actorId = await requireHrWrite();
+  if (!actorId) return { success: false, error: "Non autorisé" };
+  await prisma.assignedEquipment.delete({ where: { id: input.id } });
+  await logAudit({ adminId: actorId, action: "delete", entityType: "assigned_equipment", entityId: input.id });
+  revalidatePath("/admin/employes/equipement");
+  revalidatePath("/admin/mon-espace/equipement");
   return { success: true };
 }
 

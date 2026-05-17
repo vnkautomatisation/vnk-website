@@ -12,12 +12,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { upsertAnnouncementAction, publishAnnouncementAction, deleteAnnouncementAction } from "@/app/actions/hr-communications";
+import { MarkdownEditor } from "@/components/admin/markdown-editor";
 
 type Ann = {
   id: number; title: string; body: string; category: string;
   pinned: boolean; publishedAt: string | null; expiresAt: string | null;
   audienceType: string; audienceTeamId: number | null; audienceRoleId: number | null;
   author: { fullName: string | null; email: string } | null;
+  _count?: { reads: number };
 };
 
 export function AnnouncementsAdminView({ announcements, teams, roles }: {
@@ -51,6 +53,7 @@ export function AnnouncementsAdminView({ announcements, teams, roles }: {
                     {a.pinned && <Pin className="h-3 w-3 text-amber-500" />}
                     <h3 className="font-bold text-sm">{a.title}</h3>
                     <Badge variant="outline" className="text-[10px] capitalize">{a.category}</Badge>
+                    <Badge variant="outline" className="text-[10px]">{a._count?.reads ?? 0} vue{(a._count?.reads ?? 0) > 1 ? "s" : ""}</Badge>
                     {!a.publishedAt && <Badge className="text-[10px] bg-slate-100 text-slate-700">Brouillon</Badge>}
                     {a.publishedAt && new Date(a.publishedAt) <= new Date() && <Badge className="text-[10px] bg-emerald-100 text-emerald-700">PubliÃ©</Badge>}
                   </div>
@@ -199,7 +202,7 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Corps *</Label>
-            <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={8} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y" />
+            <MarkdownEditor value={body} onChange={setBody} placeholder="Contenu de l'annonce (Markdown supporté)" helpText="Markdown supporté : **gras**, *italique*, # titres, - listes, [lien](url)" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">

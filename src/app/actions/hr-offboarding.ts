@@ -153,3 +153,59 @@ export async function markRecordOfEmploymentSentAction(input: { adminId: number 
   revalidatePath("/admin/employes/offboarding");
   return { success: true };
 }
+
+// Clôture définitive : marque l'offboarding complete + désactive le compte admin + invalide ses sessions.
+export async function completeOffboardingAction(input: { id: number }): Promise<Result> {
+  const actorId = await requireHrWrite();
+  if (!actorId) return { success: false, error: "Non autorisé" };
+
+  try {
+    const offboarding = await prisma.offboardingChecklist.findUnique({
+      where: { id: input.id },
+      include: { admin: { select: { id: true, fullName: true, email: true, isActive: true, internalNotes: true } } },
+    });
+    if (!offboarding) return { success: false, error: "Offboarding introuvable" };
+    if (offboarding.status === "completed") return { success: false, error: "Déjà complété" };
+
+    const prefix = "[OFFBOARDED]";
+    const existingNotes = offboarding.admin.internalNotes ?? "";
+    const newNotes = existingNotes.startsWith(prefix)
+      ? existingNotes
+      : `${prefix} ${new Date().toISOString().slice(0, 10)}${existingNotes ? ` — ${existingNotes}` : ""}`;
+
+    await prisma.$transaction([
+      prisma.offboardingChecklist.update({
+        where: { id: input.id },
+        data: { status: "completed", completedAt: new Date() },
+      }),
+      prisma.admin.update({
+        where: { id: offboarding.adminId },
+        data: {
+          isActive: false,
+          endDate: offboarding.lastDay,
+          internalNotes: newNotes,
+          sessionsInvalidatedAt: new Date(),
+        },
+      }),
+      prisma.adminSession.deleteMany({ where: { adminId: offboarding.adminId } }),
+    ]);
+
+    await logAudit({
+      adminId: actorId,
+      action: "update",
+      entityType: "offboarding_checklist",
+      entityId: offboarding.id,
+      changes: {
+        status: "completed",
+        adminDeactivated: offboarding.adminId,
+        adminEmail: offboarding.admin.email,
+      },
+    });
+
+    revalidatePath("/admin/employes/offboarding");
+    revalidatePath("/admin/settings/team");
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Erreur" };
+  }
+}

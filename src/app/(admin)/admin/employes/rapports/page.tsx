@@ -2,9 +2,11 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { FileBarChart, TrendingUp, Users, AlertTriangle, Clock, Calendar } from "lucide-react";
+import { FileBarChart, TrendingUp, Users, AlertTriangle, Clock, Calendar, FileText, FileDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { getHrReportData } from "@/lib/services/hr-reports";
 
 export default async function ReportsPage() {
   const session = await auth();
@@ -15,49 +17,52 @@ export default async function ReportsPage() {
   const oneYearFromNow = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
 
   const [
-    totalActive, totalInactive,
-    deactivatedThisYear, hiredThisYear,
-    byDepartment, byPosition,
-    pendingLeaves, expiringLicenses,
-    openTimeClocks, totalPayStubs,
+    report,
+    byDepartment,
+    expiringLicenses,
+    openTimeClocks,
+    totalPayStubs,
     cnesstThisYear,
   ] = await Promise.all([
-    prisma.admin.count({ where: { isActive: true } }),
-    prisma.admin.count({ where: { isActive: false } }),
-    prisma.admin.count({ where: { isActive: false, endDate: { gte: yearAgo } } }),
-    prisma.admin.count({ where: { startDate: { gte: yearAgo } } }),
+    getHrReportData(),
     prisma.admin.groupBy({
       by: ["department"],
       where: { isActive: true, department: { not: null } },
       _count: { _all: true },
     }),
-    prisma.admin.findMany({
-      where: { isActive: true, positionId: { not: null } },
-      select: { position: { select: { name: true } } },
-    }).then((list) => {
-      const m = new Map<string, number>();
-      for (const a of list) if (a.position?.name) m.set(a.position.name, (m.get(a.position.name) ?? 0) + 1);
-      return Array.from(m.entries()).map(([name, count]) => ({ name, count }));
-    }),
-    prisma.leaveRequest.count({ where: { status: "pending" } }),
     prisma.professionalLicense.count({ where: { expiresAt: { gte: today, lte: oneYearFromNow } } }),
     prisma.timeClock.count({ where: { clockOut: null } }),
     prisma.payStub.count(),
     prisma.cnesstIncident.count({ where: { incidentDate: { gte: yearAgo } } }),
   ]);
 
-  // Calcul turnover
-  // Effectif moyen sur la période = (effectif début + effectif fin) / 2
-  // début = totalActive + deactivatedThisYear (avant les départs)
-  // fin = totalActive
-  const avgHeadcount = (totalActive + (totalActive + deactivatedThisYear)) / 2;
-  const turnoverPct = avgHeadcount > 0 ? ((deactivatedThisYear / avgHeadcount) * 100).toFixed(1) : "0";
+  const totalActive = report.headcountActive;
+  const totalInactive = report.headcountInactive;
+  const hiredThisYear = report.hiresLast12Months;
+  const deactivatedThisYear = report.departuresLast12Months;
+  const turnoverPct = report.turnoverPct.toFixed(1);
+  const pendingLeaves = report.pendingLeaves;
+  const byPosition = report.positionsBreakdown;
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-bold flex items-center gap-2"><FileBarChart className="h-5 w-5 text-[#0F2D52]" />Rapports RH</h1>
-        <p className="text-sm text-muted-foreground">People analytics · indicateurs clés sur les 12 derniers mois.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2"><FileBarChart className="h-5 w-5 text-[#0F2D52]" />Rapports RH</h1>
+          <p className="text-sm text-muted-foreground">People analytics · indicateurs clés sur les 12 derniers mois.</p>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <Button variant="outline" size="sm" asChild>
+            <a href="/api/admin/reports/hr/pdf" target="_blank" rel="noopener">
+              <FileText className="h-4 w-4 mr-1.5 text-[#0F2D52]" />Exporter PDF
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href="/api/admin/reports/hr/csv">
+              <FileDown className="h-4 w-4 mr-1.5 text-[#0F2D52]" />Exporter CSV
+            </a>
+          </Button>
+        </div>
       </div>
 
       {/* KPIs principaux */}

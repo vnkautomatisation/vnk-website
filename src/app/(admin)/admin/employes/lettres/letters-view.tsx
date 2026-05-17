@@ -6,7 +6,6 @@ import { promptDialog } from "@/components/admin/prompt-dialog";
 import { FileUploadInput } from "@/components/admin/file-upload-input";
 import { Mail, CheckCircle2, XCircle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -97,9 +96,15 @@ export function LettersView({ requests }: { requests: Req[] }) {
                     <p className="font-medium">{r.admin.fullName || r.admin.email}</p>
                     <p className="text-xs text-muted-foreground">{PURPOSE[r.purpose]} · {new Date(r.createdAt).toLocaleDateString("fr-CA")}</p>
                   </div>
-                  {r.letterUrl && (
+                  {r.status === "issued" && (
                     <Button asChild size="sm" variant="outline">
-                      <a href={r.letterUrl} target="_blank" rel="noopener"><Download className="h-3.5 w-3.5 mr-1" />PDF</a>
+                      <a
+                        href={r.letterUrl || `/api/admin/employment-letters/${r.id}/pdf`}
+                        target="_blank"
+                        rel="noopener"
+                      >
+                        <Download className="h-3.5 w-3.5 mr-1" />Télécharger PDF
+                      </a>
                     </Button>
                   )}
                 </div>

@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { logSecurityEvent } from "@/lib/security/security-events";
+import { calculateWorkingDays } from "@/lib/services/leave-days";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -38,7 +39,9 @@ export async function createLeaveRequestAction(input: z.infer<typeof requestSche
   const end = new Date(parsed.data.endDate);
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return { success: false, error: "Dates invalides" };
   if (end < start) return { success: false, error: "Fin avant début" };
-  const days = Math.ceil((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  // Calcul serveur : exclut weekends + jours fériés QC (table Holiday)
+  const days = await calculateWorkingDays(start, end);
+  if (days <= 0) return { success: false, error: "Aucun jour ouvrable dans la plage sélectionnée" };
 
   const r = await prisma.leaveRequest.create({
     data: {

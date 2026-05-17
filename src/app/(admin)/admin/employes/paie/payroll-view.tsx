@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Calculator, Plus, Lock, CheckCircle2, FileDown, Calendar, DollarSign, ChevronLeft, ChevronRight, Search,
+  Calculator, Plus, Lock, CheckCircle2, Calendar, DollarSign, ChevronLeft, ChevronRight, Search, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -209,6 +209,11 @@ function StubsList({ stubs, periods }: { stubs: Stub[]; periods: Period[] }) {
                   Brouillon
                 </Badge>
               )}
+              <Button asChild size="icon" variant="ghost" className="h-7 w-7" aria-label="Télécharger PDF">
+                <a href={`/api/admin/pay-stubs/${s.id}/pdf`} target="_blank" rel="noopener">
+                  <Download className="h-3.5 w-3.5" />
+                </a>
+              </Button>
             </div>
           ))}
         </div>
@@ -297,9 +302,16 @@ function MyStubCard({ stub }: { stub: Stub }) {
             {new Date(stub.period.startDate).toLocaleDateString("fr-CA")} → {new Date(stub.period.endDate).toLocaleDateString("fr-CA")}
           </h3>
         </div>
-        <div className="text-right">
-          <p className="text-xs uppercase tracking-wider opacity-80">Net à payer</p>
-          <p className="text-2xl font-bold tabular-nums">{Number(stub.netPay).toFixed(2)} $</p>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-xs uppercase tracking-wider opacity-80">Net à payer</p>
+            <p className="text-2xl font-bold tabular-nums">{Number(stub.netPay).toFixed(2)} $</p>
+          </div>
+          <Button asChild size="sm" variant="secondary" className="bg-white/15 text-white hover:bg-white/25 border-0 h-8">
+            <a href={`/api/admin/pay-stubs/${stub.id}/pdf`} target="_blank" rel="noopener">
+              <Download className="h-3.5 w-3.5 mr-1" />PDF
+            </a>
+          </Button>
         </div>
       </div>
       <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">

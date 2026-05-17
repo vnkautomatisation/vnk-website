@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { upsertHrPolicyAction } from "@/app/actions/hr-communications";
+import { MarkdownEditor } from "@/components/admin/markdown-editor";
 
 type Policy = {
   id: number; key: string; title: string; version: string;
@@ -136,7 +137,7 @@ function PolicyDialog({ open, existing, onClose, onSaved }: { open: boolean; exi
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Contenu Markdown *</Label>
-            <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={14} className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-mono resize-y" />
+            <MarkdownEditor value={body} onChange={setBody} rows={12} placeholder="Texte de la politique" helpText="Markdown supporté" />
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">

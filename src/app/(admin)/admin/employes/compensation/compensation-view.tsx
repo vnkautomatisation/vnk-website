@@ -366,8 +366,8 @@ function BonusDialog({ open, employees, onClose, onSaved }: { open: boolean; emp
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md p-0 overflow-hidden">
-        <div className="bg-gradient-to-br from-amber-600 to-amber-700 text-white px-5 py-4">
-          <DialogHeader><DialogTitle className="text-base text-white flex items-center gap-2"><Gift className="h-4 w-4" />Nouveau bonus</DialogTitle></DialogHeader>
+        <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
+          <DialogHeader><DialogTitle className="text-base text-white flex items-center gap-2"><Gift className="h-4 w-4 text-amber-300" />Nouveau bonus</DialogTitle></DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

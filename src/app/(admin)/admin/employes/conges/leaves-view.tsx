@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { promptDialog } from "@/components/admin/prompt-dialog";
@@ -46,12 +46,21 @@ const STATUS_META: Record<string, { label: string; color: string }> = {
   cancelled: { label: "Annulée", color: "bg-gray-100 text-gray-600" },
 };
 
+type LeaveBalance = {
+  vacationDaysTotal: number;
+  vacationDaysTaken: number;
+  vacationDaysPlanned: number;
+  vacationDaysRemaining: number;
+  sickDaysTaken: number;
+};
+
 export function LeavesView({
-  myRequests, pendingReviews, isReviewer,
+  myRequests, pendingReviews, isReviewer, balance,
 }: {
   myRequests: Request[];
   pendingReviews: Request[];
   isReviewer: boolean;
+  balance?: LeaveBalance;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<"my" | "review">("my");
@@ -75,6 +84,30 @@ export function LeavesView({
           <Plus className="h-4 w-4 mr-1.5" />Nouvelle demande
         </Button>
       </div>
+
+      {balance && (
+        <Card className="p-4 bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white border-0">
+          <h3 className="text-xs uppercase tracking-wider opacity-80">Mon solde de congés</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2 text-sm">
+            <div>
+              <p className="text-2xl font-bold tabular-nums">{balance.vacationDaysRemaining}</p>
+              <p className="text-xs opacity-80">jours dispo</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold tabular-nums">{balance.vacationDaysTaken}</p>
+              <p className="text-xs opacity-80">jours pris</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold tabular-nums">{balance.vacationDaysPlanned}</p>
+              <p className="text-xs opacity-80">jours plannifiés</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold tabular-nums">{balance.sickDaysTaken}</p>
+              <p className="text-xs opacity-80">jours maladie</p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <SettingsTabs tabs={TABS} active={tab} onChange={setTab} />
 
@@ -203,6 +236,23 @@ function CreateLeaveDialog({ open, onClose, onSaved }: { open: boolean; onClose:
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState(false);
 
+  // Prévisualisation locale : jours ouvrables (hors weekends). Le calcul exact
+  // (incluant jours fériés QC) est fait côté serveur.
+  const estimatedDays = useMemo(() => {
+    if (!start || !end) return 0;
+    const s = new Date(start + "T00:00:00");
+    const e = new Date(end + "T00:00:00");
+    if (isNaN(s.getTime()) || isNaN(e.getTime()) || s > e) return 0;
+    let count = 0;
+    const cursor = new Date(s);
+    while (cursor <= e) {
+      const dow = cursor.getDay();
+      if (dow !== 0 && dow !== 6) count++;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return count;
+  }, [start, end]);
+
   const submit = async () => {
     setPending(true);
     const r = await createLeaveRequestAction({
@@ -250,6 +300,10 @@ function CreateLeaveDialog({ open, onClose, onSaved }: { open: boolean; onClose:
               <Label className="text-xs uppercase tracking-wider font-semibold">Fin</Label>
               <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="h-9" />
             </div>
+          </div>
+          <div className="text-xs text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
+            Estimation : <strong className="tabular-nums">{estimatedDays}</strong> jour{estimatedDays > 1 ? "s" : ""} ouvrable{estimatedDays > 1 ? "s" : ""}
+            <span className="opacity-70"> (hors weekends — les jours fériés QC seront déduits côté serveur)</span>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Motif (optionnel)</Label>

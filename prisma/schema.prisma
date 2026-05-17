@@ -77,6 +77,7 @@ model Admin {
   department        String?  // « Comptabilité », « Ventes », « Technique »
   startDate         DateTime? @map("start_date") @db.Date
   endDate           DateTime? @map("end_date") @db.Date
+  birthdate         DateTime? @map("birthdate") @db.Date // pour anniversaires + dossier employé
   internalNotes     String?  @map("internal_notes")
 
   // ── Sous-équipes : appartenance à un Team + supérieur hiérarchique ──
@@ -127,6 +128,7 @@ model Admin {
   bonusApprovals           BonusRecord[] @relation("BonusApprovals")
   workSchedule             WorkSchedule? @relation("WorkSchedule")
   announcements            Announcement[] @relation("Announcements")
+  announcementReads        AnnouncementRead[] @relation("AnnouncementReadsByAdmin")
   taxDocuments             TaxDocument[] @relation("TaxDocuments")
   taxDocumentsIssued       TaxDocument[] @relation("TaxDocumentsIssued")
   letterRequests           EmploymentLetterRequest[] @relation("LetterRequests")
@@ -703,6 +705,7 @@ model Announcement {
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
   author       Admin    @relation("Announcements", fields: [authorId], references: [id], onDelete: Cascade)
+  reads        AnnouncementRead[] @relation("AnnouncementReads")
 
   @@index([publishedAt])
   @@map("announcements")
@@ -713,6 +716,9 @@ model AnnouncementRead {
   announcementId  Int      @map("announcement_id")
   adminId         Int      @map("admin_id")
   readAt          DateTime @default(now()) @map("read_at")
+
+  announcement    Announcement @relation("AnnouncementReads", fields: [announcementId], references: [id], onDelete: Cascade)
+  admin           Admin        @relation("AnnouncementReadsByAdmin", fields: [adminId], references: [id], onDelete: Cascade)
 
   @@unique([announcementId, adminId])
   @@map("announcement_reads")

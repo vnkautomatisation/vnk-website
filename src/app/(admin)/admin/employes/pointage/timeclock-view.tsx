@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { promptDialog } from "@/components/admin/prompt-dialog";
 import {
-  Clock, Play, Square, Plus, Trash2, CheckCircle2, XCircle, Filter,
+  Clock, Play, Square, Plus, Trash2, CheckCircle2, XCircle, Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +62,9 @@ export function TimeclockView({
   const [tab, setTab] = useState<"mine" | "review">("mine");
   const [manualOpen, setManualOpen] = useState(false);
   const [selectedToApprove, setSelectedToApprove] = useState<Set<number>>(new Set());
+  const [reviewSearch, setReviewSearch] = useState("");
+  const [reviewDateFrom, setReviewDateFrom] = useState("");
+  const [reviewDateTo, setReviewDateTo] = useState("");
 
   const TABS: TabItem<"mine" | "review">[] = [
     { key: "mine", label: "Mon pointage", icon: Clock },
@@ -76,6 +79,21 @@ export function TimeclockView({
     const pending = myEntries.filter((e) => !e.approvedAt && e.clockOut).reduce((s, e) => s + (e.durationMin ?? 0), 0);
     return { total, work, approved, pending };
   }, [myEntries]);
+
+  // File de revue : entrées fermées + filtres (recherche employé, plage de dates)
+  const reviewEntriesAll = useMemo(() => allEntries.filter((e) => e.clockOut), [allEntries]);
+  const reviewEntriesFiltered = useMemo(() => {
+    const q = reviewSearch.trim().toLowerCase();
+    return reviewEntriesAll.filter((entry) => {
+      if (q) {
+        const name = (entry.admin?.fullName || entry.admin?.email || "").toLowerCase();
+        if (!name.includes(q)) return false;
+      }
+      if (reviewDateFrom && new Date(entry.clockIn) < new Date(reviewDateFrom)) return false;
+      if (reviewDateTo && new Date(entry.clockIn) > new Date(reviewDateTo + "T23:59:59")) return false;
+      return true;
+    });
+  }, [reviewEntriesAll, reviewSearch, reviewDateFrom, reviewDateTo]);
 
   const handleClockIn = async () => {
     const r = await clockInAction({});
@@ -182,9 +200,40 @@ export function TimeclockView({
               </Button>
             </div>
           )}
+          <Card className="p-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={reviewSearch}
+                  onChange={(e) => setReviewSearch(e.target.value)}
+                  placeholder="Rechercher employé…"
+                  className="h-9 text-sm pl-7"
+                />
+              </div>
+              <Input
+                type="date"
+                value={reviewDateFrom}
+                onChange={(e) => setReviewDateFrom(e.target.value)}
+                aria-label="Du"
+                className="h-9 text-sm"
+              />
+              <Input
+                type="date"
+                value={reviewDateTo}
+                onChange={(e) => setReviewDateTo(e.target.value)}
+                aria-label="Au"
+                className="h-9 text-sm"
+              />
+            </div>
+          </Card>
           <Card>
             <div className="divide-y">
-              {allEntries.filter((e) => e.clockOut).map((e) => (
+              {reviewEntriesAll.length === 0 ? (
+                <div className="p-8 text-center text-sm text-muted-foreground">Aucune entrée à réviser.</div>
+              ) : reviewEntriesFiltered.length === 0 ? (
+                <div className="p-8 text-center text-sm text-muted-foreground">Aucun résultat avec ces filtres.</div>
+              ) : reviewEntriesFiltered.map((e) => (
                 <EntryRow
                   key={e.id}
                   entry={e}
@@ -220,9 +269,6 @@ export function TimeclockView({
                   }}
                 />
               ))}
-              {allEntries.filter((e) => e.clockOut).length === 0 && (
-                <div className="p-8 text-center text-sm text-muted-foreground">Aucune entrÃ©e Ã  rÃ©viser.</div>
-              )}
             </div>
           </Card>
         </div>

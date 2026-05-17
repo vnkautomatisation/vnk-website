@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { promptDialog } from "@/components/admin/prompt-dialog";
 import {
   FileSignature, Plus, Edit, Trash2, Send, CheckCircle2, AlertCircle,
-  Ban, FileText, ChevronLeft, ChevronRight, Search,
+  Ban, FileText, ChevronLeft, ChevronRight, Search, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ import {
   createContractAction, sendContractAction,
   signContractAsEmployeeAction, signContractAsEmployerAction, terminateContractAction,
 } from "@/app/actions/hr-contracts";
+import { MarkdownEditor } from "@/components/admin/markdown-editor";
 
 type Tab = "contracts" | "templates";
 type EmpLite = { id: number; fullName: string | null; email: string };
@@ -358,6 +359,7 @@ function ContractCard({
   const canSignEmployer = isHr && c.employeeSignedAt && !c.employerSignedAt && c.status !== "terminated";
   const canSend = isHr && c.status === "draft";
   const canTerminate = isHr && (c.status === "active" || c.status === "signed_employer" || c.status === "signed_employee");
+  const canDownloadPdf = c.status === "active" || (!!c.employeeSignedAt && !!c.employerSignedAt);
 
   return (
     <Card className="overflow-hidden">
@@ -419,6 +421,13 @@ function ContractCard({
           {canTerminate && (
             <Button size="sm" variant="outline" className="h-7 text-xs hover:text-destructive" onClick={onTerminate}>
               <Ban className="h-3 w-3 mr-1" />RÃ©silier
+            </Button>
+          )}
+          {canDownloadPdf && (
+            <Button asChild size="sm" variant="outline" className="h-7 text-xs">
+              <a href={`/api/admin/contracts/${c.id}/pdf`} target="_blank" rel="noopener">
+                <Download className="h-3 w-3 mr-1" />Télécharger PDF
+              </a>
             </Button>
           )}
         </div>
@@ -738,14 +747,13 @@ function TemplateDialog({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Corps Markdown *</Label>
-            <textarea
+            <MarkdownEditor
               value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={12}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-mono resize-y"
-              placeholder={"# Contrat d'embauche\n\n## Article 1 â€” Embauche\n..."}
+              onChange={setBody}
+              rows={14}
+              placeholder="Corps du contrat avec placeholders {{employeeName}}, {{startDate}}, etc."
+              helpText="Markdown + placeholders {{...}} qui seront remplacés lors de la génération du contrat"
             />
-            <p className="text-[10px] text-muted-foreground">Placeholders dispos lors de la crÃ©ation : nom employÃ©, dates, tauxâ€¦</p>
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">

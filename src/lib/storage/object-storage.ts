@@ -198,3 +198,46 @@ export async function deleteRemoteAvatar(avatarUrl: string | null | undefined): 
 export function isRemoteStorageEnabled(): boolean {
   return backend() !== "local";
 }
+
+/**
+ * Upload generique d'un buffer (PDF, etc.) — pour usage serveur direct
+ * (PDF generes server-side, exports, etc.).
+ * Sur backend "local", renvoie un dataUrl base64 (legacy stockage en BD).
+ */
+export async function uploadBuffer(opts: {
+  buffer: Buffer;
+  mime: string;
+  /** Prefixe + nom de base (ex: "tax-docs/t4-42-2024"). Sans extension. */
+  keyBase: string;
+  /** Extension forcee (sinon deduite du mime, default "bin"). */
+  ext?: string;
+}): Promise<UploadResult> {
+  const ext = opts.ext
+    ?? (opts.mime === "application/pdf" ? "pdf"
+      : opts.mime === "image/png" ? "png"
+        : opts.mime === "image/webp" ? "webp"
+          : opts.mime === "image/jpeg" ? "jpg"
+            : "bin");
+  const id = crypto.randomBytes(6).toString("hex");
+  const key = `${opts.keyBase}-${Date.now()}-${id}.${ext}`;
+
+  if (backend() === "local") {
+    return {
+      kind: "local",
+      dataUrl: `data:${opts.mime};base64,${opts.buffer.toString("base64")}`,
+    };
+  }
+
+  const res = await signedRequest({
+    method: "PUT",
+    key,
+    body: opts.buffer,
+    contentType: opts.mime,
+    cacheControl: "private, max-age=0, no-cache",
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    throw new Error(`Upload echec (${res.status}) : ${txt.slice(0, 200)}`);
+  }
+  return { kind: "remote", url: publicUrl(key), key };
+}

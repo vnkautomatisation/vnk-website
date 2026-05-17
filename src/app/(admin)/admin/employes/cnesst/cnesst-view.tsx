@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlertTriangle, Plus, Edit, FileText, Calendar, MapPin } from "lucide-react";
+import { AlertTriangle, Plus, Edit, FileText, Calendar, MapPin, Trash2, Send, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { upsertCnesstIncidentAction } from "@/app/actions/hr-cnesst";
+import { upsertCnesstIncidentAction, deleteCnesstIncidentAction, markCnesstReportedAction, markCnesstReturnedAction } from "@/app/actions/hr-cnesst";
+import { confirmDialog, promptDialog } from "@/components/admin/prompt-dialog";
 
 type Incident = {
   id: number; adminId: number; incidentDate: string; location: string;
@@ -37,6 +38,52 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
 
   const totalDaysAbsent = incidents.reduce((s, i) => s + (i.daysAbsent ?? 0), 0);
   const active = incidents.filter((i) => i.status === "declared" || i.status === "accepted").length;
+
+  const handleDelete = async (incident: Incident) => {
+    const ok = await confirmDialog({
+      title: "Supprimer cet incident ?",
+      description: "Cette action est irréversible. L'historique sera perdu.",
+      confirmLabel: "Supprimer",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    const r = await deleteCnesstIncidentAction({ id: incident.id });
+    if (r.success) { toast.success("Incident supprimé"); router.refresh(); }
+    else toast.error(r.error || "");
+  };
+
+  const handleMarkReported = async (incident: Incident) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const date = await promptDialog({
+      title: "Marquer envoyé à la CNESST",
+      label: "Date d'envoi à la CNESST (AAAA-MM-JJ)",
+      defaultValue: today,
+      placeholder: "AAAA-MM-JJ",
+      confirmLabel: "Confirmer",
+    });
+    if (date === null) return;
+    const r = await markCnesstReportedAction({ id: incident.id, date: date.trim() || today });
+    if (r.success) { toast.success("Envoi CNESST enregistré"); router.refresh(); }
+    else toast.error(r.error || "");
+  };
+
+  const handleMarkReturned = async (incident: Incident) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const date = await promptDialog({
+      title: "Retour au travail",
+      label: "Date du retour au travail (AAAA-MM-JJ)",
+      defaultValue: today,
+      placeholder: "AAAA-MM-JJ",
+      confirmLabel: "Confirmer",
+      required: true,
+    });
+    if (date === null) return;
+    const r = await markCnesstReturnedAction({ id: incident.id, date: date.trim() || today });
+    if (r.success) { toast.success("Retour enregistré"); router.refresh(); }
+    else toast.error(r.error || "");
+  };
+
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString("fr-CA", { day: "2-digit", month: "2-digit", year: "numeric" });
 
   return (
     <div className="space-y-5">
@@ -91,10 +138,45 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
                     {i.daysAbsent !== null && i.daysAbsent > 0 && (
                       <p className="text-xs text-amber-700 mt-1">Absent : {i.daysAbsent} jour{i.daysAbsent > 1 ? "s" : ""}</p>
                     )}
+                    <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                      {i.reportedToCnesstAt ? (
+                        <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700 bg-emerald-50">
+                          <Send className="h-3 w-3 mr-1" />Envoyé le {fmtDate(i.reportedToCnesstAt)}
+                        </Badge>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs border-[#0F2D52] text-[#0F2D52] hover:bg-[#0F2D52]/5"
+                          onClick={() => handleMarkReported(i)}
+                        >
+                          <Send className="h-3 w-3 mr-1" />Marquer envoyé CNESST
+                        </Button>
+                      )}
+                      {i.returnedToWorkAt ? (
+                        <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700 bg-emerald-50">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />Retour le {fmtDate(i.returnedToWorkAt)}
+                        </Badge>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs border-[#0F2D52] text-[#0F2D52] hover:bg-[#0F2D52]/5"
+                          onClick={() => handleMarkReturned(i)}
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1" />Retour au travail
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => setDialog({ open: true, existing: i })} aria-label="Modifier">
-                    <Edit className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, existing: i })} aria-label="Modifier">
+                      <Edit className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(i)} aria-label="Supprimer">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </Card>
             );

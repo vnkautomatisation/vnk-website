@@ -16,10 +16,49 @@ export default async function BirthdaysPage() {
   const admins = await prisma.admin.findMany({
     where: { isActive: true },
     select: {
-      id: true, fullName: true, email: true, avatarUrl: true, startDate: true,
+      id: true, fullName: true, email: true, avatarUrl: true, startDate: true, birthdate: true,
       position: { select: { name: true } },
     },
   });
+
+  // Anniversaires de naissance (≤ 30 jours)
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  type BirthdayItem = {
+    id: number;
+    fullName: string | null;
+    email: string;
+    avatarUrl: string | null;
+    positionName: string | null;
+    nextBirthday: Date;
+    daysUntil: number;
+    turningAge: number;
+    isToday: boolean;
+  };
+  const birthdays: BirthdayItem[] = admins
+    .filter((e) => e.birthdate)
+    .map((e) => {
+      const bd = new Date(e.birthdate!);
+      const next = new Date(todayMidnight.getFullYear(), bd.getMonth(), bd.getDate());
+      if (next < todayMidnight) next.setFullYear(todayMidnight.getFullYear() + 1);
+      const daysUntil = Math.round((next.getTime() - todayMidnight.getTime()) / 86400000);
+      const turningAge = next.getFullYear() - bd.getFullYear();
+      return {
+        id: e.id,
+        fullName: e.fullName,
+        email: e.email,
+        avatarUrl: e.avatarUrl,
+        positionName: e.position?.name ?? null,
+        nextBirthday: next,
+        daysUntil,
+        turningAge,
+        isToday: daysUntil === 0,
+      };
+    })
+    .filter((b) => b.daysUntil <= 30)
+    .sort((a, b) => a.daysUntil - b.daysUntil);
+
+  const formatBirthDate = (d: Date) =>
+    d.toLocaleDateString("fr-CA", { day: "numeric", month: "long" });
 
   // Anniversaires de travail (jubilés)
   const workAnniversaries = admins
@@ -42,8 +81,43 @@ export default async function BirthdaysPage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-bold flex items-center gap-2"><Cake className="h-5 w-5 text-pink-500" />Anniversaires</h1>
-        <p className="text-sm text-muted-foreground">Anniversaires de travail et jubilés à venir (60 jours).</p>
+        <p className="text-sm text-muted-foreground">Anniversaires de naissance (30 jours) et anniversaires de travail (60 jours).</p>
       </div>
+
+      <section>
+        <h2 className="text-sm font-semibold mb-2 uppercase tracking-wider flex items-center gap-2">
+          <Cake className="h-4 w-4 text-[#0F2D52]" />Anniversaires (naissance)
+          {birthdays.length > 0 && <span className="text-muted-foreground normal-case font-normal">({birthdays.length})</span>}
+        </h2>
+        {birthdays.length === 0 ? (
+          <Card className="p-6 text-center text-sm text-muted-foreground">Aucun anniversaire dans les 30 prochains jours.</Card>
+        ) : (
+          <Card>
+            <div className="divide-y">
+              {birthdays.map((b) => (
+                <div key={b.id} className="p-3 flex items-center gap-3 text-sm">
+                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#15406d] flex items-center justify-center text-white text-xs font-bold shrink-0"
+                    style={b.avatarUrl ? { backgroundImage: `url(${b.avatarUrl})`, backgroundSize: "cover" } : undefined}>
+                    {!b.avatarUrl && (b.fullName || b.email).split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{b.fullName || b.email}</p>
+                    <p className="text-xs text-muted-foreground truncate">{b.positionName ?? "—"}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    {b.isToday ? (
+                      <Badge className="bg-amber-100 text-amber-900 border-amber-300">Aujourd&apos;hui</Badge>
+                    ) : (
+                      <p className="text-xs font-medium">{formatBirthDate(b.nextBirthday)} <span className="text-muted-foreground">(dans {b.daysUntil} j)</span></p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground mt-0.5">aura {b.turningAge} ans</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+      </section>
 
       {milestones.length > 0 && (
         <section>

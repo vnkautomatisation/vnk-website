@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { LogOut, Plus, CheckCircle2, Calendar, FileText, AlertTriangle } from "lucide-react";
+import { LogOut, Plus, CheckCircle2, Calendar, FileText, AlertTriangle, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { startOffboardingAction, toggleOffboardingItemAction, saveExitInterviewAction, markRecordOfEmploymentSentAction } from "@/app/actions/hr-offboarding";
+import { confirmDialog } from "@/components/admin/prompt-dialog";
+import { startOffboardingAction, toggleOffboardingItemAction, saveExitInterviewAction, markRecordOfEmploymentSentAction, completeOffboardingAction } from "@/app/actions/hr-offboarding";
 
 type ChecklistItem = { key: string; label: string; done: boolean; doneAt: string | null; doneBy: number | null };
 type Offboard = {
@@ -85,9 +86,10 @@ export function OffboardingView({ checklists, candidates }: { checklists: Offboa
           <Card>
             <div className="divide-y">
               {completed.map((c) => (
-                <div key={c.id} className="p-3 flex items-center gap-3 text-sm">
+                <div key={c.id} className="p-3 flex items-center gap-3 text-sm cursor-pointer hover:bg-muted/30 transition" onClick={() => setActive(c)}>
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                   <span className="flex-1">{c.admin.fullName || c.admin.email}</span>
+                  <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-100">Clôturé</Badge>
                   <span className="text-xs text-muted-foreground">{REASON_LABEL[c.reason ?? ""]}</span>
                   <span className="text-xs text-muted-foreground">{c.lastDay && new Date(c.lastDay).toLocaleDateString("fr-CA")}</span>
                 </div>
@@ -206,12 +208,42 @@ function DetailDialog({ offboard, onClose, onChanged }: { offboard: Offboard | n
     else toast.error(r.error || "");
   };
 
+  const completeAndDeactivate = async () => {
+    const ok = await confirmDialog({
+      title: "Confirmer la clôture ?",
+      description: "Le compte employé sera DÉSACTIVÉ, ses sessions actives seront fermées. Action irréversible.",
+      confirmLabel: "Clôturer et désactiver",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    setPending(true);
+    const r = await completeOffboardingAction({ id: offboard.id });
+    setPending(false);
+    if (r.success) { toast.success("Offboarding clôturé · compte désactivé"); onChanged(); onClose(); }
+    else toast.error(r.error || "");
+  };
+
+  const allItemsDone = offboard.items.length > 0 && offboard.items.every((i) => i.done);
+  const isPastLastDay = offboard.lastDay ? new Date(offboard.lastDay) <= new Date() : false;
+  const alreadyCompleted = offboard.status === "completed";
+  const canComplete = allItemsDone && isPastLastDay;
+  const blockReason = !allItemsDone
+    ? "Tous les items de la checklist doivent être complétés"
+    : !isPastLastDay
+      ? "Le dernier jour de travail n'est pas atteint"
+      : "";
+
   return (
     <Dialog open={!!offboard} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] p-0 overflow-hidden flex flex-col">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader>
-            <DialogTitle className="text-base text-white">Offboarding · {offboard.admin.fullName || offboard.admin.email}</DialogTitle>
+            <DialogTitle className="text-base text-white flex items-center gap-2">
+              <span>Offboarding · {offboard.admin.fullName || offboard.admin.email}</span>
+              {alreadyCompleted && (
+                <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-100">Clôturé</Badge>
+              )}
+            </DialogTitle>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-4 overflow-y-auto flex-1">
@@ -257,7 +289,25 @@ function DetailDialog({ offboard, onClose, onChanged }: { offboard: Offboard | n
             )}
           </section>
         </div>
-        <DialogFooter className="px-5 py-3 border-t bg-muted/30">
+        <DialogFooter className="px-5 py-3 border-t bg-muted/30 flex flex-col sm:flex-row sm:justify-between gap-2 w-full">
+          {!alreadyCompleted ? (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+              <Button
+                onClick={completeAndDeactivate}
+                disabled={pending || !canComplete}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                title={blockReason}
+              >
+                <Lock className="h-4 w-4 mr-1.5" />
+                {pending ? "..." : "Compléter et désactiver le compte"}
+              </Button>
+              {!canComplete && blockReason && (
+                <span className="text-[11px] text-amber-700">{blockReason}</span>
+              )}
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">Compte désactivé · sessions fermées</span>
+          )}
           <Button variant="outline" onClick={onClose}>Fermer</Button>
         </DialogFooter>
       </DialogContent>

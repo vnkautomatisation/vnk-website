@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Megaphone, Pin } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AnnouncementReadTracker } from "./announcement-read-tracker";
 
 export default async function AnnouncementsPage() {
   const session = await auth();
@@ -19,7 +20,10 @@ export default async function AnnouncementsPage() {
       OR: [{ expiresAt: null }, { expiresAt: { gte: today } }],
     },
     orderBy: [{ pinned: "desc" }, { publishedAt: "desc" }],
-    include: { author: { select: { fullName: true, email: true, avatarUrl: true } } },
+    include: {
+      author: { select: { fullName: true, email: true, avatarUrl: true } },
+      reads: { where: { adminId }, take: 1, select: { id: true } },
+    },
   });
 
   // Filtrer par audience
@@ -45,6 +49,7 @@ export default async function AnnouncementsPage() {
         <div className="space-y-3">
           {visible.map((a) => (
             <Card key={a.id} className={`p-4 ${a.pinned ? "border-amber-200 bg-amber-50/30" : ""}`}>
+              <AnnouncementReadTracker announcementId={a.id} alreadyRead={(a.reads?.length ?? 0) > 0} />
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div>
                   <h2 className="font-bold flex items-center gap-1.5">

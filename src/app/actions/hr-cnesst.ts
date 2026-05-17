@@ -106,3 +106,53 @@ export async function deleteCnesstIncidentAction(input: { id: number }): Promise
   revalidatePath("/admin/employes/cnesst");
   return { success: true };
 }
+
+export async function markCnesstReportedAction(input: { id: number; date?: string }): Promise<Result> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  const actorId = session.user.adminId!;
+  try {
+    const reportedAt = input.date ? new Date(input.date) : new Date();
+    if (isNaN(reportedAt.getTime())) return { success: false, error: "Date invalide" };
+    await prisma.cnesstIncident.update({
+      where: { id: input.id },
+      data: { reportedToCnesstAt: reportedAt },
+    });
+    await logAudit({
+      adminId: actorId,
+      action: "update",
+      entityType: "cnesst_incident",
+      entityId: input.id,
+      changes: { reportedToCnesstAt: reportedAt.toISOString() },
+    });
+    revalidatePath("/admin/employes/cnesst");
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Erreur" };
+  }
+}
+
+export async function markCnesstReturnedAction(input: { id: number; date: string }): Promise<Result> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  const actorId = session.user.adminId!;
+  try {
+    const returnedAt = new Date(input.date);
+    if (isNaN(returnedAt.getTime())) return { success: false, error: "Date invalide" };
+    await prisma.cnesstIncident.update({
+      where: { id: input.id },
+      data: { returnedToWorkAt: returnedAt },
+    });
+    await logAudit({
+      adminId: actorId,
+      action: "update",
+      entityType: "cnesst_incident",
+      entityId: input.id,
+      changes: { returnedToWorkAt: returnedAt.toISOString() },
+    });
+    revalidatePath("/admin/employes/cnesst");
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Erreur" };
+  }
+}
