@@ -121,10 +121,11 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
   return (
     <>
       {/* ─── Mobile : bouton menu + breadcrumb compact ───
-          STICKY juste sous la topbar admin (64px) : reste accessible meme apres scroll.
-          z-[15] pour passer au-dessus du contenu mais sous la topbar (z-30) et le drawer (z-60).
-          backdrop-blur + bg semi-opaque pour bien lire par-dessus le contenu scroll. */}
-      <div className="lg:hidden sticky top-[64px] z-[15] mb-3 flex items-center justify-between gap-2 p-2.5 rounded-lg border bg-card/95 backdrop-blur-md shadow-sm">
+          STICKY pleine largeur juste sous la topbar admin (64px). Les marges negatives
+          -mx annulent le padding du parent (.p-4 / sm:.p-5 dans admin/layout) pour que
+          la barre s'etende d'un bord a l'autre et ne laisse aucun contenu deborder
+          sur les cotes. La px-* interne replace le contenu correctement. */}
+      <div className="lg:hidden sticky top-[64px] z-[15] mb-4 -mx-4 sm:-mx-5 px-4 sm:px-5 py-2.5 bg-card border-b shadow-md flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
