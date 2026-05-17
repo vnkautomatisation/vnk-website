@@ -15,6 +15,17 @@ const nextConfig: NextConfig = {
   },
   // Reduce cold starts
   reactStrictMode: false,
+  // Masque les warnings webpack infrastructure inoffensifs :
+  //   - "Serializing big strings (>128 kiB)..." (impact négligeable)
+  //   - "ENOENT ... .pack.gz_ -> .pack.gz" (bug rename Windows)
+  // Les vrais warnings/errors restent visibles.
+  webpack: (config) => {
+    config.infrastructureLogging = {
+      ...config.infrastructureLogging,
+      level: "error",
+    };
+    return config;
+  },
   async headers() {
     return [
       {

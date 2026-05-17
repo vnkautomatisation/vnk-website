@@ -157,11 +157,15 @@ const PRESETS: Preset[] = [
   },
 ];
 
+type AdminOption = { id: number; fullName: string | null; email: string };
+
 export function AuditTrailView({
   clients,
+  admins = [],
   counts,
 }: {
   clients: ClientOption[];
+  admins?: AdminOption[];
   counts: Record<string, number>;
 }) {
   const { open: openEntity } = useEntityPanels();
@@ -174,6 +178,9 @@ export function AuditTrailView({
   const [resultFilters, setResultFilters] = useState<Set<"success" | "failed">>(new Set());
   const [anomalyOnly, setAnomalyOnly] = useState(false);
   const [filterClient, setFilterClient] = useState<string>("");
+  const [filterAdmin, setFilterAdmin] = useState<string>("");
+  // Scope acteur : tout / admin uniquement / client uniquement
+  const [actorScope, setActorScope] = useState<"all" | "admin_only" | "client_only">("all");
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
   const [limit, setLimit] = useState(300);
@@ -202,6 +209,8 @@ export function AuditTrailView({
       if (resultFilters.size > 0) params.set("result", Array.from(resultFilters).join(","));
       if (anomalyOnly) params.set("anomaly", "1");
       if (filterClient) params.set("clientId", filterClient);
+      if (filterAdmin) params.set("adminId", filterAdmin);
+      if (actorScope !== "all") params.set("actorScope", actorScope);
       if (filterFrom) params.set("from", filterFrom);
       if (filterTo) params.set("to", filterTo);
       params.set("limit", String(limit));
@@ -215,7 +224,7 @@ export function AuditTrailView({
       }
     } finally { setLoading(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceFilters, severityFilters, resultFilters, anomalyOnly, filterClient, filterFrom, filterTo, limit]);
+  }, [sourceFilters, severityFilters, resultFilters, anomalyOnly, filterClient, filterAdmin, actorScope, filterFrom, filterTo, limit]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -251,12 +260,14 @@ export function AuditTrailView({
     setAnomalyOnly(false);
     setSearch("");
     setFilterClient("");
+    setFilterAdmin("");
+    setActorScope("all");
     setFilterFrom("");
     setFilterTo("");
     setActivePreset(null);
   };
 
-  const hasActiveFilters = !!(search || sourceFilters.size > 0 || severityFilters.size > 0 || resultFilters.size > 0 || anomalyOnly || filterClient || filterFrom || filterTo);
+  const hasActiveFilters = !!(search || sourceFilters.size > 0 || severityFilters.size > 0 || resultFilters.size > 0 || anomalyOnly || filterClient || filterAdmin || actorScope !== "all" || filterFrom || filterTo);
 
   // Effacer le preset actif quand l'utilisateur modifie un filtre manuellement
   useEffect(() => {
@@ -303,6 +314,8 @@ export function AuditTrailView({
     if (resultFilters.size > 0) params.set("result", Array.from(resultFilters).join(","));
     if (anomalyOnly) params.set("anomaly", "1");
     if (filterClient) params.set("clientId", filterClient);
+    if (filterAdmin) params.set("adminId", filterAdmin);
+    if (actorScope !== "all") params.set("actorScope", actorScope);
     if (filterFrom) params.set("from", filterFrom);
     if (filterTo) params.set("to", filterTo);
     params.set("limit", String(limit));
@@ -523,6 +536,27 @@ export function AuditTrailView({
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Label, client, admin, email, IP, pays…" className="h-9 pl-8 text-xs" />
             </div>
+          </div>
+          <div>
+            <Label className="text-[10px]">Acteur</Label>
+            <Select value={actorScope} onValueChange={(v) => setActorScope(v as typeof actorScope)}>
+              <SelectTrigger className="h-9 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tout</SelectItem>
+                <SelectItem value="admin_only">Utilisateurs (admins)</SelectItem>
+                <SelectItem value="client_only">Clients</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-[10px]">Utilisateur</Label>
+            <Select value={filterAdmin || "all"} onValueChange={(v) => setFilterAdmin(v === "all" ? "" : v)}>
+              <SelectTrigger className="h-9 w-[200px] text-xs"><SelectValue placeholder="Tous utilisateurs" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous utilisateurs</SelectItem>
+                {admins.map((a) => <SelectItem key={a.id} value={String(a.id)}>{a.fullName || a.email}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label className="text-[10px]">Client</Label>

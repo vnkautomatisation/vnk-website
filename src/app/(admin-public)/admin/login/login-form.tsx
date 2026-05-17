@@ -1,5 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function LoginForm() {
+export function LoginForm({ ssoProviders }: { ssoProviders?: { google: boolean; microsoft: boolean } } = {}) {
   const t = useTranslations("auth");
   const router = useRouter();
   const params = useSearchParams();
@@ -120,7 +121,15 @@ export function LoginForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">{t("password")}</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">{t("password")}</Label>
+                  <Link
+                    href="/admin/forgot-password"
+                    className="text-xs text-[#0F2D52] hover:underline font-medium"
+                  >
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
                 <div className="relative">
                   <Input
                     id="password"
@@ -156,6 +165,110 @@ export function LoginForm() {
                 <LogIn className="h-4 w-4" />
                 {pending ? "Connexion…" : t("sign_in_admin")}
               </Button>
+
+              {/* ─── Alternatives passwordless (passkey + SSO) ─── */}
+              <div className="relative my-3">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                <div className="relative flex justify-center text-[10px] uppercase tracking-wider">
+                  <span className="bg-white px-2 text-muted-foreground">ou</span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={pending || !email}
+                onClick={async () => {
+                  if (!email) { toast.error("Entrez votre email pour utiliser une passkey"); return; }
+                  try {
+                    const begin = await fetch("/api/auth/passkey/auth-begin", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email }),
+                    });
+                    if (!begin.ok) throw new Error("Impossible de démarrer la passkey");
+                    const { publicKey } = await begin.json();
+                    // Décoder challenge + allowCredentials.id en ArrayBuffer
+                    const b64ToBuf = (s: string) => {
+                      const bin = atob(s.replace(/-/g, "+").replace(/_/g, "/"));
+                      const buf = new Uint8Array(bin.length);
+                      for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+                      return buf.buffer;
+                    };
+                    const bufToB64u = (b: ArrayBuffer) => {
+                      const bytes = new Uint8Array(b);
+                      let bin = "";
+                      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+                      return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+                    };
+                    const cred = await navigator.credentials.get({
+                      publicKey: {
+                        ...publicKey,
+                        challenge: b64ToBuf(publicKey.challenge),
+                        allowCredentials: (publicKey.allowCredentials || []).map((c: { id: string; type: "public-key"; transports?: AuthenticatorTransport[] }) => ({ ...c, id: b64ToBuf(c.id) })),
+                      },
+                    }) as PublicKeyCredential | null;
+                    if (!cred) throw new Error("Annulée");
+                    const r = cred.response as AuthenticatorAssertionResponse;
+                    const finish = await fetch("/api/auth/passkey/auth-finish", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        id: cred.id,
+                        response: {
+                          authenticatorData: bufToB64u(r.authenticatorData),
+                          clientDataJSON: bufToB64u(r.clientDataJSON),
+                          signature: bufToB64u(r.signature),
+                          userHandle: r.userHandle ? bufToB64u(r.userHandle) : undefined,
+                        },
+                      }),
+                    });
+                    const data = await finish.json();
+                    if (!finish.ok || !data.success) throw new Error(data.error || "Échec passkey");
+                    // Signer via NextAuth avec le token one-shot
+                    const res = await signIn("admin-passkey", {
+                      email: data.email,
+                      token: data.token,
+                      redirect: false,
+                    });
+                    if (res?.error) throw new Error("Connexion refusée");
+                    router.push(params.get("redirect") ?? "/admin");
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Passkey indisponible");
+                  }
+                }}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Se connecter avec une passkey
+              </Button>
+
+              {(ssoProviders?.microsoft || ssoProviders?.google) && (
+                <div className={`grid gap-2 ${ssoProviders.microsoft && ssoProviders.google ? "grid-cols-2" : "grid-cols-1"}`}>
+                  {ssoProviders.microsoft && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => signIn("microsoft-entra-id", { callbackUrl: params.get("redirect") ?? "/admin" })}
+                    >
+                      Microsoft
+                    </Button>
+                  )}
+                  {ssoProviders.google && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => signIn("google", { callbackUrl: params.get("redirect") ?? "/admin" })}
+                    >
+                      Google
+                    </Button>
+                  )}
+                </div>
+              )}
             </>
           ) : (
             <>

@@ -1,6 +1,6 @@
 "use client";
 // Vue Sécurité — politique globale + events critiques + verrouillage comptes.
-import { useState, useTransition } from "react";
+import React, { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -217,6 +217,8 @@ export function SecurityView({
             </CardContent>
           </Card>
 
+          <PasskeysSection />
+
           <Card>
             <CardContent className="p-5 space-y-4">
               <H icon={Lock} title="Sessions & verrouillage" />
@@ -430,5 +432,144 @@ function Toggle({ label, checked, onChange, disabled, description }: { label: st
       </div>
       <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} />
     </div>
+  );
+}
+
+// ─── Passkeys (WebAuthn) ────────────────────────────────────
+type Passkey = {
+  id: number;
+  deviceLabel: string | null;
+  transports: string | null;
+  backupEligible: boolean;
+  createdAt: string;
+  lastUsedAt: string | null;
+};
+
+function PasskeysSection() {
+  const [passkeys, setPasskeys] = React.useState<Passkey[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [registering, setRegistering] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch("/api/auth/passkey/list");
+      if (r.ok) {
+        const data = await r.json();
+        setPasskeys(data.passkeys ?? []);
+      }
+    } finally { setLoading(false); }
+  }, []);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  const bufToB64u = (b: ArrayBuffer) => {
+    const bytes = new Uint8Array(b);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  };
+  const b64uToBuf = (s: string) => {
+    const bin = atob(s.replace(/-/g, "+").replace(/_/g, "/"));
+    const buf = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+    return buf.buffer;
+  };
+
+  const register = async () => {
+    if (!("credentials" in navigator)) {
+      toast.error("Votre navigateur ne supporte pas les passkeys");
+      return;
+    }
+    setRegistering(true);
+    try {
+      const label = prompt("Nom de l'appareil (ex: « iPhone Yan », « YubiKey 5 ») :");
+      if (!label) { setRegistering(false); return; }
+
+      const begin = await fetch("/api/auth/passkey/register-begin", { method: "POST" });
+      if (!begin.ok) throw new Error("Init impossible");
+      const { publicKey } = await begin.json();
+
+      const cred = await navigator.credentials.create({
+        publicKey: {
+          ...publicKey,
+          challenge: b64uToBuf(publicKey.challenge),
+          user: { ...publicKey.user, id: b64uToBuf(publicKey.user.id) },
+          excludeCredentials: (publicKey.excludeCredentials || []).map((c: { id: string; type: "public-key" }) => ({ ...c, id: b64uToBuf(c.id) })),
+        },
+      }) as PublicKeyCredential | null;
+      if (!cred) throw new Error("Annulé");
+
+      const resp = cred.response as AuthenticatorAttestationResponse;
+      const finish = await fetch("/api/auth/passkey/register-finish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: cred.id,
+          deviceLabel: label,
+          response: {
+            attestationObject: bufToB64u(resp.attestationObject),
+            clientDataJSON: bufToB64u(resp.clientDataJSON),
+            transports: (resp as AuthenticatorAttestationResponse & { getTransports?: () => string[] }).getTransports?.() ?? [],
+          },
+        }),
+      });
+      const data = await finish.json();
+      if (!finish.ok || !data.success) throw new Error(data.error || "Échec");
+      toast.success("Passkey ajoutée");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur passkey");
+    } finally { setRegistering(false); }
+  };
+
+  const remove = async (id: number) => {
+    if (!confirm("Supprimer cette passkey ?")) return;
+    const r = await fetch(`/api/auth/passkey/list?id=${id}`, { method: "DELETE" });
+    if (r.ok) { toast.success("Supprimée"); load(); }
+    else toast.error("Erreur");
+  };
+
+  return (
+    <Card>
+      <CardContent className="p-5 space-y-4">
+        <H icon={Shield} title="Passkeys (sans mot de passe)" />
+        <p className="text-xs text-muted-foreground">
+          Connectez-vous sans mot de passe via Touch ID, Face ID, Windows Hello, ou une clé physique (YubiKey).
+          Plus sûr et plus rapide que 2FA OTP.
+        </p>
+        <Button onClick={register} disabled={registering} size="sm">
+          <Shield className="h-3.5 w-3.5 mr-1.5" />
+          {registering ? "Configuration…" : "Ajouter une passkey"}
+        </Button>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Chargement…</p>
+        ) : passkeys.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">Aucune passkey enregistrée.</p>
+        ) : (
+          <div className="space-y-2">
+            {passkeys.map((p) => (
+              <div key={p.id} className="flex items-center gap-3 p-2.5 rounded-md border">
+                <Shield className="h-4 w-4 text-[#0F2D52] shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{p.deviceLabel || "Appareil sans nom"}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Ajoutée le {new Date(p.createdAt).toLocaleDateString("fr-CA")}
+                    {p.lastUsedAt && ` · Dernière utilisation ${new Date(p.lastUsedAt).toLocaleDateString("fr-CA")}`}
+                    {p.transports && ` · ${p.transports}`}
+                  </p>
+                </div>
+                {p.backupEligible && (
+                  <Badge variant="outline" className="text-[10px]">Synchronisée</Badge>
+                )}
+                <Button variant="ghost" size="sm" className="h-7 text-xs hover:text-destructive" onClick={() => remove(p.id)}>
+                  Retirer
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

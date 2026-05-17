@@ -1,0 +1,62 @@
+{
+  "name": "VNK Automatisation",
+  "short_name": "VNK",
+  "description": "Portail VNK Automatisation — gestion projets, mandats et clients",
+  "start_url": "/admin",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0F2D52",
+  "theme_color": "#0F2D52",
+  "lang": "fr-CA",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon/favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tableau de bord",
+      "short_name": "Dashboard",
+      "url": "/admin",
+      "icons": [{ "src": "/favicon/favicon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Requêtes",
+      "url": "/admin/requests",
+      "icons": [{ "src": "/favicon/favicon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Messages",
+      "url": "/admin/messages",
+      "icons": [{ "src": "/favicon/favicon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Calendrier",
+      "url": "/admin/calendar",
+      "icons": [{ "src": "/favicon/favicon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

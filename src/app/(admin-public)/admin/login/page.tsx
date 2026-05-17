@@ -16,9 +16,15 @@ export default async function AdminLoginPage() {
     redirect("/admin");
   }
 
+  // Détection serveur des providers SSO disponibles (basée sur les env vars)
+  const providers = {
+    google: !!(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET),
+    microsoft: !!(process.env.AUTH_MICROSOFT_ENTRA_ID_ID && process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET),
+  };
+
   return (
     <div className="min-h-screen vnk-gradient flex items-center justify-center p-4">
-      <LoginForm />
+      <LoginForm ssoProviders={providers} />
     </div>
   );
 }

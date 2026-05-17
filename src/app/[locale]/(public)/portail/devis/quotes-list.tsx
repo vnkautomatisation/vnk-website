@@ -422,7 +422,6 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
             <div className="px-6 py-4">
               <SignatureCanvas
                 onSave={handleSignAndAccept}
-                width={480}
                 height={180}
                 disabled={accepting}
                 legalText="les conditions du devis"

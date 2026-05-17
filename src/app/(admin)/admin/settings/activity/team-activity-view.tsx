@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { entityLabelWithId, ACTION_VERBS } from "@/lib/audit-labels";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -216,15 +217,12 @@ export function TeamActivityView({
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm">
-                        <span className="font-semibold">{log.admin?.fullName || log.admin?.email || "Système"}</span>
-                        {" "}
-                        <span className="text-muted-foreground">{meta.label.toLowerCase()}</span>
-                        {" "}
-                        <Badge variant="outline" className="text-[10px]">{log.entityType}</Badge>
-                        {log.entityId && <span className="text-muted-foreground text-xs">#{log.entityId}</span>}
-                      </p>
+                    <div className="flex items-center gap-2 flex-wrap text-sm">
+                      <span className="font-semibold">{log.admin?.fullName || log.admin?.email || "Système"}</span>
+                      <span className="text-muted-foreground">{ACTION_VERBS[log.action] ?? meta.label.toLowerCase()}</span>
+                      <span className="text-muted-foreground">
+                        {entityLabelWithId(log.entityType, log.entityId)}
+                      </span>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-[11px] text-muted-foreground">
                       <span>{formatRelative(log.createdAt)}</span>

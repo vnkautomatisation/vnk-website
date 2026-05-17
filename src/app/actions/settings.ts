@@ -47,14 +47,22 @@ export async function updateSettingsAction(
     });
     const existingMap = new Map(existingRows.map((r) => [r.key, r.value]));
 
-    // 4) Transaction update
+    // 4) Transaction upsert (créer si absent, mettre à jour sinon)
     await prisma.$transaction(
       parsed.data.updates.map((u) =>
-        prisma.setting.update({
+        prisma.setting.upsert({
           where: {
             category_key: { category: parsed.data.category, key: u.key },
           },
-          data: { value: u.value, updatedBy: adminId },
+          update: { value: u.value, updatedBy: adminId },
+          create: {
+            category: parsed.data.category,
+            key: u.key,
+            value: u.value,
+            type: "string",
+            label: u.key,
+            updatedBy: adminId,
+          },
         })
       )
     );

@@ -65,28 +65,42 @@ type CategoryMetaExtended = CategoryMeta & {
   badgeLabel?: string; // libellé custom du badge module
 };
 
+// ───────────────────────────────────────────────────────────
+// Palette VNK restreinte : 4 familles fonctionnelles seulement
+//   navy   = configuration générale & organisation (par défaut)
+//   blue   = communication & contenu
+//   green  = finance & conformité
+//   amber  = système & technique
+// ───────────────────────────────────────────────────────────
+const FAMILY = {
+  navy: "bg-[#0F2D52]",       // Général · Entreprise · Portail · Équipe
+  blue: "bg-[#1A5FB4]",       // Email · Templates · Notifications · Contenu · Branding
+  green: "bg-[#26A269]",      // Finance · Légal · Catalogues · Comptabilité
+  amber: "bg-[#C77700]",      // Système · Diagnostics · Backup · API · Sécurité
+} as const;
+
 const CATEGORIES: CategoryMetaExtended[] = [
-  { key: "general", icon: LayoutGrid, accent: "bg-blue-500" },
-  { key: "company", icon: Building2, accent: "bg-indigo-500" },
-  { key: "portal", icon: Briefcase, accent: "bg-purple-500" },
-  { key: "catalogs", icon: LayoutGrid, accent: "bg-amber-500", href: "/admin/settings/catalogs", badgeLabel: "Services · Codes promo · Listes" },
-  { key: "billing", icon: Receipt, accent: "bg-emerald-500", href: "/admin/settings/finance", badgeLabel: "Banque · Taxes · Loi 25 · Mentions" },
-  { key: "signature", icon: FileSignature, accent: "bg-violet-500" },
-  { key: "emails", icon: Mail, accent: "bg-sky-500" },
-  { key: "email_templates", icon: FileText, accent: "bg-sky-600", href: "/admin/settings/templates", badgeLabel: "Modèles emails + PDF" },
-  { key: "notifications", icon: Bell, accent: "bg-yellow-500", custom: "notifications" },
-  { key: "integrations", icon: Plug, accent: "bg-orange-500", custom: "integrations" },
-  { key: "automations", icon: Zap, accent: "bg-orange-600", custom: "automations" },
-  { key: "system", icon: Server, accent: "bg-slate-500", href: "/admin/settings/maintenance", badgeLabel: "Maintenance · Incidents · Annonce" },
-  { key: "users", icon: Users, accent: "bg-rose-500", href: "/admin/settings/team", badgeLabel: "Utilisateurs · Rôles · Postes" },
-  { key: "appearance", icon: Palette, accent: "bg-pink-500", href: "/admin/settings/branding", badgeLabel: "Logos · Couleurs · Polices" },
-  { key: "seo", icon: Search, accent: "bg-amber-500" },
-  { key: "legal", icon: Scale, accent: "bg-red-500", href: "/admin/settings/finance", badgeLabel: "Voir Finance & Loi 25" },
-  { key: "blog", icon: Newspaper, accent: "bg-teal-500", href: "/admin/settings/content", badgeLabel: "Blog · FAQ · Témoignages" },
-  { key: "analytics", icon: BarChart3, accent: "bg-cyan-500" },
-  { key: "webhooks", icon: Plug, accent: "bg-orange-600", href: "/admin/settings/webhooks", badgeLabel: "Sortants + entrants debug" },
-  { key: "diagnostics", icon: Activity, accent: "bg-indigo-600", href: "/admin/settings/diagnostics", badgeLabel: "Santé · DB · Intégrations" },
-  { key: "backup", icon: Database, accent: "bg-cyan-600", href: "/admin/settings/backup", badgeLabel: "Export · Import JSON" },
+  { key: "general", icon: LayoutGrid, accent: FAMILY.navy },
+  { key: "company", icon: Building2, accent: FAMILY.navy },
+  { key: "portal", icon: Briefcase, accent: FAMILY.navy },
+  { key: "users", icon: Users, accent: FAMILY.navy, href: "/admin/settings/team", badgeLabel: "Utilisateurs · Rôles · Postes" },
+  { key: "catalogs", icon: LayoutGrid, accent: FAMILY.green, href: "/admin/settings/catalogs", badgeLabel: "Services · Codes promo · Listes" },
+  { key: "billing", icon: Receipt, accent: FAMILY.green, href: "/admin/settings/finance", badgeLabel: "Banque · Taxes · Loi 25" },
+  { key: "legal", icon: Scale, accent: FAMILY.green, href: "/admin/settings/finance", badgeLabel: "Voir Finance & Loi 25" },
+  { key: "signature", icon: FileSignature, accent: FAMILY.blue },
+  { key: "emails", icon: Mail, accent: FAMILY.blue },
+  { key: "email_templates", icon: FileText, accent: FAMILY.blue, href: "/admin/settings/templates", badgeLabel: "Modèles emails + PDF" },
+  { key: "notifications", icon: Bell, accent: FAMILY.blue, custom: "notifications" },
+  { key: "blog", icon: Newspaper, accent: FAMILY.blue, href: "/admin/settings/content", badgeLabel: "Blog · FAQ · Témoignages" },
+  { key: "appearance", icon: Palette, accent: FAMILY.blue, href: "/admin/settings/branding", badgeLabel: "Logos · Couleurs · Polices" },
+  { key: "integrations", icon: Plug, accent: FAMILY.amber, custom: "integrations" },
+  { key: "automations", icon: Zap, accent: FAMILY.amber, custom: "automations" },
+  { key: "webhooks", icon: Plug, accent: FAMILY.amber, href: "/admin/settings/webhooks", badgeLabel: "Sortants + entrants debug" },
+  { key: "system", icon: Server, accent: FAMILY.amber, href: "/admin/settings/maintenance", badgeLabel: "Maintenance · Incidents · Annonce" },
+  { key: "diagnostics", icon: Activity, accent: FAMILY.amber, href: "/admin/settings/diagnostics", badgeLabel: "Santé · DB · Intégrations" },
+  { key: "backup", icon: Database, accent: FAMILY.amber, href: "/admin/settings/backup", badgeLabel: "Export · Import JSON" },
+  { key: "seo", icon: Search, accent: FAMILY.blue },
+  { key: "analytics", icon: BarChart3, accent: FAMILY.green },
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -167,38 +181,54 @@ export function SettingsView({
   }
 
   return (
-    <div className="space-y-8">
-      {/* ── Header ───────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-            {t("page_title")}
-          </h1>
-          <p className="text-muted-foreground mt-1">{t("page_subtitle")}</p>
-        </div>
-        <div className="flex gap-2 items-end">
-          <Link
-            href="/admin/settings/activity"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg border bg-card text-sm font-medium hover:bg-muted shrink-0"
-          >
-            <Users className="h-4 w-4" />
-            Activité équipe
-          </Link>
-          <Link
-            href="/admin/settings/onboarding"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-sm font-medium hover:opacity-90 shrink-0"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M11.9 7.6c-.4 0-.8.3-.9.7l-.6 2.4-2.4.6c-.4.1-.7.5-.7.9s.3.8.7.9l2.4.6.6 2.4c.1.4.5.7.9.7s.8-.3.9-.7l.6-2.4 2.4-.6c.4-.1.7-.5.7-.9s-.3-.8-.7-.9l-2.4-.6-.6-2.4c-.1-.4-.5-.7-.9-.7Z"/></svg>
-            Configuration guidée
-          </Link>
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher un parametre..."
-              className="pl-9"
-            />
+    <div className="space-y-5">
+      {/* ── Hero navy gradient ───────────────────────────── */}
+      <div className="relative bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-5 text-white overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-10 pointer-events-none"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 80% 20%, rgba(255,255,255,0.4) 0%, transparent 50%)",
+          }}
+        />
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-3.5 min-w-0">
+            <div className="h-12 w-12 rounded-lg bg-white/10 backdrop-blur flex items-center justify-center shrink-0 shadow-lg ring-2 ring-white/15">
+              <SettingsIcon className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t("page_title")}</h1>
+              <p className="text-white/75 text-sm mt-1">{t("page_subtitle")}</p>
+            </div>
+          </div>
+          <div className="flex gap-2 items-center flex-wrap">
+            <Link
+              href="/admin/settings/activity"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur border border-white/20 text-white text-sm font-medium transition-colors"
+            >
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Activité</span>
+            </Link>
+            <Link
+              href="/admin/settings/onboarding"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-white text-[#0F2D52] text-sm font-semibold hover:bg-white/95 shadow-sm transition-colors"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
+                <path d="M11.9 7.6c-.4 0-.8.3-.9.7l-.6 2.4-2.4.6c-.4.1-.7.5-.7.9s.3.8.7.9l2.4.6.6 2.4c.1.4.5.7.9.7s.8-.3.9-.7l.6-2.4 2.4-.6c.4-.1.7-.5.7-.9s-.3-.8-.7-.9l-2.4-.6-.6-2.4c-.1-.4-.5-.7-.9-.7Z" />
+              </svg>
+              <span className="hidden sm:inline">Configuration guidée</span>
+              <span className="sm:hidden">Setup</span>
+            </Link>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Rechercher..."
+                className="pl-9 bg-white/10 backdrop-blur border-white/20 text-white placeholder:text-white/50 hover:bg-white/15 hover:border-white/30 focus-visible:bg-white/20 focus-visible:border-white/40 focus-visible:ring-white/20"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -206,56 +236,48 @@ export function SettingsView({
       {/* ── Overview cockpit no-code ──────────────────────── */}
       {overview && !searchQuery && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <Link href="/admin/settings/team" className="rounded-lg border bg-card p-3 vnk-card-hover">
-            <div className="flex items-center gap-2 mb-1">
-              <Users className="h-3.5 w-3.5 text-rose-500" />
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Équipe</span>
-            </div>
-            <p className="text-xl font-bold">{overview.adminsActive}</p>
-            <p className="text-[10px] text-muted-foreground">{overview.roles} rôle{overview.roles > 1 ? "s" : ""} · {overview.positions} poste{overview.positions > 1 ? "s" : ""}</p>
-          </Link>
-          <Link href="/admin/settings/branding" className="rounded-lg border bg-card p-3 vnk-card-hover">
-            <div className="flex items-center gap-2 mb-1">
-              <Palette className="h-3.5 w-3.5 text-pink-500" />
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Branding</span>
-            </div>
-            <p className="text-xl font-bold">{overview.logosUploaded}<span className="text-sm text-muted-foreground">/6</span></p>
-            <p className="text-[10px] text-muted-foreground">logos téléversés</p>
-          </Link>
-          <Link href="/admin/settings/catalogs" className="rounded-lg border bg-card p-3 vnk-card-hover">
-            <div className="flex items-center gap-2 mb-1">
-              <LayoutGrid className="h-3.5 w-3.5 text-amber-500" />
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Catalogues</span>
-            </div>
-            <p className="text-xl font-bold">{overview.catalogItems}</p>
-            <p className="text-[10px] text-muted-foreground">{overview.services} service{overview.services > 1 ? "s" : ""} · {overview.promos} promo{overview.promos > 1 ? "s" : ""}</p>
-          </Link>
-          <Link href="/admin/settings/content" className="rounded-lg border bg-card p-3 vnk-card-hover">
-            <div className="flex items-center gap-2 mb-1">
-              <Newspaper className="h-3.5 w-3.5 text-teal-500" />
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Contenu</span>
-            </div>
-            <p className="text-xl font-bold">{overview.contentPublished}</p>
-            <p className="text-[10px] text-muted-foreground">{overview.posts} blog · {overview.faqs} FAQ · {overview.testimonials} avis</p>
-          </Link>
-          <Link href="/admin/settings/templates" className="rounded-lg border bg-card p-3 vnk-card-hover">
-            <div className="flex items-center gap-2 mb-1">
-              <FileText className="h-3.5 w-3.5 text-sky-600" />
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Modèles</span>
-            </div>
-            <p className="text-xl font-bold">{overview.emailTpl + overview.pdfTpl}</p>
-            <p className="text-[10px] text-muted-foreground">{overview.emailTpl} email · {overview.pdfTpl} PDF</p>
-          </Link>
-          <Link href="/admin/settings/finance" className="rounded-lg border bg-card p-3 vnk-card-hover">
-            <div className="flex items-center gap-2 mb-1">
-              <Receipt className="h-3.5 w-3.5 text-emerald-500" />
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Conformité</span>
-            </div>
-            <p className="text-xl font-bold inline-flex items-center gap-1">
-              {(overview.fiscalDone ? 1 : 0) + (overview.rprpDone ? 1 : 0)}<span className="text-sm text-muted-foreground">/2</span>
-            </p>
-            <p className="text-[10px] text-muted-foreground">{overview.fiscalDone ? "✓" : "○"} fiscal · {overview.rprpDone ? "✓" : "○"} Loi 25</p>
-          </Link>
+          <OverviewCard
+            href="/admin/settings/team"
+            icon={Users}
+            label="Équipe"
+            value={overview.adminsActive}
+            hint={`${overview.roles} rôle${overview.roles > 1 ? "s" : ""} · ${overview.positions} poste${overview.positions > 1 ? "s" : ""}`}
+          />
+          <OverviewCard
+            href="/admin/settings/branding"
+            icon={Palette}
+            label="Branding"
+            value={`${overview.logosUploaded}/6`}
+            hint="logos téléversés"
+          />
+          <OverviewCard
+            href="/admin/settings/catalogs"
+            icon={LayoutGrid}
+            label="Catalogues"
+            value={overview.catalogItems}
+            hint={`${overview.services} service${overview.services > 1 ? "s" : ""} · ${overview.promos} promo${overview.promos > 1 ? "s" : ""}`}
+          />
+          <OverviewCard
+            href="/admin/settings/content"
+            icon={Newspaper}
+            label="Contenu"
+            value={overview.contentPublished}
+            hint={`${overview.posts} blog · ${overview.faqs} FAQ · ${overview.testimonials} avis`}
+          />
+          <OverviewCard
+            href="/admin/settings/templates"
+            icon={FileText}
+            label="Modèles"
+            value={overview.emailTpl + overview.pdfTpl}
+            hint={`${overview.emailTpl} email · ${overview.pdfTpl} PDF`}
+          />
+          <OverviewCard
+            href="/admin/settings/finance"
+            icon={Receipt}
+            label="Conformité"
+            value={`${(overview.fiscalDone ? 1 : 0) + (overview.rprpDone ? 1 : 0)}/2`}
+            hint={`${overview.fiscalDone ? "✓" : "○"} fiscal · ${overview.rprpDone ? "✓" : "○"} Loi 25`}
+          />
         </div>
       )}
 
@@ -280,7 +302,7 @@ export function SettingsView({
           Aucun parametre correspondant a &quot;{searchQuery}&quot;
         </div>
       ) : null}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         {filteredCategories.map((cat) => {
           const Icon = cat.icon;
           const count = settingsByCategory[cat.key]?.length ?? 0;
@@ -289,47 +311,49 @@ export function SettingsView({
 
           const inner = (
             <>
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-2">
                 <div
                   className={cn(
-                    "h-11 w-11 rounded-lg flex items-center justify-center text-white",
+                    "h-10 w-10 rounded-lg flex items-center justify-center text-white shadow-sm",
                     cat.accent
                   )}
                 >
                   <Icon className="h-5 w-5" />
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all mt-1" />
               </div>
 
-              <h3 className="mt-4 font-semibold text-base leading-tight">
+              <h3 className="mt-3 font-semibold text-sm leading-tight text-foreground group-hover:text-[#0F2D52] transition-colors">
                 {t(`categories.${cat.key}`)}
               </h3>
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+              <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2 leading-snug">
                 {t(`categories.${cat.key}_desc`)}
               </p>
 
-              <div className="mt-4 flex items-center justify-between">
+              <div className="mt-3 pt-3 border-t border-border/50">
                 {hasHref ? (
-                  <Badge className="text-[10px] bg-[#0F2D52] hover:bg-[#0F2D52]/90 text-white">
+                  <span className="text-[10px] font-medium text-[#0F2D52]/80 inline-flex items-center gap-1">
                     {cat.badgeLabel ?? "Module avancé"}
-                  </Badge>
+                  </span>
                 ) : isCustom ? (
-                  <Badge className="text-[10px] bg-[#0F2D52] hover:bg-[#0F2D52]/90 text-white">
+                  <span className="text-[10px] font-medium text-[#0F2D52]/80">
                     Module avancé
-                  </Badge>
+                  </span>
                 ) : (
-                  <Badge variant="secondary" className="text-[10px]">
+                  <span className="text-[10px] text-muted-foreground">
                     {count} {count > 1 ? "paramètres" : "paramètre"}
-                  </Badge>
+                  </span>
                 )}
               </div>
             </>
           );
 
           const sharedClass = cn(
-            "group text-left",
-            "rounded-xl border bg-card p-5",
-            "vnk-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            "group text-left block",
+            "rounded-xl border bg-card p-4",
+            "transition-all duration-200",
+            "hover:shadow-md hover:-translate-y-0.5 hover:border-[#0F2D52]/30",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F2D52]/30 focus-visible:ring-offset-2"
           );
 
           if (hasHref) {
@@ -353,20 +377,13 @@ export function SettingsView({
       </div>
 
       {/* ── Info footer ─────────────────────────────────── */}
-      <Card>
-        <CardContent className="p-5 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-          <div className="text-sm text-muted-foreground">
-            <p className="font-medium text-foreground mb-1">
-              Configuration du portail
-            </p>
-            <p>
-              Toutes les modifications sont appliquées immédiatement et
-              enregistrées dans l&apos;historique d&apos;activité.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="rounded-lg border border-[#0F2D52]/15 bg-[#0F2D52]/[0.03] px-4 py-3 flex items-start gap-3">
+        <AlertCircle className="h-4 w-4 text-[#0F2D52]/60 shrink-0 mt-0.5" />
+        <div className="text-xs text-muted-foreground">
+          <span className="font-semibold text-[#0F2D52]">Configuration du portail · </span>
+          Toutes les modifications sont appliquées immédiatement et enregistrées dans l&apos;historique d&apos;activité.
+        </div>
+      </div>
     </div>
   );
 }
@@ -781,4 +798,37 @@ function NotificationsWrapper() {
     );
   }
   return <TabNotifications admin={admin} />;
+}
+
+// ─── Carte KPI overview cockpit (style sobre navy) ─────────
+function OverviewCard({
+  href,
+  icon: Icon,
+  label,
+  value,
+  hint,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number | string;
+  hint?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group rounded-lg border bg-card p-3 transition-all hover:shadow-md hover:border-[#0F2D52]/30 hover:-translate-y-0.5"
+    >
+      <div className="flex items-center gap-2 mb-1.5">
+        <div className="h-6 w-6 rounded-md bg-[#0F2D52]/8 flex items-center justify-center">
+          <Icon className="h-3.5 w-3.5 text-[#0F2D52]" />
+        </div>
+        <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground group-hover:text-[#0F2D52] transition-colors">
+          {label}
+        </span>
+      </div>
+      <p className="text-xl font-bold text-[#0F2D52] tabular-nums">{value}</p>
+      {hint && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{hint}</p>}
+    </Link>
+  );
 }

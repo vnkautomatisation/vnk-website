@@ -391,7 +391,6 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
             <div className="px-6 py-5">
               <SignatureCanvas
                 onSave={handleSign}
-                width={480}
                 height={180}
                 disabled={signing}
                 legalText="les conditions du contrat"

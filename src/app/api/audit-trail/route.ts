@@ -161,12 +161,16 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const types = searchParams.get("type")?.split(",").filter(Boolean) ?? [];
   const clientIdFilter = searchParams.get("clientId");
+  const adminIdFilter = searchParams.get("adminId");
+  // actorScope : "all" (par défaut) | "admin_only" (uniquement événements admin/utilisateurs) | "client_only"
+  const actorScope = searchParams.get("actorScope") || "all";
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const severityFilter = searchParams.get("severity")?.split(",").filter(Boolean) ?? [];
   const resultFilter = searchParams.get("result")?.split(",").filter(Boolean) ?? [];
   const anomalyFilter = searchParams.get("anomaly") === "1";
   const limit = Math.min(Number(searchParams.get("limit") ?? 200), 1000);
+  const adminIdNum = adminIdFilter ? Number(adminIdFilter) : null;
 
   const want = (k: string) => types.length === 0 || types.includes(k);
   const dateFilter: { gte?: Date; lte?: Date } = {};
@@ -397,6 +401,18 @@ export async function GET(req: Request) {
   }
   if (anomalyFilter) {
     filtered = filtered.filter((e) => e.anomalies.length > 0);
+  }
+  // ─── Filtre acteur : admin/utilisateur spécifique ─────────────
+  if (adminIdNum) {
+    filtered = filtered.filter((e) => e.adminId === adminIdNum);
+  }
+  // ─── Filtre scope acteur (admin_only / client_only) ───────────
+  if (actorScope === "admin_only") {
+    // Actions effectuées par un utilisateur (admin) du système
+    filtered = filtered.filter((e) => e.adminId != null);
+  } else if (actorScope === "client_only") {
+    // Actions effectuées par/sur un client (jamais d'admin)
+    filtered = filtered.filter((e) => e.adminId == null && e.clientId != null);
   }
 
   // Tri global par date desc + limit

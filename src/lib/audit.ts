@@ -13,7 +13,8 @@ export type AuditAction =
   | "settings_update"
   | "impersonate"
   | "password_reset"
-  | "role_change";
+  | "role_change"
+  | "transfer";
 
 export async function logAudit(params: {
   adminId?: number | null;

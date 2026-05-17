@@ -1,0 +1,388 @@
+"use client";
+// Vue Ã‰quipes â€” crÃ©ation, hiÃ©rarchie, lead, assignation membres.
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Network, Plus, Edit, Trash2, Users as UsersIcon, Crown, GitBranch } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { createTeamAction, updateTeamAction, deleteTeamAction, assignAdminToTeamAction } from "@/app/actions/teams";
+
+type AdminLite = {
+  id: number;
+  fullName: string | null;
+  email: string;
+  avatarUrl: string | null;
+  teamId: number | null;
+  managerId: number | null;
+  position: { name: string; color: string | null } | null;
+};
+type TeamRow = {
+  id: number;
+  name: string;
+  description: string | null;
+  color: string | null;
+  leadAdminId: number | null;
+  parentTeamId: number | null;
+  sortOrder: number;
+  lead: { id: number; fullName: string | null; email: string; avatarUrl: string | null } | null;
+  parent: { id: number; name: string } | null;
+  members: Array<{ id: number; fullName: string | null; email: string; avatarUrl: string | null; isActive: boolean; position: { name: string; color: string | null } | null }>;
+  _count: { members: number; children: number };
+};
+
+export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLite[] }) {
+  const router = useRouter();
+  const [dialog, setDialog] = useState<{ open: boolean; team: TeamRow | null }>({ open: false, team: null });
+  const [confirmDel, setConfirmDel] = useState<TeamRow | null>(null);
+  const [assignDialog, setAssignDialog] = useState<{ open: boolean; team: TeamRow | null }>({ open: false, team: null });
+
+  const onDelete = async () => {
+    if (!confirmDel) return;
+    const r = await deleteTeamAction({ id: confirmDel.id });
+    if (r.success) { toast.success("Ã‰quipe supprimÃ©e"); router.refresh(); }
+    else toast.error(r.error || "Erreur");
+    setConfirmDel(null);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Network className="h-5 w-5 text-[#0F2D52]" />
+            Ã‰quipes
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {teams.length} Ã©quipe{teams.length > 1 ? "s" : ""} Â· structurez la hiÃ©rarchie de votre organisation
+          </p>
+        </div>
+        <Button onClick={() => setDialog({ open: true, team: null })}>
+          <Plus className="h-4 w-4 mr-1.5" />
+          Nouvelle Ã©quipe
+        </Button>
+      </div>
+
+      {teams.length === 0 ? (
+        <Card className="p-10 text-center text-sm text-muted-foreground">
+          Aucune Ã©quipe crÃ©Ã©e. Commencez par en crÃ©er une pour organiser votre personnel.
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {teams.map((t) => (
+            <Card key={t.id} className="overflow-hidden">
+              <div
+                className="h-1.5"
+                style={{ backgroundColor: t.color ?? "#0F2D52" }}
+              />
+              <div className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-sm flex items-center gap-1.5">
+                      {t.name}
+                      {t.parent && (
+                        <Badge variant="outline" className="text-[10px] gap-1">
+                          <GitBranch className="h-2.5 w-2.5" />
+                          {t.parent.name}
+                        </Badge>
+                      )}
+                    </h3>
+                    {t.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{t.description}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, team: t })} aria-label="Modifier">
+                      <Edit className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDel(t)} aria-label="Supprimer">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {t.lead && (
+                  <div className="flex items-center gap-2 p-2 rounded-md bg-amber-50 border border-amber-200">
+                    <Crown className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-wider text-amber-700 font-semibold">Chef d&apos;Ã©quipe</p>
+                      <p className="text-xs font-medium truncate">{t.lead.fullName || t.lead.email}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                      Membres ({t._count.members})
+                    </p>
+                    <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => setAssignDialog({ open: true, team: t })}>
+                      <UsersIcon className="h-3 w-3 mr-1" />
+                      GÃ©rer
+                    </Button>
+                  </div>
+                  {t.members.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">Aucun membre</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {t.members.slice(0, 6).map((m) => (
+                        <div
+                          key={m.id}
+                          className="h-7 w-7 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#15406d] flex items-center justify-center text-white text-[10px] font-semibold ring-2 ring-white"
+                          title={m.fullName || m.email}
+                          style={m.avatarUrl ? { backgroundImage: `url(${m.avatarUrl})`, backgroundSize: "cover" } : undefined}
+                        >
+                          {!m.avatarUrl && (m.fullName || m.email).split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase()}
+                        </div>
+                      ))}
+                      {t.members.length > 6 && (
+                        <div className="h-7 px-2 rounded-full bg-muted flex items-center text-[10px] font-medium text-muted-foreground">
+                          +{t.members.length - 6}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <TeamDialog
+        open={dialog.open}
+        team={dialog.team}
+        teams={teams}
+        admins={admins}
+        onClose={() => setDialog({ open: false, team: null })}
+        onSaved={() => router.refresh()}
+      />
+
+      <AssignMembersDialog
+        open={assignDialog.open}
+        team={assignDialog.team}
+        admins={admins}
+        onClose={() => setAssignDialog({ open: false, team: null })}
+        onSaved={() => router.refresh()}
+      />
+
+      <ConfirmDialog
+        open={!!confirmDel}
+        onOpenChange={(o) => !o && setConfirmDel(null)}
+        title={`Supprimer ${confirmDel?.name} ?`}
+        description="Les membres et sous-Ã©quipes seront dÃ©tachÃ©s. Cette action ne peut Ãªtre annulÃ©e."
+        confirmLabel="Supprimer"
+        variant="destructive"
+        onConfirm={onDelete}
+      />
+    </div>
+  );
+}
+
+function TeamDialog({
+  open, team, teams, admins, onClose, onSaved,
+}: {
+  open: boolean;
+  team: TeamRow | null;
+  teams: TeamRow[];
+  admins: AdminLite[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(team?.name ?? "");
+  const [description, setDescription] = useState(team?.description ?? "");
+  const [color, setColor] = useState(team?.color ?? "#0F2D52");
+  const [leadId, setLeadId] = useState(team?.leadAdminId ? String(team.leadAdminId) : "none");
+  const [parentId, setParentId] = useState(team?.parentTeamId ? String(team.parentTeamId) : "none");
+  const [pending, setPending] = useState(false);
+
+  // Reset propre Ã  l'ouverture / changement de team (useEffect au lieu d'un anti-pattern dans le body)
+  useEffect(() => {
+    if (open) {
+      setName(team?.name ?? "");
+      setDescription(team?.description ?? "");
+      setColor(team?.color ?? "#0F2D52");
+      setLeadId(team?.leadAdminId ? String(team.leadAdminId) : "none");
+      setParentId(team?.parentTeamId ? String(team.parentTeamId) : "none");
+    }
+  }, [open, team]);
+
+  const submit = async () => {
+    if (!name.trim()) { toast.error("Nom requis"); return; }
+    setPending(true);
+    const payload = {
+      name: name.trim(),
+      description: description.trim() || null,
+      color,
+      leadAdminId: leadId === "none" ? null : Number(leadId),
+      parentTeamId: parentId === "none" ? null : Number(parentId),
+    };
+    const r = team
+      ? await updateTeamAction({ id: team.id, ...payload })
+      : await createTeamAction(payload);
+    setPending(false);
+    if (r.success) {
+      toast.success(team ? "Ã‰quipe modifiÃ©e" : "Ã‰quipe crÃ©Ã©e");
+      onSaved();
+      onClose();
+    } else toast.error(r.error || "Erreur");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md p-0 overflow-hidden">
+        <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-base text-white flex items-center gap-2">
+              <Network className="h-4 w-4" />
+              {team ? "Modifier l'Ã©quipe" : "Nouvelle Ã©quipe"}
+            </DialogTitle>
+            <DialogDescription className="text-white/80 text-xs">
+              Une Ã©quipe regroupe des membres avec un objectif commun.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+        <div className="p-5 space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider font-semibold">Nom *</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ComptabilitÃ©, Ventesâ€¦" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider font-semibold">Description</Label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y"
+              placeholder="RÃ´le, mission, contexteâ€¦"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wider font-semibold">Couleur</Label>
+              <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-9 cursor-pointer" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wider font-semibold">Ã‰quipe parent</Label>
+              <Select value={parentId} onValueChange={setParentId}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Aucune" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">â€” Aucune (top-level) â€”</SelectItem>
+                  {teams.filter((t) => t.id !== team?.id).map((t) => (
+                    <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider font-semibold">Chef d&apos;Ã©quipe</Label>
+            <Select value={leadId} onValueChange={setLeadId}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Aucun" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">â€” Aucun â€”</SelectItem>
+                {admins.map((a) => (
+                  <SelectItem key={a.id} value={String(a.id)}>{a.fullName || a.email}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter className="px-5 py-3 border-t bg-muted/30">
+          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button onClick={submit} disabled={pending || !name.trim()}>
+            {pending ? "..." : team ? "Enregistrer" : "CrÃ©er"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AssignMembersDialog({
+  open, team, admins, onClose, onSaved,
+}: {
+  open: boolean;
+  team: TeamRow | null;
+  admins: AdminLite[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [pending, setPending] = useState(false);
+
+  if (!team) return null;
+  const memberIds = new Set(team.members.map((m) => m.id));
+
+  const toggleMember = async (adminId: number, isMember: boolean) => {
+    setPending(true);
+    const r = await assignAdminToTeamAction({
+      adminId,
+      teamId: isMember ? null : team.id,
+    });
+    setPending(false);
+    if (r.success) {
+      toast.success(isMember ? "Membre retirÃ©" : "Membre ajoutÃ©");
+      onSaved();
+    } else toast.error(r.error || "Erreur");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg p-0 overflow-hidden">
+        <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-base text-white flex items-center gap-2">
+              <UsersIcon className="h-4 w-4" />
+              Membres de Â« {team.name} Â»
+            </DialogTitle>
+            <DialogDescription className="text-white/80 text-xs">
+              Activez/dÃ©sactivez les membres. Un employÃ© ne peut appartenir qu&apos;Ã  une seule Ã©quipe.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+        <div className="p-5 max-h-[60vh] overflow-y-auto space-y-1">
+          {admins.map((a) => {
+            const isMember = memberIds.has(a.id);
+            const inOtherTeam = a.teamId != null && a.teamId !== team.id;
+            return (
+              <label
+                key={a.id}
+                className={`flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 cursor-pointer ${isMember ? "bg-emerald-50" : ""}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isMember}
+                  disabled={pending}
+                  onChange={() => toggleMember(a.id, isMember)}
+                  className="h-4 w-4 rounded border-input"
+                />
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#15406d] flex items-center justify-center text-white text-[11px] font-semibold ring-2 ring-white shrink-0">
+                  {(a.fullName || a.email).split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{a.fullName || a.email}</p>
+                  <p className="text-xs text-muted-foreground truncate">{a.position?.name || a.email}</p>
+                </div>
+                {inOtherTeam && (
+                  <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">
+                    Autre Ã©quipe
+                  </Badge>
+                )}
+              </label>
+            );
+          })}
+        </div>
+        <DialogFooter className="px-5 py-3 border-t bg-muted/30">
+          <Button variant="outline" onClick={onClose}>Fermer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

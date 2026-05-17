@@ -130,3 +130,30 @@ export async function deletePositionAction(input: z.infer<typeof deleteSchema>):
   revalidatePath("/admin/settings");
   return { success: true };
 }
+
+// ═══════════════════════════════════════════════════════════
+// RÉORDONNER LES POSTES (drag & drop)
+// ═══════════════════════════════════════════════════════════
+const reorderSchema = z.object({
+  orderedIds: z.array(z.number().int()).min(1),
+});
+
+export async function reorderPositionsAction(input: z.infer<typeof reorderSchema>): Promise<Result> {
+  const adminId = await requirePositionsWrite();
+  if (!adminId) return { success: false, error: "Non autorisé" };
+  const parsed = reorderSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: "Données invalides" };
+
+  await prisma.$transaction(
+    parsed.data.orderedIds.map((id, idx) =>
+      prisma.position.update({
+        where: { id },
+        data: { sortOrder: (idx + 1) * 10 },
+      })
+    )
+  );
+
+  await logAudit({ adminId, action: "update", entityType: "position_reorder", changes: { count: parsed.data.orderedIds.length } });
+  revalidatePath("/admin/settings/team");
+  return { success: true };
+}

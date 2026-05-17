@@ -21,6 +21,8 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
+  Users as UsersIcon,
+  UserCircle as MyAreaIcon,
 } from "lucide-react";
 import {
   DashboardIcon,
@@ -41,6 +43,7 @@ import {
   DisputesIcon,
   FinanceGroupIcon,
   FinanceSummaryIcon,
+  StatisticsIcon,
   PaymentsGroupIcon,
   TransactionsIcon,
   ReconciliationIcon,
@@ -77,8 +80,10 @@ function isGroup(e: NavEntry): e is NavGroup {
 
 const NAV: NavEntry[] = [
   { key: "dashboard", icon: DashboardIcon, href: "/admin" },
+  { key: "mon_espace", icon: MyAreaIcon, href: "/admin/mon-espace" },
   { key: "workflow", icon: WorkflowIcon, href: "/admin/workflow" },
   { key: "clients", icon: ClientsIcon, href: "/admin/clients" },
+  { key: "employes", icon: UsersIcon, href: "/admin/employes" },
   {
     key: "operations_group",
     icon: OperationsIcon,
@@ -138,6 +143,7 @@ const NAV: NavEntry[] = [
       },
     ],
   },
+  { key: "statistics", icon: StatisticsIcon, href: "/admin/statistics" },
   { key: "audit_trail", icon: AuditTrailIcon, href: "/admin/audit-trail" },
   { key: "profile", icon: ProfileIcon, href: "/admin/profile" },
   { key: "settings", icon: SettingsIcon, href: "/admin/settings" },
@@ -273,7 +279,14 @@ export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
 
   const [compact, setCompactState] = useState(false);
   useEffect(() => { setCompactState(loadJson("admin.sidebar.compact", false)); }, []);
-  const setCompact = (v: boolean) => { setCompactState(v); saveJson("admin.sidebar.compact", v); };
+  const setCompact = (v: boolean) => {
+    setCompactState(v);
+    saveJson("admin.sidebar.compact", v);
+    // Cookie pour SSR (évite CLS au rechargement)
+    if (typeof document !== "undefined") {
+      document.cookie = `admin-sidebar-compact=${v ? "1" : "0"}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+    }
+  };
 
   // Synchronise la largeur de la sidebar avec une CSS variable
   // pour que le <main> du layout suive automatiquement (evite le gap blanc en mode compact)

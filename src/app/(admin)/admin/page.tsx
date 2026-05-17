@@ -14,6 +14,18 @@ export default async function AdminDashboard() {
   const session = await auth();
   const adminId = session?.user?.adminId;
 
+  // Redirect onboarding si pas encore complété (1re connexion après invitation)
+  if (adminId) {
+    const me = await prisma.admin.findUnique({
+      where: { id: adminId },
+      select: { onboardingDone: true },
+    });
+    if (me && !me.onboardingDone) {
+      const { redirect } = await import("next/navigation");
+      redirect("/admin/welcome");
+    }
+  }
+
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);

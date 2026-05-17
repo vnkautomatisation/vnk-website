@@ -13,7 +13,9 @@
     "db:baseline": "prisma db pull && prisma migrate resolve --applied 20260411_000_init",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:seed-hr": "tsx prisma/seed-hr.ts",
+    "test": "tsx --test tests/security.test.ts"
   },
   "dependencies": {
     "@auth/core": "^0.37.2",

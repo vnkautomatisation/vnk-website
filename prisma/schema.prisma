@@ -79,6 +79,10 @@ model Admin {
   endDate           DateTime? @map("end_date") @db.Date
   internalNotes     String?  @map("internal_notes")
 
+  // ── Sous-équipes : appartenance à un Team + supérieur hiérarchique ──
+  teamId            Int?     @map("team_id")
+  managerId         Int?     @map("manager_id")
+
   auditLogs        AuditLog[]
   sessions         AdminSession[]
   assignedPayments Payment[] @relation("AssignedPayments")
@@ -86,11 +90,740 @@ model Admin {
   trustedDevices   AdminTrustedDevice[]
   apiTokens        AdminApiToken[]
   securityEvents   AdminSecurityEvent[]
+  passkeys         AdminPasskey[]
+  team             Team?    @relation("TeamMembers", fields: [teamId], references: [id])
+  ledTeams         Team[]   @relation("TeamLead")
+  manager          Admin?   @relation("AdminManager", fields: [managerId], references: [id])
+  directReports    Admin[]  @relation("AdminManager")
+
+  // ── Module RH ─────────────────────────────────────────
+  contracts        EmployeeContract[] @relation("EmployeeContracts")
+  employerContractSignatures EmployeeContract[] @relation("EmployerSignatures")
+  legalSignatures  LegalDocumentSignature[] @relation("LegalSignatures")
+  timeClocks       TimeClock[] @relation("TimeClocks")
+  timeClockApprovals TimeClock[] @relation("TimeClockApprovers")
+  payStubs         PayStub[] @relation("PayStubs")
+  leaveRequests    LeaveRequest[] @relation("LeaveRequests")
+  leaveReviews     LeaveRequest[] @relation("LeaveReviewers")
+
+  // ── Dossier employé étendu ───────────────────────────
+  emergencyContacts        EmergencyContact[] @relation("EmergencyContacts")
+  bankInfo                 BankInfo? @relation("BankInfo")
+  familyDependents         FamilyDependent[] @relation("FamilyDependents")
+  professionalLicenses     ProfessionalLicense[] @relation("ProfessionalLicenses")
+  employeeFiles            EmployeeFile[] @relation("EmployeeFiles")
+  employeeFilesUploaded    EmployeeFile[] @relation("EmployeeFilesUploaded")
+  assignedEquipment        AssignedEquipment[] @relation("AssignedEquipment")
+  trainingRecords          TrainingRecord[] @relation("TrainingRecords")
+  cnesstIncidents          CnesstIncident[] @relation("CnesstIncidents")
+  cnesstReports            CnesstIncident[] @relation("CnesstReports")
+  performanceReviews       PerformanceReview[] @relation("PerformanceReviews")
+  performanceReviewsAsReviewer PerformanceReview[] @relation("PerformanceReviewers")
+  oneOnOnesAsEmployee      OneOnOneMeeting[] @relation("OneOnOnesAsEmployee")
+  oneOnOnesAsManager       OneOnOneMeeting[] @relation("OneOnOnesAsManager")
+  salaryHistory            SalaryHistory[] @relation("SalaryHistory")
+  salaryApprovals          SalaryHistory[] @relation("SalaryApprovals")
+  bonuses                  BonusRecord[] @relation("Bonuses")
+  bonusApprovals           BonusRecord[] @relation("BonusApprovals")
+  workSchedule             WorkSchedule? @relation("WorkSchedule")
+  announcements            Announcement[] @relation("Announcements")
+  taxDocuments             TaxDocument[] @relation("TaxDocuments")
+  taxDocumentsIssued       TaxDocument[] @relation("TaxDocumentsIssued")
+  letterRequests           EmploymentLetterRequest[] @relation("LetterRequests")
+  letterRequestsIssued     EmploymentLetterRequest[] @relation("LetterRequestsIssued")
+  offboardingAsEmployee    OffboardingChecklist? @relation("OffboardingAsEmployee")
+  offboardingInitiated     OffboardingChecklist[] @relation("OffboardingInitiator")
+  offboardingSuccessor     OffboardingChecklist[] @relation("OffboardingSuccessor")
+  hrPolicies               HrPolicy[] @relation("HrPolicies")
 
   position         Position? @relation(fields: [positionId], references: [id])
   customRole       Role?     @relation(fields: [roleId], references: [id])
 
+  @@index([teamId])
+  @@index([managerId])
   @@map("admins")
+}
+
+// ── Passkeys WebAuthn (login sans mot de passe) ────────────
+model AdminPasskey {
+  id            Int      @id @default(autoincrement())
+  adminId       Int      @map("admin_id")
+  credentialId  String   @unique @map("credential_id") // base64url
+  publicKey     String   @map("public_key") @db.Text   // SPKI base64
+  counter       BigInt   @default(0)
+  transports    String?  // "usb,nfc,internal,hybrid"
+  deviceLabel   String?  @map("device_label")          // "iPhone Yan", "YubiKey 5"
+  backupEligible Boolean @default(false) @map("backup_eligible")
+  backupState    Boolean @default(false) @map("backup_state")
+  aaguid        String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  lastUsedAt    DateTime? @map("last_used_at")
+
+  admin         Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("admin_passkeys")
+}
+
+// ── Challenges éphémères WebAuthn (registration + auth) ─────
+model WebAuthnChallenge {
+  id          Int      @id @default(autoincrement())
+  challenge   String   @unique  // base64url
+  adminId     Int?     @map("admin_id")   // null si flow d'auth (email pas encore donné)
+  email       String?  // pour flow d'auth par email
+  purpose     String   // "registration" | "authentication"
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([expiresAt])
+  @@map("webauthn_challenges")
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODULE EMPLOYÉS — contrats, documents légaux, pointage, paie, congés
+// ═══════════════════════════════════════════════════════════
+
+// ── Templates de contrats associés aux postes ──────────────
+model ContractTemplate {
+  id             Int      @id @default(autoincrement())
+  name           String   // « Contrat CDI Comptable », « Contrat stagiaire »
+  positionId     Int?     @map("position_id")
+  contractType   String   @map("contract_type") // cdi | cdd | contractuel | stagiaire | autre
+  bodyMarkdown   String   @map("body_markdown") @db.Text
+  defaultSalary  Decimal? @map("default_salary") @db.Decimal(10, 2)
+  defaultRate    Decimal? @map("default_rate") @db.Decimal(8, 2)
+  defaultHoursPerWeek Int? @map("default_hours_per_week")
+  defaultVacationPct  Decimal? @default(4.0) @map("default_vacation_pct") @db.Decimal(4, 2)
+  probationDays  Int?     @default(90) @map("probation_days")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
+  position       Position? @relation(fields: [positionId], references: [id], onDelete: SetNull)
+  contracts      EmployeeContract[]
+
+  @@map("contract_templates")
+}
+
+// ── Contrat signé d'un employé ─────────────────────────────
+model EmployeeContract {
+  id              Int      @id @default(autoincrement())
+  adminId         Int      @map("admin_id")
+  templateId      Int?     @map("template_id")
+  title           String   // « Contrat CDI - Yan Verone »
+  contractType    String   @map("contract_type")
+  bodyMarkdown    String   @map("body_markdown") @db.Text
+  startDate       DateTime @map("start_date") @db.Date
+  endDate         DateTime? @map("end_date") @db.Date
+  probationEndDate DateTime? @map("probation_end_date") @db.Date
+  salaryAnnual    Decimal? @map("salary_annual") @db.Decimal(10, 2)
+  hourlyRate      Decimal? @map("hourly_rate") @db.Decimal(8, 2)
+  hoursPerWeek    Int?     @map("hours_per_week")
+  vacationPct     Decimal? @map("vacation_pct") @db.Decimal(4, 2)
+  currency        String   @default("CAD")
+
+  // ── Double signature ────────────────────────────────────
+  employeeSignatureData String? @map("employee_signature_data") @db.Text // data URL PNG
+  employeeSignedAt      DateTime? @map("employee_signed_at")
+  employeeSignedIp      String? @map("employee_signed_ip")
+  employerSignatureData String? @map("employer_signature_data") @db.Text
+  employerSignedAt      DateTime? @map("employer_signed_at")
+  employerSignedIp      String? @map("employer_signed_ip")
+  employerAdminId       Int? @map("employer_admin_id") // qui a signé côté employeur
+
+  status          String   @default("draft") // draft | sent | signed_employee | signed_employer | active | terminated | expired
+  terminatedAt    DateTime? @map("terminated_at")
+  terminationReason String? @map("termination_reason")
+  pdfUrl          String?  @map("pdf_url") // PDF signé archivé
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin           Admin    @relation("EmployeeContracts", fields: [adminId], references: [id], onDelete: Cascade)
+  template        ContractTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  employer        Admin?   @relation("EmployerSignatures", fields: [employerAdminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId])
+  @@index([status])
+  @@map("employee_contracts")
+}
+
+// ── Documents légaux à faire signer aux employés ───────────
+model LegalDocumentTemplate {
+  id           Int      @id @default(autoincrement())
+  key          String   @unique // nda | code_conduct | harassment_policy | security_policy | data_policy
+  title        String
+  category     String   @default("policy") // policy | nda | acknowledgment
+  version      String   @default("1.0")
+  bodyMarkdown String   @map("body_markdown") @db.Text
+  isRequired   Boolean  @default(true) @map("is_required")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  signatures   LegalDocumentSignature[]
+
+  @@map("legal_document_templates")
+}
+
+model LegalDocumentSignature {
+  id          Int      @id @default(autoincrement())
+  templateId  Int      @map("template_id")
+  adminId     Int      @map("admin_id")
+  version     String   // copie au moment de la signature pour archive immuable
+  signatureData String? @map("signature_data") @db.Text
+  signedAt    DateTime @default(now()) @map("signed_at")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+
+  template    LegalDocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  admin       Admin    @relation("LegalSignatures", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, adminId, version])
+  @@index([adminId])
+  @@map("legal_document_signatures")
+}
+
+// ── Pointage horaire employé (distinct de TimeEntry qui est facturable client) ──
+model TimeClock {
+  id          Int      @id @default(autoincrement())
+  adminId     Int      @map("admin_id")
+  clockIn     DateTime @map("clock_in")
+  clockOut    DateTime? @map("clock_out")
+  durationMin Int?     @map("duration_min") // calculé à la sortie
+  category    String   @default("work") // work | break | meeting | training | sick | vacation
+  notes       String?
+  approvedBy  Int?     @map("approved_by")
+  approvedAt  DateTime? @map("approved_at")
+  payStubId   Int?     @map("pay_stub_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin       Admin    @relation("TimeClocks", fields: [adminId], references: [id], onDelete: Cascade)
+  approver    Admin?   @relation("TimeClockApprovers", fields: [approvedBy], references: [id], onDelete: SetNull)
+  payStub     PayStub? @relation(fields: [payStubId], references: [id], onDelete: SetNull)
+
+  @@index([adminId, clockIn])
+  @@index([payStubId])
+  @@map("time_clocks")
+}
+
+// ── Cycles de paie ──────────────────────────────────────────
+model PayPeriod {
+  id          Int      @id @default(autoincrement())
+  startDate   DateTime @map("start_date") @db.Date
+  endDate     DateTime @map("end_date") @db.Date
+  payDate     DateTime @map("pay_date") @db.Date
+  status      String   @default("open") // open | locked | paid
+  lockedAt    DateTime? @map("locked_at")
+  paidAt      DateTime? @map("paid_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  stubs       PayStub[]
+
+  @@index([startDate, endDate])
+  @@map("pay_periods")
+}
+
+// ── Bulletin de paie ────────────────────────────────────────
+model PayStub {
+  id              Int      @id @default(autoincrement())
+  periodId        Int      @map("period_id")
+  adminId         Int      @map("admin_id")
+  hoursRegular    Decimal  @default(0) @map("hours_regular") @db.Decimal(6, 2)
+  hoursOvertime   Decimal  @default(0) @map("hours_overtime") @db.Decimal(6, 2)
+  hoursVacation   Decimal  @default(0) @map("hours_vacation") @db.Decimal(6, 2)
+  hoursSick       Decimal  @default(0) @map("hours_sick") @db.Decimal(6, 2)
+  rate            Decimal  @default(0) @map("rate") @db.Decimal(8, 2)
+  grossPay        Decimal  @default(0) @map("gross_pay") @db.Decimal(10, 2)
+  // Déductions à la source Québec (provisoires — calcul réel via service externe en prod)
+  deductionFederal Decimal @default(0) @map("deduction_federal") @db.Decimal(10, 2)
+  deductionProvincial Decimal @default(0) @map("deduction_provincial") @db.Decimal(10, 2)
+  deductionRrq    Decimal  @default(0) @map("deduction_rrq") @db.Decimal(10, 2) // Régime rentes Québec
+  deductionAe     Decimal  @default(0) @map("deduction_ae") @db.Decimal(10, 2)  // Assurance-emploi
+  deductionRqap   Decimal  @default(0) @map("deduction_rqap") @db.Decimal(10, 2) // Régime québécois assurance parentale
+  deductionOther  Decimal  @default(0) @map("deduction_other") @db.Decimal(10, 2)
+  netPay          Decimal  @default(0) @map("net_pay") @db.Decimal(10, 2)
+  notes           String?
+  pdfUrl          String?  @map("pdf_url")
+  releasedAt      DateTime? @map("released_at") // visible à l'employé
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  period          PayPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  admin           Admin    @relation("PayStubs", fields: [adminId], references: [id], onDelete: Cascade)
+  timeClocks      TimeClock[]
+
+  @@unique([periodId, adminId])
+  @@index([adminId])
+  @@map("pay_stubs")
+}
+
+// ── Demandes de congé ───────────────────────────────────────
+model LeaveRequest {
+  id          Int      @id @default(autoincrement())
+  adminId     Int      @map("admin_id")
+  type        String   // vacation | sick | parental | unpaid | bereavement | other
+  startDate   DateTime @map("start_date") @db.Date
+  endDate     DateTime @map("end_date") @db.Date
+  daysCount   Decimal  @map("days_count") @db.Decimal(4, 2)
+  reason      String?
+  status      String   @default("pending") // pending | approved | rejected | cancelled
+  reviewerId  Int?     @map("reviewer_id")
+  reviewedAt  DateTime? @map("reviewed_at")
+  reviewNotes String?  @map("review_notes")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin       Admin    @relation("LeaveRequests", fields: [adminId], references: [id], onDelete: Cascade)
+  reviewer    Admin?   @relation("LeaveReviewers", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([adminId, status])
+  @@index([startDate, endDate])
+  @@map("leave_requests")
+}
+
+// ═══════════════════════════════════════════════════════════
+// DOSSIER EMPLOYÉ ÉTENDU
+// ═══════════════════════════════════════════════════════════
+
+// ── Coordonnées d'urgence (médical) ─────────────────────────
+model EmergencyContact {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  name         String
+  relationship String   // "Conjoint", "Parent", "Frère/Sœur", "Ami(e)"
+  phone        String
+  phoneAlt     String?  @map("phone_alt")
+  email        String?
+  isPrimary    Boolean  @default(false) @map("is_primary")
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin        Admin    @relation("EmergencyContacts", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("emergency_contacts")
+}
+
+// ── Information bancaire pour dépôt direct (chiffré) ───────
+model BankInfo {
+  id              Int      @id @default(autoincrement())
+  adminId         Int      @unique @map("admin_id")
+  // Données chiffrées avec ENCRYPTION_KEY env var (AES-256-GCM)
+  institutionEnc  String   @map("institution_enc") @db.Text
+  transitEnc      String   @map("transit_enc") @db.Text
+  accountEnc      String   @map("account_enc") @db.Text
+  // Métadonnées non sensibles (masquage UI)
+  institutionLabel String?  @map("institution_label") // "Desjardins", "BMO"
+  accountLast4    String?  @map("account_last4")     // Pour affichage UI
+  verifiedAt      DateTime? @map("verified_at")      // Voided cheque vérifié
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin           Admin    @relation("BankInfo", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("bank_info")
+}
+
+// ── Personnes à charge / famille (assurance collective) ────
+model FamilyDependent {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  type         String   // spouse | child | other
+  fullName     String   @map("full_name")
+  birthdate    DateTime? @db.Date
+  sin          String?  // NAS (chiffré idéalement, pour CRA)
+  isInsured    Boolean  @default(false) @map("is_insured")
+  isTaxDependent Boolean @default(false) @map("is_tax_dependent")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin        Admin    @relation("FamilyDependents", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("family_dependents")
+}
+
+// ── Permis & certifications professionnels ─────────────────
+model ProfessionalLicense {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  type         String   // "Licence électricien", "Carte CCQ", "Secourisme", "Permis classe 5"
+  number       String?  // numéro du permis
+  issuer       String?  // émetteur (RBQ, CCQ, Croix-Rouge, SAAQ)
+  issuedAt     DateTime? @map("issued_at") @db.Date
+  expiresAt    DateTime? @map("expires_at") @db.Date
+  fileUrl      String?  @map("file_url")  // PDF du certificat
+  isMandatory  Boolean  @default(false) @map("is_mandatory")
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin        Admin    @relation("ProfessionalLicenses", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([expiresAt])
+  @@map("professional_licenses")
+}
+
+// ── Documents employé (CV, diplômes, photos, autres) ───────
+model EmployeeFile {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  category     String   // resume | diploma | photo | id | other
+  title        String
+  fileUrl      String   @map("file_url")
+  fileSize     Int?     @map("file_size")
+  mimeType     String?  @map("mime_type")
+  uploadedBy   Int?     @map("uploaded_by")
+  isPrivate    Boolean  @default(true) @map("is_private") // Visible RH seulement
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  admin        Admin    @relation("EmployeeFiles", fields: [adminId], references: [id], onDelete: Cascade)
+  uploader     Admin?   @relation("EmployeeFilesUploaded", fields: [uploadedBy], references: [id], onDelete: SetNull)
+
+  @@index([adminId, category])
+  @@map("employee_files")
+}
+
+// ── Équipement attribué (laptop, outils, EPI, voiture) ─────
+model AssignedEquipment {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  category     String   // laptop | phone | tool | epi | vehicle | card | license | other
+  name         String   // "MacBook Pro 14", "iPhone 15 Pro", "Multimètre Fluke 87"
+  serialNumber String?  @map("serial_number")
+  brand        String?
+  model        String?
+  assignedAt   DateTime @default(now()) @map("assigned_at")
+  returnedAt   DateTime? @map("returned_at")
+  conditionOnReturn String? @map("condition_on_return") // good | damaged | lost
+  value        Decimal? @db.Decimal(10, 2)
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin        Admin    @relation("AssignedEquipment", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([category])
+  @@map("assigned_equipment")
+}
+
+// ── Formations & cursus (SIMDUT, cadenassage, sécurité) ────
+model TrainingRecord {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  title        String   // "SIMDUT 2015", "Cadenassage/déconsignation"
+  category     String   @default("safety") // safety | technical | leadership | compliance | other
+  provider     String?  // "CNESST", "Schneider Electric"
+  completedAt  DateTime? @map("completed_at") @db.Date
+  expiresAt    DateTime? @map("expires_at") @db.Date
+  certificateUrl String? @map("certificate_url")
+  isMandatory  Boolean  @default(false) @map("is_mandatory")
+  hoursCount   Decimal? @map("hours_count") @db.Decimal(5, 2)
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin        Admin    @relation("TrainingRecords", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([expiresAt])
+  @@map("training_records")
+}
+
+// ── CNESST : déclarations d'accident travail (obligatoire QC) ──
+model CnesstIncident {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  reportedBy   Int      @map("reported_by")
+  incidentDate DateTime @map("incident_date")
+  location     String   // "Atelier rue X", "Chantier client Acme"
+  description  String   @db.Text
+  injuryType   String?  @map("injury_type") // brûlure, fracture, choc électrique, chute, etc.
+  bodyPart     String?  @map("body_part")
+  witnessName  String?  @map("witness_name")
+  reportedToCnesstAt DateTime? @map("reported_to_cnesst_at")
+  cnesstFileNumber String? @map("cnesst_file_number")
+  daysAbsent   Int?     @map("days_absent")
+  returnedToWorkAt DateTime? @map("returned_to_work_at")
+  attachmentUrls Json?  @map("attachment_urls") // array URLs
+  status       String   @default("declared") // declared | accepted | refused | closed
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin        Admin    @relation("CnesstIncidents", fields: [adminId], references: [id], onDelete: Cascade)
+  reporter     Admin    @relation("CnesstReports", fields: [reportedBy], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([incidentDate])
+  @@map("cnesst_incidents")
+}
+
+// ── Évaluations de performance (annuelles) ─────────────────
+model PerformanceReview {
+  id              Int      @id @default(autoincrement())
+  adminId         Int      @map("admin_id")
+  reviewerId      Int      @map("reviewer_id")
+  periodStart     DateTime @map("period_start") @db.Date
+  periodEnd       DateTime @map("period_end") @db.Date
+  status          String   @default("draft") // draft | submitted | reviewed | acknowledged | closed
+  rating          Int?     // 1-5 ou 1-10
+  strengths       String?  @db.Text
+  improvements    String?  @db.Text
+  objectivesNext  String?  @map("objectives_next") @db.Text
+  managerComments String?  @map("manager_comments") @db.Text
+  employeeComments String? @map("employee_comments") @db.Text
+  submittedAt     DateTime? @map("submitted_at")
+  acknowledgedAt  DateTime? @map("acknowledged_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin           Admin    @relation("PerformanceReviews", fields: [adminId], references: [id], onDelete: Cascade)
+  reviewer        Admin    @relation("PerformanceReviewers", fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([reviewerId])
+  @@map("performance_reviews")
+}
+
+// ── Réunions 1-on-1 (manager ↔ employé) ────────────────────
+model OneOnOneMeeting {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")     // l'employé
+  managerId    Int      @map("manager_id")   // qui mène la réunion
+  scheduledAt  DateTime @map("scheduled_at")
+  durationMin  Int      @default(30) @map("duration_min")
+  agenda       String?  @db.Text   // points à aborder (préparés)
+  notes        String?  @db.Text   // notes de la réunion
+  actionItems  Json?    @map("action_items") // [{ text, owner, dueDate, done }]
+  privateNotes String?  @map("private_notes") @db.Text // visible manager seulement
+  status       String   @default("scheduled") // scheduled | held | cancelled | rescheduled
+  heldAt       DateTime? @map("held_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin        Admin    @relation("OneOnOnesAsEmployee", fields: [adminId], references: [id], onDelete: Cascade)
+  manager      Admin    @relation("OneOnOnesAsManager", fields: [managerId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, scheduledAt])
+  @@index([managerId, scheduledAt])
+  @@map("one_on_ones")
+}
+
+// ── Historique salaires & augmentations ────────────────────
+model SalaryHistory {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  effectiveDate DateTime @map("effective_date") @db.Date
+  type         String   // initial | raise | promotion | adjustment | bonus_base | demotion
+  salaryAnnual Decimal? @map("salary_annual") @db.Decimal(10, 2)
+  hourlyRate   Decimal? @map("hourly_rate") @db.Decimal(8, 2)
+  currency     String   @default("CAD")
+  reason       String?
+  approvedBy   Int?     @map("approved_by")
+  contractId   Int?     @map("contract_id") // si lié à un avenant
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  admin        Admin    @relation("SalaryHistory", fields: [adminId], references: [id], onDelete: Cascade)
+  approver     Admin?   @relation("SalaryApprovals", fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  @@index([adminId, effectiveDate])
+  @@map("salary_history")
+}
+
+// ── Primes / bonus / commissions ────────────────────────────
+model BonusRecord {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  type         String   // annual_bonus | spot_bonus | commission | sign_on | referral | retention
+  amount       Decimal  @db.Decimal(10, 2)
+  currency     String   @default("CAD")
+  reason       String?
+  awardedAt    DateTime @map("awarded_at") @db.Date
+  paidWith     Int?     @map("paid_with") // payStubId si versé
+  approvedBy   Int?     @map("approved_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  admin        Admin    @relation("Bonuses", fields: [adminId], references: [id], onDelete: Cascade)
+  approver     Admin?   @relation("BonusApprovals", fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  @@index([adminId, awardedAt])
+  @@map("bonus_records")
+}
+
+// ── Horaire de travail (peut varier par employé) ───────────
+model WorkSchedule {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @unique @map("admin_id")
+  // JSON : { monday: { start: "08:00", end: "16:00", break: 30 }, ... }
+  weeklyPattern Json    @map("weekly_pattern")
+  isRemote     Boolean  @default(false) @map("is_remote")
+  remoteDays   String?  @map("remote_days") // "mon,wed,fri"
+  effectiveFrom DateTime @default(now()) @map("effective_from") @db.Date
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin        Admin    @relation("WorkSchedule", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("work_schedules")
+}
+
+// ── Jours fériés Québec (configurable, pré-rempli au seed) ──
+model Holiday {
+  id           Int      @id @default(autoincrement())
+  date         DateTime @db.Date
+  name         String   // "Jour de l'An", "Action de grâce", "Fête nationale"
+  type         String   @default("statutory") // statutory | company | optional
+  isPaid       Boolean  @default(true) @map("is_paid")
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([date, name])
+  @@index([date])
+  @@map("holidays")
+}
+
+// ── Annonces internes ──────────────────────────────────────
+model Announcement {
+  id           Int      @id @default(autoincrement())
+  authorId     Int      @map("author_id")
+  title        String
+  body         String   @db.Text
+  category     String   @default("general") // general | safety | hr | tech | celebration
+  pinned       Boolean  @default(false)
+  publishedAt  DateTime? @map("published_at")
+  expiresAt    DateTime? @map("expires_at")
+  audienceType String   @default("all") @map("audience_type") // all | team | role
+  audienceTeamId Int?   @map("audience_team_id")
+  audienceRoleId Int?   @map("audience_role_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  author       Admin    @relation("Announcements", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([publishedAt])
+  @@map("announcements")
+}
+
+model AnnouncementRead {
+  id              Int      @id @default(autoincrement())
+  announcementId  Int      @map("announcement_id")
+  adminId         Int      @map("admin_id")
+  readAt          DateTime @default(now()) @map("read_at")
+
+  @@unique([announcementId, adminId])
+  @@map("announcement_reads")
+}
+
+// ── Documents fiscaux (T4, Relevé 1, lettre emploi) ────────
+model TaxDocument {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  type         String   // t4 | releve1 | employment_letter | nr4 | t2200 | other
+  taxYear      Int?     @map("tax_year") // 2024, 2025
+  title        String
+  fileUrl      String   @map("file_url")
+  issuedAt     DateTime @default(now()) @map("issued_at")
+  issuedBy     Int      @map("issued_by")
+  notes        String?
+
+  admin        Admin    @relation("TaxDocuments", fields: [adminId], references: [id], onDelete: Cascade)
+  issuer       Admin    @relation("TaxDocumentsIssued", fields: [issuedBy], references: [id], onDelete: Cascade)
+
+  @@index([adminId, taxYear])
+  @@map("tax_documents")
+}
+
+// ── Demandes de lettres d'emploi ───────────────────────────
+model EmploymentLetterRequest {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  purpose      String   // bank | rental | embassy | hypothec | other
+  recipient    String?  // destinataire ("Banque XYZ")
+  includeSalary Boolean @default(true) @map("include_salary")
+  notes        String?
+  status       String   @default("pending") // pending | issued | rejected
+  letterUrl    String?  @map("letter_url")
+  issuedAt     DateTime? @map("issued_at")
+  issuedBy     Int?     @map("issued_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  admin        Admin    @relation("LetterRequests", fields: [adminId], references: [id], onDelete: Cascade)
+  issuer       Admin?   @relation("LetterRequestsIssued", fields: [issuedBy], references: [id], onDelete: SetNull)
+
+  @@index([adminId])
+  @@map("employment_letter_requests")
+}
+
+// ── Checklist d'offboarding (sortie d'emploi) ──────────────
+model OffboardingChecklist {
+  id              Int      @id @default(autoincrement())
+  adminId         Int      @unique @map("admin_id")
+  initiatedBy     Int      @map("initiated_by")
+  reason          String?  // resignation | termination | retirement | end_contract
+  lastDay         DateTime? @map("last_day") @db.Date
+  // Items checklist (JSON)
+  items           Json     @default("[]") // [{ key, label, done, doneAt, doneBy }]
+  successorId     Int?     @map("successor_id")
+  exitInterview   String?  @map("exit_interview") @db.Text
+  exitInterviewAt DateTime? @map("exit_interview_at")
+  recordOfEmploymentSentAt DateTime? @map("re_sent_at") // Relevé d'emploi EDSC
+  finalPayDate    DateTime? @map("final_pay_date") @db.Date
+  status          String   @default("active") // active | completed | cancelled
+  completedAt     DateTime? @map("completed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin           Admin    @relation("OffboardingAsEmployee", fields: [adminId], references: [id], onDelete: Cascade)
+  initiator       Admin    @relation("OffboardingInitiator", fields: [initiatedBy], references: [id], onDelete: Cascade)
+  successor       Admin?   @relation("OffboardingSuccessor", fields: [successorId], references: [id], onDelete: SetNull)
+
+  @@map("offboarding_checklists")
+}
+
+// ── Politiques RH internes (harcèlement, IT, télétravail, etc.) ──
+// Distinct des LegalDocumentTemplate qui sont les docs signés.
+// HrPolicy = référence + version publiée pour consultation.
+model HrPolicy {
+  id           Int      @id @default(autoincrement())
+  key          String   @unique // "harassment" | "remote_work" | "it_usage" | "code_of_conduct"
+  title        String
+  version      String
+  bodyMarkdown String   @db.Text @map("body_markdown")
+  effectiveFrom DateTime @map("effective_from") @db.Date
+  isActive     Boolean  @default(true) @map("is_active")
+  publishedBy  Int      @map("published_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  publisher    Admin    @relation("HrPolicies", fields: [publishedBy], references: [id], onDelete: Cascade)
+
+  @@map("hr_policies")
+}
+
+// ── Sous-équipes / cellules organisationnelles ──────────────
+model Team {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  color       String?  @default("#0F2D52")
+  // Lead = chef d'équipe (optionnel — sinon hiérarchie pure via managerId)
+  leadAdminId Int?     @map("lead_admin_id")
+  parentTeamId Int?    @map("parent_team_id")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  lead        Admin?   @relation("TeamLead", fields: [leadAdminId], references: [id], onDelete: SetNull)
+  parent      Team?    @relation("TeamHierarchy", fields: [parentTeamId], references: [id], onDelete: SetNull)
+  children    Team[]   @relation("TeamHierarchy")
+  members     Admin[]  @relation("TeamMembers")
+
+  @@index([parentTeamId])
+  @@map("teams")
 }
 
 // ── Rôles personnalisables avec matrice de permissions ──────
@@ -131,8 +864,58 @@ model Position {
 
   defaultRole     Role?    @relation(fields: [defaultRoleId], references: [id])
   admins          Admin[]
+  contractTemplates ContractTemplate[]
 
   @@map("positions")
+}
+
+// ── Réinitialisation de mot de passe (flow "mot de passe oublié") ──
+// Pattern : email saisi → token + code 6 chiffres envoyés par mail → user
+// saisit le code + nouveau mot de passe. Token expire 30 min, max 5 essais.
+model PasswordResetToken {
+  id           Int      @id @default(autoincrement())
+  email        String
+  adminId      Int?     @map("admin_id") // null si email inconnu (anti enum)
+  clientId     Int?     @map("client_id") // si reset client
+  tokenHash    String   @unique @map("token_hash") // SHA-256 du token URL
+  codeHash     String   @map("code_hash") // SHA-256 du code à 6 chiffres
+  attempts     Int      @default(0) // nb essais code erroné
+  expiresAt    DateTime @map("expires_at")
+  usedAt       DateTime? @map("used_at")
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([email, usedAt])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+// ── Invitations d'utilisateurs admin (lien single-use) ──
+// Pattern Slack/Stripe : l'admin crée une invitation, l'employé reçoit un lien
+// signé HMAC + token aléatoire qui expire en 7 jours. À l'acceptation, l'employé
+// crée son propre mot de passe et active sa 2FA. Anti-pattern évité : pas de
+// mot de passe en clair affiché à l'admin créateur.
+model AdminInvitation {
+  id            Int      @id @default(autoincrement())
+  email         String
+  fullName      String?  @map("full_name")
+  title         String?
+  phone         String?
+  department    String?
+  roleId        Int?     @map("role_id")
+  positionId    Int?     @map("position_id")
+  tokenHash     String   @unique @map("token_hash") // SHA-256 du token brut
+  invitedById   Int      @map("invited_by_id")
+  expiresAt     DateTime @map("expires_at")
+  acceptedAt    DateTime? @map("accepted_at")
+  acceptedAdminId Int?   @map("accepted_admin_id") // id du compte créé après acceptation
+  revokedAt     DateTime? @map("revoked_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([email, acceptedAt])
+  @@index([expiresAt])
+  @@map("admin_invitations")
 }
 
 // ── Abonnements Web Push (notifications navigateur) ──

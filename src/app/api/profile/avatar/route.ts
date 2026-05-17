@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logSecurityEvent } from "@/lib/security/security-events";
+import { validateImageBuffer } from "@/lib/security/image-magic";
+import { uploadAvatar, deleteRemoteAvatar } from "@/lib/storage/object-storage";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 Mo brut
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -36,23 +38,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convertir en data URL base64
+    // ── Vérification magic bytes (le Content-Type est manipulable) ──
     const buf = Buffer.from(await file.arrayBuffer());
-    const dataUrl = `data:${file.type};base64,${buf.toString("base64")}`;
+    const magic = validateImageBuffer(buf);
+    if (!magic.ok) {
+      return NextResponse.json({ error: magic.error }, { status: 415 });
+    }
+
+    // ── Récupérer l'ancien avatar pour cleanup remote ──
+    const previous = await prisma.admin.findUnique({
+      where: { id: adminId },
+      select: { avatarUrl: true },
+    });
+
+    // ── Upload vers R2/S3 (ou data URL fallback) ──
+    const uploaded = await uploadAvatar({
+      buffer: buf,
+      mime: magic.mime,
+      prefix: `admin/${adminId}`,
+    });
+    const newUrl = uploaded.kind === "remote" ? uploaded.url : uploaded.dataUrl;
 
     await prisma.admin.update({
       where: { id: adminId },
-      data: { avatarUrl: dataUrl },
+      data: { avatarUrl: newUrl },
     });
+
+    // Cleanup ancien fichier remote
+    if (previous?.avatarUrl) {
+      await deleteRemoteAvatar(previous.avatarUrl).catch(() => null);
+    }
 
     await logSecurityEvent({
       adminId,
       type: "profile_updated",
       message: "Photo de profil téléversée",
-      metadata: { fileType: file.type, fileSize: file.size },
+      metadata: { fileType: file.type, fileSize: file.size, backend: uploaded.kind },
     });
 
-    return NextResponse.json({ ok: true, avatarUrl: dataUrl });
+    return NextResponse.json({ ok: true, avatarUrl: newUrl });
   } catch (err) {
     console.error("[avatar-upload]", err);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
@@ -67,10 +91,17 @@ export async function DELETE() {
   const adminId = session.user.adminId!;
 
   try {
+    const previous = await prisma.admin.findUnique({
+      where: { id: adminId },
+      select: { avatarUrl: true },
+    });
     await prisma.admin.update({
       where: { id: adminId },
       data: { avatarUrl: null },
     });
+    if (previous?.avatarUrl) {
+      await deleteRemoteAvatar(previous.avatarUrl).catch(() => null);
+    }
     await logSecurityEvent({
       adminId,
       type: "profile_updated",

@@ -1,0 +1,44 @@
+# Railway configuration
+# Documentation : https://docs.railway.com/reference/config-as-code
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm install --legacy-peer-deps && npx prisma generate && npm run build"
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+
+# ─────────────────────────────────────────────────────────
+# CRON JOBS
+# ─────────────────────────────────────────────────────────
+# Pour activer les crons côté Railway, créer un service séparé
+# (ou utiliser Railway Cron via le dashboard) avec :
+#   - Schedule (cron): 0 3 * * *           # tous les jours à 3h UTC
+#   - Command:
+#       curl -X POST \
+#         -H "Authorization: Bearer $CRON_SECRET" \
+#         "$RAILWAY_PUBLIC_DOMAIN/api/cron/audit-retention"
+#
+# Variables d'env requises :
+#   - CRON_SECRET                (secret partagé entre Railway et l'app)
+#   - RAILWAY_PUBLIC_DOMAIN      (auto-injectée par Railway)
+#
+# Liste des crons recommandés :
+#
+# [[crons]]
+# name = "audit-retention"
+# schedule = "0 3 * * *"              # quotidien 3h UTC
+# command = """curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" "https://$RAILWAY_PUBLIC_DOMAIN/api/cron/audit-retention" """
+#
+# [[crons]]
+# name = "expired-invitations-cleanup"
+# schedule = "0 4 * * *"              # quotidien 4h UTC (1h après retention)
+# command = """curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" "https://$RAILWAY_PUBLIC_DOMAIN/api/cron/expired-invitations" """
+#
+# Note : Railway ne supporte pas encore les [[crons]] en railway.toml directement.
+# Il faut soit utiliser un service worker dédié (Worker service avec cron),
+# soit configurer les crons depuis le dashboard Railway (Settings → Cron Schedule).

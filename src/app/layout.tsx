@@ -43,7 +43,12 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/favicon/apple-touch-icon.png", sizes: "180x180" }],
   },
-  manifest: "/favicon/site.webmanifest",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "VNK Automatisation",
+  },
 };
 
 export const viewport: Viewport = {
@@ -53,6 +58,8 @@ export const viewport: Viewport = {
   themeColor: "#0F2D52",
 };
 
+import { PwaRegister } from "@/components/pwa-register";
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -60,6 +67,7 @@ export default function RootLayout({
     <html lang="fr" className={inter.variable} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased">
         {children}
+        <PwaRegister />
       </body>
     </html>
   );

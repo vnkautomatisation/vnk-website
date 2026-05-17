@@ -136,3 +136,72 @@ export async function deleteRoleAction(input: z.infer<typeof deleteSchema>): Pro
   revalidatePath("/admin/settings");
   return { success: true };
 }
+
+// ═══════════════════════════════════════════════════════════
+// DUPLIQUER UN RÔLE
+// ═══════════════════════════════════════════════════════════
+const duplicateSchema = z.object({
+  sourceId: z.number().int(),
+  newName: z.string().min(2).max(50).regex(/^[a-z][a-z0-9_]*$/, "Code en minuscules sans espaces"),
+});
+
+export async function duplicateRoleAction(input: z.infer<typeof duplicateSchema>): Promise<Result<{ id: number }>> {
+  const adminId = await requireRolesWrite();
+  if (!adminId) return { success: false, error: "Non autorisé" };
+  const parsed = duplicateSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+
+  const source = await prisma.role.findUnique({ where: { id: parsed.data.sourceId } });
+  if (!source) return { success: false, error: "Rôle source introuvable" };
+
+  const existing = await prisma.role.findUnique({ where: { name: parsed.data.newName } });
+  if (existing) return { success: false, error: "Un rôle avec ce nom existe déjà" };
+
+  const created = await prisma.role.create({
+    data: {
+      name: parsed.data.newName,
+      description: source.description ? `${source.description} (copie de ${source.name})` : `Copie de ${source.name}`,
+      permissions: source.permissions as never,
+      color: source.color,
+      sortOrder: 1000,
+      isSystem: false,
+    },
+    select: { id: true },
+  });
+
+  await logAudit({
+    adminId, action: "create", entityType: "role", entityId: created.id,
+    changes: { duplicatedFrom: source.id, sourceName: source.name },
+  });
+  await logSecurityEvent({ adminId, type: "role_created", message: `Rôle dupliqué : ${source.name} → ${parsed.data.newName}` });
+
+  revalidatePath("/admin/settings/team");
+  return { success: true, data: { id: created.id } };
+}
+
+// ═══════════════════════════════════════════════════════════
+// RÉORDONNER LES RÔLES (drag & drop)
+// ═══════════════════════════════════════════════════════════
+const reorderSchema = z.object({
+  orderedIds: z.array(z.number().int()).min(1),
+});
+
+export async function reorderRolesAction(input: z.infer<typeof reorderSchema>): Promise<Result> {
+  const adminId = await requireRolesWrite();
+  if (!adminId) return { success: false, error: "Non autorisé" };
+  const parsed = reorderSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: "Données invalides" };
+
+  await prisma.$transaction(
+    parsed.data.orderedIds.map((id, idx) =>
+      prisma.role.update({
+        where: { id },
+        data: { sortOrder: (idx + 1) * 10 },
+      })
+    )
+  );
+
+  await logAudit({ adminId, action: "update", entityType: "role_reorder", changes: { count: parsed.data.orderedIds.length } });
+  revalidatePath("/admin/settings/team");
+  return { success: true };
+}

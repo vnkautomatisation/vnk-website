@@ -192,6 +192,8 @@
       "workflow": "Pipeline workflow",
       "clients_group": "Clients",
       "clients": "Clients",
+      "mon_espace": "My workspace",
+      "employes": "Employees",
       "operations_group": "Operations",
       "mandates": "Mandates",
       "requests": "Requests",
@@ -221,6 +223,7 @@
       "tax_declarations": "Tax reports",
       "system_group": "System",
       "profile": "My profile",
+      "statistics": "Statistics",
       "audit_trail": "Audit trail",
       "settings": "Settings"
     },

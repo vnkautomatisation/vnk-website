@@ -247,6 +247,18 @@ export function FinanceSummaryIcon({ className }: IconProps) {
   );
 }
 
+// ─── STATISTICS : 3 barres + axe ─────────────────────────────
+export function StatisticsIcon({ className }: IconProps) {
+  return (
+    <svg {...baseProps} className={cn(className)}>
+      <rect x="4" y="13" width="3.5" height="7" rx="0.6" {...softFill} {...stroke} />
+      <rect x="10.25" y="9" width="3.5" height="11" rx="0.6" {...softFill} {...stroke} />
+      <rect x="16.5" y="5" width="3.5" height="15" rx="0.6" {...softFill} {...stroke} />
+      <path d="M3 20h18" {...stroke} />
+    </svg>
+  );
+}
+
 // ─── PAYMENTS GROUP : carte avec puce + bande ─────────────────
 export function PaymentsGroupIcon({ className }: IconProps) {
   return (

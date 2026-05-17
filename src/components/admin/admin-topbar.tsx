@@ -142,6 +142,24 @@ export function AdminTopbar({
                   Parametres
                 </NextLink>
               </DropdownMenuItem>
+              {/* ─── Actions cachées en mobile : refresh / langue / public ─── */}
+              <DropdownMenuSeparator className="sm:hidden" />
+              <DropdownMenuItem className="sm:hidden" onClick={() => window.location.reload()}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Rafraîchir
+              </DropdownMenuItem>
+              <DropdownMenuItem className="sm:hidden" asChild>
+                <a href="/" target="_blank" rel="noopener">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Voir le site public
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="sm:hidden" onClick={toggleLocale} disabled={pending}>
+                <span className="h-4 w-4 mr-2 inline-flex items-center justify-center text-[10px] font-bold border rounded">
+                  {otherLabel}
+                </span>
+                Passer en {currentLocale === "fr" ? "Anglais" : "Français"}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => signOut({ callbackUrl: "/admin/login" })}
