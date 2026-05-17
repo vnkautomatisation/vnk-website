@@ -327,9 +327,11 @@ export function MonEspaceDashboard({
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Annonces */}
-        <Card className="lg:col-span-2 overflow-hidden">
+      {/* Grille 3 colonnes equilibrees : annonces a gauche, equipe au milieu, finances/equip a droite.
+          Pas de max-h interne : tout coule naturellement avec le scroll de page (evite le double-scroll). */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+        {/* Colonne 1 : Annonces (peut etre la plus haute) */}
+        <Card className="overflow-hidden md:col-span-2 lg:col-span-1">
           <div className="p-4 border-b flex items-center justify-between">
             <h2 className="font-bold text-sm flex items-center gap-2">
               <Megaphone className="h-4 w-4 text-[#0F2D52]" />
@@ -339,19 +341,19 @@ export function MonEspaceDashboard({
               Toutes →
             </Link>
           </div>
-          <div className="divide-y max-h-96 overflow-y-auto">
+          <div className="divide-y">
             {announcements.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground text-center">Aucune annonce récente.</p>
             ) : (
               announcements.map((a) => (
                 <article key={a.id} className="p-4 hover:bg-muted/30 transition relative">
                   <AnnouncementReadTracker announcementId={a.id} alreadyRead={a.reads?.length > 0} />
-                  <div className="flex items-center gap-2 mb-1">
-                    {a.pinned && <Pin className="h-3 w-3 text-amber-500" />}
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    {a.pinned && <Pin className="h-3 w-3 text-amber-500 shrink-0" />}
                     <h3 className="font-semibold text-sm">{a.title}</h3>
                     <Badge variant="outline" className="text-[9px]">{a.category}</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-1">{a.body}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-3 mb-1">{a.body}</p>
                   <p className="text-[10px] text-muted-foreground">
                     {a.author?.fullName || a.author?.email || "VNK"} · {new Date(a.publishedAt).toLocaleDateString("fr-CA", { day: "numeric", month: "short" })}
                   </p>
@@ -361,7 +363,7 @@ export function MonEspaceDashboard({
           </div>
         </Card>
 
-        {/* Sidebar */}
+        {/* Colonne 2 : Equipe (manager, 1-on-1, anniversaires) */}
         <div className="space-y-4">
           {/* Mon manager */}
           {me.manager && (
@@ -418,6 +420,42 @@ export function MonEspaceDashboard({
             </div>
           </Card>
 
+          {/* Anniversaires équipe */}
+          <Card>
+            <div className="p-4 border-b">
+              <h2 className="font-bold text-sm flex items-center gap-2">
+                <Cake className="h-4 w-4 text-[#0F2D52]" />
+                Anniversaires à venir
+              </h2>
+            </div>
+            <div className="p-3 space-y-2">
+              {upcomingBirthdays.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic px-1">Pas d&apos;anniversaire dans les 14 jours.</p>
+              ) : upcomingBirthdays.map((b) => (
+                <div key={b.id} className="text-xs p-2 rounded-md bg-muted/40 flex items-center gap-2">
+                  <div
+                    className="h-8 w-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#15406d] flex items-center justify-center text-white text-[10px] font-bold shrink-0 overflow-hidden"
+                    style={b.avatarUrl ? { backgroundImage: `url(${b.avatarUrl})`, backgroundSize: "cover" } : undefined}
+                  >
+                    {!b.avatarUrl && getInitials(b.fullName, b.email)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">{b.fullName || b.email}</p>
+                    <p className="text-muted-foreground">
+                      Le {new Date(b.nextBirthday).toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}
+                      {b.daysUntil === 0 ? " (aujourd'hui)" : ` (dans ${b.daysUntil} j)`}
+                      {" · "}aura {b.turningAge} ans
+                    </p>
+                  </div>
+                  <HeartHandshake className="h-3.5 w-3.5 text-pink-500 shrink-0" />
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        {/* Colonne 3 : Finances et possessions (bulletins, equipement, docs fiscaux) */}
+        <div className="space-y-4">
           {/* Bulletins récents */}
           <Card>
             <div className="p-4 border-b flex items-center justify-between">
@@ -480,39 +518,6 @@ export function MonEspaceDashboard({
                   </div>
                 );
               })}
-            </div>
-          </Card>
-
-          {/* Anniversaires équipe */}
-          <Card>
-            <div className="p-4 border-b">
-              <h2 className="font-bold text-sm flex items-center gap-2">
-                <Cake className="h-4 w-4 text-[#0F2D52]" />
-                Anniversaires à venir
-              </h2>
-            </div>
-            <div className="p-3 space-y-2">
-              {upcomingBirthdays.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic px-1">Pas d&apos;anniversaire dans les 14 jours.</p>
-              ) : upcomingBirthdays.map((b) => (
-                <div key={b.id} className="text-xs p-2 rounded-md bg-muted/40 flex items-center gap-2">
-                  <div
-                    className="h-8 w-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#15406d] flex items-center justify-center text-white text-[10px] font-bold shrink-0 overflow-hidden"
-                    style={b.avatarUrl ? { backgroundImage: `url(${b.avatarUrl})`, backgroundSize: "cover" } : undefined}
-                  >
-                    {!b.avatarUrl && getInitials(b.fullName, b.email)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{b.fullName || b.email}</p>
-                    <p className="text-muted-foreground">
-                      Le {new Date(b.nextBirthday).toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}
-                      {b.daysUntil === 0 ? " (aujourd'hui)" : ` (dans ${b.daysUntil} j)`}
-                      {" · "}aura {b.turningAge} ans
-                    </p>
-                  </div>
-                  <HeartHandshake className="h-3.5 w-3.5 text-pink-500 shrink-0" />
-                </div>
-              ))}
             </div>
           </Card>
 
