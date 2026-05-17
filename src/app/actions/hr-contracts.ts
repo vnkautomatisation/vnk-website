@@ -159,6 +159,24 @@ export async function sendContractAction(input: { id: number }): Promise<Result>
     where: { id: input.id },
     data: { status: "sent" },
   });
+  // Notifier l'employé qu'un contrat est à signer
+  const contract = await prisma.employeeContract.findUnique({
+    where: { id: input.id },
+    select: { adminId: true, title: true },
+  });
+  if (contract) {
+    await prisma.notification.create({
+      data: {
+        recipientType: "admin",
+        recipientId: contract.adminId,
+        type: "warning",
+        title: "Contrat à signer",
+        body: `Veuillez consulter et signer votre contrat : ${contract.title}`,
+        link: "/admin/mon-espace/contrats",
+        icon: "file-signature",
+      },
+    }).catch(() => null);
+  }
   await logAudit({ adminId: actorId, action: "update", entityType: "employee_contract", entityId: input.id, changes: { sent: true } });
   revalidatePath("/admin/employes/contrats");
   return { success: true };
@@ -188,6 +206,37 @@ export async function signContractAsEmployeeAction(input: { id: number; signatur
       status: contract.employerSignedAt ? "active" : "signed_employee",
     },
   });
+
+  // Notifier le(s) RH/super-admin que l'employé a signé et qu'il faut contre-signer
+  const signed = await prisma.employeeContract.findUnique({
+    where: { id: input.id },
+    select: {
+      title: true,
+      admin: { select: { fullName: true, email: true } },
+    },
+  });
+  if (signed) {
+    const hrAdmins = await prisma.admin.findMany({
+      where: { isActive: true, customRole: { name: "super_admin" } },
+      select: { id: true },
+    });
+    await Promise.all(
+      hrAdmins.map((a) =>
+        prisma.notification.create({
+          data: {
+            recipientType: "admin",
+            recipientId: a.id,
+            type: "info",
+            title: "Contrat signé par l'employé",
+            body: `${signed.admin.fullName || signed.admin.email} a signé : ${signed.title}. À signer en tant qu'employeur.`,
+            link: "/admin/employes/contrats",
+            icon: "file-signature",
+          },
+        }).catch(() => null),
+      ),
+    );
+  }
+
   await logAudit({ adminId, action: "update", entityType: "employee_contract", entityId: input.id, changes: { employeeSigned: true } });
   revalidatePath("/admin/employes/contrats");
   return { success: true };
@@ -216,6 +265,26 @@ export async function signContractAsEmployerAction(input: { id: number; signatur
       status: contract.employeeSignedAt ? "active" : "signed_employer",
     },
   });
+
+  // Notifier l'employé que son contrat est maintenant actif (les deux signatures sont apposées)
+  const finalized = await prisma.employeeContract.findUnique({
+    where: { id: input.id },
+    select: { adminId: true, title: true },
+  });
+  if (finalized) {
+    await prisma.notification.create({
+      data: {
+        recipientType: "admin",
+        recipientId: finalized.adminId,
+        type: "success",
+        title: "Contrat actif",
+        body: `Votre contrat est maintenant signé par les deux parties : ${finalized.title}`,
+        link: "/admin/mon-espace/contrats",
+        icon: "check-circle",
+      },
+    }).catch(() => null);
+  }
+
   await logAudit({ adminId: actorId, action: "update", entityType: "employee_contract", entityId: input.id, changes: { employerSigned: true } });
   revalidatePath("/admin/employes/contrats");
   return { success: true };

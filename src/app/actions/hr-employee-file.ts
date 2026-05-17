@@ -273,6 +273,21 @@ export async function upsertEquipmentAction(input: z.infer<typeof equipmentSchem
     ? await prisma.assignedEquipment.update({ where: { id: parsed.data.id }, data, select: { id: true } })
     : await prisma.assignedEquipment.create({ data, select: { id: true } });
 
+  // Notifier l'employé qu'un équipement vient de lui être attribué (création seulement)
+  if (!parsed.data.id) {
+    await prisma.notification.create({
+      data: {
+        recipientType: "admin",
+        recipientId: parsed.data.adminId,
+        type: "info",
+        title: "Équipement assigné",
+        body: `${parsed.data.name}${parsed.data.category ? ` (${parsed.data.category})` : ""}`,
+        link: "/admin/mon-espace/equipement",
+        icon: "package",
+      },
+    }).catch(() => null);
+  }
+
   await logAudit({ adminId: actorId, action: parsed.data.id ? "update" : "create", entityType: "assigned_equipment", entityId: row.id });
   revalidatePath("/admin/employes/equipement");
   revalidatePath("/admin/mon-espace/equipement");

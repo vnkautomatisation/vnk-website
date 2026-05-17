@@ -77,7 +77,7 @@ async function notifyAnnouncementAudience(announcementId: number, ann: { title: 
     await prisma.notification.create({
       data: {
         recipientType: "admin", recipientId: r.id,
-        type: "info", title: `📢 ${ann.title}`,
+        type: "info", title: ann.title,
         link: `/admin/mon-espace`,
         icon: "megaphone",
       },

@@ -67,7 +67,7 @@ export async function upsertCnesstIncidentAction(input: z.infer<typeof incidentS
           recipientType: "admin",
           recipientId: sa.id,
           type: "error",
-          title: "⚠️ Nouvelle déclaration CNESST",
+          title: "Nouvelle déclaration CNESST",
           body: `Accident déclaré le ${data.incidentDate.toLocaleDateString("fr-CA")} · ${data.location}`,
           link: "/admin/employes/cnesst",
           icon: "alert-triangle",

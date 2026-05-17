@@ -61,6 +61,29 @@ export async function upsertLegalDocAction(input: z.infer<typeof docSchema> & { 
       },
       select: { id: true },
     });
+
+    // Notifier tous les admins actifs qu'un nouveau document obligatoire est à signer
+    if (parsed.data.isRequired) {
+      const activeAdmins = await prisma.admin.findMany({
+        where: { isActive: true },
+        select: { id: true },
+      });
+      await Promise.all(
+        activeAdmins.map((a) =>
+          prisma.notification.create({
+            data: {
+              recipientType: "admin",
+              recipientId: a.id,
+              type: "warning",
+              title: "Nouveau document à signer",
+              body: parsed.data.title,
+              link: "/admin/mon-espace/documents",
+              icon: "file-signature",
+            },
+          }).catch(() => null),
+        ),
+      );
+    }
   }
   await logAudit({ adminId, action: parsed.data.id ? "update" : "create", entityType: "legal_doc", entityId: doc.id });
   revalidatePath("/admin/employes/documents");

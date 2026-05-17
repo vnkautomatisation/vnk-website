@@ -112,7 +112,7 @@ export async function reviewLeaveRequestAction(input: { id: number; decision: "a
       type: input.decision === "approved" ? "success" : "warning",
       title: input.decision === "approved" ? "Demande de congé approuvée" : "Demande de congé refusée",
       body: input.notes || `Statut : ${input.decision === "approved" ? "approuvée" : "refusée"}`,
-      link: "/admin/employes/conges",
+      link: "/admin/mon-espace/conges",
       icon: "calendar",
     },
   }).catch(() => null);

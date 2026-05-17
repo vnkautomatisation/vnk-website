@@ -184,6 +184,28 @@ export async function markPayPeriodPaidAction(input: { id: number }): Promise<Re
     where: { periodId: input.id },
     data: { releasedAt: new Date() },
   });
+
+  // Notifier chaque employé que son bulletin de paie est disponible
+  const stubs = await prisma.payStub.findMany({
+    where: { periodId: input.id },
+    select: { adminId: true, netPay: true },
+  });
+  await Promise.all(
+    stubs.map((s) =>
+      prisma.notification.create({
+        data: {
+          recipientType: "admin",
+          recipientId: s.adminId,
+          type: "success",
+          title: "Nouveau bulletin de paie disponible",
+          body: `Net : ${Number(s.netPay).toFixed(2)} $`,
+          link: "/admin/mon-espace/paie",
+          icon: "wallet",
+        },
+      }).catch(() => null),
+    ),
+  );
+
   await logAudit({ adminId, action: "update", entityType: "pay_period", entityId: input.id, changes: { paid: true } });
   revalidatePath("/admin/employes/paie");
   return { success: true };

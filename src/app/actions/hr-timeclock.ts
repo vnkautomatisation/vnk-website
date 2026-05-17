@@ -136,6 +136,28 @@ export async function approveTimeClockAction(input: { ids: number[] }): Promise<
     where: { id: { in: input.ids }, approvedAt: null, payStubId: null },
     data: { approvedBy: actorId, approvedAt: new Date() },
   });
+
+  // Notifier chaque employé dont le pointage vient d'être approuvé
+  const approved = await prisma.timeClock.findMany({
+    where: { id: { in: input.ids }, approvedBy: actorId },
+    select: { adminId: true, clockIn: true },
+  });
+  await Promise.all(
+    approved.map((e) =>
+      prisma.notification.create({
+        data: {
+          recipientType: "admin",
+          recipientId: e.adminId,
+          type: "success",
+          title: "Pointage approuvé",
+          body: `Pointage du ${e.clockIn.toLocaleDateString("fr-CA")} validé.`,
+          link: "/admin/mon-espace/pointage",
+          icon: "check-circle",
+        },
+      }).catch(() => null),
+    ),
+  );
+
   await logAudit({ adminId: actorId, action: "update", entityType: "time_clock_bulk", changes: { approved: r.count, ids: input.ids } });
   revalidatePath("/admin/employes/pointage");
   return { success: true, data: { approved: r.count } };
@@ -152,6 +174,20 @@ export async function rejectTimeClockAction(input: { id: number; reason: string 
     where: { id: input.id },
     data: { approvedAt: null, approvedBy: null, notes: `[REJET ${new Date().toISOString().slice(0,10)}] ${input.reason}\n${tc.notes ?? ""}`.slice(0, 500) },
   });
+
+  // Notifier l'employé du rejet
+  await prisma.notification.create({
+    data: {
+      recipientType: "admin",
+      recipientId: tc.adminId,
+      type: "warning",
+      title: "Pointage rejeté",
+      body: `Pointage du ${tc.clockIn.toLocaleDateString("fr-CA")} rejeté : ${input.reason}`,
+      link: "/admin/mon-espace/pointage",
+      icon: "alert-triangle",
+    },
+  }).catch(() => null);
+
   await logAudit({ adminId: actorId, action: "update", entityType: "time_clock", entityId: input.id, changes: { rejected: true, reason: input.reason } });
   revalidatePath("/admin/employes/pointage");
   return { success: true };
