@@ -8,12 +8,25 @@
 // - Auto-expand du groupe contenant l'item actif
 // - Etat persisté localStorage
 // - Responsive : drawer mobile <1024px, sidebar fixe ≥1024px
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, createContext, useContext, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+
+// ─── Flyout shared state ───
+// Un seul flyout global peut etre visible a la fois dans la sidebar.
+// On lift l'etat au niveau AdminSidebar pour eviter le bug de 2 flyouts ouverts simultanement.
+type FlyoutCtx = {
+  activeKey: string | null;
+  openFlyout: (key: string, pos: { top: number; left: number }) => void;
+  scheduleClose: (key: string) => void;
+  cancelClose: () => void;
+  getPos: () => { top: number; left: number } | null;
+};
+const FlyoutContext = createContext<FlyoutCtx | null>(null);
+const useFlyout = () => useContext(FlyoutContext);
 import {
   Menu,
   X,
@@ -337,8 +350,47 @@ export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeHref, hydrated]);
 
+  // ─── Flyout state global : un seul flyout visible a la fois ───
+  const [activeFlyoutKey, setActiveFlyoutKey] = useState<string | null>(null);
+  const flyoutPosRef = useRef<{ top: number; left: number } | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openFlyout = useCallback((key: string, pos: { top: number; left: number }) => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    flyoutPosRef.current = pos;
+    setActiveFlyoutKey(key);
+  }, []);
+
+  const scheduleClose = useCallback((key: string) => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(() => {
+      // Ne ferme que si le flyout cible est toujours l'actif (sinon un autre a deja pris le relais)
+      setActiveFlyoutKey((cur) => (cur === key ? null : cur));
+      closeTimerRef.current = null;
+    }, 180);
+  }, []);
+
+  const cancelClose = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+
+  const getPos = useCallback(() => flyoutPosRef.current, []);
+
+  useEffect(() => () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); }, []);
+
+  // Fermer le flyout au changement de route
+  useEffect(() => { setActiveFlyoutKey(null); }, [pathname]);
+
+  const flyoutCtx: FlyoutCtx = { activeKey: activeFlyoutKey, openFlyout, scheduleClose, cancelClose, getPos };
+
   return (
-    <>
+    <FlyoutContext.Provider value={flyoutCtx}>
       {/* Desktop sidebar (≥ 1024px) */}
       <aside
         className={cn(
@@ -406,7 +458,7 @@ export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
           </div>
         </>
       )}
-    </>
+    </FlyoutContext.Provider>
   );
 }
 
@@ -539,26 +591,24 @@ function GroupRow({
   const badge = entryBadgeSum(group, counts);
   const label = t(group.key);
 
-  // Hover flyout via portal
+  // Flyout : etat partage global (un seul flyout visible a la fois dans toute la sidebar)
+  const flyoutCtx = useFlyout();
   const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const [flyoutPos, setFlyoutPos] = useState<{ top: number; left: number } | null>(null);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMyFlyoutActive = flyoutCtx?.activeKey === group.key;
+
   const showFlyout = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setFlyoutPos({ top: rect.top, left: rect.right + 6 });
-    }
+    if (!flyoutCtx || !buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    flyoutCtx.openFlyout(group.key, { top: rect.top, left: rect.right + 6 });
   };
   const hideFlyoutLater = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => setFlyoutPos(null), 180);
+    flyoutCtx?.scheduleClose(group.key);
   };
-  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
 
   // Flyout actif si : compact OU (groupe fermé en mode normal desktop).
   // JAMAIS de flyout sur mobile drawer : on n'a pas la place a droite, accordion inline a la place.
   const flyoutEligible = !inMobileDrawer && (compact || !isOpen);
+  const flyoutPos = isMyFlyoutActive ? flyoutCtx?.getPos() : null;
 
   // Indentation par niveau (level 0 = racine, level 1 = enfant d'un groupe, etc.)
   const indentClass = depth === 0 ? "" : depth === 1 ? "ml-2" : "ml-4";
@@ -626,7 +676,7 @@ function GroupRow({
         <div
           className="fixed bg-card border rounded-lg shadow-xl p-1 min-w-[220px] z-[60]"
           style={{ top: flyoutPos.top, left: flyoutPos.left }}
-          onMouseEnter={showFlyout}
+          onMouseEnter={() => flyoutCtx?.cancelClose()}
           onMouseLeave={hideFlyoutLater}
         >
           <p className="px-3 py-1.5 text-xs font-semibold text-muted-foreground border-b mb-1 flex items-center gap-1.5">
@@ -641,7 +691,7 @@ function GroupRow({
                 activeHref={activeHref}
                 t={t}
                 counts={counts}
-                onNavigate={() => { setFlyoutPos(null); onNavigate?.(); }}
+                onNavigate={() => { flyoutCtx?.scheduleClose(group.key); onNavigate?.(); }}
               />
             ))}
           </ul>
