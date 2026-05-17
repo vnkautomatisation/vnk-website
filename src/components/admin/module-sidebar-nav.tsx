@@ -52,52 +52,72 @@ function isActive(pathname: string, href: string, items: NavItem[]): boolean {
 export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTagline, sections, storageKey }: Props) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const [hydrated, setHydrated] = useState(false);
 
-  // Charger état collapsed depuis localStorage
-  useEffect(() => {
-    setHydrated(true);
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) setCollapsedGroups(new Set(JSON.parse(raw) as string[]));
-    } catch { /* ignore */ }
-  }, [storageKey]);
+  // Logique POSITIVE : on stocke quels groupes sont OUVERTS.
+  // Default : tous ouverts (multi-open natif, n'importe lequel peut etre referme/rouvert).
+  // v2 = nouvelle clé pour invalider tout ancien state corrompu d'une version précédente.
+  const positiveKey = `${storageKey}.v2`;
 
-  const persistCollapsed = (next: Set<string>) => {
-    try { localStorage.setItem(storageKey, JSON.stringify(Array.from(next))); } catch { /* ignore */ }
-  };
+  const allGroupNames = useMemo(() => sections.map((s) => s.group), [sections]);
 
-  const toggleGroup = (group: string) => {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(group)) next.delete(group); else next.add(group);
-      persistCollapsed(next);
-      return next;
-    });
-  };
-
-  // Page active + groupe actif (toujours développé)
+  // Page active + groupe actif
   const allItems = useMemo(() => sections.flatMap((s) => s.items), [sections]);
   const activeItem = allItems.find((it) => isActive(pathname, it.href, allItems));
   const activeGroup = sections.find((s) => s.items.some((it) => isActive(pathname, it.href, s.items)));
 
-  // Expand all / collapse all
-  const allCollapsed = sections.every((s) => collapsedGroups.has(s.group) || s === activeGroup);
-  const someExpanded = sections.some((s) => !collapsedGroups.has(s.group));
+  // Init : tous ouverts (server-stable, hydration-safe)
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(allGroupNames));
+  const [hydrated, setHydrated] = useState(false);
+
+  // Hydratation : charger préférences user depuis localStorage
+  useEffect(() => {
+    setHydrated(true);
+    try {
+      const raw = localStorage.getItem(positiveKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as string[];
+        // Filtre : ne garder que les groupes encore existants
+        const valid = parsed.filter((g) => allGroupNames.includes(g));
+        setOpenGroups(new Set(valid));
+      }
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [positiveKey]);
+
+  const persist = (next: Set<string>) => {
+    try { localStorage.setItem(positiveKey, JSON.stringify(Array.from(next))); } catch { /* ignore */ }
+  };
+
+  // Toggle d'UN groupe — totalement indépendant des autres. Multi-open garanti.
+  const toggleGroup = (group: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(group)) next.delete(group); else next.add(group);
+      persist(next);
+      return next;
+    });
+  };
+
+  // Vrai si AU MOINS UN groupe (autre que actif) est ouvert
+  const someOpen = sections.some((s) => openGroups.has(s.group) && s !== activeGroup);
   const toggleAll = () => {
-    if (someExpanded) {
-      // tout replier (sauf groupe actif)
-      const next = new Set(sections.map((s) => s.group));
-      if (activeGroup) next.delete(activeGroup.group);
-      setCollapsedGroups(next);
-      persistCollapsed(next);
+    if (someOpen) {
+      // Tout fermer (sauf groupe actif)
+      const next = activeGroup ? new Set<string>([activeGroup.group]) : new Set<string>();
+      setOpenGroups(next);
+      persist(next);
     } else {
-      // tout déplier
-      const next = new Set<string>();
-      setCollapsedGroups(next);
-      persistCollapsed(next);
+      // Tout ouvrir
+      const next = new Set(allGroupNames);
+      setOpenGroups(next);
+      persist(next);
     }
+  };
+
+  // Le groupe ACTIF est toujours visiblement ouvert (UX : on doit voir où on est)
+  const isGroupOpen = (group: string, section: NavSection) => {
+    if (section === activeGroup) return true;
+    return openGroups.has(group);
   };
 
   // Fermer le drawer mobile à la navigation
@@ -166,8 +186,8 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
                 onClick={toggleAll}
                 className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition"
               >
-                {someExpanded ? <ChevronsDownUp className="h-3 w-3" /> : <ChevronsUpDown className="h-3 w-3" />}
-                {someExpanded ? "Tout replier" : "Tout déplier"}
+                {someOpen ? <ChevronsDownUp className="h-3 w-3" /> : <ChevronsUpDown className="h-3 w-3" />}
+                {someOpen ? "Tout replier" : "Tout déplier"}
               </button>
             </div>
             <nav
@@ -180,7 +200,7 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
                   section={section}
                   pathname={pathname}
                   isActiveGroup={section === activeGroup}
-                  collapsed={hydrated && collapsedGroups.has(section.group) && section !== activeGroup}
+                  open={!hydrated || isGroupOpen(section.group, section)}
                   onToggle={() => toggleGroup(section.group)}
                 />
               ))}
@@ -212,11 +232,11 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
               type="button"
               onClick={toggleAll}
               className="text-[11px] text-muted-foreground hover:text-[#0F2D52] inline-flex items-center gap-1 transition"
-              aria-label={someExpanded ? "Tout replier" : "Tout déplier"}
-              title={someExpanded ? "Tout replier" : "Tout déplier"}
+              aria-label={someOpen ? "Tout replier" : "Tout déplier"}
+              title={someOpen ? "Tout replier" : "Tout déplier"}
             >
-              {someExpanded ? <ChevronsDownUp className="h-3 w-3" /> : <ChevronsUpDown className="h-3 w-3" />}
-              <span>{someExpanded ? "Replier" : "Déplier"}</span>
+              {someOpen ? <ChevronsDownUp className="h-3 w-3" /> : <ChevronsUpDown className="h-3 w-3" />}
+              <span>{someOpen ? "Replier" : "Déplier"}</span>
             </button>
           </div>
 
@@ -227,7 +247,7 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
                 section={section}
                 pathname={pathname}
                 isActiveGroup={section === activeGroup}
-                collapsed={hydrated && collapsedGroups.has(section.group) && section !== activeGroup}
+                open={!hydrated || isGroupOpen(section.group, section)}
                 onToggle={() => toggleGroup(section.group)}
               />
             ))}
@@ -239,12 +259,12 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
 }
 
 function NavGroup({
-  section, pathname, isActiveGroup, collapsed, onToggle,
+  section, pathname, isActiveGroup, open, onToggle,
 }: {
   section: NavSection;
   pathname: string;
   isActiveGroup: boolean;
-  collapsed: boolean;
+  open: boolean;
   onToggle: () => void;
 }) {
   const GroupIcon = section.groupIcon;
@@ -262,20 +282,20 @@ function NavGroup({
             ? "text-[#0F2D52] bg-[#0F2D52]/5"
             : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
         )}
-        aria-expanded={!collapsed}
+        aria-expanded={open}
       >
         {GroupIcon && (
           <GroupIcon className={cn("h-3.5 w-3.5 shrink-0", isActiveGroup ? "text-[#0F2D52]" : "text-muted-foreground")} />
         )}
         <span className="flex-1 text-left truncate">{section.group}</span>
-        {collapsed && (
+        {!open && (
           <span className="text-[9px] font-bold text-muted-foreground/70 bg-muted/60 rounded px-1.5 py-0.5 normal-case tracking-normal">
             {itemCount}
           </span>
         )}
-        <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform", collapsed && "-rotate-90")} />
+        <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform", !open && "-rotate-90")} />
       </button>
-      {!collapsed && (
+      {open && (
         <div className="space-y-0.5 mt-1">
           {section.items.map((item) => {
             const active = isActive(pathname, item.href, section.items);
