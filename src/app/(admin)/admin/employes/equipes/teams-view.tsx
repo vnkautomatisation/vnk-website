@@ -1,5 +1,5 @@
 "use client";
-// Vue Ã‰quipes â€” crÃ©ation, hiÃ©rarchie, lead, assignation membres.
+// Vue Équipes — création, hiérarchie, lead, assignation membres.
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -46,7 +46,7 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
   const onDelete = async () => {
     if (!confirmDel) return;
     const r = await deleteTeamAction({ id: confirmDel.id });
-    if (r.success) { toast.success("Ã‰quipe supprimÃ©e"); router.refresh(); }
+    if (r.success) { toast.success("Équipe supprimée"); router.refresh(); }
     else toast.error(r.error || "Erreur");
     setConfirmDel(null);
   };
@@ -58,21 +58,21 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Network className="h-5 w-5 text-[#0F2D52]" />
-            Ã‰quipes
+            Équipes
           </h1>
           <p className="text-sm text-muted-foreground">
-            {teams.length} Ã©quipe{teams.length > 1 ? "s" : ""} Â· structurez la hiÃ©rarchie de votre organisation
+            {teams.length} équipe{teams.length > 1 ? "s" : ""} · structurez la hiérarchie de votre organisation
           </p>
         </div>
         <Button onClick={() => setDialog({ open: true, team: null })}>
           <Plus className="h-4 w-4 mr-1.5" />
-          Nouvelle Ã©quipe
+          Nouvelle équipe
         </Button>
       </div>
 
       {teams.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted-foreground">
-          Aucune Ã©quipe crÃ©Ã©e. Commencez par en crÃ©er une pour organiser votre personnel.
+          Aucune équipe créée. Commencez par en créer une pour organiser votre personnel.
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -112,7 +112,7 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
                   <div className="flex items-center gap-2 p-2 rounded-md bg-amber-50 border border-amber-200">
                     <Crown className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-xs uppercase tracking-wider text-amber-700 font-semibold">Chef d&apos;Ã©quipe</p>
+                      <p className="text-xs uppercase tracking-wider text-amber-700 font-semibold">Chef d&apos;équipe</p>
                       <p className="text-xs font-medium truncate">{t.lead.fullName || t.lead.email}</p>
                     </div>
                   </div>
@@ -125,7 +125,7 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
                     </p>
                     <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => setAssignDialog({ open: true, team: t })}>
                       <UsersIcon className="h-3 w-3 mr-1" />
-                      GÃ©rer
+                      Gérer
                     </Button>
                   </div>
                   {t.members.length === 0 ? (
@@ -177,7 +177,7 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
         open={!!confirmDel}
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.name} ?`}
-        description="Les membres et sous-Ã©quipes seront dÃ©tachÃ©s. Cette action ne peut Ãªtre annulÃ©e."
+        description="Les membres et sous-équipes seront détachés. Cette action ne peut être annulée."
         confirmLabel="Supprimer"
         variant="destructive"
         onConfirm={onDelete}
@@ -203,7 +203,7 @@ function TeamDialog({
   const [parentId, setParentId] = useState(team?.parentTeamId ? String(team.parentTeamId) : "none");
   const [pending, setPending] = useState(false);
 
-  // Reset propre Ã  l'ouverture / changement de team (useEffect au lieu d'un anti-pattern dans le body)
+  // Reset propre à l'ouverture / changement de team (useEffect au lieu d'un anti-pattern dans le body)
   useEffect(() => {
     if (open) {
       setName(team?.name ?? "");
@@ -229,7 +229,7 @@ function TeamDialog({
       : await createTeamAction(payload);
     setPending(false);
     if (r.success) {
-      toast.success(team ? "Ã‰quipe modifiÃ©e" : "Ã‰quipe crÃ©Ã©e");
+      toast.success(team ? "Équipe modifiée" : "Équipe créée");
       onSaved();
       onClose();
     } else toast.error(r.error || "Erreur");
@@ -242,17 +242,17 @@ function TeamDialog({
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <Network className="h-4 w-4" />
-              {team ? "Modifier l'Ã©quipe" : "Nouvelle Ã©quipe"}
+              {team ? "Modifier l'équipe" : "Nouvelle équipe"}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Une Ã©quipe regroupe des membres avec un objectif commun.
+              Une équipe regroupe des membres avec un objectif commun.
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Nom *</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ComptabilitÃ©, Ventesâ€¦" />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Comptabilité, Ventes…" />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Description</Label>
@@ -261,7 +261,7 @@ function TeamDialog({
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y"
-              placeholder="RÃ´le, mission, contexteâ€¦"
+              placeholder="Rôle, mission, contexte…"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -270,11 +270,11 @@ function TeamDialog({
               <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-9 cursor-pointer" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Ã‰quipe parent</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Équipe parent</Label>
               <Select value={parentId} onValueChange={setParentId}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Aucune" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">â€” Aucune (top-level) â€”</SelectItem>
+                  <SelectItem value="none">— Aucune (top-level) —</SelectItem>
                   {teams.filter((t) => t.id !== team?.id).map((t) => (
                     <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
                   ))}
@@ -283,11 +283,11 @@ function TeamDialog({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Chef d&apos;Ã©quipe</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold">Chef d&apos;équipe</Label>
             <Select value={leadId} onValueChange={setLeadId}>
               <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Aucun" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">â€” Aucun â€”</SelectItem>
+                <SelectItem value="none">— Aucun —</SelectItem>
                 {admins.map((a) => (
                   <SelectItem key={a.id} value={String(a.id)}>{a.fullName || a.email}</SelectItem>
                 ))}
@@ -298,7 +298,7 @@ function TeamDialog({
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
           <Button onClick={submit} disabled={pending || !name.trim()}>
-            {pending ? "..." : team ? "Enregistrer" : "CrÃ©er"}
+            {pending ? "..." : team ? "Enregistrer" : "Créer"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -328,7 +328,7 @@ function AssignMembersDialog({
     });
     setPending(false);
     if (r.success) {
-      toast.success(isMember ? "Membre retirÃ©" : "Membre ajoutÃ©");
+      toast.success(isMember ? "Membre retiré" : "Membre ajouté");
       onSaved();
     } else toast.error(r.error || "Erreur");
   };
@@ -340,10 +340,10 @@ function AssignMembersDialog({
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <UsersIcon className="h-4 w-4" />
-              Membres de Â« {team.name} Â»
+              Membres de « {team.name} »
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Activez/dÃ©sactivez les membres. Un employÃ© ne peut appartenir qu&apos;Ã  une seule Ã©quipe.
+              Activez/désactivez les membres. Un employé ne peut appartenir qu&apos;à une seule équipe.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -372,7 +372,7 @@ function AssignMembersDialog({
                 </div>
                 {inOtherTeam && (
                   <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">
-                    Autre Ã©quipe
+                    Autre équipe
                   </Badge>
                 )}
               </label>

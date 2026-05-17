@@ -47,10 +47,10 @@ export function LegalDocsView({
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
             <FileText className="h-5 w-5 text-[#0F2D52]" />
-            Documents lÃ©gaux
+            Documents légaux
           </h1>
           <p className="text-sm text-muted-foreground">
-            NDA, politiques, codes de conduite â€” chaque employÃ© doit signer les documents obligatoires.
+            NDA, politiques, codes de conduite — chaque employé doit signer les documents obligatoires.
           </p>
         </div>
         {isHr && (
@@ -73,7 +73,7 @@ export function LegalDocsView({
                     {t.isRequired && <Badge variant="outline" className="text-[10px] text-red-700 border-red-300 bg-red-50">Obligatoire</Badge>}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    v{t.version} Â· {t.category} Â· {t._count.signatures} signature{t._count.signatures !== 1 ? "s" : ""}
+                    v{t.version} · {t.category} · {t._count.signatures} signature{t._count.signatures !== 1 ? "s" : ""}
                   </p>
                 </div>
                 {isHr && (
@@ -89,23 +89,23 @@ export function LegalDocsView({
               </div>
 
               <div className="text-xs text-muted-foreground border-t pt-2 line-clamp-3">
-                {t.bodyMarkdown.slice(0, 200)}â€¦
+                {t.bodyMarkdown.slice(0, 200)}…
               </div>
 
               <div className="flex items-center justify-between pt-1">
                 {upToDate ? (
                   <Badge variant="outline" className="text-emerald-700 border-emerald-300 bg-emerald-50">
                     <CheckCircle2 className="h-3 w-3 mr-1" />
-                    SignÃ© le {new Date(signed.signedAt).toLocaleDateString("fr-CA")}
+                    Signé le {new Date(signed.signedAt).toLocaleDateString("fr-CA")}
                   </Badge>
                 ) : signed ? (
                   <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50">
                     <AlertCircle className="h-3 w-3 mr-1" />
-                    Nouvelle version (v{t.version}) Ã  signer
+                    Nouvelle version (v{t.version}) à signer
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="text-muted-foreground">
-                    <AlertCircle className="h-3 w-3 mr-1" />Non signÃ©
+                    <AlertCircle className="h-3 w-3 mr-1" />Non signé
                   </Badge>
                 )}
                 {!upToDate && (
@@ -119,7 +119,7 @@ export function LegalDocsView({
         })}
         {templates.length === 0 && (
           <Card className="p-10 text-center text-sm text-muted-foreground col-span-full">
-            Aucun document lÃ©gal dÃ©fini.
+            Aucun document légal défini.
           </Card>
         )}
       </div>
@@ -143,13 +143,13 @@ export function LegalDocsView({
         open={!!confirmDel}
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.title} ?`}
-        description="Si dÃ©jÃ  signÃ© par des employÃ©s, le document sera dÃ©sactivÃ© au lieu d'Ãªtre supprimÃ©."
+        description="Si déjà signé par des employés, le document sera désactivé au lieu d'être supprimé."
         confirmLabel="Supprimer"
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDel) return;
           const r = await deleteLegalDocAction({ id: confirmDel.id });
-          if (r.success) { toast.success("SupprimÃ©"); router.refresh(); } else toast.error(r.error || "");
+          if (r.success) { toast.success("Supprimé"); router.refresh(); } else toast.error(r.error || "");
           setConfirmDel(null);
         }}
       />
@@ -180,7 +180,7 @@ function EditDialog({
   }, [open, existing]);
 
   const submit = async () => {
-    if (!key.trim() || !title.trim() || !body.trim()) { toast.error("ClÃ©, titre et corps requis"); return; }
+    if (!key.trim() || !title.trim() || !body.trim()) { toast.error("Clé, titre et corps requis"); return; }
     setPending(true);
     const r = await upsertLegalDocAction({
       id: existing?.id,
@@ -192,7 +192,7 @@ function EditDialog({
       isRequired,
     });
     setPending(false);
-    if (r.success) { toast.success(existing ? "ModifiÃ©" : "CrÃ©Ã©"); onSaved(); onClose(); }
+    if (r.success) { toast.success(existing ? "Modifié" : "Créé"); onSaved(); onClose(); }
     else toast.error(r.error || "");
   };
 
@@ -203,40 +203,40 @@ function EditDialog({
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              {existing ? "Modifier document lÃ©gal" : "Nouveau document lÃ©gal"}
+              {existing ? "Modifier document légal" : "Nouveau document légal"}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Si vous modifiez le contenu, augmentez la version (v1.0 â†’ v1.1) pour forcer une re-signature.
+              Si vous modifiez le contenu, augmentez la version (v1.0 → v1.1) pour forcer une re-signature.
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3 overflow-y-auto flex-1">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">ClÃ© technique *</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Clé technique *</Label>
               <Input
                 value={key}
                 onChange={(e) => setKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
                 placeholder="nda_principal"
                 disabled={!!existing}
               />
-              <p className="text-[10px] text-muted-foreground">Immuable une fois crÃ©Ã©.</p>
+              <p className="text-[10px] text-muted-foreground">Immuable une fois créé.</p>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">CatÃ©gorie</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Catégorie</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="policy">Politique</SelectItem>
                   <SelectItem value="nda">NDA</SelectItem>
-                  <SelectItem value="acknowledgment">AccusÃ© de rÃ©ception</SelectItem>
+                  <SelectItem value="acknowledgment">Accusé de réception</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Titre *</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Accord de confidentialitÃ© (NDA)" />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Accord de confidentialité (NDA)" />
           </div>
           <div className="flex gap-3 items-end">
             <div className="space-y-1.5">
@@ -260,13 +260,13 @@ function EditDialog({
               onChange={(e) => setBody(e.target.value)}
               rows={12}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-mono resize-y"
-              placeholder={"# Accord de confidentialitÃ©\n\n..."}
+              placeholder={"# Accord de confidentialité\n\n..."}
             />
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
-          <Button onClick={submit} disabled={pending}>{pending ? "..." : existing ? "Enregistrer" : "CrÃ©er"}</Button>
+          <Button onClick={submit} disabled={pending}>{pending ? "..." : existing ? "Enregistrer" : "Créer"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -283,12 +283,12 @@ function SignDocDialog({
   if (!template) return null;
 
   const submit = async () => {
-    if (!acknowledged) { toast.error("Cochez Â« J'ai lu Â» pour confirmer"); return; }
+    if (!acknowledged) { toast.error("Cochez « J'ai lu » pour confirmer"); return; }
     if (!signatureData) { toast.error("Signez avant de soumettre"); return; }
     setPending(true);
     const r = await signLegalDocAction({ templateId: template.id, signatureData });
     setPending(false);
-    if (r.success) { toast.success("Document signÃ©"); onSigned(); onClose(); }
+    if (r.success) { toast.success("Document signé"); onSigned(); onClose(); }
     else toast.error(r.error || "");
   };
 
@@ -315,7 +315,7 @@ function SignDocDialog({
               className="h-4 w-4 mt-0.5 rounded border-input flex-shrink-0"
             />
             <span>
-              J&apos;ai lu intÃ©gralement le document ci-dessus et j&apos;accepte ses termes en toute connaissance de cause.
+              J&apos;ai lu intégralement le document ci-dessus et j&apos;accepte ses termes en toute connaissance de cause.
             </span>
           </label>
           <SignaturePad onChange={setSignatureData} />

@@ -55,18 +55,18 @@ export function AnnouncementsAdminView({ announcements, teams, roles }: {
                     <Badge variant="outline" className="text-[10px] capitalize">{a.category}</Badge>
                     <Badge variant="outline" className="text-[10px]">{a._count?.reads ?? 0} vue{(a._count?.reads ?? 0) > 1 ? "s" : ""}</Badge>
                     {!a.publishedAt && <Badge className="text-[10px] bg-slate-100 text-slate-700">Brouillon</Badge>}
-                    {a.publishedAt && new Date(a.publishedAt) <= new Date() && <Badge className="text-[10px] bg-emerald-100 text-emerald-700">PubliÃ©</Badge>}
+                    {a.publishedAt && new Date(a.publishedAt) <= new Date() && <Badge className="text-[10px] bg-emerald-100 text-emerald-700">Publié</Badge>}
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{a.body}</p>
                   <p className="text-[10px] text-muted-foreground mt-1">
-                    {a.author?.fullName || a.author?.email} Â· Audience: {a.audienceType === "all" ? "Tout le monde" : a.audienceType}
+                    {a.author?.fullName || a.author?.email} · Audience: {a.audienceType === "all" ? "Tout le monde" : a.audienceType}
                   </p>
                 </div>
                 <div className="flex flex-col gap-1 items-end">
                   {!a.publishedAt && (
                     <Button size="sm" onClick={async () => {
                       const r = await publishAnnouncementAction({ id: a.id });
-                      if (r.success) { toast.success("PubliÃ©"); router.refresh(); }
+                      if (r.success) { toast.success("Publié"); router.refresh(); }
                       else toast.error(r.error || "");
                     }}>
                       <Send className="h-3 w-3 mr-1" />Publier
@@ -100,13 +100,13 @@ export function AnnouncementsAdminView({ announcements, teams, roles }: {
         open={!!confirmDel}
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.title} ?`}
-        description="Cette annonce sera retirée définitivement. Les notifications déjà envoyées restent."
+        description="Cette annonce sera retir�e d�finitivement. Les notifications d�j� envoy�es restent."
         confirmLabel="Supprimer"
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDel) return;
           const r = await deleteAnnouncementAction({ id: confirmDel.id });
-          if (r.success) { toast.success("SupprimÃ©e"); router.refresh(); }
+          if (r.success) { toast.success("Supprimée"); router.refresh(); }
           else toast.error(r.error || "");
           setConfirmDel(null);
         }}
@@ -162,7 +162,7 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
       audienceRoleId: audienceRoleId ? Number(audienceRoleId) : null,
     });
     setPending(false);
-    if (r.success) { toast.success("EnregistrÃ©"); onSaved(); onClose(); }
+    if (r.success) { toast.success("Enregistré"); onSaved(); onClose(); }
     else toast.error(r.error || "");
   };
 
@@ -179,21 +179,21 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">CatÃ©gorie</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Catégorie</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="general">GÃ©nÃ©ral</SelectItem>
-                  <SelectItem value="safety">SÃ©curitÃ©</SelectItem>
+                  <SelectItem value="general">Général</SelectItem>
+                  <SelectItem value="safety">Sécurité</SelectItem>
                   <SelectItem value="hr">RH</SelectItem>
                   <SelectItem value="tech">Technique</SelectItem>
-                  <SelectItem value="celebration">CÃ©lÃ©bration</SelectItem>
+                  <SelectItem value="celebration">Célébration</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <label className="flex items-center gap-2 text-sm cursor-pointer mt-6">
               <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} className="h-4 w-4 rounded border-input" />
-              <Pin className="h-3.5 w-3.5 text-amber-500" />Ã‰pinglÃ©e
+              <Pin className="h-3.5 w-3.5 text-amber-500" />Épinglée
             </label>
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider font-semibold">Expire le</Label>
@@ -202,7 +202,7 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Corps *</Label>
-            <MarkdownEditor value={body} onChange={setBody} placeholder="Contenu de l'annonce (Markdown supporté)" helpText="Markdown supporté : **gras**, *italique*, # titres, - listes, [lien](url)" />
+            <MarkdownEditor value={body} onChange={setBody} placeholder="Contenu de l'annonce (Markdown support�)" helpText="Markdown support� : **gras**, *italique*, # titres, - listes, [lien](url)" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
@@ -211,14 +211,14 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tout le monde</SelectItem>
-                  <SelectItem value="team">Ã‰quipe</SelectItem>
-                  <SelectItem value="role">RÃ´le</SelectItem>
+                  <SelectItem value="team">Équipe</SelectItem>
+                  <SelectItem value="role">Rôle</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             {audienceType === "team" && (
               <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-wider font-semibold">Ã‰quipe</Label>
+                <Label className="text-xs uppercase tracking-wider font-semibold">Équipe</Label>
                 <Select value={audienceTeamId} onValueChange={setAudienceTeamId}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>{teams.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}</SelectContent>
@@ -227,7 +227,7 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
             )}
             {audienceType === "role" && (
               <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-wider font-semibold">RÃ´le</Label>
+                <Label className="text-xs uppercase tracking-wider font-semibold">Rôle</Label>
                 <Select value={audienceRoleId} onValueChange={setAudienceRoleId}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>{roles.map((r) => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}</SelectContent>
@@ -238,7 +238,7 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
           {!existing && (
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" checked={publishNow} onChange={(e) => setPublishNow(e.target.checked)} className="h-4 w-4 rounded border-input" />
-              Publier immÃ©diatement (sinon en brouillon)
+              Publier immédiatement (sinon en brouillon)
             </label>
           )}
         </div>

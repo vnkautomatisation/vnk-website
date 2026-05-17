@@ -36,14 +36,14 @@ type Entry = {
 const CAT_LABEL: Record<string, { label: string; color: string }> = {
   work: { label: "Travail", color: "bg-emerald-100 text-emerald-700" },
   break: { label: "Pause", color: "bg-blue-100 text-blue-700" },
-  meeting: { label: "RÃ©union", color: "bg-violet-100 text-violet-700" },
+  meeting: { label: "Réunion", color: "bg-violet-100 text-violet-700" },
   training: { label: "Formation", color: "bg-amber-100 text-amber-700" },
   sick: { label: "Maladie", color: "bg-red-100 text-red-700" },
   vacation: { label: "Vacances", color: "bg-cyan-100 text-cyan-700" },
 };
 
 function fmtDuration(mins: number | null): string {
-  if (!mins) return "â€”";
+  if (!mins) return "—";
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `${h}h${m.toString().padStart(2, "0")}`;
@@ -68,7 +68,7 @@ export function TimeclockView({
 
   const TABS: TabItem<"mine" | "review">[] = [
     { key: "mine", label: "Mon pointage", icon: Clock },
-    ...(isPayrollAdmin ? [{ key: "review" as const, label: "Ã€ approuver", icon: CheckCircle2, count: allEntries.filter((e) => !e.approvedAt && e.clockOut).length }] : []),
+    ...(isPayrollAdmin ? [{ key: "review" as const, label: "À approuver", icon: CheckCircle2, count: allEntries.filter((e) => !e.approvedAt && e.clockOut).length }] : []),
   ];
 
   // Stats personnelles 30j
@@ -80,7 +80,7 @@ export function TimeclockView({
     return { total, work, approved, pending };
   }, [myEntries]);
 
-  // File de revue : entrées fermées + filtres (recherche employé, plage de dates)
+  // File de revue : entr�es ferm�es + filtres (recherche employ�, plage de dates)
   const reviewEntriesAll = useMemo(() => allEntries.filter((e) => e.clockOut), [allEntries]);
   const reviewEntriesFiltered = useMemo(() => {
     const q = reviewSearch.trim().toLowerCase();
@@ -97,12 +97,12 @@ export function TimeclockView({
 
   const handleClockIn = async () => {
     const r = await clockInAction({});
-    if (r.success) { toast.success("Pointage dÃ©marrÃ©"); router.refresh(); }
+    if (r.success) { toast.success("Pointage démarré"); router.refresh(); }
     else toast.error(r.error || "Erreur");
   };
   const handleClockOut = async () => {
     const r = await clockOutAction();
-    if (r.success) { toast.success(`Pointage fermÃ© Â· ${fmtDuration(r.data.durationMin)}`); router.refresh(); }
+    if (r.success) { toast.success(`Pointage fermé · ${fmtDuration(r.data.durationMin)}`); router.refresh(); }
     else toast.error(r.error || "Erreur");
   };
 
@@ -113,7 +113,7 @@ export function TimeclockView({
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Clock className="h-5 w-5 text-[#0F2D52]" />Pointage
           </h1>
-          <p className="text-sm text-muted-foreground">Suivez vos heures de travail Â· approuvÃ©es avant chaque paie.</p>
+          <p className="text-sm text-muted-foreground">Suivez vos heures de travail · approuvées avant chaque paie.</p>
         </div>
 
         {/* Action principale : clock in/out */}
@@ -122,11 +122,11 @@ export function TimeclockView({
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-50 border border-emerald-200">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-xs font-mono text-emerald-900">
-                DÃ©marrÃ© Ã  {new Date(openEntry.clockIn).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
+                Démarré à {new Date(openEntry.clockIn).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
               </span>
             </div>
             <Button variant="destructive" onClick={handleClockOut}>
-              <Square className="h-4 w-4 mr-1.5" />ArrÃªter
+              <Square className="h-4 w-4 mr-1.5" />Arrêter
             </Button>
           </div>
         ) : (
@@ -149,7 +149,7 @@ export function TimeclockView({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <StatBox label="Total 30j" value={fmtDuration(myStats.total)} accent="emerald" />
             <StatBox label="Travail" value={fmtDuration(myStats.work)} accent="blue" />
-            <StatBox label="ApprouvÃ©" value={fmtDuration(myStats.approved)} accent="emerald" />
+            <StatBox label="Approuvé" value={fmtDuration(myStats.approved)} accent="emerald" />
             <StatBox label="En attente" value={fmtDuration(myStats.pending)} accent="amber" />
           </div>
 
@@ -163,7 +163,7 @@ export function TimeclockView({
                   showAdmin={false}
                   onDelete={async () => {
                     const r = await deleteTimeClockAction({ id: e.id });
-                    if (r.success) { toast.success("SupprimÃ©"); router.refresh(); }
+                    if (r.success) { toast.success("Supprimé"); router.refresh(); }
                     else toast.error(r.error || "");
                   }}
                 />
@@ -182,21 +182,21 @@ export function TimeclockView({
         <div className="space-y-3">
           {selectedToApprove.size > 0 && (
             <div className="flex items-center gap-2 p-3 rounded-md bg-[#0F2D52] text-white">
-              <span className="text-sm font-medium">{selectedToApprove.size} entrÃ©e{selectedToApprove.size > 1 ? "s" : ""} sÃ©lectionnÃ©e{selectedToApprove.size > 1 ? "s" : ""}</span>
+              <span className="text-sm font-medium">{selectedToApprove.size} entrée{selectedToApprove.size > 1 ? "s" : ""} sélectionnée{selectedToApprove.size > 1 ? "s" : ""}</span>
               <div className="flex-1" />
               <Button
                 size="sm"
                 variant="secondary"
                 onClick={async () => {
                   const r = await approveTimeClockAction({ ids: Array.from(selectedToApprove) });
-                  if (r.success) { toast.success(`${r.data.approved} approuvÃ©e(s)`); setSelectedToApprove(new Set()); router.refresh(); }
+                  if (r.success) { toast.success(`${r.data.approved} approuvée(s)`); setSelectedToApprove(new Set()); router.refresh(); }
                   else toast.error(r.error || "");
                 }}
               >
                 <CheckCircle2 className="h-4 w-4 mr-1.5" />Approuver
               </Button>
               <Button size="sm" variant="ghost" className="text-white hover:bg-white/20" onClick={() => setSelectedToApprove(new Set())}>
-                DÃ©sÃ©lectionner
+                Désélectionner
               </Button>
             </div>
           )}
@@ -207,7 +207,7 @@ export function TimeclockView({
                 <Input
                   value={reviewSearch}
                   onChange={(e) => setReviewSearch(e.target.value)}
-                  placeholder="Rechercher employé…"
+                  placeholder="Rechercher employ�"
                   className="h-9 text-sm pl-7"
                 />
               </div>
@@ -230,9 +230,9 @@ export function TimeclockView({
           <Card>
             <div className="divide-y">
               {reviewEntriesAll.length === 0 ? (
-                <div className="p-8 text-center text-sm text-muted-foreground">Aucune entrée à réviser.</div>
+                <div className="p-8 text-center text-sm text-muted-foreground">Aucune entr�e � r�viser.</div>
               ) : reviewEntriesFiltered.length === 0 ? (
-                <div className="p-8 text-center text-sm text-muted-foreground">Aucun résultat avec ces filtres.</div>
+                <div className="p-8 text-center text-sm text-muted-foreground">Aucun r�sultat avec ces filtres.</div>
               ) : reviewEntriesFiltered.map((e) => (
                 <EntryRow
                   key={e.id}
@@ -249,14 +249,14 @@ export function TimeclockView({
                   }}
                   onApprove={async () => {
                     const r = await approveTimeClockAction({ ids: [e.id] });
-                    if (r.success) { toast.success("ApprouvÃ©e"); router.refresh(); }
+                    if (r.success) { toast.success("Approuvée"); router.refresh(); }
                     else toast.error(r.error || "");
                   }}
                   onReject={async () => {
                     const reason = await promptDialog({
                       title: "Rejeter cette saisie de temps",
                       label: "Motif du rejet",
-                      placeholder: "L'employÃ© verra ce message",
+                      placeholder: "L'employé verra ce message",
                       multiline: true,
                       required: true,
                       variant: "destructive",
@@ -264,7 +264,7 @@ export function TimeclockView({
                     });
                     if (!reason) return;
                     const r = await rejectTimeClockAction({ id: e.id, reason });
-                    if (r.success) { toast.success("RejetÃ©e"); router.refresh(); }
+                    if (r.success) { toast.success("Rejetée"); router.refresh(); }
                     else toast.error(r.error || "");
                   }}
                 />
@@ -329,7 +329,7 @@ function EntryRow({
           <Badge className={`text-[10px] ${cat.color}`}>{cat.label}</Badge>
           {entry.approvedAt && (
             <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50">
-              <CheckCircle2 className="h-2.5 w-2.5 mr-1" />ApprouvÃ©
+              <CheckCircle2 className="h-2.5 w-2.5 mr-1" />Approuvé
             </Badge>
           )}
           {entry.payStubId && (
@@ -340,9 +340,9 @@ function EntryRow({
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">
           {date.toLocaleDateString("fr-CA", { weekday: "short", day: "numeric", month: "short" })}
-          {" Â· "}
+          {" · "}
           {date.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
-          {entry.clockOut ? ` â†’ ${new Date(entry.clockOut).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}` : " Â· en cours"}
+          {entry.clockOut ? ` → ${new Date(entry.clockOut).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}` : " · en cours"}
         </p>
         {entry.notes && <p className="text-[11px] text-muted-foreground italic mt-0.5 truncate">{entry.notes}</p>}
       </div>
@@ -387,7 +387,7 @@ function ManualEntryDialog({ open, onClose, onSaved }: { open: boolean; onClose:
       notes: notes || null,
     });
     setPending(false);
-    if (r.success) { toast.success("EntrÃ©e ajoutÃ©e"); onSaved(); onClose(); }
+    if (r.success) { toast.success("Entrée ajoutée"); onSaved(); onClose(); }
     else toast.error(r.error || "");
   };
 
@@ -400,14 +400,14 @@ function ManualEntryDialog({ open, onClose, onSaved }: { open: boolean; onClose:
               <Plus className="h-4 w-4" />Saisie manuelle
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Pour rattraper une pÃ©riode oubliÃ©e (sera soumise Ã  approbation).
+              Pour rattraper une période oubliée (sera soumise à approbation).
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">DÃ©but</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Début</Label>
               <Input type="datetime-local" value={clockIn} onChange={(e) => setClockIn(e.target.value)} className="h-9" />
             </div>
             <div className="space-y-1.5">
@@ -416,7 +416,7 @@ function ManualEntryDialog({ open, onClose, onSaved }: { open: boolean; onClose:
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">CatÃ©gorie</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold">Catégorie</Label>
             <Select value={category} onValueChange={(v) => setCategory(v as "work" | "break" | "meeting" | "training" | "sick" | "vacation")}>
               <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -428,7 +428,7 @@ function ManualEntryDialog({ open, onClose, onSaved }: { open: boolean; onClose:
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Notes</Label>
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: RÃ©union client Acme" />
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: Réunion client Acme" />
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">

@@ -1,5 +1,5 @@
 "use client";
-// Vue Contrats â€” 2 onglets : Contrats individuels / Templates par poste.
+// Vue Contrats — 2 onglets : Contrats individuels / Templates par poste.
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -50,12 +50,12 @@ type Contract = {
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   draft: { label: "Brouillon", color: "bg-slate-100 text-slate-700" },
-  sent: { label: "EnvoyÃ©", color: "bg-blue-100 text-blue-700" },
-  signed_employee: { label: "SignÃ© employÃ©", color: "bg-amber-100 text-amber-700" },
-  signed_employer: { label: "SignÃ© employeur", color: "bg-amber-100 text-amber-700" },
+  sent: { label: "Envoyé", color: "bg-blue-100 text-blue-700" },
+  signed_employee: { label: "Signé employé", color: "bg-amber-100 text-amber-700" },
+  signed_employer: { label: "Signé employeur", color: "bg-amber-100 text-amber-700" },
   active: { label: "Actif", color: "bg-emerald-100 text-emerald-700" },
-  terminated: { label: "TerminÃ©", color: "bg-red-100 text-red-700" },
-  expired: { label: "ExpirÃ©", color: "bg-gray-100 text-gray-600" },
+  terminated: { label: "Terminé", color: "bg-red-100 text-red-700" },
+  expired: { label: "Expiré", color: "bg-gray-100 text-gray-600" },
 };
 
 export function ContractsView({
@@ -85,7 +85,7 @@ export function ContractsView({
   const myContracts = contracts.filter((c) => c.adminId === currentAdminId);
   const othersContracts = contracts.filter((c) => c.adminId !== currentAdminId);
 
-  // Filtres pour "Tous les employés"
+  // Filtres pour "Tous les employ�s"
   const [othersSearch, setOthersSearch] = useState("");
   const [othersStatus, setOthersStatus] = useState<string>("all");
   const [othersType, setOthersType] = useState<string>("all");
@@ -123,10 +123,10 @@ export function ContractsView({
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
             <FileSignature className="h-5 w-5 text-[#0F2D52]" />
-            Contrats d&apos;employÃ©s
+            Contrats d&apos;employés
           </h1>
           <p className="text-sm text-muted-foreground">
-            Workflow : brouillon â†’ envoyÃ© â†’ signÃ© employÃ© + employeur â†’ actif
+            Workflow : brouillon → envoyé → signé employé + employeur → actif
           </p>
         </div>
         {isHr && tab === "contracts" && (
@@ -163,7 +163,7 @@ export function ContractsView({
 
           {isHr && othersContracts.length > 0 && (
             <section className="space-y-3">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Tous les employÃ©s</h2>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Tous les employés</h2>
 
               {/* Filtres */}
               <Card className="p-3">
@@ -173,7 +173,7 @@ export function ContractsView({
                     <Input
                       value={othersSearch}
                       onChange={(e) => setOthersSearch(e.target.value)}
-                      placeholder="Rechercher employÃ© ou titreâ€¦"
+                      placeholder="Rechercher employé ou titre…"
                       className="h-9 text-sm pl-7"
                     />
                   </div>
@@ -195,7 +195,7 @@ export function ContractsView({
               </Card>
 
               {filteredOthers.length === 0 ? (
-                <Card className="p-8 text-center text-sm text-muted-foreground">Aucun rÃ©sultat avec ces filtres.</Card>
+                <Card className="p-8 text-center text-sm text-muted-foreground">Aucun résultat avec ces filtres.</Card>
               ) : (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -212,10 +212,10 @@ export function ContractsView({
                   {filteredOthers.length > OTHERS_PAGE_SIZE && (
                     <div className="flex items-center justify-between text-xs px-2">
                       <span className="text-muted-foreground">
-                        Page {othersPage + 1} / {othersTotalPages} Â· {filteredOthers.length} contrat{filteredOthers.length > 1 ? "s" : ""}
+                        Page {othersPage + 1} / {othersTotalPages} · {filteredOthers.length} contrat{filteredOthers.length > 1 ? "s" : ""}
                       </span>
                       <div className="flex items-center gap-1">
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setOthersPage((p) => Math.max(0, p - 1))} disabled={othersPage === 0} aria-label="Page prÃ©cÃ©dente">
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setOthersPage((p) => Math.max(0, p - 1))} disabled={othersPage === 0} aria-label="Page précédente">
                           <ChevronLeft className="h-3.5 w-3.5" />
                         </Button>
                         <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setOthersPage((p) => Math.min(othersTotalPages - 1, p + 1))} disabled={othersPage >= othersTotalPages - 1} aria-label="Page suivante">
@@ -231,8 +231,8 @@ export function ContractsView({
 
           {contracts.length === 0 && (
             <Card className="p-10 text-center text-sm text-muted-foreground">
-              {isHr ? "Aucun contrat crÃ©Ã©. Commencez par un template puis gÃ©nÃ©rez un contrat pour un employÃ©."
-                    : "Aucun contrat Ã©mis pour votre compte."}
+              {isHr ? "Aucun contrat créé. Commencez par un template puis générez un contrat pour un employé."
+                    : "Aucun contrat émis pour votre compte."}
             </Card>
           )}
         </div>
@@ -270,7 +270,7 @@ export function ContractsView({
           ))}
           {templates.length === 0 && (
             <Card className="p-10 text-center text-sm text-muted-foreground col-span-full">
-              Aucun template. CrÃ©ez-en un pour standardiser les contrats par poste.
+              Aucun template. Créez-en un pour standardiser les contrats par poste.
             </Card>
           )}
         </div>
@@ -304,24 +304,24 @@ export function ContractsView({
       <ConfirmDialog
         open={!!terminateDialog}
         onOpenChange={(o) => !o && setTerminateDialog(null)}
-        title={`RÃ©silier ${terminateDialog?.title} ?`}
-        description="Cette action marquera le contrat comme terminÃ©. ConservÃ© pour l'historique."
-        confirmLabel="RÃ©silier"
+        title={`Résilier ${terminateDialog?.title} ?`}
+        description="Cette action marquera le contrat comme terminé. Conservé pour l'historique."
+        confirmLabel="Résilier"
         variant="destructive"
         onConfirm={async () => {
           if (!terminateDialog) return;
           const reason = await promptDialog({
-            title: "Motif de rÃ©siliation",
-            description: "DÃ©crivez prÃ©cisÃ©ment la raison de la rÃ©siliation (conservÃ© pour l'historique lÃ©gal).",
+            title: "Motif de résiliation",
+            description: "Décrivez précisément la raison de la résiliation (conservé pour l'historique légal).",
             label: "Motif *",
             multiline: true,
             required: true,
             variant: "destructive",
-            confirmLabel: "RÃ©silier",
+            confirmLabel: "Résilier",
           });
           if (!reason) { setTerminateDialog(null); return; }
           const r = await terminateContractAction({ id: terminateDialog.id, reason });
-          if (r.success) { toast.success("Contrat rÃ©siliÃ©"); router.refresh(); }
+          if (r.success) { toast.success("Contrat résilié"); router.refresh(); }
           else toast.error(r.error || "");
           setTerminateDialog(null);
         }}
@@ -331,13 +331,13 @@ export function ContractsView({
         open={!!confirmDelTpl}
         onOpenChange={(o) => !o && setConfirmDelTpl(null)}
         title={`Supprimer ${confirmDelTpl?.name} ?`}
-        description="Si le template est dÃ©jÃ  utilisÃ©, il sera dÃ©sactivÃ© au lieu d'Ãªtre supprimÃ©."
+        description="Si le template est déjà utilisé, il sera désactivé au lieu d'être supprimé."
         confirmLabel="Supprimer"
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDelTpl) return;
           const r = await deleteContractTemplateAction({ id: confirmDelTpl.id });
-          if (r.success) { toast.success("Template supprimÃ©"); router.refresh(); }
+          if (r.success) { toast.success("Template supprimé"); router.refresh(); }
           else toast.error(r.error || "");
           setConfirmDelTpl(null);
         }}
@@ -373,7 +373,7 @@ function ContractCard({
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-          <div>DÃ©but : <strong>{new Date(c.startDate).toLocaleDateString("fr-CA")}</strong></div>
+          <div>Début : <strong>{new Date(c.startDate).toLocaleDateString("fr-CA")}</strong></div>
           {c.endDate && <div>Fin : <strong>{new Date(c.endDate).toLocaleDateString("fr-CA")}</strong></div>}
           {c.salaryAnnual && <div>Salaire/an : <strong>{Number(c.salaryAnnual).toLocaleString("fr-CA")} $</strong></div>}
           {c.hourlyRate && <div>Taux/h : <strong>{Number(c.hourlyRate).toFixed(2)} $</strong></div>}
@@ -384,16 +384,16 @@ function ContractCard({
         <div className="flex flex-wrap gap-1.5 text-[10px]">
           {c.employeeSignedAt ? (
             <Badge variant="outline" className="text-emerald-700 border-emerald-300 bg-emerald-50">
-              <CheckCircle2 className="h-2.5 w-2.5 mr-1" />SignÃ© employÃ©
+              <CheckCircle2 className="h-2.5 w-2.5 mr-1" />Signé employé
             </Badge>
           ) : (
             <Badge variant="outline" className="text-muted-foreground">
-              <AlertCircle className="h-2.5 w-2.5 mr-1" />Signature employÃ© en attente
+              <AlertCircle className="h-2.5 w-2.5 mr-1" />Signature employé en attente
             </Badge>
           )}
           {c.employerSignedAt ? (
             <Badge variant="outline" className="text-emerald-700 border-emerald-300 bg-emerald-50">
-              <CheckCircle2 className="h-2.5 w-2.5 mr-1" />SignÃ© employeur
+              <CheckCircle2 className="h-2.5 w-2.5 mr-1" />Signé employeur
             </Badge>
           ) : (
             <Badge variant="outline" className="text-muted-foreground">
@@ -405,7 +405,7 @@ function ContractCard({
         <div className="flex flex-wrap gap-1.5 pt-1">
           {canSend && (
             <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onSend}>
-              <Send className="h-3 w-3 mr-1" />Envoyer Ã  l&apos;employÃ©
+              <Send className="h-3 w-3 mr-1" />Envoyer à l&apos;employé
             </Button>
           )}
           {canSignEmployee && (
@@ -420,13 +420,13 @@ function ContractCard({
           )}
           {canTerminate && (
             <Button size="sm" variant="outline" className="h-7 text-xs hover:text-destructive" onClick={onTerminate}>
-              <Ban className="h-3 w-3 mr-1" />RÃ©silier
+              <Ban className="h-3 w-3 mr-1" />Résilier
             </Button>
           )}
           {canDownloadPdf && (
             <Button asChild size="sm" variant="outline" className="h-7 text-xs">
               <a href={`/api/admin/contracts/${c.id}/pdf`} target="_blank" rel="noopener">
-                <Download className="h-3 w-3 mr-1" />Télécharger PDF
+                <Download className="h-3 w-3 mr-1" />T�l�charger PDF
               </a>
             </Button>
           )}
@@ -490,7 +490,7 @@ function NewContractDialog({
 
   const submit = async () => {
     if (!employeeId || !title.trim() || !bodyMarkdown.trim() || !startDate) {
-      toast.error("EmployÃ©, titre, corps et date dÃ©but requis"); return;
+      toast.error("Employé, titre, corps et date début requis"); return;
     }
     setPending(true);
     const r = await createContractAction({
@@ -506,7 +506,7 @@ function NewContractDialog({
     });
     setPending(false);
     if (r.success) {
-      toast.success("Contrat crÃ©Ã© en brouillon");
+      toast.success("Contrat créé en brouillon");
       onSaved(); onClose();
       // Reset complet
       setEmployeeId("");
@@ -532,16 +532,16 @@ function NewContractDialog({
               <FileSignature className="h-4 w-4" />Nouveau contrat
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              CrÃ©Ã© en brouillon Â· Ã  envoyer ensuite pour signature.
+              Créé en brouillon · à envoyer ensuite pour signature.
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3 overflow-y-auto flex-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">EmployÃ© *</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Employé *</Label>
               <Select value={employeeId} onValueChange={setEmployeeId}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choisirâ€¦" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choisir…" /></SelectTrigger>
                 <SelectContent>
                   {employees.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>)}
                 </SelectContent>
@@ -552,7 +552,7 @@ function NewContractDialog({
               <Select value={templateId} onValueChange={onTemplateChange}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">â€” Sans template â€”</SelectItem>
+                  <SelectItem value="none">— Sans template —</SelectItem>
                   {templates.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -560,7 +560,7 @@ function NewContractDialog({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Titre *</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Contrat CDI - â€¦" />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Contrat CDI - …" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
@@ -577,7 +577,7 @@ function NewContractDialog({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">DÃ©but *</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Début *</Label>
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9" />
             </div>
             <div className="space-y-1.5">
@@ -588,11 +588,11 @@ function NewContractDialog({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider font-semibold">Salaire/an</Label>
-              <Input type="number" step="0.01" value={salaryAnnual} onChange={(e) => setSalaryAnnual(e.target.value)} className="h-9" placeholder="â€”" />
+              <Input type="number" step="0.01" value={salaryAnnual} onChange={(e) => setSalaryAnnual(e.target.value)} className="h-9" placeholder="—" />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider font-semibold">Taux/h</Label>
-              <Input type="number" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} className="h-9" placeholder="â€”" />
+              <Input type="number" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} className="h-9" placeholder="—" />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider font-semibold">Heures/sem</Label>
@@ -610,14 +610,14 @@ function NewContractDialog({
               onChange={(e) => setBodyMarkdown(e.target.value)}
               rows={10}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-mono resize-y"
-              placeholder={"# Contrat d'embauche\n\nEntre VNK Automatisation Inc. (ci-aprÃ¨s Â« l'employeur Â») et â€¦"}
+              placeholder={"# Contrat d'embauche\n\nEntre VNK Automatisation Inc. (ci-après « l'employeur ») et …"}
             />
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
           <Button onClick={submit} disabled={pending}>
-            {pending ? "..." : "CrÃ©er le contrat"}
+            {pending ? "..." : "Créer le contrat"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -677,7 +677,7 @@ function TemplateDialog({
       ? await updateContractTemplateAction({ ...payload, id: existing.id })
       : await createContractTemplateAction(payload);
     setPending(false);
-    if (r.success) { toast.success(existing ? "Template modifiÃ©" : "Template crÃ©Ã©"); onSaved(); onClose(); }
+    if (r.success) { toast.success(existing ? "Template modifié" : "Template créé"); onSaved(); onClose(); }
     else toast.error(r.error || "Erreur");
   };
 
@@ -690,7 +690,7 @@ function TemplateDialog({
               <FileText className="h-4 w-4" />{existing ? "Modifier template" : "Nouveau template de contrat"}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Standardise les contrats par poste. RÃ©utilisable lors de la crÃ©ation d&apos;un contrat.
+              Standardise les contrats par poste. Réutilisable lors de la création d&apos;un contrat.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -701,11 +701,11 @@ function TemplateDialog({
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Contrat CDI Comptable" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Poste liÃ©</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Poste lié</Label>
               <Select value={positionId} onValueChange={setPositionId}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">â€” Aucun â€”</SelectItem>
+                  <SelectItem value="none">— Aucun —</SelectItem>
                   {positions.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -752,13 +752,13 @@ function TemplateDialog({
               onChange={setBody}
               rows={14}
               placeholder="Corps du contrat avec placeholders {{employeeName}}, {{startDate}}, etc."
-              helpText="Markdown + placeholders {{...}} qui seront remplacés lors de la génération du contrat"
+              helpText="Markdown + placeholders {{...}} qui seront remplac�s lors de la g�n�ration du contrat"
             />
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
-          <Button onClick={submit} disabled={pending}>{pending ? "..." : existing ? "Enregistrer" : "CrÃ©er"}</Button>
+          <Button onClick={submit} disabled={pending}>{pending ? "..." : existing ? "Enregistrer" : "Créer"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -793,7 +793,7 @@ function SignDialog({
       : await signContractAsEmployerAction({ id: contract.id, signatureData });
     setPending(false);
     if (r.success) {
-      toast.success(as === "employee" ? "SignÃ© !" : "ContresignÃ© â€” contrat actif");
+      toast.success(as === "employee" ? "Signé !" : "Contresigné — contrat actif");
       onSigned(); onClose();
     } else toast.error(r.error || "Erreur");
   };
@@ -808,19 +808,19 @@ function SignDialog({
               {as === "employee" ? "Signer mon contrat" : "Contresigner (employeur)"}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              {contract.title} Â· {as === "employee" ? "Votre signature confirme votre engagement." : "Validation finale de l'employeur."}
+              {contract.title} · {as === "employee" ? "Votre signature confirme votre engagement." : "Validation finale de l'employeur."}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div className="rounded-lg border bg-muted/20 p-3 max-h-48 overflow-y-auto">
-            <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-1">AperÃ§u du contrat</p>
+            <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-1">Aperçu du contrat</p>
             <pre className="text-xs font-mono whitespace-pre-wrap">{contract.title}</pre>
           </div>
           <SignaturePad onChange={setSignatureData} />
           <p className="text-[10px] text-muted-foreground">
-            En signant, vous certifiez avoir lu et acceptÃ© l&apos;intÃ©gralitÃ© des termes du contrat.
-            Votre signature est horodatÃ©e et archivÃ©e pour conformitÃ© lÃ©gale.
+            En signant, vous certifiez avoir lu et accepté l&apos;intégralité des termes du contrat.
+            Votre signature est horodatée et archivée pour conformité légale.
           </p>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">

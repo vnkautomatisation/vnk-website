@@ -28,14 +28,14 @@ export function PoliciesAdminView({ policies }: { policies: Policy[] }) {
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2"><FileText className="h-5 w-5 text-[#0F2D52]" />Politiques RH</h1>
           <p className="text-sm text-muted-foreground">
-            Politiques internes (harcÃ¨lement, tÃ©lÃ©travail, IT, code de conduite) â€” consultables par tout le personnel.
+            Politiques internes (harcèlement, télétravail, IT, code de conduite) — consultables par tout le personnel.
           </p>
         </div>
         <Button onClick={() => setDialog({ open: true, existing: null })}><Plus className="h-4 w-4 mr-1.5" />Nouvelle politique</Button>
       </div>
 
       {policies.length === 0 ? (
-        <Card className="p-10 text-center text-sm text-muted-foreground">Aucune politique publiÃ©e.</Card>
+        <Card className="p-10 text-center text-sm text-muted-foreground">Aucune politique publiée.</Card>
       ) : (
         <div className="space-y-3">
           {policies.map((p) => (
@@ -50,7 +50,7 @@ export function PoliciesAdminView({ policies }: { policies: Policy[] }) {
                   <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
                     <Calendar className="h-3 w-3" />
                     En vigueur depuis le {new Date(p.effectiveFrom).toLocaleDateString("fr-CA")}
-                    Â· clÃ© : <code className="bg-muted px-1 rounded text-[10px]">{p.key}</code>
+                    · clé : <code className="bg-muted px-1 rounded text-[10px]">{p.key}</code>
                   </p>
                   <p className="text-sm mt-2 line-clamp-3">{p.bodyMarkdown}</p>
                 </div>
@@ -100,7 +100,7 @@ function PolicyDialog({ open, existing, onClose, onSaved }: { open: boolean; exi
       id: existing?.id, key, title, version, bodyMarkdown: body, effectiveFrom, isActive,
     });
     setPending(false);
-    if (r.success) { toast.success("EnregistrÃ©"); onSaved(); onClose(); }
+    if (r.success) { toast.success("Enregistré"); onSaved(); onClose(); }
     else toast.error(r.error || "");
   };
 
@@ -113,7 +113,7 @@ function PolicyDialog({ open, existing, onClose, onSaved }: { open: boolean; exi
         <div className="p-5 space-y-3 overflow-y-auto flex-1">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">ClÃ© technique *</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Clé technique *</Label>
               <Input value={key} onChange={(e) => setKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))} placeholder="harassment" disabled={!!existing} />
             </div>
             <div className="space-y-1.5">
@@ -123,7 +123,7 @@ function PolicyDialog({ open, existing, onClose, onSaved }: { open: boolean; exi
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Titre *</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Politique de prÃ©vention du harcÃ¨lement" />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Politique de prévention du harcèlement" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -137,7 +137,7 @@ function PolicyDialog({ open, existing, onClose, onSaved }: { open: boolean; exi
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Contenu Markdown *</Label>
-            <MarkdownEditor value={body} onChange={setBody} rows={12} placeholder="Texte de la politique" helpText="Markdown supporté" />
+            <MarkdownEditor value={body} onChange={setBody} rows={12} placeholder="Texte de la politique" helpText="Markdown support�" />
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">

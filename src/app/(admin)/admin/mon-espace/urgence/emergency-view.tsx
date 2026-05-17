@@ -30,7 +30,7 @@ export function EmergencyContactsView({ adminId, contacts }: { adminId: number; 
             <Heart className="h-5 w-5 text-red-500" />Contacts d&apos;urgence
           </h1>
           <p className="text-sm text-muted-foreground">
-            Personnes Ã  contacter en cas d&apos;accident. Au moins un contact principal recommandÃ©.
+            Personnes à contacter en cas d&apos;accident. Au moins un contact principal recommandé.
           </p>
         </div>
         <Button onClick={() => setDialog({ open: true, existing: null })}>
@@ -43,7 +43,7 @@ export function EmergencyContactsView({ adminId, contacts }: { adminId: number; 
           <Heart className="h-10 w-10 text-red-300 mx-auto mb-3" />
           <p className="text-sm font-medium">Aucun contact d&apos;urgence</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Indispensable pour la sÃ©curitÃ© â€” surtout en chantier client.
+            Indispensable pour la sécurité — surtout en chantier client.
           </p>
         </Card>
       ) : (
@@ -107,13 +107,13 @@ export function EmergencyContactsView({ adminId, contacts }: { adminId: number; 
         open={!!confirmDel}
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.name} ?`}
-        description="Ce contact d'urgence sera retirÃ©."
+        description="Ce contact d'urgence sera retiré."
         confirmLabel="Supprimer"
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDel) return;
           const r = await deleteEmergencyContactAction({ id: confirmDel.id, adminId });
-          if (r.success) { toast.success("Contact supprimÃ©"); router.refresh(); }
+          if (r.success) { toast.success("Contact supprimé"); router.refresh(); }
           else toast.error(r.error || "");
           setConfirmDel(null);
         }}
@@ -136,7 +136,7 @@ function ContactDialog({ open, existing, adminId, onClose, onSaved }: {
 
   const submit = async () => {
     if (!name.trim() || !relationship.trim() || !phone.trim()) {
-      toast.error("Nom, relation et tÃ©lÃ©phone requis"); return;
+      toast.error("Nom, relation et téléphone requis"); return;
     }
     setPending(true);
     const r = await upsertEmergencyContactAction({
@@ -151,7 +151,7 @@ function ContactDialog({ open, existing, adminId, onClose, onSaved }: {
       notes: notes.trim() || null,
     });
     setPending(false);
-    if (r.success) { toast.success("EnregistrÃ©"); onSaved(); onClose(); }
+    if (r.success) { toast.success("Enregistré"); onSaved(); onClose(); }
     else toast.error(r.error || "");
   };
 
@@ -176,16 +176,16 @@ function ContactDialog({ open, existing, adminId, onClose, onSaved }: {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider font-semibold">Relation *</Label>
-              <Input value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="Conjointe, Parentâ€¦" />
+              <Input value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="Conjointe, Parent…" />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">TÃ©lÃ©phone *</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Téléphone *</Label>
               <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="514-555-1234" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">TÃ©lÃ©phone alt</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Téléphone alt</Label>
               <Input value={phoneAlt} onChange={(e) => setPhoneAlt(e.target.value)} />
             </div>
           </div>
@@ -200,7 +200,7 @@ function ContactDialog({ open, existing, adminId, onClose, onSaved }: {
           </label>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Notes</Label>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y" placeholder="Ex : parle seulement franÃ§ais" />
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y" placeholder="Ex : parle seulement français" />
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">

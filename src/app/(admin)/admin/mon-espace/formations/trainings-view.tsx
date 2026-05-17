@@ -24,7 +24,7 @@ function daysUntil(date: string | null): number | null {
 function ExpiryBadge({ date }: { date: string | null }) {
   const days = daysUntil(date);
   if (days === null) return null;
-  if (days < 0) return <Badge variant="outline" className="text-[10px] text-red-700 border-red-300 bg-red-50">ExpirÃ©</Badge>;
+  if (days < 0) return <Badge variant="outline" className="text-[10px] text-red-700 border-red-300 bg-red-50">Expiré</Badge>;
   if (days < 30) return <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">Expire dans {days}j</Badge>;
   if (days < 90) return <Badge variant="outline" className="text-[10px] text-blue-700 border-blue-300 bg-blue-50">Expire dans {Math.floor(days / 30)} mois</Badge>;
   return null;
@@ -68,7 +68,7 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
       {tab === "licenses" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {licenses.length === 0 ? (
-            <Card className="col-span-full p-10 text-center text-sm text-muted-foreground">Aucun permis enregistrÃ©.</Card>
+            <Card className="col-span-full p-10 text-center text-sm text-muted-foreground">Aucun permis enregistré.</Card>
           ) : licenses.map((l) => (
             <Card key={l.id} className="p-4">
               <div className="flex items-start justify-between gap-2">
@@ -78,7 +78,7 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
                     {l.isMandatory && <Badge variant="outline" className="text-[9px] text-red-700 border-red-300 bg-red-50">Obligatoire</Badge>}
                     <ExpiryBadge date={l.expiresAt} />
                   </div>
-                  <p className="text-xs text-muted-foreground">{l.issuer ?? "â€”"}{l.number && ` Â· nÂ° ${l.number}`}</p>
+                  <p className="text-xs text-muted-foreground">{l.issuer ?? "—"}{l.number && ` · n° ${l.number}`}</p>
                   {l.expiresAt && (
                     <p className="text-[11px] text-muted-foreground mt-1">Expire le {new Date(l.expiresAt).toLocaleDateString("fr-CA")}</p>
                   )}
@@ -100,7 +100,7 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
       {tab === "trainings" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {trainings.length === 0 ? (
-            <Card className="col-span-full p-10 text-center text-sm text-muted-foreground">Aucune formation enregistrÃ©e.</Card>
+            <Card className="col-span-full p-10 text-center text-sm text-muted-foreground">Aucune formation enregistrée.</Card>
           ) : trainings.map((t) => (
             <Card key={t.id} className="p-4">
               <div className="flex items-start justify-between gap-2">
@@ -112,13 +112,13 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
                     <ExpiryBadge date={t.expiresAt} />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {t.provider ?? "â€”"}
-                    {t.completedAt && ` Â· ComplÃ©tÃ©e le ${new Date(t.completedAt).toLocaleDateString("fr-CA")}`}
-                    {t.hoursCount && ` Â· ${Number(t.hoursCount)}h`}
+                    {t.provider ?? "—"}
+                    {t.completedAt && ` · Complétée le ${new Date(t.completedAt).toLocaleDateString("fr-CA")}`}
+                    {t.hoursCount && ` · ${Number(t.hoursCount)}h`}
                   </p>
                   {t.completedAt && (
                     <p className="text-[11px] text-emerald-700 flex items-center gap-1 mt-1">
-                      <CheckCircle2 className="h-3 w-3" />ComplÃ©tÃ©e
+                      <CheckCircle2 className="h-3 w-3" />Complétée
                     </p>
                   )}
                 </div>
@@ -143,13 +143,13 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
         open={!!confirmDelLic}
         onOpenChange={(o) => !o && setConfirmDelLic(null)}
         title={`Supprimer ${confirmDelLic?.type} ?`}
-        description="Ce permis sera retiré de votre dossier."
+        description="Ce permis sera retir� de votre dossier."
         confirmLabel="Supprimer"
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDelLic) return;
           const r = await deleteLicenseAction({ id: confirmDelLic.id, adminId });
-          if (r.success) { toast.success("SupprimÃ©"); router.refresh(); } else toast.error(r.error || "");
+          if (r.success) { toast.success("Supprimé"); router.refresh(); } else toast.error(r.error || "");
           setConfirmDelLic(null);
         }}
       />
@@ -157,13 +157,13 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
         open={!!confirmDelTr}
         onOpenChange={(o) => !o && setConfirmDelTr(null)}
         title={`Supprimer ${confirmDelTr?.title} ?`}
-        description="Cette formation sera retirée de votre dossier."
+        description="Cette formation sera retir�e de votre dossier."
         confirmLabel="Supprimer"
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDelTr) return;
           const r = await deleteTrainingAction({ id: confirmDelTr.id, adminId });
-          if (r.success) { toast.success("SupprimÃ©"); router.refresh(); } else toast.error(r.error || "");
+          if (r.success) { toast.success("Supprimé"); router.refresh(); } else toast.error(r.error || "");
           setConfirmDelTr(null);
         }}
       />
@@ -193,7 +193,7 @@ function LicenseDialog({ open, existing, adminId, onClose, onSaved }: { open: bo
       fileUrl: fileUrl || null, isMandatory, notes: notes || null,
     });
     setPending(false);
-    if (r.success) { toast.success("EnregistrÃ©"); onSaved(); onClose(); }
+    if (r.success) { toast.success("Enregistré"); onSaved(); onClose(); }
     else toast.error(r.error || "");
   };
 
@@ -210,21 +210,21 @@ function LicenseDialog({ open, existing, adminId, onClose, onSaved }: { open: bo
         <div className="p-5 space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Type *</Label>
-            <Input value={type} onChange={(e) => setType(e.target.value)} placeholder="Licence Ã©lectricien, Permis classe 5, Secourismeâ€¦" />
+            <Input value={type} onChange={(e) => setType(e.target.value)} placeholder="Licence électricien, Permis classe 5, Secourisme…" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">NÂ°</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">N°</Label>
               <Input value={number} onChange={(e) => setNumber(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Ã‰metteur</Label>
-              <Input value={issuer} onChange={(e) => setIssuer(e.target.value)} placeholder="RBQ, CCQ, Croix-Rougeâ€¦" />
+              <Label className="text-xs uppercase tracking-wider font-semibold">Émetteur</Label>
+              <Input value={issuer} onChange={(e) => setIssuer(e.target.value)} placeholder="RBQ, CCQ, Croix-Rouge…" />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Ã‰mis le</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Émis le</Label>
               <Input type="date" value={issuedAt} onChange={(e) => setIssuedAt(e.target.value)} className="h-9" />
             </div>
             <div className="space-y-1.5">
@@ -280,7 +280,7 @@ function TrainingDialog({ open, existing, adminId, onClose, onSaved }: { open: b
       notes: notes || null,
     });
     setPending(false);
-    if (r.success) { toast.success("EnregistrÃ©"); onSaved(); onClose(); }
+    if (r.success) { toast.success("Enregistré"); onSaved(); onClose(); }
     else toast.error(r.error || "");
   };
 
@@ -297,18 +297,18 @@ function TrainingDialog({ open, existing, adminId, onClose, onSaved }: { open: b
         <div className="p-5 space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Titre *</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="SIMDUT 2015, Cadenassageâ€¦" />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="SIMDUT 2015, Cadenassage…" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">CatÃ©gorie</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Catégorie</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="safety">SÃ©curitÃ© (SST)</SelectItem>
+                  <SelectItem value="safety">Sécurité (SST)</SelectItem>
                   <SelectItem value="technical">Technique</SelectItem>
                   <SelectItem value="leadership">Leadership</SelectItem>
-                  <SelectItem value="compliance">ConformitÃ©</SelectItem>
+                  <SelectItem value="compliance">Conformité</SelectItem>
                   <SelectItem value="other">Autre</SelectItem>
                 </SelectContent>
               </Select>
@@ -320,11 +320,11 @@ function TrainingDialog({ open, existing, adminId, onClose, onSaved }: { open: b
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Fournisseur</Label>
-            <Input value={provider} onChange={(e) => setProvider(e.target.value)} placeholder="CNESST, Schneiderâ€¦" />
+            <Input value={provider} onChange={(e) => setProvider(e.target.value)} placeholder="CNESST, Schneider…" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">ComplÃ©tÃ©e le</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Complétée le</Label>
               <Input type="date" value={completedAt} onChange={(e) => setCompletedAt(e.target.value)} className="h-9" />
             </div>
             <div className="space-y-1.5">

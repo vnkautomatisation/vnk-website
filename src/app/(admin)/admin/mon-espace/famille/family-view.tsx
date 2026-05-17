@@ -31,10 +31,10 @@ export function FamilyView({ adminId, dependents }: { adminId: number; dependent
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            <Users className="h-5 w-5 text-[#0F2D52]" />Famille / DÃ©pendants
+            <Users className="h-5 w-5 text-[#0F2D52]" />Famille / Dépendants
           </h1>
           <p className="text-sm text-muted-foreground">
-            Conjoint(e) et enfants couverts par votre assurance collective ou dÃ©clarÃ©s au fisc.
+            Conjoint(e) et enfants couverts par votre assurance collective ou déclarés au fisc.
           </p>
         </div>
         <Button onClick={() => setDialog({ open: true, existing: null })}>
@@ -44,7 +44,7 @@ export function FamilyView({ adminId, dependents }: { adminId: number; dependent
 
       {dependents.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted-foreground">
-          Aucun dÃ©pendant enregistrÃ©.
+          Aucun dépendant enregistré.
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -58,10 +58,10 @@ export function FamilyView({ adminId, dependents }: { adminId: number; dependent
                     <Icon className="h-5 w-5 text-[#0F2D52] mt-0.5 shrink-0" />
                     <div>
                       <h3 className="font-bold text-sm">{d.fullName}</h3>
-                      <p className="text-xs text-muted-foreground">{meta.label}{d.birthdate && ` Â· ${new Date(d.birthdate).toLocaleDateString("fr-CA")}`}</p>
+                      <p className="text-xs text-muted-foreground">{meta.label}{d.birthdate && ` · ${new Date(d.birthdate).toLocaleDateString("fr-CA")}`}</p>
                       <div className="flex gap-1 mt-1.5 flex-wrap">
-                        {d.isInsured && <Badge variant="outline" className="text-[10px]">AssurÃ©</Badge>}
-                        {d.isTaxDependent && <Badge variant="outline" className="text-[10px]">DÃ©pendant fiscal</Badge>}
+                        {d.isInsured && <Badge variant="outline" className="text-[10px]">Assuré</Badge>}
+                        {d.isTaxDependent && <Badge variant="outline" className="text-[10px]">Dépendant fiscal</Badge>}
                       </div>
                     </div>
                   </div>
@@ -92,13 +92,13 @@ export function FamilyView({ adminId, dependents }: { adminId: number; dependent
         open={!!confirmDel}
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.fullName} ?`}
-        description="Ce dÃ©pendant sera retirÃ© de votre dossier."
+        description="Ce dépendant sera retiré de votre dossier."
         confirmLabel="Supprimer"
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDel) return;
           const r = await deleteFamilyDependentAction({ id: confirmDel.id, adminId });
-          if (r.success) { toast.success("SupprimÃ©"); router.refresh(); } else toast.error(r.error || "");
+          if (r.success) { toast.success("Supprimé"); router.refresh(); } else toast.error(r.error || "");
           setConfirmDel(null);
         }}
       />
@@ -127,7 +127,7 @@ function DepDialog({ open, existing, adminId, onClose, onSaved }: { open: boolea
       isTaxDependent,
     });
     setPending(false);
-    if (r.success) { toast.success("EnregistrÃ©"); onSaved(); onClose(); }
+    if (r.success) { toast.success("Enregistré"); onSaved(); onClose(); }
     else toast.error(r.error || "");
   };
 
@@ -137,7 +137,7 @@ function DepDialog({ open, existing, adminId, onClose, onSaved }: { open: boolea
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader>
             <DialogTitle className="text-base text-white flex items-center gap-2">
-              <Users className="h-4 w-4" />{existing ? "Modifier" : "Nouveau"} dÃ©pendant
+              <Users className="h-4 w-4" />{existing ? "Modifier" : "Nouveau"} dépendant
             </DialogTitle>
           </DialogHeader>
         </div>
@@ -170,7 +170,7 @@ function DepDialog({ open, existing, adminId, onClose, onSaved }: { open: boolea
             </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" checked={isTaxDependent} onChange={(e) => setIsTaxDependent(e.target.checked)} className="h-4 w-4 rounded border-input" />
-              DÃ©pendant fiscal (pour T4/RelevÃ© 1)
+              Dépendant fiscal (pour T4/Relevé 1)
             </label>
           </div>
         </div>

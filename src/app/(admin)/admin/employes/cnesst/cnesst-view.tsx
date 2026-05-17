@@ -26,10 +26,10 @@ type Incident = {
 type Emp = { id: number; fullName: string | null; email: string };
 
 const STATUS: Record<string, { label: string; color: string }> = {
-  declared: { label: "DÃ©clarÃ©", color: "bg-amber-100 text-amber-700" },
-  accepted: { label: "AcceptÃ© CNESST", color: "bg-emerald-100 text-emerald-700" },
-  refused: { label: "RefusÃ© CNESST", color: "bg-red-100 text-red-700" },
-  closed: { label: "FermÃ©", color: "bg-gray-100 text-gray-700" },
+  declared: { label: "Déclaré", color: "bg-amber-100 text-amber-700" },
+  accepted: { label: "Accepté CNESST", color: "bg-emerald-100 text-emerald-700" },
+  refused: { label: "Refusé CNESST", color: "bg-red-100 text-red-700" },
+  closed: { label: "Fermé", color: "bg-gray-100 text-gray-700" },
 };
 
 export function CnesstView({ incidents, employees }: { incidents: Incident[]; employees: Emp[] }) {
@@ -42,28 +42,28 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
   const handleDelete = async (incident: Incident) => {
     const ok = await confirmDialog({
       title: "Supprimer cet incident ?",
-      description: "Cette action est irréversible. L'historique sera perdu.",
+      description: "Cette action est irr�versible. L'historique sera perdu.",
       confirmLabel: "Supprimer",
       variant: "destructive",
     });
     if (!ok) return;
     const r = await deleteCnesstIncidentAction({ id: incident.id });
-    if (r.success) { toast.success("Incident supprimé"); router.refresh(); }
+    if (r.success) { toast.success("Incident supprim�"); router.refresh(); }
     else toast.error(r.error || "");
   };
 
   const handleMarkReported = async (incident: Incident) => {
     const today = new Date().toISOString().slice(0, 10);
     const date = await promptDialog({
-      title: "Marquer envoyé à la CNESST",
-      label: "Date d'envoi à la CNESST (AAAA-MM-JJ)",
+      title: "Marquer envoy� � la CNESST",
+      label: "Date d'envoi � la CNESST (AAAA-MM-JJ)",
       defaultValue: today,
       placeholder: "AAAA-MM-JJ",
       confirmLabel: "Confirmer",
     });
     if (date === null) return;
     const r = await markCnesstReportedAction({ id: incident.id, date: date.trim() || today });
-    if (r.success) { toast.success("Envoi CNESST enregistré"); router.refresh(); }
+    if (r.success) { toast.success("Envoi CNESST enregistr�"); router.refresh(); }
     else toast.error(r.error || "");
   };
 
@@ -79,7 +79,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
     });
     if (date === null) return;
     const r = await markCnesstReturnedAction({ id: incident.id, date: date.trim() || today });
-    if (r.success) { toast.success("Retour enregistré"); router.refresh(); }
+    if (r.success) { toast.success("Retour enregistr�"); router.refresh(); }
     else toast.error(r.error || "");
   };
 
@@ -90,14 +90,14 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-500" />CNESST Â· Accidents du travail
+            <AlertTriangle className="h-5 w-5 text-red-500" />CNESST · Accidents du travail
           </h1>
           <p className="text-sm text-muted-foreground">
-            Registre des dÃ©clarations CNESST (obligation QuÃ©bec â€” dÃ©claration &lt; 24h).
+            Registre des déclarations CNESST (obligation Québec — déclaration &lt; 24h).
           </p>
         </div>
         <Button variant="destructive" onClick={() => setDialog({ open: true, existing: null })}>
-          <Plus className="h-4 w-4 mr-1.5" />Nouvelle dÃ©claration
+          <Plus className="h-4 w-4 mr-1.5" />Nouvelle déclaration
         </Button>
       </div>
 
@@ -109,7 +109,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
 
       {incidents.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted-foreground">
-          Aucune dÃ©claration enregistrÃ©e. EspÃ©rons que Ã§a reste !
+          Aucune déclaration enregistrée. Espérons que ça reste !
         </Card>
       ) : (
         <div className="space-y-2">
@@ -122,7 +122,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-bold text-sm">{i.admin.fullName || i.admin.email}</h3>
                       <Badge className={`text-[10px] ${s.color}`}>{s.label}</Badge>
-                      {i.cnesstFileNumber && <Badge variant="outline" className="text-[10px]">NÂ° dossier : {i.cnesstFileNumber}</Badge>}
+                      {i.cnesstFileNumber && <Badge variant="outline" className="text-[10px]">N° dossier : {i.cnesstFileNumber}</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                       <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(i.incidentDate).toLocaleString("fr-CA", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
@@ -132,7 +132,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
                     {(i.injuryType || i.bodyPart) && (
                       <p className="text-xs text-muted-foreground mt-1">
                         {i.injuryType && <strong>Blessure : </strong>}{i.injuryType}
-                        {i.bodyPart && <span> Â· {i.bodyPart}</span>}
+                        {i.bodyPart && <span> · {i.bodyPart}</span>}
                       </p>
                     )}
                     {i.daysAbsent !== null && i.daysAbsent > 0 && (
@@ -141,7 +141,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
                     <div className="flex items-center gap-1.5 flex-wrap mt-2">
                       {i.reportedToCnesstAt ? (
                         <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700 bg-emerald-50">
-                          <Send className="h-3 w-3 mr-1" />Envoyé le {fmtDate(i.reportedToCnesstAt)}
+                          <Send className="h-3 w-3 mr-1" />Envoy� le {fmtDate(i.reportedToCnesstAt)}
                         </Badge>
                       ) : (
                         <Button
@@ -150,7 +150,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
                           className="h-7 text-xs border-[#0F2D52] text-[#0F2D52] hover:bg-[#0F2D52]/5"
                           onClick={() => handleMarkReported(i)}
                         >
-                          <Send className="h-3 w-3 mr-1" />Marquer envoyé CNESST
+                          <Send className="h-3 w-3 mr-1" />Marquer envoy� CNESST
                         </Button>
                       )}
                       {i.returnedToWorkAt ? (
@@ -239,7 +239,7 @@ function IncidentDialog({ open, existing, employees, onClose, onSaved }: { open:
       status: status as "declared" | "accepted" | "refused" | "closed",
     });
     setPending(false);
-    if (r.success) { toast.success("EnregistrÃ©"); onSaved(); onClose(); }
+    if (r.success) { toast.success("Enregistré"); onSaved(); onClose(); }
     else toast.error(r.error || "");
   };
 
@@ -249,19 +249,19 @@ function IncidentDialog({ open, existing, employees, onClose, onSaved }: { open:
         <div className="bg-gradient-to-br from-red-700 to-red-900 text-white px-5 py-4">
           <DialogHeader>
             <DialogTitle className="text-base text-white flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />DÃ©claration CNESST
+              <AlertTriangle className="h-4 w-4" />Déclaration CNESST
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Toute dÃ©claration ici alerte automatiquement les super-admins.
+              Toute déclaration ici alerte automatiquement les super-admins.
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3 overflow-y-auto flex-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">EmployÃ© blessÃ© *</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Employé blessé *</Label>
               <Select value={adminId} onValueChange={setAdminId}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choisirâ€¦" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choisir…" /></SelectTrigger>
                 <SelectContent>{employees.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -272,29 +272,29 @@ function IncidentDialog({ open, existing, employees, onClose, onSaved }: { open:
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Lieu *</Label>
-            <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Atelier, chantier client Xâ€¦" />
+            <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Atelier, chantier client X…" />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Description *</Label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y" placeholder="DÃ©crivez l'accident, les circonstances, l'enchaÃ®nementâ€¦" />
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y" placeholder="Décrivez l'accident, les circonstances, l'enchaînement…" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider font-semibold">Type blessure</Label>
-              <Input value={injuryType} onChange={(e) => setInjuryType(e.target.value)} placeholder="BrÃ»lure, fracture, choc Ã©lectriqueâ€¦" />
+              <Input value={injuryType} onChange={(e) => setInjuryType(e.target.value)} placeholder="Brûlure, fracture, choc électrique…" />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wider font-semibold">Partie du corps</Label>
-              <Input value={bodyPart} onChange={(e) => setBodyPart(e.target.value)} placeholder="Main droite, dosâ€¦" />
+              <Input value={bodyPart} onChange={(e) => setBodyPart(e.target.value)} placeholder="Main droite, dos…" />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">TÃ©moin</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">Témoin</Label>
               <Input value={witnessName} onChange={(e) => setWitnessName(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">NÂ° dossier CNESST</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">N° dossier CNESST</Label>
               <Input value={cnesstFileNumber} onChange={(e) => setCnesstFileNumber(e.target.value)} />
             </div>
           </div>
@@ -308,10 +308,10 @@ function IncidentDialog({ open, existing, employees, onClose, onSaved }: { open:
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="declared">DÃ©clarÃ©</SelectItem>
-                  <SelectItem value="accepted">AcceptÃ© CNESST</SelectItem>
-                  <SelectItem value="refused">RefusÃ© CNESST</SelectItem>
-                  <SelectItem value="closed">FermÃ©</SelectItem>
+                  <SelectItem value="declared">Déclaré</SelectItem>
+                  <SelectItem value="accepted">Accepté CNESST</SelectItem>
+                  <SelectItem value="refused">Refusé CNESST</SelectItem>
+                  <SelectItem value="closed">Fermé</SelectItem>
                 </SelectContent>
               </Select>
             </div>
