@@ -35,20 +35,6 @@ type Props = {
   storageKey: string;            // pour persister état collapsé groupes
 };
 
-function isActive(pathname: string, href: string, items: NavItem[]): boolean {
-  // Pour le lien racine (ex: /admin/employes), exact match seulement
-  // si pas d'autre item du même groupe ne matche.
-  if (pathname === href) return true;
-  if (href.endsWith("/") || href === "/admin/employes" || href === "/admin/mon-espace") {
-    // Vérifier qu'aucun autre item plus spécifique ne matche
-    const moreSpecific = items.some(
-      (i) => i.href !== href && i.href.length > href.length && pathname.startsWith(i.href)
-    );
-    return !moreSpecific && pathname.startsWith(href);
-  }
-  return pathname.startsWith(href);
-}
-
 export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTagline, sections, storageKey }: Props) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -60,10 +46,26 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
 
   const allGroupNames = useMemo(() => sections.map((s) => s.group), [sections]);
 
-  // Page active + groupe actif
+  // Page active + groupe actif.
+  // On calcule UN SEUL activeHref pour tout le module (single source of truth).
+  // Sans ca, "/admin/employes" (Liste) matche aussi quand on est sur /admin/employes/anniversaires
+  // car le check "moreSpecific" interne a isActive ne voit que les items du meme groupe.
   const allItems = useMemo(() => sections.flatMap((s) => s.items), [sections]);
-  const activeItem = allItems.find((it) => isActive(pathname, it.href, allItems));
-  const activeGroup = sections.find((s) => s.items.some((it) => isActive(pathname, it.href, s.items)));
+  const activeHref = useMemo(() => {
+    // 1. Exact match prioritaire
+    const exact = allItems.find((it) => it.href === pathname);
+    if (exact) return exact.href;
+    // 2. Sinon : prefix le plus long qui matche pathname
+    let best: string | null = null;
+    for (const it of allItems) {
+      if (pathname === it.href || pathname.startsWith(it.href + "/")) {
+        if (!best || it.href.length > best.length) best = it.href;
+      }
+    }
+    return best;
+  }, [pathname, allItems]);
+  const activeItem = allItems.find((it) => it.href === activeHref);
+  const activeGroup = sections.find((s) => s.items.some((it) => it.href === activeHref));
 
   // Init : tous ouverts (server-stable, hydration-safe)
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(allGroupNames));
@@ -198,7 +200,7 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
                 <NavGroup
                   key={section.group}
                   section={section}
-                  pathname={pathname}
+                  activeHref={activeHref}
                   isActiveGroup={section === activeGroup}
                   open={!hydrated || isGroupOpen(section.group, section)}
                   onToggle={() => toggleGroup(section.group)}
@@ -245,7 +247,7 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
               <NavGroup
                 key={section.group}
                 section={section}
-                pathname={pathname}
+                activeHref={activeHref}
                 isActiveGroup={section === activeGroup}
                 open={!hydrated || isGroupOpen(section.group, section)}
                 onToggle={() => toggleGroup(section.group)}
@@ -259,10 +261,10 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
 }
 
 function NavGroup({
-  section, pathname, isActiveGroup, open, onToggle,
+  section, activeHref, isActiveGroup, open, onToggle,
 }: {
   section: NavSection;
-  pathname: string;
+  activeHref: string | null;
   isActiveGroup: boolean;
   open: boolean;
   onToggle: () => void;
@@ -298,7 +300,7 @@ function NavGroup({
       {open && (
         <div className="space-y-0.5 mt-1">
           {section.items.map((item) => {
-            const active = isActive(pathname, item.href, section.items);
+            const active = item.href === activeHref;
             const Icon = item.icon;
             return (
               <Link
