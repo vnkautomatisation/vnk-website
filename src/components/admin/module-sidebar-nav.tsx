@@ -120,8 +120,11 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
 
   return (
     <>
-      {/* ─── Mobile : bouton menu + breadcrumb compact ─── */}
-      <div className="lg:hidden mb-3 flex items-center justify-between gap-2 p-3 rounded-lg border bg-card">
+      {/* ─── Mobile : bouton menu + breadcrumb compact ───
+          STICKY juste sous la topbar admin (64px) : reste accessible meme apres scroll.
+          z-[15] pour passer au-dessus du contenu mais sous la topbar (z-30) et le drawer (z-60).
+          backdrop-blur + bg semi-opaque pour bien lire par-dessus le contenu scroll. */}
+      <div className="lg:hidden sticky top-[64px] z-[15] mb-3 flex items-center justify-between gap-2 p-2.5 rounded-lg border bg-card/95 backdrop-blur-md shadow-sm">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
