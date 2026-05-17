@@ -6,12 +6,14 @@ import {
   Clock, Calculator, CalendarDays, GitBranch, BadgeCheck, AlertTriangle,
   GraduationCap, BarChart, Award, MessageSquare, Megaphone, Cake,
   LogOut, FileBarChart, ScrollText, Laptop,
+  UsersRound, FolderOpen, Timer, Wrench, HeartPulse, Radio, Archive,
 } from "lucide-react";
 import { ModuleSidebarNav, type NavSection } from "@/components/admin/module-sidebar-nav";
 
 const SECTIONS: NavSection[] = [
   {
     group: "Personnes",
+    groupIcon: UsersRound,
     items: [
       { href: "/admin/employes", label: "Liste", icon: Users },
       { href: "/admin/employes/equipes", label: "Équipes", icon: Network },
@@ -22,6 +24,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     group: "Documents",
+    groupIcon: FolderOpen,
     items: [
       { href: "/admin/employes/contrats", label: "Contrats", icon: FileSignature },
       { href: "/admin/employes/documents", label: "Documents légaux", icon: FileText },
@@ -30,6 +33,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     group: "Temps & paie",
+    groupIcon: Timer,
     items: [
       { href: "/admin/employes/pointage", label: "Pointage", icon: Clock },
       { href: "/admin/employes/conges", label: "Congés", icon: CalendarDays },
@@ -40,6 +44,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     group: "Qualifications",
+    groupIcon: Wrench,
     items: [
       { href: "/admin/employes/permis", label: "Permis", icon: BadgeCheck },
       { href: "/admin/employes/formations", label: "Formations", icon: GraduationCap },
@@ -49,6 +54,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     group: "Suivi RH",
+    groupIcon: HeartPulse,
     items: [
       { href: "/admin/employes/evaluations", label: "Évaluations", icon: Award },
       { href: "/admin/employes/one-on-ones", label: "1-on-1", icon: MessageSquare },
@@ -57,6 +63,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     group: "Communications",
+    groupIcon: Radio,
     items: [
       { href: "/admin/employes/annonces", label: "Annonces", icon: Megaphone },
       { href: "/admin/employes/anniversaires", label: "Anniversaires", icon: Cake },
@@ -64,6 +71,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     group: "Fiscal & sortie",
+    groupIcon: Archive,
     items: [
       { href: "/admin/employes/docs-fiscaux", label: "Docs fiscaux", icon: FileText },
       { href: "/admin/employes/lettres", label: "Lettres d'emploi", icon: FileSignature },

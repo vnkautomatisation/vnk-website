@@ -74,10 +74,16 @@ export default async function AdminLayout({
     <TooltipProvider delayDuration={300}>
       <AdminThemeProvider>
       <EntityPanelsRoot>
-        <div
-          className="min-h-screen bg-muted/40"
-          style={{ "--admin-sidebar-w": initialSidebarWidth } as React.CSSProperties}
-        >
+        {/* Inline script : applique la CSS var sur documentElement avant le premier paint.
+            Évite le bug de portée : AdminSidebar.setCompact() écrit sur documentElement,
+            si la même var était aussi sur un parent div (inline style) elle l'écraserait
+            et le <main> ne suivrait pas. Documentement = single source of truth. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{document.documentElement.style.setProperty('--admin-sidebar-w','${initialSidebarWidth}')}catch(e){}`,
+          }}
+        />
+        <div className="min-h-screen bg-muted/40">
           {/* Skip-to-content link (a11y WCAG 2.4.1) */}
           <a
             href="#admin-main"

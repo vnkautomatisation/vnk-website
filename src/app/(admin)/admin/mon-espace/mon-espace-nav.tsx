@@ -4,12 +4,14 @@
 import {
   Home, FileText, Clock, Calculator, CalendarDays, Briefcase, GraduationCap,
   Heart, CreditCard, Users, FileSignature, Megaphone, UserCircle, ScrollText,
+  Sparkles, FolderOpen, Wallet, FolderClosed, Building2,
 } from "lucide-react";
 import { ModuleSidebarNav, type NavSection } from "@/components/admin/module-sidebar-nav";
 
 const SECTIONS: NavSection[] = [
   {
     group: "Mon quotidien",
+    groupIcon: Sparkles,
     items: [
       { href: "/admin/mon-espace", label: "Tableau de bord", icon: Home },
       { href: "/admin/mon-espace/pointage", label: "Mon pointage", icon: Clock },
@@ -18,6 +20,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     group: "Mes documents",
+    groupIcon: FolderOpen,
     items: [
       { href: "/admin/mon-espace/documents", label: "Documents", icon: FileText },
       { href: "/admin/mon-espace/contrats", label: "Mes contrats", icon: FileSignature },
@@ -26,12 +29,14 @@ const SECTIONS: NavSection[] = [
   },
   {
     group: "Ma rémunération",
+    groupIcon: Wallet,
     items: [
       { href: "/admin/mon-espace/paie", label: "Mes bulletins", icon: Calculator },
     ],
   },
   {
     group: "Mon dossier",
+    groupIcon: FolderClosed,
     items: [
       { href: "/admin/mon-espace/equipement", label: "Mon équipement", icon: Briefcase },
       { href: "/admin/mon-espace/formations", label: "Formations & permis", icon: GraduationCap },
@@ -42,6 +47,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     group: "Mon équipe",
+    groupIcon: Building2,
     items: [
       { href: "/admin/mon-espace/equipe", label: "Annuaire", icon: UserCircle },
       { href: "/admin/mon-espace/annonces", label: "Annonces", icon: Megaphone },
