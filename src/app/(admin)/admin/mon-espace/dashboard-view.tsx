@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -131,6 +132,19 @@ export function MonEspaceDashboard({
     else toast.error(r.error || "");
   };
 
+  // KPI "Heures cette semaine" LIVE : si un shift est en cours, on incremente
+  // la minute pour que l'employe voie son temps grimper en temps reel.
+  // weekHours (prop server) inclut DEJA la duree du shift ouvert au moment du fetch
+  // (calcule server-side). Ici on ajoute juste le delta depuis ce fetch.
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!openClock) return;
+    const id = setInterval(() => setTick((t) => t + 1), 60_000); // chaque minute
+    return () => clearInterval(id);
+  }, [openClock]);
+  // tick increment = +1 minute par tick (on ne stocke pas Date.now sinon hydration mismatch)
+  const liveWeekHours = openClock ? weekHours + tick : weekHours;
+
   const incompleteSteps = completionSteps.filter((s) => !s.done);
 
   return (
@@ -190,7 +204,7 @@ export function MonEspaceDashboard({
 
       {/* KPIs personnels */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <KpiCard label="Heures cette semaine" value={fmtHours(weekHours)} icon={Clock} accent="emerald" />
+        <KpiCard label="Heures cette semaine" value={fmtHours(liveWeekHours)} icon={Clock} accent="emerald" />
         <KpiCard label="Actions à faire" value={String(totalActions)} icon={AlertTriangle} accent={totalActions > 0 ? "amber" : "emerald"} />
         <KpiCard label="Congés en attente" value={String(pendingLeavesCount)} icon={CalendarDays} accent={pendingLeavesCount > 0 ? "blue" : "muted"} />
         <KpiCard

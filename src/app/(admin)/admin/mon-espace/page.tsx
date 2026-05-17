@@ -14,8 +14,11 @@ export default async function MonEspaceHome() {
   const adminId = session.user.adminId!;
 
   const today = new Date();
+  // Debut de semaine = LUNDI (convention Quebec). getDay() = 0 pour dimanche,
+  // 1 pour lundi. (getDay() + 6) % 7 donne 0 pour lundi, 6 pour dimanche.
+  const dayIndex = (today.getDay() + 6) % 7;
   const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay());
+  startOfWeek.setDate(today.getDate() - dayIndex);
   startOfWeek.setHours(0, 0, 0, 0);
   const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
@@ -185,11 +188,21 @@ export default async function MonEspaceHome() {
   ];
   const completionPct = completionSteps.reduce((sum, s) => sum + (s.done ? s.weight : 0), 0);
 
+  // Heures de la semaine : somme des shifts fermes + duree du shift EN COURS si l'employe
+  // est actuellement pointe (clockOut: null). Sinon le KPI affichait 0 tant que le user
+  // n'avait pas ferme son pointage du matin -> illisible.
+  const closedMin = weekHours?._sum?.durationMin ?? 0;
+  let openMin = 0;
+  if (openClock && openClock.clockIn >= startOfWeek) {
+    openMin = Math.max(0, Math.floor((today.getTime() - openClock.clockIn.getTime()) / 60000));
+  }
+  const weekHoursTotal = closedMin + openMin;
+
   return (
     <MonEspaceDashboard
       me={JSON.parse(JSON.stringify(me))}
       openClock={openClock ? JSON.parse(JSON.stringify(openClock)) : null}
-      weekHours={weekHours?._sum?.durationMin ?? 0}
+      weekHours={weekHoursTotal}
       unsignedDocs={JSON.parse(JSON.stringify(unsignedDocs))}
       pendingContracts={JSON.parse(JSON.stringify(pendingContracts))}
       expiringLicenses={JSON.parse(JSON.stringify(expiringLicenses))}
