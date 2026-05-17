@@ -42,28 +42,28 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
   const handleDelete = async (incident: Incident) => {
     const ok = await confirmDialog({
       title: "Supprimer cet incident ?",
-      description: "Cette action est irr�versible. L'historique sera perdu.",
+      description: "Cette action est irréversible. L'historique sera perdu.",
       confirmLabel: "Supprimer",
       variant: "destructive",
     });
     if (!ok) return;
     const r = await deleteCnesstIncidentAction({ id: incident.id });
-    if (r.success) { toast.success("Incident supprim�"); router.refresh(); }
+    if (r.success) { toast.success("Incident supprimé"); router.refresh(); }
     else toast.error(r.error || "");
   };
 
   const handleMarkReported = async (incident: Incident) => {
     const today = new Date().toISOString().slice(0, 10);
     const date = await promptDialog({
-      title: "Marquer envoy� � la CNESST",
-      label: "Date d'envoi � la CNESST (AAAA-MM-JJ)",
+      title: "Marquer envoyé à la CNESST",
+      label: "Date d'envoi à la CNESST (AAAA-MM-JJ)",
       defaultValue: today,
       placeholder: "AAAA-MM-JJ",
       confirmLabel: "Confirmer",
     });
     if (date === null) return;
     const r = await markCnesstReportedAction({ id: incident.id, date: date.trim() || today });
-    if (r.success) { toast.success("Envoi CNESST enregistr�"); router.refresh(); }
+    if (r.success) { toast.success("Envoi CNESST enregistré"); router.refresh(); }
     else toast.error(r.error || "");
   };
 
@@ -79,7 +79,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
     });
     if (date === null) return;
     const r = await markCnesstReturnedAction({ id: incident.id, date: date.trim() || today });
-    if (r.success) { toast.success("Retour enregistr�"); router.refresh(); }
+    if (r.success) { toast.success("Retour enregistré"); router.refresh(); }
     else toast.error(r.error || "");
   };
 
@@ -141,7 +141,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
                     <div className="flex items-center gap-1.5 flex-wrap mt-2">
                       {i.reportedToCnesstAt ? (
                         <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700 bg-emerald-50">
-                          <Send className="h-3 w-3 mr-1" />Envoy� le {fmtDate(i.reportedToCnesstAt)}
+                          <Send className="h-3 w-3 mr-1" />Envoyé le {fmtDate(i.reportedToCnesstAt)}
                         </Badge>
                       ) : (
                         <Button
@@ -150,7 +150,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
                           className="h-7 text-xs border-[#0F2D52] text-[#0F2D52] hover:bg-[#0F2D52]/5"
                           onClick={() => handleMarkReported(i)}
                         >
-                          <Send className="h-3 w-3 mr-1" />Marquer envoy� CNESST
+                          <Send className="h-3 w-3 mr-1" />Marquer envoyé CNESST
                         </Button>
                       )}
                       {i.returnedToWorkAt ? (

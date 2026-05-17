@@ -68,7 +68,7 @@ export function TimeclockView({
 
   const TABS: TabItem<"mine" | "review">[] = [
     { key: "mine", label: "Mon pointage", icon: Clock },
-    ...(isPayrollAdmin ? [{ key: "review" as const, label: "À approuver", icon: CheckCircle2, count: allEntries.filter((e) => !e.approvedAt && e.clockOut).length }] : []),
+    ...(isPayrollAdmin ? [{ key: "review" as const, label: "à approuver", icon: CheckCircle2, count: allEntries.filter((e) => !e.approvedAt && e.clockOut).length }] : []),
   ];
 
   // Stats personnelles 30j
@@ -80,7 +80,7 @@ export function TimeclockView({
     return { total, work, approved, pending };
   }, [myEntries]);
 
-  // File de revue : entr�es ferm�es + filtres (recherche employ�, plage de dates)
+  // File de revue : entrées fermées + filtres (recherche employé, plage de dates)
   const reviewEntriesAll = useMemo(() => allEntries.filter((e) => e.clockOut), [allEntries]);
   const reviewEntriesFiltered = useMemo(() => {
     const q = reviewSearch.trim().toLowerCase();
@@ -102,7 +102,7 @@ export function TimeclockView({
   };
   const handleClockOut = async () => {
     const r = await clockOutAction();
-    if (r.success) { toast.success(`Pointage fermé · ${fmtDuration(r.data.durationMin)}`); router.refresh(); }
+    if (r.success) { toast.success(`Pointage fermé à ${fmtDuration(r.data.durationMin)}`); router.refresh(); }
     else toast.error(r.error || "Erreur");
   };
 
@@ -207,7 +207,7 @@ export function TimeclockView({
                 <Input
                   value={reviewSearch}
                   onChange={(e) => setReviewSearch(e.target.value)}
-                  placeholder="Rechercher employ�"
+                  placeholder="Rechercher employé"
                   className="h-9 text-sm pl-7"
                 />
               </div>
@@ -230,9 +230,9 @@ export function TimeclockView({
           <Card>
             <div className="divide-y">
               {reviewEntriesAll.length === 0 ? (
-                <div className="p-8 text-center text-sm text-muted-foreground">Aucune entr�e � r�viser.</div>
+                <div className="p-8 text-center text-sm text-muted-foreground">Aucune entrée à réviser.</div>
               ) : reviewEntriesFiltered.length === 0 ? (
-                <div className="p-8 text-center text-sm text-muted-foreground">Aucun r�sultat avec ces filtres.</div>
+                <div className="p-8 text-center text-sm text-muted-foreground">Aucun résultat avec ces filtres.</div>
               ) : reviewEntriesFiltered.map((e) => (
                 <EntryRow
                   key={e.id}

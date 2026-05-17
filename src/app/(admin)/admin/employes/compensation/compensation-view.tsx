@@ -94,7 +94,7 @@ export function CompensationView({ employees, salaryHistory, bonuses }: { employ
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2"><BarChart className="h-5 w-5 text-[#0F2D52]" />Compensation</h1>
-          <p className="text-sm text-muted-foreground">Salaires, augmentations, bonus et primes (RH/super-admin uniquement).</p>
+          <p className="text-sm text-muted-foreground">Historique des salaires, augmentations, bonus et primes.</p>
         </div>
         {tab === "salaries" ? (
           <Button onClick={() => setSalDialog(true)}><Plus className="h-4 w-4 mr-1.5" />Ajustement salarial</Button>

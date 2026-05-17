@@ -85,7 +85,7 @@ export function ContractsView({
   const myContracts = contracts.filter((c) => c.adminId === currentAdminId);
   const othersContracts = contracts.filter((c) => c.adminId !== currentAdminId);
 
-  // Filtres pour "Tous les employ�s"
+  // Filtres pour "Tous les employés"
   const [othersSearch, setOthersSearch] = useState("");
   const [othersStatus, setOthersStatus] = useState<string>("all");
   const [othersType, setOthersType] = useState<string>("all");
@@ -123,10 +123,12 @@ export function ContractsView({
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
             <FileSignature className="h-5 w-5 text-[#0F2D52]" />
-            Contrats d&apos;employés
+            {isHr ? "Contrats d'employés" : "Mes contrats"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Workflow : brouillon → envoyé → signé employé + employeur → actif
+            {isHr
+              ? "Créez, envoyez et gérez les contrats de vos employés."
+              : "Consultez et signez vos contrats d'emploi."}
           </p>
         </div>
         {isHr && tab === "contracts" && (
@@ -426,7 +428,7 @@ function ContractCard({
           {canDownloadPdf && (
             <Button asChild size="sm" variant="outline" className="h-7 text-xs">
               <a href={`/api/admin/contracts/${c.id}/pdf`} target="_blank" rel="noopener">
-                <Download className="h-3 w-3 mr-1" />T�l�charger PDF
+                <Download className="h-3 w-3 mr-1" />Télécharger PDF
               </a>
             </Button>
           )}
@@ -752,7 +754,7 @@ function TemplateDialog({
               onChange={setBody}
               rows={14}
               placeholder="Corps du contrat avec placeholders {{employeeName}}, {{startDate}}, etc."
-              helpText="Markdown + placeholders {{...}} qui seront remplac�s lors de la g�n�ration du contrat"
+              helpText="Markdown + placeholders {{...}} qui seront remplacés lors de la génération du contrat"
             />
           </div>
         </div>

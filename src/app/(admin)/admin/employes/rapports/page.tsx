@@ -49,7 +49,7 @@ export default async function ReportsPage() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2"><FileBarChart className="h-5 w-5 text-[#0F2D52]" />Rapports RH</h1>
-          <p className="text-sm text-muted-foreground">People analytics · indicateurs clés sur les 12 derniers mois.</p>
+          <p className="text-sm text-muted-foreground">Vue d&apos;ensemble des effectifs et indicateurs clés sur les 12 derniers mois.</p>
         </div>
         <div className="flex gap-2 shrink-0">
           <Button variant="outline" size="sm" asChild>

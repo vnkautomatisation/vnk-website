@@ -100,7 +100,7 @@ export function AnnouncementsAdminView({ announcements, teams, roles }: {
         open={!!confirmDel}
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.title} ?`}
-        description="Cette annonce sera retir�e d�finitivement. Les notifications d�j� envoy�es restent."
+        description="Cette annonce sera retirée définitivement. Les notifications déjà envoyées restent."
         confirmLabel="Supprimer"
         variant="destructive"
         onConfirm={async () => {
@@ -202,7 +202,7 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Corps *</Label>
-            <MarkdownEditor value={body} onChange={setBody} placeholder="Contenu de l'annonce (Markdown support�)" helpText="Markdown support� : **gras**, *italique*, # titres, - listes, [lien](url)" />
+            <MarkdownEditor value={body} onChange={setBody} placeholder="Contenu de l'annonce (Markdown supporté)" helpText="Markdown supporté : **gras**, *italique*, # titres, - listes, [lien](url)" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">

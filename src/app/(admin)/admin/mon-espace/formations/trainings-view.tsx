@@ -143,7 +143,7 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
         open={!!confirmDelLic}
         onOpenChange={(o) => !o && setConfirmDelLic(null)}
         title={`Supprimer ${confirmDelLic?.type} ?`}
-        description="Ce permis sera retir� de votre dossier."
+        description="Ce permis sera retiré de votre dossier."
         confirmLabel="Supprimer"
         variant="destructive"
         onConfirm={async () => {
@@ -157,7 +157,7 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
         open={!!confirmDelTr}
         onOpenChange={(o) => !o && setConfirmDelTr(null)}
         title={`Supprimer ${confirmDelTr?.title} ?`}
-        description="Cette formation sera retir�e de votre dossier."
+        description="Cette formation sera retirée de votre dossier."
         confirmLabel="Supprimer"
         variant="destructive"
         onConfirm={async () => {

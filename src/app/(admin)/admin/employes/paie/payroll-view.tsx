@@ -72,10 +72,12 @@ export function PayrollView({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-[#0F2D52]" />Paie
+            <Calculator className="h-5 w-5 text-[#0F2D52]" />{isPayrollAdmin ? "Paie" : "Mes bulletins de paie"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Cycles de paie · bulletins · DAS Québec (RRQ, AE, RQAP, fédéral, provincial)
+            {isPayrollAdmin
+              ? "Gérez les cycles de paie et les bulletins des employés."
+              : "Consultez et téléchargez vos bulletins de paie."}
           </p>
         </div>
         {isPayrollAdmin && tab === "periods" && (

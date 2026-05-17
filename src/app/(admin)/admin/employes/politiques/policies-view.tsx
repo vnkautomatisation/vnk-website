@@ -137,7 +137,7 @@ function PolicyDialog({ open, existing, onClose, onSaved }: { open: boolean; exi
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Contenu Markdown *</Label>
-            <MarkdownEditor value={body} onChange={setBody} rows={12} placeholder="Texte de la politique" helpText="Markdown support�" />
+            <MarkdownEditor value={body} onChange={setBody} rows={12} placeholder="Texte de la politique" helpText="Markdown supporté" />
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">

@@ -39,8 +39,8 @@ export function OffboardingView({ checklists, candidates }: { checklists: Offboa
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold flex items-center gap-2"><LogOut className="h-5 w-5 text-[#0F2D52]" />Offboarding</h1>
-          <p className="text-sm text-muted-foreground">Checklists de départs · Relevé d&apos;emploi · transfert portefeuille.</p>
+          <h1 className="text-xl font-bold flex items-center gap-2"><LogOut className="h-5 w-5 text-[#0F2D52]" />Départs d&apos;employés</h1>
+          <p className="text-sm text-muted-foreground">Suivi des départs : checklists, documents et transfert des dossiers.</p>
         </div>
         <Button onClick={() => setDialog(true)}><Plus className="h-4 w-4 mr-1.5" />Démarrer un offboarding</Button>
       </div>
