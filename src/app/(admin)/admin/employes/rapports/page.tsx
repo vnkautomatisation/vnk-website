@@ -2,11 +2,12 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { FileBarChart, TrendingUp, Users, AlertTriangle, Clock, Calendar, FileText, FileDown } from "lucide-react";
+import { FileBarChart, TrendingUp, Users, AlertTriangle, Clock, Calendar, FileDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getHrReportData } from "@/lib/services/hr-reports";
+import { HrReportPdfButton } from "./hr-report-pdf-button";
 
 export default async function ReportsPage() {
   const session = await auth();
@@ -52,11 +53,7 @@ export default async function ReportsPage() {
           <p className="text-sm text-muted-foreground">Vue d&apos;ensemble des effectifs et indicateurs clés sur les 12 derniers mois.</p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button variant="outline" size="sm" asChild>
-            <a href="/api/admin/reports/hr/pdf" target="_blank" rel="noopener">
-              <FileText className="h-4 w-4 mr-1.5 text-[#0F2D52]" />Exporter PDF
-            </a>
-          </Button>
+          <HrReportPdfButton />
           <Button variant="outline" size="sm" asChild>
             <a href="/api/admin/reports/hr/csv">
               <FileDown className="h-4 w-4 mr-1.5 text-[#0F2D52]" />Exporter CSV

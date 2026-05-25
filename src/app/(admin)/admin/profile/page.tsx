@@ -26,6 +26,7 @@ export default async function ProfilePage() {
         passwordChangedAt: true, loginAlertsEnabled: true, recoveryEmail: true,
         dataExportRequestedAt: true, marketingOptIn: true, analyticsOptIn: true,
         onboardingDone: true, onboardingSteps: true,
+        delegateApprovalTo: true,
       },
     }),
     prisma.adminSession.findMany({
@@ -66,6 +67,33 @@ export default async function ProfilePage() {
   ]);
 
   const backupCodesActive = backupCodes.filter((c) => !c.usedAt).length;
+
+  // ── Delegation d'approbation : candidats (autres admins actifs ayant autorité review) ─
+  const rawCandidates = await prisma.admin.findMany({
+    where: { isActive: true, id: { not: adminId } },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      title: true,
+      customRole: { select: { name: true, permissions: true } },
+    },
+    orderBy: { fullName: "asc" },
+  }).catch(() => [] as Array<{ id: number; fullName: string | null; email: string; title: string | null; customRole: { name: string; permissions: unknown } | null }>);
+  const delegationCandidates = rawCandidates
+    .filter((c) => {
+      const perms = (c.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
+      const isSuper = c.customRole?.name === "super_admin";
+      return isSuper || (perms.leaves ?? []).includes("write") || (perms.users ?? []).includes("write");
+    })
+    .map(({ id, fullName, email, title }) => ({ id, fullName, email, title }));
+
+  const currentDelegate = admin.delegateApprovalTo
+    ? await prisma.admin.findUnique({
+        where: { id: admin.delegateApprovalTo },
+        select: { id: true, fullName: true, email: true, title: true },
+      })
+    : null;
 
   return (
     <ProfileView
@@ -126,6 +154,10 @@ export default async function ProfilePage() {
         invoicesIssued,
         revenue30: Number(revenue30._sum.amountTtc ?? 0),
         paymentsAssigned,
+      }}
+      delegation={{
+        candidates: delegationCandidates,
+        currentDelegate,
       }}
     />
   );

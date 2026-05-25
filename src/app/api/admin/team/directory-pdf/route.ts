@@ -143,7 +143,7 @@ export async function GET(req: Request) {
   return new NextResponse(Readable.from(pdf) as unknown as ReadableStream, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="annuaire-vnk_${new Date().toISOString().slice(0, 10)}.pdf"`,
+      "Content-Disposition": `inline; filename="annuaire-vnk_${new Date().toISOString().slice(0, 10)}.pdf"`,
     },
   });
 }

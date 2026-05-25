@@ -12,15 +12,18 @@ export default function middleware(request: NextRequest) {
     request.cookies.get("authjs.session-token") ||
     request.cookies.get("__Secure-authjs.session-token");
 
-  // ── /admin/* : pas de prefixe locale, auth requise (sauf login) ──
+  // ── /admin/* : AUTH DESACTIVEE TEMPORAIREMENT ──
+  // Le check de session a ete retire — n'importe qui accede a /admin.
+  // A reactiver quand l'auth aura ete reconstruite (cf. src/lib/auth.ts).
   if (pathname.startsWith("/admin")) {
-    if (!pathname.startsWith("/admin/login") && !sessionCookie) {
+    // Si quelqu'un essaie d'aller sur /admin/login, on l'envoie directement
+    // sur le tableau de bord — le login n'a plus de raison d'etre.
+    if (pathname === "/admin/login" || pathname.startsWith("/admin/login/")) {
       const url = request.nextUrl.clone();
-      url.pathname = "/admin/login";
-      url.searchParams.set("redirect", pathname);
+      url.pathname = "/admin";
+      url.search = "";
       return NextResponse.redirect(url);
     }
-    // Forward le pathname dans un header pour que request.ts détecte le contexte admin
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-pathname", pathname);
     return NextResponse.next({ request: { headers: requestHeaders } });

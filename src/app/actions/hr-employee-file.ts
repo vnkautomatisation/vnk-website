@@ -298,10 +298,36 @@ export async function upsertEquipmentAction(input: z.infer<typeof equipmentSchem
 export async function returnEquipmentAction(input: { id: number; condition: "good" | "damaged" | "lost" }): Promise<Result> {
   const actorId = await requireHrWrite();
   if (!actorId) return { success: false, error: "Non autorisé" };
+
+  // Récupérer adminId + nom AVANT la mise à jour pour pouvoir notifier
+  // l'employé que son équipement a été marqué retourné par RH.
+  const equipment = await prisma.assignedEquipment.findUnique({
+    where: { id: input.id },
+    select: { adminId: true, name: true, returnedAt: true },
+  });
+
   await prisma.assignedEquipment.update({
     where: { id: input.id },
     data: { returnedAt: new Date(), conditionOnReturn: input.condition },
   });
+
+  // Notifier l'employé seulement si le retour est NOUVEAU (évite spam si déjà retourné).
+  if (equipment && !equipment.returnedAt) {
+    await prisma.notification
+      .create({
+        data: {
+          recipientType: "admin",
+          recipientId: equipment.adminId,
+          type: "info",
+          title: `Équipement marqué retourné : ${equipment.name}`,
+          body: `Les RH ont enregistré le retour de cet équipement (état : ${input.condition === "good" ? "bon état" : input.condition === "damaged" ? "endommagé" : "perdu"}). Contactez-les si ce n'est pas exact.`,
+          link: "/admin/mon-espace/equipement",
+          icon: "package",
+        },
+      })
+      .catch(() => null);
+  }
+
   await logAudit({ adminId: actorId, action: "update", entityType: "assigned_equipment", entityId: input.id, changes: { returned: true, condition: input.condition } });
   revalidatePath("/admin/employes/equipement");
   revalidatePath("/admin/mon-espace/equipement");

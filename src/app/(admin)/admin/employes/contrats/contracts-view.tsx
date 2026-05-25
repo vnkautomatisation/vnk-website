@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { promptDialog } from "@/components/admin/prompt-dialog";
 import {
   FileSignature, Plus, Edit, Trash2, Send, CheckCircle2, AlertCircle,
-  Ban, FileText, ChevronLeft, ChevronRight, Search, Download,
+  Ban, FileText, ChevronLeft, ChevronRight, Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SettingsTabs, type TabItem } from "@/components/admin/settings-tabs";
+import { PdfPreviewModal } from "@/components/admin/pdf-preview-modal";
 import { SignaturePad } from "./signature-pad";
 import {
   createContractTemplateAction, updateContractTemplateAction, deleteContractTemplateAction,
@@ -75,6 +76,14 @@ export function ContractsView({
   const [signDialog, setSignDialog] = useState<{ open: boolean; contract: Contract | null; as: "employee" | "employer" }>({ open: false, contract: null, as: "employee" });
   const [terminateDialog, setTerminateDialog] = useState<Contract | null>(null);
   const [confirmDelTpl, setConfirmDelTpl] = useState<Template | null>(null);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
+
+  const openContractPdf = (c: Contract) => setPdfPreview({
+    url: `/api/admin/contracts/${c.id}/pdf`,
+    title: c.title,
+    description: c.admin.fullName || c.admin.email,
+    filename: `contrat-${c.id}.pdf`,
+  });
 
   const TABS: TabItem<Tab>[] = [
     { key: "contracts", label: "Contrats", icon: FileSignature, count: contracts.length },
@@ -157,6 +166,7 @@ export function ContractsView({
                     onSign={(as) => setSignDialog({ open: true, contract: c, as })}
                     onTerminate={() => setTerminateDialog(c)}
                     onSend={async () => { const r = await sendContractAction({ id: c.id }); if (r.success) router.refresh(); else toast.error(r.error || ""); }}
+                    onOpenPdf={() => openContractPdf(c)}
                   />
                 ))}
               </div>
@@ -207,6 +217,7 @@ export function ContractsView({
                         onSign={(as) => setSignDialog({ open: true, contract: c, as })}
                         onTerminate={() => setTerminateDialog(c)}
                         onSend={async () => { const r = await sendContractAction({ id: c.id }); if (r.success) router.refresh(); else toast.error(r.error || ""); }}
+                        onOpenPdf={() => openContractPdf(c)}
                       />
                     ))}
                   </div>
@@ -344,17 +355,27 @@ export function ContractsView({
           setConfirmDelTpl(null);
         }}
       />
+
+      <PdfPreviewModal
+        open={!!pdfPreview}
+        url={pdfPreview?.url ?? null}
+        title={pdfPreview?.title ?? ""}
+        description={pdfPreview?.description}
+        downloadFilename={pdfPreview?.filename}
+        onClose={() => setPdfPreview(null)}
+      />
     </div>
   );
 }
 
 function ContractCard({
-  c, mine, isHr, onSign, onTerminate, onSend,
+  c, mine, isHr, onSign, onTerminate, onSend, onOpenPdf,
 }: {
   c: Contract; mine: boolean; isHr: boolean;
   onSign: (as: "employee" | "employer") => void;
   onTerminate: () => void;
   onSend: () => void;
+  onOpenPdf: () => void;
 }) {
   const status = STATUS_LABELS[c.status] ?? { label: c.status, color: "bg-gray-100 text-gray-700" };
   const canSignEmployee = mine && c.status === "sent" && !c.employeeSignedAt;
@@ -426,10 +447,8 @@ function ContractCard({
             </Button>
           )}
           {canDownloadPdf && (
-            <Button asChild size="sm" variant="outline" className="h-7 text-xs">
-              <a href={`/api/admin/contracts/${c.id}/pdf`} target="_blank" rel="noopener">
-                <Download className="h-3 w-3 mr-1" />Télécharger PDF
-              </a>
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onOpenPdf}>
+              <FileText className="h-3 w-3 mr-1" />Aperçu PDF
             </Button>
           )}
         </div>

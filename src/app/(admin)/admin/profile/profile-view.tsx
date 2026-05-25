@@ -131,9 +131,16 @@ export type PersonalKpis = {
   paymentsAssigned: number;
 };
 
+export type DelegationCandidate = {
+  id: number;
+  fullName: string | null;
+  email: string;
+  title: string | null;
+};
+
 export function ProfileView({
   admin, sessions, auditLogs, securityEvents, loginEvents,
-  backupCodesCount, trustedDevices, apiTokens, personalKpis,
+  backupCodesCount, trustedDevices, apiTokens, personalKpis, delegation,
 }: {
   admin: AdminProfile;
   sessions: SessionRow[];
@@ -144,6 +151,10 @@ export function ProfileView({
   trustedDevices: TrustedDeviceRow[];
   apiTokens: ApiTokenRow[];
   personalKpis: PersonalKpis;
+  delegation: {
+    candidates: DelegationCandidate[];
+    currentDelegate: DelegationCandidate | null;
+  };
 }) {
   const t = useTranslations("admin.profile.tabs");
   const tBanner = useTranslations("admin.profile.banner");
@@ -214,9 +225,9 @@ export function ProfileView({
       />
 
       {/* Sticky compact bar au scroll */}
-      <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
+      <div ref={sentinelRef} aria-hidden className="h-px" />
       {scrolled && (
-        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <User className="h-4 w-4" />
@@ -262,6 +273,8 @@ export function ProfileView({
             trustedDevices={trustedDevices}
             securityScore={securityScore}
             loginAlertsEnabled={admin.loginAlertsEnabled}
+            delegationCandidates={delegation.candidates}
+            currentDelegate={delegation.currentDelegate}
           />
         </TabsContent>
         <TabsContent value="sessions" className="mt-4">

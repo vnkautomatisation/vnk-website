@@ -1,0 +1,101 @@
+// GET /api/admin/timeclock/csv
+// Export CSV des pointages approuves (UTF-8 BOM pour Excel).
+// Auth : admin avec permission payroll/users write.
+// Query optionnels : ?from=YYYY-MM-DD&to=YYYY-MM-DD
+import "server-only";
+import { NextResponse, type NextRequest } from "next/server";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { logAudit } from "@/lib/audit";
+import { getTimesheetScope, timeClockScopeWhere } from "@/lib/services/timesheet-scope";
+
+export const dynamic = "force-dynamic";
+
+const CSV_MAX_ROWS = 50000;
+
+function csv(v: string | number): string {
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""').replace(/\n/g, " ").replace(/\r/g, " ")}"`;
+  return s;
+}
+
+export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  }
+  const adminId = session.user.adminId!;
+  const me = await prisma.admin.findUnique({ where: { id: adminId }, include: { customRole: true } });
+  const perms = (me?.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
+  const isPayrollAdmin = me?.customRole?.name === "super_admin" || (perms.payroll ?? []).includes("write") || (perms.users ?? []).includes("write");
+  if (!isPayrollAdmin) {
+    return NextResponse.json({ error: "Permission paie/RH requise" }, { status: 403 });
+  }
+
+  const url = new URL(req.url);
+  const fromStr = url.searchParams.get("from");
+  const toStr = url.searchParams.get("to");
+  const from = fromStr ? new Date(fromStr) : null;
+  const to = toStr ? new Date(toStr + "T23:59:59") : null;
+
+  // Scope hierarchique : un manager n'exporte QUE ses subordonnes ; HR/founder
+  // voient tout (mais HR non-fondateur s'exclut lui-meme).
+  const scope = await getTimesheetScope(adminId);
+  const scopeWhere = timeClockScopeWhere(scope);
+
+  const where: Record<string, unknown> = {
+    ...scopeWhere,
+    approvedAt: { not: null },
+  };
+  const clockInWhere: { gte?: Date; lte?: Date } = {};
+  if (from && !isNaN(from.getTime())) clockInWhere.gte = from;
+  if (to && !isNaN(to.getTime())) clockInWhere.lte = to;
+  if (clockInWhere.gte || clockInWhere.lte) where.clockIn = clockInWhere;
+
+  const entries = await prisma.timeClock.findMany({
+    where,
+    orderBy: { clockIn: "desc" },
+    take: CSV_MAX_ROWS,
+    include: {
+      admin: { select: { fullName: true, email: true } },
+      approver: { select: { fullName: true, email: true } },
+    },
+  });
+
+  const lines: string[] = ["Employé,Date début,Heure début,Date fin,Heure fin,Durée (min),Catégorie,Approuvé par,Notes"];
+  for (const e of entries) {
+    const row = [
+      csv(e.admin.fullName || e.admin.email),
+      e.clockIn.toLocaleDateString("fr-CA"),
+      e.clockIn.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" }),
+      e.clockOut ? e.clockOut.toLocaleDateString("fr-CA") : "",
+      e.clockOut ? e.clockOut.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" }) : "",
+      String(e.durationMin ?? ""),
+      e.category,
+      e.approver ? (e.approver.fullName || e.approver.email) : "",
+      csv(e.notes ?? ""),
+    ].join(",");
+    lines.push(row);
+  }
+
+  const body = "﻿" + lines.join("\n");
+
+  await logAudit({
+    adminId,
+    action: "export",
+    entityType: "time_clock_csv",
+    entityId: 0,
+    changes: { count: entries.length, from: fromStr ?? null, to: toStr ?? null },
+  }).catch(() => {});
+
+  const datePart = new Date().toISOString().slice(0, 10);
+  const filename = `pointages-${datePart}.csv`;
+
+  return new NextResponse(body, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
+}

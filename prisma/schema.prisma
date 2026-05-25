@@ -80,9 +80,24 @@ model Admin {
   birthdate         DateTime? @map("birthdate") @db.Date // pour anniversaires + dossier employé
   internalNotes     String?  @map("internal_notes")
 
+  // ── Fondateur : un super_admin sans superieur hierarchique a le droit de tout faire,
+  // y compris approuver ses propres heures. Les autres super_admin/managers ne peuvent
+  // pas approuver leurs propres heures — leur superieur le fait.
+  isFounder         Boolean  @default(false) @map("is_founder")
+
   // ── Sous-équipes : appartenance à un Team + supérieur hiérarchique ──
   teamId            Int?     @map("team_id")
   managerId         Int?     @map("manager_id")
+
+  // ── Politique de congés assignée (null = politique par défaut) ──
+  leavePolicyId     Int?     @map("leave_policy_id")
+
+  // ── Délégation d'approbation : à qui les demandes vont en mon absence ──
+  delegateApprovalTo Int?    @map("delegate_approval_to")
+
+  // ── Blocage admin : empêche l'employé de soumettre des congés ──
+  leaveBlockedUntil  DateTime? @map("leave_blocked_until")
+  leaveBlockedReason String?   @map("leave_blocked_reason")
 
   auditLogs        AuditLog[]
   sessions         AdminSession[]
@@ -103,9 +118,18 @@ model Admin {
   legalSignatures  LegalDocumentSignature[] @relation("LegalSignatures")
   timeClocks       TimeClock[] @relation("TimeClocks")
   timeClockApprovals TimeClock[] @relation("TimeClockApprovers")
+  timeClockEditRequests       TimeClockEditRequest[] @relation("TimeClockEditRequests")
+  timeClockEditRequestReviews TimeClockEditRequest[] @relation("TimeClockEditReviewer")
+  timeClockHistoryActions     TimeClockHistory[]     @relation("TimeClockHistoryActor")
   payStubs         PayStub[] @relation("PayStubs")
   leaveRequests    LeaveRequest[] @relation("LeaveRequests")
   leaveReviews     LeaveRequest[] @relation("LeaveReviewers")
+  leavePolicy      LeavePolicy?   @relation(fields: [leavePolicyId], references: [id])
+  leaveBalances    LeaveBalance[] @relation("LeaveBalances")
+  leaveAccruals    LeaveAccrual[] @relation("LeaveAccruals")
+  vacationPreferences VacationPreference[] @relation("VacationPreferences")
+  delegate         Admin?         @relation("Delegate", fields: [delegateApprovalTo], references: [id])
+  delegatesFrom    Admin[]        @relation("Delegate")
 
   // ── Dossier employé étendu ───────────────────────────
   emergencyContacts        EmergencyContact[] @relation("EmergencyContacts")
@@ -114,6 +138,8 @@ model Admin {
   professionalLicenses     ProfessionalLicense[] @relation("ProfessionalLicenses")
   employeeFiles            EmployeeFile[] @relation("EmployeeFiles")
   employeeFilesUploaded    EmployeeFile[] @relation("EmployeeFilesUploaded")
+  employeeNotes            EmployeeNote[] @relation("EmployeeNotes")
+  employeeNotesAuthored    EmployeeNote[] @relation("EmployeeNotesAuthor")
   assignedEquipment        AssignedEquipment[] @relation("AssignedEquipment")
   trainingRecords          TrainingRecord[] @relation("TrainingRecords")
   cnesstIncidents          CnesstIncident[] @relation("CnesstIncidents")
@@ -292,11 +318,25 @@ model TimeClock {
   adminId     Int      @map("admin_id")
   clockIn     DateTime @map("clock_in")
   clockOut    DateTime? @map("clock_out")
-  durationMin Int?     @map("duration_min") // calculé à la sortie
+  durationMin Int?     @map("duration_min") // calcule = (clockOut - clockIn) - totalBreakMin
   category    String   @default("work") // work | break | meeting | training | sick | vacation
   notes       String?
+  // ── Pauses cumulees (au lieu de creer N pointages separes) ───
+  // Pause  : pausedAt = now
+  // Reprendre : totalBreakMin += (now - pausedAt) ; pausedAt = null
+  // Arreter : si pausedAt non null on ferme d'abord la pause
+  pausedAt    DateTime? @map("paused_at")
+  totalBreakMin Int     @default(0) @map("total_break_min")
+  // ── Code de tache (obligatoire au clock-in, choisi parmi les codes du poste) ─
+  jobCodeId   Int?     @map("job_code_id")
+  // ── Flag : saisie manuelle (rattrapage) vs clock-in/out reel ──
+  // Une saisie manuelle = l'employe declare ses heures, le detail des pauses
+  // n'est pas tracke. La regle "pause manquante CNESST" ne s'applique pas
+  // aux jours uniquement composes de saisies manuelles.
+  isManual    Boolean  @default(false) @map("is_manual")
   approvedBy  Int?     @map("approved_by")
   approvedAt  DateTime? @map("approved_at")
+  submittedAt DateTime? @map("submitted_at") // soumission par l'employé (revue à valider)
   payStubId   Int?     @map("pay_stub_id")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
@@ -304,10 +344,68 @@ model TimeClock {
   admin       Admin    @relation("TimeClocks", fields: [adminId], references: [id], onDelete: Cascade)
   approver    Admin?   @relation("TimeClockApprovers", fields: [approvedBy], references: [id], onDelete: SetNull)
   payStub     PayStub? @relation(fields: [payStubId], references: [id], onDelete: SetNull)
+  jobCode     JobCode? @relation(fields: [jobCodeId], references: [id], onDelete: SetNull)
+  history     TimeClockHistory[]
 
   @@index([adminId, clockIn])
   @@index([payStubId])
+  @@index([jobCodeId])
   @@map("time_clocks")
+}
+
+// ── Historique des actions sur un pointage ────────────────
+// Trace chaque approbation, annulation, rejet, edition pour audit fin et
+// affichage utilisateur ("approuvé par X le 24 mai"). Remplace le préfixage
+// historique dans `notes`.
+model TimeClockHistory {
+  id          Int      @id @default(autoincrement())
+  timeClockId Int      @map("time_clock_id")
+  actorId     Int      @map("actor_id")
+  event       String   // "approved" | "unapproved" | "rejected" | "edited"
+  reason      String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  timeClock   TimeClock @relation(fields: [timeClockId], references: [id], onDelete: Cascade)
+  actor       Admin     @relation("TimeClockHistoryActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([timeClockId, createdAt])
+  @@map("time_clock_history")
+}
+
+// ── Demande de modification de pointage post-soumission ───
+// L'employe demande a debloquer des entrees deja submittedAt (cadenas) pour les editer.
+// Un admin peut accorder (deverrouille les entries) ou refuser (notif explicative).
+model TimeClockEditRequest {
+  id          Int      @id @default(autoincrement())
+  adminId     Int      @map("admin_id")
+  entryIds    Json     @map("entry_ids") // array of TimeClock ids
+  reason      String
+  status      String   @default("pending") // pending | granted | denied
+  reviewerId  Int?     @map("reviewer_id")
+  reviewedAt  DateTime? @map("reviewed_at")
+  reviewNote  String?  @map("review_note")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  admin       Admin    @relation("TimeClockEditRequests", fields: [adminId], references: [id], onDelete: Cascade)
+  reviewer    Admin?   @relation("TimeClockEditReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@map("timeclock_edit_requests")
+}
+
+// Snapshot pour l'undo des actions destructives sur les pointages (merge/delete-shorts/reject).
+// Le payload contient l'etat des entrees affectees au format JSON, restaurable pendant ~24h.
+model TimeClockSnapshot {
+  id          Int       @id @default(autoincrement())
+  actorId     Int       @map("actor_id")
+  reason      String    // merge_day | delete_short | reject
+  payload     Json
+  createdAt   DateTime  @default(now()) @map("created_at")
+  restoredAt  DateTime? @map("restored_at")
+  expiresAt   DateTime  @map("expires_at")
+
+  @@index([actorId, createdAt])
+  @@map("time_clock_snapshots")
 }
 
 // ── Cycles de paie ──────────────────────────────────────────
@@ -374,15 +472,171 @@ model LeaveRequest {
   reviewerId  Int?     @map("reviewer_id")
   reviewedAt  DateTime? @map("reviewed_at")
   reviewNotes String?  @map("review_notes")
+  // ── Demi-journee : "AM" / "PM" / null. Si non null, daysCount = 0.5 ──
+  halfDay     String?  @map("half_day")
+  // ── Lien avec le balance utilise (V2 CNESST) ──
+  balanceId   Int?     @map("balance_id")
+  // ── Escalade automatique apres 48h sans revue ──
+  escalatedAt DateTime? @map("escalated_at")
+  // ── Justificatif (certificat médical, document, etc.) ──
+  attachmentUrl  String? @map("attachment_url")
+  attachmentName String? @map("attachment_name")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
   admin       Admin    @relation("LeaveRequests", fields: [adminId], references: [id], onDelete: Cascade)
   reviewer    Admin?   @relation("LeaveReviewers", fields: [reviewerId], references: [id], onDelete: SetNull)
+  balance     LeaveBalance? @relation(fields: [balanceId], references: [id], onDelete: SetNull)
+  // Une demande de conge peut etre issue de l'attribution d'une preference (vacation bidding)
+  vacationPreferences VacationPreference[] @relation("VacationPreferenceLeave")
 
   @@index([adminId, status])
   @@index([startDate, endDate])
   @@map("leave_requests")
+}
+
+// ── Fenetre de selection de vacances (vacation bidding) ──
+// Cycle : draft -> open -> closed -> in_review -> allocated -> archived
+//   draft     : configuree par RH, pas encore visible
+//   open      : entre openingDate et closingDate, employes soumettent leurs preferences
+//   closed    : fenetre fermee (manuel ou auto), plus de soumissions ; attente revue RH
+//   in_review : RH revise / ajuste les preferences avant attribution finale
+//   allocated : les LeaveRequest ont ete creees a partir des preferences accordees
+//   archived  : fenetre passee, lecture seule, conserve historique
+model VacationSelectionWindow {
+  id              Int      @id @default(autoincrement())
+  name            String   // "Vacances ete 2026", "Vacances Noel 2026"
+  // Periode pendant laquelle les employes peuvent soumettre
+  openingDate     DateTime @map("opening_date")
+  closingDate     DateTime @map("closing_date")
+  // Periode de vacances couverte (ex: 1er juin -> 30 sept pour ete)
+  coversFrom      DateTime @map("covers_from") @db.Date
+  coversTo        DateTime @map("covers_to") @db.Date
+  // Plafond de jours qu'un employe peut demander dans cette fenetre
+  maxDaysPerEmployee Int   @default(10) @map("max_days_per_employee")
+  // Methode d'attribution : "seniority" (par anciennete), "fcfs" (premier arrive), "manual"
+  allocationMethod String  @default("seniority") @map("allocation_method")
+  status          String   @default("draft") // "draft" | "open" | "closed" | "in_review" | "allocated" | "archived"
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  preferences     VacationPreference[]
+
+  @@index([status, openingDate])
+  @@map("vacation_selection_windows")
+}
+
+// ── Preference soumise par un employe pour une fenetre ──
+// rank : 1 = choix prefere, 2 = fallback, 3 = dernier recours
+// status : "pending" (en attente attribution) | "granted" (attribue) | "denied"
+// Si granted, leaveRequestId pointe sur la LeaveRequest approuvee creee
+model VacationPreference {
+  id              Int      @id @default(autoincrement())
+  windowId        Int      @map("window_id")
+  adminId         Int      @map("admin_id")
+  rank            Int      // 1, 2, 3, ...
+  startDate       DateTime @map("start_date") @db.Date
+  endDate         DateTime @map("end_date") @db.Date
+  daysCount       Decimal  @map("days_count") @db.Decimal(4, 2)
+  status          String   @default("pending") // "pending" | "granted" | "denied"
+  leaveRequestId  Int?     @map("leave_request_id")
+  notes           String?
+  // ── Workflow appel (R5) : un employe peut faire appel d'une attribution ──
+  appealReason     String?   @map("appeal_reason")
+  appealStatus     String?   @map("appeal_status") // pending | approved | rejected
+  appealedAt       DateTime? @map("appealed_at")
+  appealReviewedBy Int?      @map("appeal_reviewed_by")
+  appealReviewedAt DateTime? @map("appeal_reviewed_at")
+  appealReviewNotes String?  @map("appeal_review_notes")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  window          VacationSelectionWindow @relation(fields: [windowId], references: [id], onDelete: Cascade)
+  admin           Admin   @relation("VacationPreferences", fields: [adminId], references: [id], onDelete: Cascade)
+  leaveRequest    LeaveRequest? @relation("VacationPreferenceLeave", fields: [leaveRequestId], references: [id], onDelete: SetNull)
+
+  @@unique([windowId, adminId, rank])
+  @@index([windowId, adminId])
+  @@index([windowId, status])
+  @@map("vacation_preferences")
+}
+
+// ── Politique de congés CNESST configurable par employé ────
+// Permet de definir les regles d'accumulation, quotas et carry-over.
+// Une politique par defaut (isDefault=true) est appliquee aux nouveaux employes.
+model LeavePolicy {
+  id                  Int      @id @default(autoincrement())
+  name                String   @unique
+  // Periode de reference CNESST : 1er mai N -> 30 avril N+1 par defaut
+  referenceMonthStart Int      @default(5) @map("reference_month_start")
+  // Taux d'accumulation (% du temps travaille). 4% = 2 sem, 6% = 3 sem (CNESST)
+  accrualRateBelow3y  Decimal  @default(4) @map("accrual_rate_below_3y") @db.Decimal(5, 2)
+  accrualRateAbove3y  Decimal  @default(6) @map("accrual_rate_above_3y") @db.Decimal(5, 2)
+  // Preavis minimum (jours) pour les vacances
+  vacationNoticeDays  Int      @default(7) @map("vacation_notice_days")
+  minConsecutiveDays  Int      @default(1) @map("min_consecutive_days")
+  maxConsecutiveDays  Int      @default(30) @map("max_consecutive_days")
+  // Carry-over : nb max de jours reportables, duree en mois
+  carryOverDays       Int      @default(0) @map("carry_over_days")
+  carryOverMonths     Int      @default(12) @map("carry_over_months")
+  // Quotas annuels (null = pas de quota fixe)
+  sickDaysPerYear     Int?     @map("sick_days_per_year")
+  personalDaysPerYear Int?     @map("personal_days_per_year")
+  isDefault           Boolean  @default(false) @map("is_default")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admins              Admin[]
+
+  @@map("leave_policies")
+}
+
+// ── Solde de conges (snapshot par periode et par type) ──────
+// Une ligne par (admin, type, periode). Mis a jour par accrueWeek + lors des
+// review/cancel sur LeaveRequest. La somme accrued + carriedOver - taken -
+// planned = solde disponible.
+model LeaveBalance {
+  id              Int      @id @default(autoincrement())
+  adminId         Int      @map("admin_id")
+  type            String   // vacation | sick | personal
+  periodStart     DateTime @map("period_start") @db.Date
+  periodEnd       DateTime @map("period_end") @db.Date
+  accruedDays     Decimal  @default(0) @map("accrued_days") @db.Decimal(6, 2)
+  takenDays       Decimal  @default(0) @map("taken_days") @db.Decimal(6, 2)
+  plannedDays     Decimal  @default(0) @map("planned_days") @db.Decimal(6, 2)
+  carriedOverDays Decimal  @default(0) @map("carried_over_days") @db.Decimal(6, 2)
+  quotaDays       Decimal? @map("quota_days") @db.Decimal(6, 2)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin           Admin    @relation("LeaveBalances", fields: [adminId], references: [id], onDelete: Cascade)
+  accruals        LeaveAccrual[]
+  requests        LeaveRequest[]
+
+  @@unique([adminId, type, periodStart])
+  @@index([adminId, periodEnd])
+  @@map("leave_balances")
+}
+
+// ── Accumulation hebdomadaire (trace immuable pour audit) ──
+// Cree chaque semaine par le cron : recolte les heures travaillees du
+// LeaveAccrual.weekStart -> +7j, calcule les jours accumulés via le taux
+// CNESST applicable (ancienneté de l'employé), et bump le LeaveBalance.
+model LeaveAccrual {
+  id          Int      @id @default(autoincrement())
+  adminId     Int      @map("admin_id")
+  balanceId   Int      @map("balance_id")
+  weekStart   DateTime @map("week_start") @db.Date
+  hoursWorked Decimal  @default(0) @map("hours_worked") @db.Decimal(6, 2)
+  accruedDays Decimal  @default(0) @map("accrued_days") @db.Decimal(6, 2)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  admin       Admin        @relation("LeaveAccruals", fields: [adminId], references: [id], onDelete: Cascade)
+  balance     LeaveBalance @relation(fields: [balanceId], references: [id], onDelete: Cascade)
+
+  @@unique([adminId, weekStart, balanceId])
+  @@index([balanceId])
+  @@map("leave_accruals")
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -487,6 +741,32 @@ model EmployeeFile {
 
   @@index([adminId, category])
   @@map("employee_files")
+}
+
+// ── Notes et avis dans le dossier employe ────────────────────
+// Notes RH génériques, avis disciplinaires, mentions de mérite,
+// rapports d'incidents, observations manager, etc.
+model EmployeeNote {
+  id           Int      @id @default(autoincrement())
+  adminId      Int      @map("admin_id")
+  authorId     Int      @map("author_id")
+  category     String   // general | discipline | commendation | observation | medical | onboarding | exit
+  severity     String?  // info | warning | critical (surtout pour discipline)
+  title        String
+  body         String   @db.Text
+  isConfidential Boolean @default(true) @map("is_confidential") // Confidentiel : visible RH+manager+super_admin uniquement
+  acknowledgedAt DateTime? @map("acknowledged_at") // L'employe a confirme avoir lu la note (pour avis disciplinaires)
+  occurredAt   DateTime? @map("occurred_at") // Date de l'evenement decrit (si different de createdAt)
+  attachmentUrl String? @map("attachment_url") // PDF rapport medical, photo, etc.
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  admin        Admin    @relation("EmployeeNotes", fields: [adminId], references: [id], onDelete: Cascade)
+  author       Admin    @relation("EmployeeNotesAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([adminId, category, createdAt])
+  @@index([adminId, occurredAt])
+  @@map("employee_notes")
 }
 
 // ── Équipement attribué (laptop, outils, EPI, voiture) ─────
@@ -871,8 +1151,30 @@ model Position {
   defaultRole     Role?    @relation(fields: [defaultRoleId], references: [id])
   admins          Admin[]
   contractTemplates ContractTemplate[]
+  jobCodes        JobCode[]
 
   @@map("positions")
+}
+
+// ─── Codes de tache par poste ──────────────────────────────
+// Chaque poste a sa propre liste de codes (ex: comptable -> COMPTA-001..N,
+// programmeur -> DEV-001..N). Un code appartient a UN poste.
+// Le pointage exige obligatoirement un code au clock-in.
+model JobCode {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  label       String
+  positionId  Int      @map("position_id")
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  position    Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  timeClocks  TimeClock[]
+
+  @@index([positionId, isActive])
+  @@map("job_codes")
 }
 
 // ── Réinitialisation de mot de passe (flow "mot de passe oublié") ──

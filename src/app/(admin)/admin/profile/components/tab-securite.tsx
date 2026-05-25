@@ -11,15 +11,25 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter } f
 import {
   Lock, ShieldCheck, ShieldOff, Eye, EyeOff, KeyRound, AlertTriangle,
   RefreshCw, Trash2, ShieldAlert, Smartphone, MonitorSmartphone, Copy, Check, Fingerprint, Pencil,
+  UserPlus, UserMinus,
 } from "lucide-react";
 import { regenerateBackupCodesAction, removeTrustedDeviceAction } from "@/app/actions/profile";
-import type { TrustedDeviceRow } from "../profile-view";
+import { delegateLeaveApprovalAction } from "@/app/actions/hr-leaves";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { TrustedDeviceRow, DelegationCandidate } from "../profile-view";
 import { useRouter } from "next/navigation";
 
 type BreachInfo = { breached: boolean; count: number; strength: number; strengthLabel: string } | null;
 
 export function TabSecurite({
   twoFactorEnabled, passwordChangedAt, backupCodesCount, trustedDevices, securityScore, loginAlertsEnabled,
+  delegationCandidates, currentDelegate,
 }: {
   twoFactorEnabled: boolean;
   passwordChangedAt: string | null;
@@ -27,6 +37,8 @@ export function TabSecurite({
   trustedDevices: TrustedDeviceRow[];
   securityScore: number;
   loginAlertsEnabled: boolean;
+  delegationCandidates: DelegationCandidate[];
+  currentDelegate: DelegationCandidate | null;
 }) {
   const t = useTranslations("admin.profile.security");
   const tCommon = useTranslations("admin.profile.common");
@@ -191,6 +203,29 @@ export function TabSecurite({
     ? Math.floor((Date.now() - new Date(passwordChangedAt).getTime()) / (1000 * 60 * 60 * 24))
     : null;
   const pwExpired = pwDaysSince !== null && pwDaysSince > 180;
+
+  // ── Delegation d'approbation de congés ───────────────
+  const [delegateSel, setDelegateSel] = useState<string>(currentDelegate ? String(currentDelegate.id) : "");
+  const [delPending, startDel] = useTransition();
+  const saveDelegation = (delegateId: number | null) => {
+    startDel(async () => {
+      const r = await delegateLeaveApprovalAction({ delegateId });
+      if (r.success) {
+        toast.success(delegateId === null ? "Délégation désactivée" : "Délégation enregistrée");
+        router.refresh();
+      } else {
+        toast.error(r.error);
+      }
+    });
+  };
+  const handleActivateDelegation = () => {
+    if (!delegateSel) { toast.error("Sélectionnez un délégué"); return; }
+    saveDelegation(Number(delegateSel));
+  };
+  const handleClearDelegation = () => {
+    setDelegateSel("");
+    saveDelegation(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -367,6 +402,86 @@ export function TabSecurite({
                 })}
               </ul>
             )}
+          </CardContent>
+        </Card>
+
+        {/* ─── Délégation d'approbation de congés ─── */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              Délégation d&apos;approbation
+              {currentDelegate && (
+                <Badge className="ml-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Active</Badge>
+              )}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              En cas d&apos;absence, désignez un collègue qui pourra approuver les demandes de congé à votre place.
+              Le routage s&apos;active automatiquement quand vous êtes en congé approuvé.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {currentDelegate ? (
+              <div className="rounded-md border bg-muted/30 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#0F2D52] truncate">
+                      Délégué actuel : {currentDelegate.fullName || currentDelegate.email}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {currentDelegate.title ? `${currentDelegate.title} · ` : ""}{currentDelegate.email}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearDelegation}
+                    disabled={delPending}
+                    className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                  >
+                    <UserMinus className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline ml-1">Désactiver</span>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">Aucune délégation configurée.</p>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+              <div>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
+                  {currentDelegate ? "Changer le délégué" : "Désigner un délégué"}
+                </Label>
+                <Select value={delegateSel} onValueChange={setDelegateSel}>
+                  <SelectTrigger className="h-9 mt-1.5">
+                    <SelectValue placeholder="Sélectionner un administrateur" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {delegationCandidates.length === 0 ? (
+                      <div className="px-2 py-3 text-xs text-muted-foreground italic">Aucun candidat éligible</div>
+                    ) : delegationCandidates.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {(c.fullName || c.email)}
+                        {c.title ? ` — ${c.title}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={handleActivateDelegation}
+                disabled={delPending || !delegateSel || String(currentDelegate?.id ?? "") === delegateSel}
+                className="bg-[#0F2D52] hover:bg-[#0a223e] text-white"
+              >
+                <UserPlus className="h-4 w-4" />
+                <span className="ml-1">{currentDelegate ? "Mettre à jour" : "Activer"}</span>
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Seuls les admins avec droit de revue des congés sont éligibles. Un cron quotidien
+              déclenche le routage des demandes en attente vers le délégué quand vous êtes absent.
+            </p>
           </CardContent>
         </Card>
       </div>

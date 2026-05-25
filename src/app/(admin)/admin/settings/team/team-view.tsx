@@ -8,7 +8,9 @@ import {
   Edit, Trash2, Key, UserX, UserCheck, Mail, Phone, Building2,
   Search, X, ArrowUpDown, ArrowUp, ArrowDown, Clock,
   Send, RotateCcw, Ban, Copy, Hourglass, AlertTriangle, FileDown,
+  FolderOpen, FileText,
 } from "lucide-react";
+import { PdfPreviewModal } from "@/components/admin/pdf-preview-modal";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -154,6 +156,7 @@ export function TeamView({
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(defaultTab);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
 
   // Recherche / filtres / tri
   const [search, setSearch] = useState("");
@@ -707,22 +710,48 @@ export function TeamView({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={() => window.open("/api/admin/team/directory-pdf", "_blank")}>
-              <FileDown className="h-3.5 w-3.5 mr-2" />
+            <DropdownMenuItem onClick={() => setPdfPreview({
+              url: "/api/admin/team/directory-pdf",
+              title: "Annuaire interne · Actifs",
+              description: "Tous les employés actifs",
+              filename: "annuaire-actifs.pdf",
+            })}>
+              <FileText className="h-3.5 w-3.5 mr-2" />
               Tous les actifs
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.open("/api/admin/team/directory-pdf?includeInactive=1", "_blank")}>
-              <FileDown className="h-3.5 w-3.5 mr-2" />
+            <DropdownMenuItem onClick={() => setPdfPreview({
+              url: "/api/admin/team/directory-pdf?includeInactive=1",
+              title: "Annuaire interne · Actifs + Inactifs",
+              description: "Inclut les employés inactifs",
+              filename: "annuaire-complet.pdf",
+            })}>
+              <FileText className="h-3.5 w-3.5 mr-2" />
               Inclure les inactifs
             </DropdownMenuItem>
             {filterRoleId !== "all" && (
-              <DropdownMenuItem onClick={() => window.open(`/api/admin/team/directory-pdf?roleId=${filterRoleId}`, "_blank")}>
+              <DropdownMenuItem onClick={() => {
+                const roleName = roles.find((r) => String(r.id) === filterRoleId)?.name || "Rôle";
+                setPdfPreview({
+                  url: `/api/admin/team/directory-pdf?roleId=${filterRoleId}`,
+                  title: `Annuaire interne · ${roleName}`,
+                  description: `Filtré par rôle : ${roleName}`,
+                  filename: `annuaire-role-${filterRoleId}.pdf`,
+                });
+              }}>
                 <Shield className="h-3.5 w-3.5 mr-2" />
                 Rôle actuel : {roles.find((r) => String(r.id) === filterRoleId)?.name}
               </DropdownMenuItem>
             )}
             {filterPositionId !== "all" && (
-              <DropdownMenuItem onClick={() => window.open(`/api/admin/team/directory-pdf?positionId=${filterPositionId}`, "_blank")}>
+              <DropdownMenuItem onClick={() => {
+                const posName = positions.find((p) => String(p.id) === filterPositionId)?.name || "Poste";
+                setPdfPreview({
+                  url: `/api/admin/team/directory-pdf?positionId=${filterPositionId}`,
+                  title: `Annuaire interne · ${posName}`,
+                  description: `Filtré par poste : ${posName}`,
+                  filename: `annuaire-poste-${filterPositionId}.pdf`,
+                });
+              }}>
                 <Briefcase className="h-3.5 w-3.5 mr-2" />
                 Poste actuel : {positions.find((p) => String(p.id) === filterPositionId)?.name}
               </DropdownMenuItem>
@@ -731,8 +760,14 @@ export function TeamView({
             <DropdownMenuItem
               onClick={() => {
                 const dep = prompt("Filtrer par département (laisser vide pour annuler) :");
-                if (dep && dep.trim()) {
-                  window.open(`/api/admin/team/directory-pdf?department=${encodeURIComponent(dep.trim())}`, "_blank");
+                const trimmed = dep?.trim();
+                if (trimmed) {
+                  setPdfPreview({
+                    url: `/api/admin/team/directory-pdf?department=${encodeURIComponent(trimmed)}`,
+                    title: `Annuaire interne · ${trimmed}`,
+                    description: `Filtré par département : ${trimmed}`,
+                    filename: `annuaire-${trimmed.toLowerCase().replace(/\s+/g, "-")}.pdf`,
+                  });
                 }
               }}
             >
@@ -1311,6 +1346,9 @@ export function TeamView({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => router.push(`/admin/employes/${u.id}/dossier`)}>
+                          <FolderOpen className="h-4 w-4 mr-2" />Voir le dossier
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setUserDialog({ open: true, user: u })}>
                           <Edit className="h-4 w-4 mr-2" />Modifier
                         </DropdownMenuItem>
@@ -2273,6 +2311,15 @@ export function TeamView({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PdfPreviewModal
+        open={!!pdfPreview}
+        url={pdfPreview?.url ?? null}
+        title={pdfPreview?.title ?? ""}
+        description={pdfPreview?.description}
+        downloadFilename={pdfPreview?.filename}
+        onClose={() => setPdfPreview(null)}
+      />
     </SettingsPageShell>
   );
 }

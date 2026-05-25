@@ -4,6 +4,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Sun, Bandage, Baby, Home as Ho
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ActionTooltip } from "@/components/ui/action-tooltip";
 
 type Leave = {
   id: number; type: string; startDate: string; endDate: string; daysCount: number;
@@ -128,20 +129,22 @@ export function CalendarMonthView({
                   {dayHolidays.length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-label="Jour férié" />}
                 </div>
                 {dayHolidays.map((h) => (
-                  <div key={h.id} className="mt-1 px-1.5 py-0.5 rounded text-[9px] bg-amber-100 text-amber-900 truncate" title={h.name}>
-                    {h.name}
-                  </div>
+                  <ActionTooltip key={h.id} label={h.name}>
+                    <div className="mt-1 px-1.5 py-0.5 rounded text-[9px] bg-amber-100 text-amber-900 truncate cursor-default">
+                      {h.name}
+                    </div>
+                  </ActionTooltip>
                 ))}
                 {dayLeaves.slice(0, 3).map((l) => {
                   const meta = TYPE_META[l.type] ?? TYPE_META.other;
                   return (
-                    <div
-                      key={l.id}
-                      className={`mt-1 px-1.5 py-0.5 rounded text-[9px] text-white truncate ${meta.color}`}
-                      title={`${l.admin.fullName || l.admin.email} · ${meta.label}`}
-                    >
-                      {(l.admin.fullName || l.admin.email).split(" ")[0]}
-                    </div>
+                    <ActionTooltip key={l.id} label={`${l.admin.fullName || l.admin.email} · ${meta.label}`}>
+                      <div
+                        className={`mt-1 px-1.5 py-0.5 rounded text-[9px] text-white truncate cursor-default ${meta.color}`}
+                      >
+                        {(l.admin.fullName || l.admin.email).split(" ")[0]}
+                      </div>
+                    </ActionTooltip>
                   );
                 })}
                 {dayLeaves.length > 3 && (

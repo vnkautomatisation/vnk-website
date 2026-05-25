@@ -47,6 +47,7 @@ export default async function MonEspaceHome() {
       select: {
         id: true, fullName: true, email: true, avatarUrl: true, twoFactorEnabled: true,
         birthdate: true,
+        positionId: true,
         position: { select: { name: true, color: true } },
         customRole: { select: { name: true, color: true } },
         team: { select: { name: true, color: true } },
@@ -61,6 +62,7 @@ export default async function MonEspaceHome() {
     prisma.timeClock.findFirst({
       where: { adminId, clockOut: null },
       orderBy: { clockIn: "desc" },
+      select: { id: true, clockIn: true, category: true, pausedAt: true, totalBreakMin: true },
     }),
     prisma.timeClock.aggregate({
       where: { adminId, clockIn: { gte: startOfWeek }, clockOut: { not: null } },
@@ -191,18 +193,35 @@ export default async function MonEspaceHome() {
   // Heures de la semaine : somme des shifts fermes + duree du shift EN COURS si l'employe
   // est actuellement pointe (clockOut: null). Sinon le KPI affichait 0 tant que le user
   // n'avait pas ferme son pointage du matin -> illisible.
+  // Protection : si l'employe a oublie de pointer sortie et que le clockIn date de plus
+  // de 16h, on cap a 16h pour eviter d'afficher des valeurs absurdes (24h, 48h, etc.).
+  const MAX_OPEN_SHIFT_MIN = 16 * 60; // 16h, journee max raisonnable
   const closedMin = weekHours?._sum?.durationMin ?? 0;
   let openMin = 0;
   if (openClock && openClock.clockIn >= startOfWeek) {
-    openMin = Math.max(0, Math.floor((today.getTime() - openClock.clockIn.getTime()) / 60000));
+    // Si en pause, on fige le compteur a pausedAt — sinon now
+    const refMs = openClock.pausedAt ? openClock.pausedAt.getTime() : today.getTime();
+    const elapsed = Math.floor((refMs - openClock.clockIn.getTime()) / 60000);
+    const worked = Math.max(0, elapsed - (openClock.totalBreakMin ?? 0));
+    openMin = Math.min(worked, MAX_OPEN_SHIFT_MIN);
   }
   const weekHoursTotal = closedMin + openMin;
+
+  // Codes de tache dispos pour le poste de cet employe (pour le clock-in)
+  const availableJobCodes = me.positionId
+    ? await prisma.jobCode.findMany({
+        where: { positionId: me.positionId, isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
+        select: { id: true, code: true, label: true },
+      }).catch(() => [])
+    : [];
 
   return (
     <MonEspaceDashboard
       me={JSON.parse(JSON.stringify(me))}
       openClock={openClock ? JSON.parse(JSON.stringify(openClock)) : null}
       weekHours={weekHoursTotal}
+      availableJobCodes={availableJobCodes}
       unsignedDocs={JSON.parse(JSON.stringify(unsignedDocs))}
       pendingContracts={JSON.parse(JSON.stringify(pendingContracts))}
       expiringLicenses={JSON.parse(JSON.stringify(expiringLicenses))}

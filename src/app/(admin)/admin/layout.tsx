@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
-import { cache } from "react";
+import { cache, Suspense } from "react";
 import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -14,11 +14,12 @@ import { PromptDialogHost } from "@/components/admin/prompt-dialog";
 import { EntityPanelsRoot } from "@/components/admin/entity-panels-host";
 import { AdminThemeProvider } from "@/components/admin/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { NavigationFeedback } from "@/components/navigation-feedback";
 
 const getAdmin = cache(async (adminId: number) =>
   prisma.admin.findUnique({
     where: { id: adminId },
-    select: { fullName: true, email: true, onboardingDone: true },
+    select: { fullName: true, email: true, onboardingDone: true, avatarUrl: true },
   })
 );
 
@@ -92,6 +93,13 @@ export default async function AdminLayout({
             Aller au contenu principal
           </a>
 
+          {/* Feedback navigation global VNK : barre top dès 200ms + overlay dès 300ms.
+              L'ancien contenu reste techniquement visible dessous (blur + opacity).
+              Suspense requis par Next.js 15 pour useSearchParams. */}
+          <Suspense fallback={null}>
+            <NavigationFeedback />
+          </Suspense>
+
           <CommandPalette />
           <PromptDialogHost />
 
@@ -99,6 +107,7 @@ export default async function AdminLayout({
           <AdminTopbar
             adminName={admin?.fullName ?? admin?.email ?? "Admin"}
             adminEmail={admin?.email ?? ""}
+            adminAvatarUrl={admin?.avatarUrl ?? null}
             overdueCount={overdueCount}
           />
 

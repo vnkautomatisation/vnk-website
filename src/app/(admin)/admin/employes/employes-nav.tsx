@@ -2,10 +2,10 @@
 // Navigation latérale du module Employés.
 // Délègue à ModuleSidebarNav (scroll + collapse + a11y + mobile drawer).
 import {
-  Users, Network, Shield, Briefcase, FileText, FileSignature,
+  Users, Network, Shield, ShieldCheck, Briefcase, FileText, FileSignature,
   Clock, Calculator, CalendarDays, GitBranch, BadgeCheck, AlertTriangle,
   GraduationCap, BarChart, Award, MessageSquare, Megaphone, Cake,
-  LogOut, FileBarChart, ScrollText, Laptop,
+  LogOut, FileBarChart, ScrollText, Laptop, CalendarRange,
   UsersRound, FolderOpen, Timer, Wrench, HeartPulse, Radio, Archive,
 } from "lucide-react";
 import { ModuleSidebarNav, type NavSection } from "@/components/admin/module-sidebar-nav";
@@ -36,7 +36,10 @@ const SECTIONS: NavSection[] = [
     groupIcon: Timer,
     items: [
       { href: "/admin/employes/pointage", label: "Pointage", icon: Clock },
+      { href: "/admin/employes/codes-taches", label: "Codes de tâche", icon: Briefcase },
       { href: "/admin/employes/conges", label: "Congés", icon: CalendarDays },
+      { href: "/admin/employes/conges/fenetres", label: "Fenêtres de sélection", icon: CalendarRange },
+      { href: "/admin/employes/conges/politiques", label: "Politiques congés", icon: ShieldCheck },
       { href: "/admin/employes/calendrier", label: "Calendrier RH", icon: CalendarDays },
       { href: "/admin/employes/paie", label: "Paie", icon: Calculator },
       { href: "/admin/employes/compensation", label: "Salaires & bonus", icon: BarChart },

@@ -3,8 +3,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { LiveShiftCounter } from "@/components/admin/live-shift-counter";
 import {
-  Play, Square, FileSignature, AlertTriangle, CheckCircle2, Clock,
+  Play, Pause, Square, FileSignature, AlertTriangle, CheckCircle2, Clock,
   Calculator, CalendarDays, GraduationCap, Megaphone, ArrowRight,
   Pin, ShieldCheck, Laptop, Smartphone, Briefcase, Cake, FileText,
   UserCheck, ClipboardList, Mail, BookOpen, Plane, Download, Wallet,
@@ -13,8 +14,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { clockInAction, clockOutAction } from "@/app/actions/hr-timeclock";
+import { clockInAction, clockOutAction, pauseClockAction, resumeClockAction } from "@/app/actions/hr-timeclock";
 import { AnnouncementReadTracker } from "./annonces/announcement-read-tracker";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import { PdfPreviewModal } from "@/components/admin/pdf-preview-modal";
 
 function fmtHours(min: number): string {
   if (!min) return "0h00";
@@ -88,6 +93,7 @@ type Birthday = {
 type TaxDoc = { id: number; type: string; taxYear: number | null; title: string; fileUrl: string | null; issuedAt: string };
 
 type CompletionStep = { key: string; label: string; href: string; done: boolean; weight: number };
+type JobCode = { id: number; code: string; label: string };
 
 export function MonEspaceDashboard({
   me, openClock, weekHours,
@@ -97,9 +103,10 @@ export function MonEspaceDashboard({
   announcements, upcomingOneOnOnes,
   leaveBalance, myEquipment, upcomingBirthdays,
   taxDocuments, completionPct, completionSteps,
+  availableJobCodes,
 }: {
   me: Me;
-  openClock: { id: number; clockIn: string; category: string } | null;
+  openClock: { id: number; clockIn: string; category: string; pausedAt: string | null; totalBreakMin: number } | null;
   weekHours: number;
   unsignedDocs: Array<{ id: number; title: string; version: string }>;
   pendingContracts: Array<{ id: number; title: string }>;
@@ -115,35 +122,78 @@ export function MonEspaceDashboard({
   taxDocuments: TaxDoc[];
   completionPct: number;
   completionSteps: CompletionStep[];
+  availableJobCodes: JobCode[];
 }) {
   const router = useRouter();
   const totalActions =
     unsignedDocs.length + pendingContracts.length + expiringLicenses.length +
     expiringTrainings.length + (me.twoFactorEnabled ? 0 : 1);
 
-  const handleClockIn = async () => {
-    const r = await clockInAction({});
-    if (r.success) { toast.success("Pointage démarré"); router.refresh(); }
-    else toast.error(r.error || "");
+  // Dialog de selection du code au clock-in
+  const [showJobCodeDialog, setShowJobCodeDialog] = useState(false);
+  const [selectedJobCodeId, setSelectedJobCodeId] = useState<number | null>(null);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
+
+  const handleClockInClick = () => {
+    // Si pas de codes dispos pour ce poste -> clock-in direct sans code
+    if (availableJobCodes.length === 0) {
+      void doClockIn(null);
+      return;
+    }
+    // Sinon ouvrir le dialog pour choisir
+    setSelectedJobCodeId(availableJobCodes[0]?.id ?? null);
+    setShowJobCodeDialog(true);
+  };
+
+  const doClockIn = async (jobCodeId: number | null) => {
+    const r = await clockInAction(jobCodeId ? { jobCodeId } : {});
+    if (r.success) {
+      const code = jobCodeId ? availableJobCodes.find((c) => c.id === jobCodeId)?.code : null;
+      toast.success(code ? `Pointage démarré · ${code}` : "Pointage démarré");
+      setShowJobCodeDialog(false);
+      router.refresh();
+    } else {
+      toast.error(r.error || "");
+    }
   };
   const handleClockOut = async () => {
     const r = await clockOutAction();
     if (r.success) { toast.success(`Pointage fermé · ${fmtHours(r.data.durationMin)}`); router.refresh(); }
     else toast.error(r.error || "");
   };
+  const handlePause = async () => {
+    const r = await pauseClockAction();
+    if (r.success) { toast.success("En pause"); router.refresh(); }
+    else toast.error(r.error || "");
+  };
+  const handleResume = async () => {
+    const r = await resumeClockAction();
+    if (r.success) {
+      toast.success(r.data.breakAddedMin > 0 ? `Reprise · pause de ${fmtHours(r.data.breakAddedMin)}` : "Reprise");
+      router.refresh();
+    }
+    else toast.error(r.error || "");
+  };
 
   // KPI "Heures cette semaine" LIVE : si un shift est en cours, on incremente
-  // la minute pour que l'employe voie son temps grimper en temps reel.
-  // weekHours (prop server) inclut DEJA la duree du shift ouvert au moment du fetch
-  // (calcule server-side). Ici on ajoute juste le delta depuis ce fetch.
+  // 1 minute par tick. weekHours (prop server) inclut DEJA la duree du shift
+  // ouvert au moment du fetch (calcule server-side). On ajoute juste le delta
+  // depuis ce fetch.
+  //
+  // CRITIQUE : la dep du useEffect est openClock?.id (PRIMITIVE stable) et
+  // non l'objet openClock entier (re-cree a chaque render via JSON serialization
+  // -> ref instable -> effect en boucle). Reset explicite de tick a 0 quand
+  // l'id change (clock-in -> clock-out -> clock-in laisserait sinon le tick
+  // de la 1ere session se cumuler avec la 2eme).
+  const openClockId = openClock?.id ?? null;
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    if (!openClock) return;
-    const id = setInterval(() => setTick((t) => t + 1), 60_000); // chaque minute
+    setTick(0); // reset a chaque changement de pointage (in/out/in)
+    if (!openClockId) return;
+    const id = setInterval(() => setTick((t) => t + 1), 60_000);
     return () => clearInterval(id);
-  }, [openClock]);
-  // tick increment = +1 minute par tick (on ne stocke pas Date.now sinon hydration mismatch)
-  const liveWeekHours = openClock ? weekHours + tick : weekHours;
+  }, [openClockId]);
+  const liveWeekHours = openClockId ? weekHours + tick : weekHours;
 
   const incompleteSteps = completionSteps.filter((s) => !s.done);
 
@@ -166,28 +216,44 @@ export function MonEspaceDashboard({
             </div>
             <div className="min-w-0">
               <h1 className="text-lg font-bold truncate">Bonjour {me.fullName?.split(" ")[0] || me.email}</h1>
-              <p className="text-xs text-white/80 flex items-center gap-2 flex-wrap">
+              <div className="text-xs text-white/80 flex items-center gap-2 flex-wrap">
                 {me.position && <span>{me.position.name}</span>}
                 {me.team && <Badge variant="outline" className="bg-white/10 text-white border-white/30 text-[10px]">{me.team.name}</Badge>}
                 {me.customRole && <Badge variant="outline" className="bg-white/10 text-white border-white/30 text-[10px]">{me.customRole.name}</Badge>}
-              </p>
+              </div>
             </div>
           </div>
-          {/* Quick clock */}
+          {/* Quick clock : Pause / Reprendre / Arreter sur le shift en cours */}
           {openClock ? (
             <div className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-500/20 border border-emerald-300/30">
-                <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
-                <span className="text-xs font-mono">
-                  Depuis {new Date(openClock.clockIn).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
-                </span>
-              </div>
-              <Button variant="secondary" onClick={handleClockOut} size="sm">
+              {openClock.pausedAt ? (
+                <>
+                  <span className="px-2.5 py-1 rounded-md bg-amber-400/20 border border-amber-300/40 text-xs font-mono">
+                    En pause
+                  </span>
+                  <Button variant="secondary" onClick={handleResume} size="sm">
+                    <Play className="h-3.5 w-3.5 mr-1" />Reprendre
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <LiveShiftCounter
+                    clockIn={openClock.clockIn}
+                    pausedAt={openClock.pausedAt}
+                    totalBreakMin={openClock.totalBreakMin}
+                    variant="dark"
+                  />
+                  <Button variant="secondary" onClick={handlePause} size="sm">
+                    <Pause className="h-3.5 w-3.5 mr-1" />Pause
+                  </Button>
+                </>
+              )}
+              <Button variant="secondary" onClick={handleClockOut} size="sm" className="bg-red-500/90 hover:bg-red-500 text-white border-0">
                 <Square className="h-3.5 w-3.5 mr-1" />Arrêter
               </Button>
             </div>
           ) : (
-            <Button onClick={handleClockIn} variant="secondary" size="sm" className="shrink-0">
+            <Button onClick={handleClockInClick} variant="secondary" size="sm" className="shrink-0">
               <Play className="h-3.5 w-3.5 mr-1.5" />Commencer ma journée
             </Button>
           )}
@@ -491,15 +557,19 @@ export function MonEspaceDashboard({
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <a
-                      href={`/api/admin/pay-stubs/${s.id}/pdf`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => setPdfPreview({
+                        url: `/api/admin/pay-stubs/${s.id}/pdf`,
+                        title: `Bulletin de paie #${s.id}`,
+                        description: `${new Date(s.period.startDate).toLocaleDateString("fr-CA")} → ${new Date(s.period.endDate).toLocaleDateString("fr-CA")} · ${Number(s.netPay).toFixed(2)} $`,
+                        filename: `bulletin-paie-${s.id}.pdf`,
+                      })}
                       className="text-[11px] font-semibold text-[#0F2D52] hover:underline flex items-center gap-0.5"
                     >
-                      <Download className="h-3 w-3" />
+                      <FileText className="h-3 w-3" />
                       PDF
-                    </a>
+                    </button>
                     <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                   </div>
                 </div>
@@ -573,6 +643,64 @@ export function MonEspaceDashboard({
           </Card>
         </div>
       </div>
+
+      {/* Dialog : choix du code de tache au clock-in */}
+      <Dialog open={showJobCodeDialog} onOpenChange={setShowJobCodeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choisir un code de tâche</DialogTitle>
+            <DialogDescription>
+              Sélectionnez la tâche sur laquelle vous allez travailler. Vous pourrez pointer
+              <strong> Pause</strong>, <strong>Reprendre</strong> ou <strong>Arrêter</strong> ensuite.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2 max-h-[400px] overflow-y-auto">
+            {availableJobCodes.length === 0 ? (
+              <div className="text-sm text-muted-foreground text-center py-6">
+                Aucun code de tâche disponible pour votre poste.<br />
+                Demandez à votre superviseur d&apos;en créer dans <em>Employés → Codes de tâche</em>.
+              </div>
+            ) : (
+              availableJobCodes.map((jc) => (
+                <label
+                  key={jc.id}
+                  className={`flex items-center gap-3 p-3 rounded-md border cursor-pointer transition ${
+                    selectedJobCodeId === jc.id ? "border-[#0F2D52] bg-blue-50" : "hover:bg-muted/40"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="jobCode"
+                    checked={selectedJobCodeId === jc.id}
+                    onChange={() => setSelectedJobCodeId(jc.id)}
+                    className="h-4 w-4"
+                  />
+                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-muted">{jc.code}</span>
+                  <span className="flex-1 text-sm">{jc.label}</span>
+                </label>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowJobCodeDialog(false)}>Annuler</Button>
+            <Button
+              onClick={() => selectedJobCodeId && doClockIn(selectedJobCodeId)}
+              disabled={!selectedJobCodeId}
+            >
+              <Play className="h-4 w-4 mr-1.5" />Commencer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <PdfPreviewModal
+        open={!!pdfPreview}
+        url={pdfPreview?.url ?? null}
+        title={pdfPreview?.title ?? ""}
+        description={pdfPreview?.description}
+        downloadFilename={pdfPreview?.filename}
+        onClose={() => setPdfPreview(null)}
+      />
     </div>
   );
 }

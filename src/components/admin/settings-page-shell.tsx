@@ -110,16 +110,13 @@ export function SettingsPageShell({
         </div>
       </div>
 
-      {/* Sentinel + Sticky compact bar (apparaît au scroll) */}
-      <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
-      {stickyBadges && stickyBadges.length > 0 && (
+      {/* Sentinel discret (1px) qui déclenche le scrolled state via IntersectionObserver */}
+      <div ref={sentinelRef} aria-hidden className="h-px" />
+      {/* Sticky compact bar : on ne rend RIEN dans le flow tant que !scrolled
+          (évite le vide fantôme entre hero et contenu — bug -mt-3 + opacity-0). */}
+      {stickyBadges && stickyBadges.length > 0 && scrolled && (
         <div
-          className={cn(
-            "sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 transition-all",
-            scrolled
-              ? "bg-background/95 backdrop-blur shadow-sm border-b"
-              : "bg-transparent pointer-events-none opacity-0 -translate-y-2"
-          )}
+          className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in"
         >
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">

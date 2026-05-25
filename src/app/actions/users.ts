@@ -915,7 +915,7 @@ export async function updateUserAction(input: z.infer<typeof updateSchema>): Pro
 
   const before = await prisma.admin.findUnique({
     where: { id },
-    select: { fullName: true, roleId: true, positionId: true, department: true, title: true, isActive: true, updatedAt: true },
+    select: { fullName: true, roleId: true, positionId: true, department: true, title: true, isActive: true, updatedAt: true, managerId: true },
   });
   if (!before) return { success: false, error: "Utilisateur introuvable" };
 
@@ -957,6 +957,70 @@ export async function updateUserAction(input: z.infer<typeof updateSchema>): Pro
       managerId: managerId === undefined ? undefined : managerId,
     },
   });
+
+  // ── Notification : changement de manager ──────────────────
+  // Quand managerId est explicitement fourni et différent de l'ancien,
+  // on notifie le NOUVEAU manager et l'EMPLOYÉ concerné.
+  if (managerId !== undefined && managerId !== before.managerId) {
+    const [employee, newManager, oldManager] = await Promise.all([
+      prisma.admin.findUnique({ where: { id }, select: { fullName: true, email: true } }),
+      managerId ? prisma.admin.findUnique({ where: { id: managerId }, select: { fullName: true, isActive: true } }) : Promise.resolve(null),
+      before.managerId ? prisma.admin.findUnique({ where: { id: before.managerId }, select: { fullName: true } }) : Promise.resolve(null),
+    ]);
+    const employeeLabel = employee?.fullName || employee?.email || `Employé #${id}`;
+
+    // Nouveau manager : "Nouvel employé à votre charge"
+    if (managerId && newManager?.isActive) {
+      await prisma.notification
+        .create({
+          data: {
+            recipientType: "admin",
+            recipientId: managerId,
+            type: "info",
+            title: "Nouvel employé à votre charge",
+            body: `${employeeLabel} vous est désormais rattaché.`,
+            link: "/admin/employes/organigramme",
+            icon: "users",
+          },
+        })
+        .catch(() => null);
+    }
+
+    // Employé : "Nouveau manager : [nom]" (ou "Plus de manager attitré" si retiré)
+    const newMgrLabel = newManager?.fullName ?? "—";
+    await prisma.notification
+      .create({
+        data: {
+          recipientType: "admin",
+          recipientId: id,
+          type: "info",
+          title: managerId ? `Nouveau manager : ${newMgrLabel}` : "Manager retiré",
+          body: managerId
+            ? `Votre supérieur hiérarchique a été mis à jour.`
+            : `Vous n'avez plus de supérieur hiérarchique attitré pour l'instant.`,
+          link: "/admin/mon-espace",
+          icon: "user-check",
+        },
+      })
+      .catch(() => null);
+
+    // Bonus : informer l'ancien manager qu'un de ses subordonnés a changé de hiérarchie.
+    if (before.managerId && before.managerId !== managerId && oldManager) {
+      await prisma.notification
+        .create({
+          data: {
+            recipientType: "admin",
+            recipientId: before.managerId,
+            type: "info",
+            title: "Employé retiré de votre équipe",
+            body: `${employeeLabel} n'est plus sous votre supervision.`,
+            link: "/admin/employes/organigramme",
+            icon: "users",
+          },
+        })
+        .catch(() => null);
+    }
+  }
 
   await logAudit({
     adminId,

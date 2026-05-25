@@ -1,50 +1,50 @@
-// Service Worker — notifications Web Push uniquement.
-// Enregistré par /admin pour recevoir les push du portail.
+// Service Worker NEUTRALISE temporairement pour debugger un spam de fetch.
+// Quand le browser le re-recupere, il se desinscrit lui-meme et libere les
+// clients. Plus aucun fetch handler, plus aucune interception.
+//
+// Pour reactiver les Web Push : restaurer l'ancien handler 'push' + supprimer
+// le bloc d'auto-unregister ci-dessous.
 
-self.addEventListener("install", () => {
+self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener("push", (event) => {
-  let data = {};
-  try {
-    data = event.data ? event.data.json() : {};
-  } catch {
-    data = { title: "VNK", body: event.data ? event.data.text() : "" };
-  }
-
-  const title = data.title || "VNK Automatisation";
-  const options = {
-    body: data.body || "",
-    icon: data.icon || "/favicon/favicon-192x192.png",
-    badge: data.badge || "/favicon/favicon-48x48.png",
-    tag: data.tag,
-    data: { url: data.url || "/admin" },
-    actions: data.actions || [],
-    requireInteraction: data.requireInteraction || false,
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  const url = event.notification.data?.url || "/admin";
-
   event.waitUntil(
-    self.clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clientList) => {
-        for (const client of clientList) {
-          if (client.url.includes(new URL(url, self.location.origin).pathname) && "focus" in client) {
-            return client.focus();
-          }
+    (async () => {
+      // Libere immediatement les clients controles
+      await self.clients.claim();
+
+      // Vide tous les caches
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      } catch (e) {
+        console.warn("[sw] cache cleanup failed", e);
+      }
+
+      // Auto-desinscription
+      try {
+        await self.registration.unregister();
+        console.log("[sw] auto-unregistered");
+      } catch (e) {
+        console.warn("[sw] unregister failed", e);
+      }
+
+      // Force-reload de tous les clients pour qu'ils ne soient plus
+      // controles par un SW. Sans ca, ils gardent l'ancien SW en memoire
+      // tant qu'ils ne sont pas fermes.
+      try {
+        const clients = await self.clients.matchAll({ type: "window" });
+        for (const c of clients) {
+          c.navigate(c.url).catch(() => null);
         }
-        if (self.clients.openWindow) return self.clients.openWindow(url);
-      })
+      } catch (e) {
+        console.warn("[sw] client reload failed", e);
+      }
+    })()
   );
 });
+
+// Pas de handler 'fetch' ni 'push'. Le SW est inerte jusqu'a son activation,
+// puis se supprime tout seul.

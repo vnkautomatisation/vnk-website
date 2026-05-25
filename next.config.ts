@@ -11,7 +11,11 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["pdfkit", "fontkit", "restructure", "iconv-lite"],
   experimental: {
     serverActions: { bodySizeLimit: "10mb" },
-    optimizePackageImports: ["lucide-react", "sonner"],
+    // Note: "sonner" retiré car bug Next.js — son barrel-optimize duplique l'import
+    // de `toast` dans les fichiers qui en importent ET importent un autre composant
+    // qui en importe aussi (ex: vacation-window-banner → appel SubmitAppealDialog).
+    // Cf. https://github.com/vercel/next.js/issues/57966 (similaire)
+    optimizePackageImports: ["lucide-react"],
   },
   // Reduce cold starts
   reactStrictMode: false,

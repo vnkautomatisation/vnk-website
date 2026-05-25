@@ -976,3 +976,980 @@ export async function generateEmploymentLetterPdf(params: LetterParams): Promise
       .text(body.closing, x, doc.y, { width: w });
   }, footerText);
 }
+
+// ═══════════════════════════════════════════════════════════
+// 5. DOSSIER EMPLOYE COMPLET
+//    PDF interne consolidant identite, contrats, evaluations,
+//    notes, conges, equipement, permis/formations, CNESST.
+// ═══════════════════════════════════════════════════════════
+
+export type DossierAdmin = {
+  id: number;
+  fullName: string | null;
+  email: string;
+  phone: string | null;
+  title: string | null;
+  department: string | null;
+  birthdate: Date | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  position: { name: string } | null;
+  customRole: { name: string } | null;
+  team: { name: string } | null;
+  manager: { fullName: string | null; email: string } | null;
+};
+
+export type DossierNote = {
+  id: number;
+  category: string;
+  severity: string | null;
+  title: string;
+  body: string;
+  isConfidential: boolean;
+  acknowledgedAt: Date | null;
+  occurredAt: Date | null;
+  createdAt: Date;
+  author: { fullName: string | null; email: string };
+};
+
+export type DossierContract = {
+  id: number;
+  title: string;
+  contractType: string;
+  status: string;
+  startDate: Date;
+  endDate: Date | null;
+  salaryAnnual: number | null;
+  hourlyRate: number | null;
+  hoursPerWeek: number | null;
+};
+
+export type DossierReview = {
+  id: number;
+  periodStart: Date;
+  periodEnd: Date;
+  status: string;
+  rating: number | null;
+  managerComments: string | null;
+  strengths: string | null;
+  improvements: string | null;
+  reviewer: { fullName: string | null; email: string };
+};
+
+export type DossierLeave = {
+  id: number;
+  type: string;
+  status: string;
+  startDate: Date;
+  endDate: Date;
+  daysCount: number;
+  reason: string | null;
+};
+
+export type DossierEquipment = {
+  id: number;
+  category: string;
+  name: string;
+  serialNumber: string | null;
+  brand: string | null;
+  model: string | null;
+  assignedAt: Date;
+};
+
+export type DossierLicense = {
+  id: number;
+  type: string;
+  number: string | null;
+  issuer: string | null;
+  issuedAt: Date | null;
+  expiresAt: Date | null;
+};
+
+export type DossierTraining = {
+  id: number;
+  title: string;
+  category: string;
+  provider: string | null;
+  completedAt: Date | null;
+  expiresAt: Date | null;
+  isMandatory: boolean;
+};
+
+export type DossierCnesst = {
+  id: number;
+  incidentDate: Date;
+  location: string;
+  description: string;
+  injuryType: string | null;
+  status: string;
+  daysAbsent: number | null;
+};
+
+const NOTE_CATEGORY_LABEL: Record<string, string> = {
+  discipline: "Discipline",
+  exit: "Depart",
+  medical: "Medical",
+  observation: "Observation",
+  onboarding: "Onboarding",
+  commendation: "Felicitation",
+  general: "General",
+};
+
+const NOTE_CATEGORY_COLOR: Record<string, string> = {
+  discipline: C.red,
+  commendation: C.green,
+  observation: "#2563EB", // blue
+  medical: "#7C3AED", // violet
+  onboarding: "#0891B2", // cyan
+  exit: C.amber,
+  general: C.gray,
+};
+
+const NOTE_CATEGORY_ORDER = ["discipline", "exit", "medical", "observation", "onboarding", "commendation", "general"];
+
+function ensureColumnTable(
+  doc: CapturedDoc,
+  title: string,
+  headers: string[],
+  widths: number[],
+  rows: string[][],
+) {
+  sectionTitle(doc, title);
+  const x = 50;
+  const w = doc.page.width - 100;
+  const rowH = 16;
+  if (rows.length === 0) {
+    doc.fillColor(C.gray).font("Helvetica-Oblique").fontSize(8.5)
+      .text("Aucune entree.", x, doc.y, { width: w });
+    doc.y += 12;
+    return;
+  }
+  // Normalise widths a la largeur totale
+  const totalW = widths.reduce((s, n) => s + n, 0);
+  const ratios = widths.map((n) => n / totalW);
+  const colX = ratios.reduce<number[]>((acc, r) => {
+    const last = acc[acc.length - 1] ?? x;
+    acc.push(last + r * w);
+    return acc;
+  }, [x]).slice(0, -1);
+  // Header
+  ensureSpace(doc, rowH + 6);
+  doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5);
+  headers.forEach((h, i) => {
+    doc.text(h.toUpperCase(), colX[i] + 4, doc.y, {
+      width: ratios[i] * w - 8, lineBreak: false, ellipsis: true, characterSpacing: 0.5,
+    });
+  });
+  doc.y += 12;
+  doc.strokeColor(C.border).lineWidth(0.5).moveTo(x, doc.y).lineTo(x + w, doc.y).stroke();
+  doc.y += 3;
+  // Rows
+  rows.forEach((cells, i) => {
+    ensureSpace(doc, rowH + 2);
+    const ry = doc.y;
+    if (i % 2 === 1) {
+      doc.rect(x, ry - 2, w, rowH).fill(C.grayLight);
+    }
+    doc.fillColor(C.text).font("Helvetica").fontSize(8.5);
+    cells.forEach((c, j) => {
+      doc.text(sanitize(c) || "—", colX[j] + 4, ry + 2, {
+        width: ratios[j] * w - 8, lineBreak: false, ellipsis: true,
+      });
+    });
+    doc.y = ry + rowH;
+  });
+  doc.moveDown(0.3);
+}
+
+export type DossierMonthlyHours = {
+  ym: string; // YYYY-MM
+  workMin: number;     // travail effectif (work + meeting + training)
+  meetingMin: number;
+  trainingMin: number;
+};
+
+export type DossierData = {
+  admin: DossierAdmin;
+  notes: DossierNote[];
+  contracts: DossierContract[];
+  reviews: DossierReview[];
+  leaves: DossierLeave[];
+  equipment: DossierEquipment[];
+  licenses: DossierLicense[];
+  trainings: DossierTraining[];
+  cnesst: DossierCnesst[];
+  payAgg: { count: number; grossPay: number; netPay: number };
+  // Optionnel : heures travaillees agregees par mois (12 derniers mois)
+  monthlyHours?: DossierMonthlyHours[];
+};
+
+function seniorityFr(start: Date | null): string {
+  if (!start) return "—";
+  const now = new Date();
+  const months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+  if (months < 1) return "Moins d'un mois";
+  if (months < 12) return `${months} mois`;
+  const y = Math.floor(months / 12);
+  const m = months % 12;
+  return m === 0 ? `${y} an${y > 1 ? "s" : ""}` : `${y} an${y > 1 ? "s" : ""} ${m} mois`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// RELEVE PERSONNEL DE POINTAGES (auto-export employe)
+// ═══════════════════════════════════════════════════════════
+export type PersonalTimesheetEntry = {
+  clockIn: Date;
+  clockOut: Date | null;
+  durationMin: number | null;
+  category: string;
+  notes: string | null;
+  approvedAt: Date | null;
+};
+
+const CAT_LABEL_PDF: Record<string, string> = {
+  work: "Travail",
+  break: "Pause",
+  meeting: "Reunion",
+  training: "Formation",
+  sick: "Maladie",
+  vacation: "Vacances",
+};
+
+function fmtDurFromMin(mins: number | null): string {
+  if (mins == null || mins <= 0) return "—";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${h}h${m.toString().padStart(2, "0")}`;
+}
+
+// Agrégat (employé, jour) : travail = work+meeting+training, absence = vacation/sick/parental/etc.
+type DayBucket = {
+  date: string; // YYYY-MM-DD
+  workMin: number;
+  meetingMin: number;
+  trainingMin: number;
+  breakMin: number;
+  absenceMin: number; // congés payés (vacation, sick, parental, bereavement, unpaid, other)
+  absenceType: string | null; // type principal du congé (pour libellé)
+  totalEffMin: number; // total rémunéré (work + meeting + training + absence)
+  isApproved: boolean;
+  isSubmitted: boolean;
+};
+
+const ABSENCE_TYPE_LABELS: Record<string, string> = {
+  vacation: "Vacances",
+  sick: "Maladie",
+  parental: "Parental",
+  bereavement: "Décès",
+  unpaid: "Sans solde",
+  other: "Autre",
+};
+
+function dayKeyFromDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
+function aggregateByDay(entries: PersonalTimesheetEntry[]): DayBucket[] {
+  const map = new Map<string, DayBucket>();
+  for (const e of entries) {
+    if (!e.clockOut) continue;
+    const key = dayKeyFromDate(e.clockIn);
+    let b = map.get(key);
+    if (!b) {
+      b = {
+        date: key,
+        workMin: 0,
+        meetingMin: 0,
+        trainingMin: 0,
+        breakMin: 0,
+        absenceMin: 0,
+        absenceType: null,
+        totalEffMin: 0,
+        isApproved: true,
+        isSubmitted: true,
+      };
+      map.set(key, b);
+    }
+    const dur = e.durationMin ?? 0;
+    if (e.category === "work") { b.workMin += dur; b.totalEffMin += dur; }
+    else if (e.category === "meeting") { b.meetingMin += dur; b.totalEffMin += dur; }
+    else if (e.category === "training") { b.trainingMin += dur; b.totalEffMin += dur; }
+    else if (e.category === "break") { b.breakMin += dur; }
+    else if (e.category && ABSENCE_TYPE_LABELS[e.category]) {
+      // vacation, sick, parental, bereavement, unpaid, other → comptés comme absence rémunérée
+      b.absenceMin += dur;
+      b.totalEffMin += dur;
+      if (!b.absenceType) b.absenceType = e.category;
+    }
+    // approval state : tous approuvés ?
+    if (!e.approvedAt) b.isApproved = false;
+  }
+  return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export async function generatePersonalTimesheetPdf(params: {
+  admin: { fullName: string | null; email: string; position?: string | null };
+  from: Date;
+  to: Date;
+  entries: PersonalTimesheetEntry[];
+}): Promise<Buffer> {
+  const { admin, from, to, entries } = params;
+  const buckets = aggregateByDay(entries);
+  const totalEffMin = buckets.reduce((s, b) => s + b.totalEffMin, 0);
+  const totalWorkMin = buckets.reduce((s, b) => s + b.workMin, 0);
+  const totalMeetingMin = buckets.reduce((s, b) => s + b.meetingMin, 0);
+  const totalTrainingMin = buckets.reduce((s, b) => s + b.trainingMin, 0);
+  const totalAbsenceMin = buckets.reduce((s, b) => s + b.absenceMin, 0);
+  const totalBreakMin = buckets.reduce((s, b) => s + b.breakMin, 0);
+  const approvedMin = buckets.filter((b) => b.isApproved).reduce((s, b) => s + b.totalEffMin, 0);
+  const pendingMin = buckets.filter((b) => !b.isApproved).reduce((s, b) => s + b.totalEffMin, 0);
+
+  return capture((doc) => {
+    drawHeader(
+      doc,
+      "Releve d'heures",
+      `${formatDateShort(from)} → ${formatDateShort(to)}`,
+    );
+
+    drawInfoBlock(doc, "Employe", [
+      ["Nom", sanitize(admin.fullName) || sanitize(admin.email)],
+      ["Courriel", sanitize(admin.email)],
+      ["Poste", sanitize(admin.position) || "—"],
+      ["Periode", `${formatDate(from)} au ${formatDate(to)}`],
+    ], { accent: C.navy });
+
+    sectionTitle(doc, "Synthese");
+    const x = 50;
+    const w = doc.page.width - 100;
+    const cardW = (w - 24) / 3;
+    ensureSpace(doc, 60);
+    const y = doc.y;
+    const cards: Array<{ label: string; value: string; color: string }> = [
+      { label: "TRAVAIL EFFECTIF", value: fmtDurFromMin(totalEffMin), color: C.navy },
+      { label: "APPROUVE", value: fmtDurFromMin(approvedMin), color: C.green },
+      { label: "EN ATTENTE", value: fmtDurFromMin(pendingMin), color: C.amber },
+    ];
+    cards.forEach((c, i) => {
+      const cx = x + i * (cardW + 12);
+      doc.roundedRect(cx, y, cardW, 50, 5).fillAndStroke(C.grayLight, C.border);
+      doc.rect(cx, y, 3, 50).fill(c.color);
+      doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5)
+        .text(c.label, cx + 12, y + 10, { lineBreak: false, characterSpacing: 0.6 });
+      doc.fillColor(c.color).font("Helvetica-Bold").fontSize(16)
+        .text(c.value, cx + 12, y + 24, { width: cardW - 20, lineBreak: false });
+    });
+    doc.y = y + 60;
+
+    // Resume quotidien — 1 ligne par jour, pas de detail technique
+    sectionTitle(doc, "Resume quotidien");
+    const xT = 50;
+    const wT = doc.page.width - 100;
+    const rowH = 16;
+    if (buckets.length === 0) {
+      doc.fillColor(C.gray).font("Helvetica-Oblique").fontSize(8.5)
+        .text("Aucune journee travaillee sur la periode.", xT, doc.y, { width: wT });
+      doc.y += 12;
+    } else {
+      // Colonnes simplifiees : TRAVAIL fusionne work+meeting+training (vu "travail effectif")
+      const headers = ["DATE", "TRAVAIL", "ABSENCE", "TOTAL", "STATUT"];
+      const ratios = [1.6, 1.2, 1.4, 1.2, 1.2];
+      const totalR = ratios.reduce((s, n) => s + n, 0);
+      const colX = ratios.reduce<number[]>((acc, r) => {
+        const last = acc[acc.length - 1] ?? xT;
+        acc.push(last + (r / totalR) * wT);
+        return acc;
+      }, [xT]).slice(0, -1);
+
+      ensureSpace(doc, rowH + 4);
+      doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5);
+      const headerY = doc.y; // y FIXE pour toutes les cellules header
+      headers.forEach((h, i) => {
+        // STATUT (dernier col, i=4) aligné à gauche, DATE (i=0) aussi
+        const align: "left" | "right" = i === 0 || i === 4 ? "left" : "right";
+        doc.text(h, colX[i] + 4, headerY, {
+          width: (ratios[i] / totalR) * wT - 8, lineBreak: false, characterSpacing: 0.5, align,
+        });
+      });
+      doc.y = headerY + 12;
+      doc.strokeColor(C.border).lineWidth(0.5).moveTo(xT, doc.y).lineTo(xT + wT, doc.y).stroke();
+      doc.y += 3;
+
+      buckets.forEach((b, i) => {
+        ensureSpace(doc, rowH + 2);
+        const ry = doc.y;
+        if (i % 2 === 1) doc.rect(xT, ry - 2, wT, rowH).fill(C.grayLight);
+        const d = new Date(b.date + "T12:00:00");
+        const dateLabel = d.toLocaleDateString("fr-CA", { weekday: "short", day: "2-digit", month: "short" });
+        const status = b.isApproved ? "Approuve" : "Soumis";
+        // TRAVAIL = work + meeting + training fusionnes
+        const travailMin = b.workMin + b.meetingMin + b.trainingMin;
+        // Absence : duree + libelle court du type (ex: "8h00 Vacances")
+        const absenceCell = b.absenceMin > 0
+          ? `${fmtDurFromMin(b.absenceMin)}${b.absenceType ? ` ${ABSENCE_TYPE_LABELS[b.absenceType] ?? ""}`.trimEnd() : ""}`
+          : "—";
+        const cells = [
+          dateLabel,
+          fmtDurFromMin(travailMin),
+          absenceCell,
+          fmtDurFromMin(b.totalEffMin),
+          status,
+        ];
+        doc.fillColor(C.text).font("Helvetica").fontSize(8.5);
+        cells.forEach((c, j) => {
+          const align: "left" | "right" = j === 0 || j === 4 ? "left" : "right";
+          doc.text(sanitize(c), colX[j] + 4, ry + 2, {
+            width: (ratios[j] / totalR) * wT - 8, lineBreak: false, ellipsis: true, align,
+          });
+        });
+        doc.y = ry + rowH;
+      });
+
+      // Ligne TOTAL
+      ensureSpace(doc, rowH + 6);
+      const ry = doc.y + 2;
+      doc.strokeColor(C.border).lineWidth(0.6).moveTo(xT, ry).lineTo(xT + wT, ry).stroke();
+      const totalY = ry + 5; // y FIXE pour toutes les cellules (sinon PDFKit avance curseur)
+      const totalTravailMin = totalWorkMin + totalMeetingMin + totalTrainingMin;
+      const totals = [
+        "TOTAL",
+        fmtDurFromMin(totalTravailMin),
+        fmtDurFromMin(totalAbsenceMin),
+        fmtDurFromMin(totalEffMin),
+        "",
+      ];
+      doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(9);
+      totals.forEach((c, j) => {
+        const align: "left" | "right" = j === 0 || j === 4 ? "left" : "right";
+        doc.text(c, colX[j] + 4, totalY, {
+          width: (ratios[j] / totalR) * wT - 8, lineBreak: false, align,
+        });
+      });
+      doc.y = totalY + rowH;
+    }
+
+    // Pied : info pauses (conformite uniquement)
+    if (totalBreakMin > 0) {
+      doc.moveDown(0.6);
+      doc.fillColor(C.gray).font("Helvetica-Oblique").fontSize(7.5)
+        .text(
+          `Pauses cumulees sur la periode : ${fmtDurFromMin(totalBreakMin)} (information conformite, non comptabilise).`,
+          50, doc.y, { width: doc.page.width - 100 },
+        );
+    }
+  }, `Releve d'heures · ${sanitize(admin.fullName) || sanitize(admin.email)} · Genere le ${formatDate(new Date())} · ${COMPANY.fullName}`);
+}
+
+export async function generateEmployeeDossierPdf(data: DossierData): Promise<Buffer> {
+  const { admin, notes, contracts, reviews, leaves, equipment, licenses, trainings, cnesst, payAgg, monthlyHours } = data;
+  const empName = sanitize(admin.fullName) || sanitize(admin.email);
+  const todayStr = new Date().toLocaleDateString("fr-CA", { day: "2-digit", month: "long", year: "numeric" });
+
+  return capture((doc) => {
+    drawHeader(doc, "Dossier employe", empName);
+
+    // ── Bandeau identite synthese ───────────────────────
+    drawInfoBlock(doc, "Identite et emploi", [
+      ["Nom complet", empName],
+      ["Courriel", sanitize(admin.email)],
+      ["Telephone", sanitize(admin.phone) || "—"],
+      ["Poste", sanitize(admin.position?.name) || sanitize(admin.title) || "—"],
+      ["Departement", sanitize(admin.department) || "—"],
+      ["Equipe", sanitize(admin.team?.name) || "—"],
+      ["Role", sanitize(admin.customRole?.name) || "—"],
+      ["Manager", admin.manager ? (sanitize(admin.manager.fullName) || sanitize(admin.manager.email)) : "—"],
+      ["Date d'embauche", formatDate(admin.startDate)],
+      ["Anciennete", seniorityFr(admin.startDate)],
+      ["Date de fin", formatDate(admin.endDate)],
+      ["Naissance", formatDate(admin.birthdate)],
+    ], { accent: C.navy });
+
+    // ── Contrats ────────────────────────────────────────
+    ensureColumnTable(
+      doc,
+      "Contrats",
+      ["Titre", "Type", "Debut", "Fin", "Statut", "Remuneration"],
+      [3, 1.2, 1.2, 1.2, 1.1, 1.5],
+      contracts.map((c) => [
+        c.title,
+        c.contractType.toUpperCase(),
+        formatDateShort(c.startDate),
+        c.endDate ? formatDateShort(c.endDate) : "—",
+        c.status,
+        c.salaryAnnual != null
+          ? `${money(Number(c.salaryAnnual))} / an`
+          : c.hourlyRate != null
+          ? `${money(Number(c.hourlyRate))} / h`
+          : "—",
+      ]),
+    );
+
+    // ── Evaluations ─────────────────────────────────────
+    sectionTitle(doc, "Evaluations de performance");
+    if (reviews.length === 0) {
+      doc.fillColor(C.gray).font("Helvetica-Oblique").fontSize(8.5)
+        .text("Aucune evaluation.", 50, doc.y, { width: doc.page.width - 100 });
+      doc.y += 12;
+    } else {
+      const x = 50;
+      const w = doc.page.width - 100;
+      reviews.forEach((r) => {
+        ensureSpace(doc, 60);
+        const y = doc.y;
+        doc.roundedRect(x, y, w, 56, 4).fillAndStroke(C.grayLight, C.border);
+        doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(9.5)
+          .text(`${formatDateShort(r.periodStart)} → ${formatDateShort(r.periodEnd)}`, x + 10, y + 8, { lineBreak: false });
+        doc.fillColor(C.gray).font("Helvetica").fontSize(8)
+          .text(`Reviewer : ${sanitize(r.reviewer.fullName) || sanitize(r.reviewer.email)}`, x + 10, y + 22, { lineBreak: false });
+        if (r.rating != null) {
+          doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(13)
+            .text(`${r.rating} / 5`, x + w - 90, y + 12, { width: 80, align: "right", lineBreak: false });
+        }
+        const summary = sanitize(r.managerComments || r.strengths || r.improvements || "").slice(0, 220);
+        if (summary) {
+          doc.fillColor(C.text).font("Helvetica").fontSize(8.5)
+            .text(summary, x + 10, y + 36, { width: w - 20, lineBreak: false, ellipsis: true });
+        }
+        doc.y = y + 60;
+      });
+    }
+
+    // ── Notes par categorie ─────────────────────────────
+    sectionTitle(doc, "Notes et avis dans le dossier");
+    if (notes.length === 0) {
+      doc.fillColor(C.gray).font("Helvetica-Oblique").fontSize(8.5)
+        .text("Aucune note.", 50, doc.y, { width: doc.page.width - 100 });
+      doc.y += 12;
+    } else {
+      const grouped: Record<string, DossierNote[]> = {};
+      for (const n of notes) {
+        (grouped[n.category] ||= []).push(n);
+      }
+      for (const cat of NOTE_CATEGORY_ORDER) {
+        const list = grouped[cat];
+        if (!list || list.length === 0) continue;
+        const color = NOTE_CATEGORY_COLOR[cat] || C.gray;
+        const label = NOTE_CATEGORY_LABEL[cat] || cat;
+        ensureSpace(doc, 22);
+        doc.fillColor(color).font("Helvetica-Bold").fontSize(10)
+          .text(`${label.toUpperCase()} (${list.length})`, 50, doc.y, { lineBreak: false, characterSpacing: 0.5 });
+        doc.y += 14;
+
+        for (const n of list) {
+          const bodyText = sanitize(n.body);
+          const x = 50;
+          const w = doc.page.width - 100;
+          const titleH = 14;
+          const metaH = 12;
+          const bodyH = Math.min(
+            doc.heightOfString(bodyText, { width: w - 20 }),
+            120,
+          );
+          const blockH = 14 + titleH + metaH + bodyH + 14;
+          ensureSpace(doc, blockH + 6);
+          const y = doc.y;
+          doc.roundedRect(x, y, w, blockH, 4).fillAndStroke(C.grayLight, C.border);
+          doc.rect(x, y, 3, blockH).fill(color);
+          // Titre + severity
+          doc.fillColor(C.text).font("Helvetica-Bold").fontSize(10)
+            .text(sanitize(n.title), x + 12, y + 8, {
+              width: w - 130, lineBreak: false, ellipsis: true,
+            });
+          if (n.severity && cat === "discipline") {
+            const sevLabel = n.severity.toUpperCase();
+            const sevColor = n.severity === "critical" ? C.red : n.severity === "warning" ? C.amber : C.gray;
+            doc.fillColor(sevColor).font("Helvetica-Bold").fontSize(8)
+              .text(sevLabel, x + w - 90, y + 10, { width: 80, align: "right", lineBreak: false });
+          }
+          // Meta
+          const meta = `${formatDateShort(n.occurredAt || n.createdAt)} · ${sanitize(n.author.fullName) || sanitize(n.author.email)}${n.isConfidential ? " · Confidentiel" : ""}${n.acknowledgedAt ? ` · Lu ${formatDateShort(n.acknowledgedAt)}` : ""}`;
+          doc.fillColor(C.gray).font("Helvetica").fontSize(7.5)
+            .text(sanitize(meta), x + 12, y + 8 + titleH, {
+              width: w - 24, lineBreak: false, ellipsis: true,
+            });
+          // Body
+          doc.fillColor(C.text).font("Helvetica").fontSize(8.5)
+            .text(bodyText, x + 12, y + 8 + titleH + metaH + 2, {
+              width: w - 24, height: bodyH, ellipsis: true,
+            });
+          doc.y = y + blockH + 6;
+        }
+      }
+    }
+
+    // ── Conges ──────────────────────────────────────────
+    ensureColumnTable(
+      doc,
+      "Historique des conges",
+      ["Type", "Debut", "Fin", "Jours", "Statut"],
+      [1.4, 1, 1, 0.8, 1],
+      leaves.map((l) => [
+        l.type,
+        formatDateShort(l.startDate),
+        formatDateShort(l.endDate),
+        Number(l.daysCount).toFixed(1),
+        l.status,
+      ]),
+    );
+
+    // ── Equipement ──────────────────────────────────────
+    ensureColumnTable(
+      doc,
+      "Equipement actif",
+      ["Nom", "Categorie", "Marque/Modele", "S/N", "Depuis"],
+      [2, 1, 1.4, 1.2, 1],
+      equipment.map((e) => [
+        e.name,
+        e.category,
+        [e.brand, e.model].filter(Boolean).join(" ") || "—",
+        e.serialNumber || "—",
+        formatDateShort(e.assignedAt),
+      ]),
+    );
+
+    // ── Permis ──────────────────────────────────────────
+    ensureColumnTable(
+      doc,
+      "Permis professionnels",
+      ["Type", "Numero", "Emetteur", "Emis", "Expire"],
+      [2, 1.2, 1.4, 1, 1],
+      licenses.map((l) => [
+        l.type,
+        l.number || "—",
+        l.issuer || "—",
+        l.issuedAt ? formatDateShort(l.issuedAt) : "—",
+        l.expiresAt ? formatDateShort(l.expiresAt) : "—",
+      ]),
+    );
+
+    // ── Formations ──────────────────────────────────────
+    ensureColumnTable(
+      doc,
+      "Formations",
+      ["Titre", "Categorie", "Fournisseur", "Termine", "Obligatoire"],
+      [2, 1.1, 1.4, 1, 0.8],
+      trainings.map((t) => [
+        t.title,
+        t.category,
+        t.provider || "—",
+        t.completedAt ? formatDateShort(t.completedAt) : "—",
+        t.isMandatory ? "Oui" : "Non",
+      ]),
+    );
+
+    // ── Paie (resume) ───────────────────────────────────
+    sectionTitle(doc, "Paie — recapitulatif");
+    drawInfoBlock(doc, "Bulletins emis", [
+      ["Nombre de bulletins", String(payAgg.count)],
+      ["Brut cumule", money(payAgg.grossPay)],
+      ["Net cumule", money(payAgg.netPay)],
+    ], { accent: C.green });
+
+    // ── Heures travaillees (12 derniers mois, agrege) ───
+    if (monthlyHours && monthlyHours.length > 0) {
+      const totalWork = monthlyHours.reduce((s, m) => s + m.workMin, 0);
+      const totalMeeting = monthlyHours.reduce((s, m) => s + m.meetingMin, 0);
+      const totalTraining = monthlyHours.reduce((s, m) => s + m.trainingMin, 0);
+      ensureColumnTable(
+        doc,
+        "Heures travaillees — 12 derniers mois",
+        ["Mois", "Travail", "Reunion", "Formation", "Total"],
+        [1.4, 1, 1, 1.2, 1.1],
+        [
+          ...monthlyHours.map((m) => {
+            const [y, mo] = m.ym.split("-");
+            const d = new Date(Number(y), Number(mo) - 1, 1);
+            const label = d.toLocaleDateString("fr-CA", { month: "long", year: "numeric" });
+            const pureWork = Math.max(0, m.workMin - m.meetingMin - m.trainingMin);
+            return [
+              label,
+              fmtDurFromMin(pureWork),
+              fmtDurFromMin(m.meetingMin),
+              fmtDurFromMin(m.trainingMin),
+              fmtDurFromMin(m.workMin),
+            ];
+          }),
+          [
+            "TOTAL",
+            fmtDurFromMin(Math.max(0, totalWork - totalMeeting - totalTraining)),
+            fmtDurFromMin(totalMeeting),
+            fmtDurFromMin(totalTraining),
+            fmtDurFromMin(totalWork),
+          ],
+        ],
+      );
+    }
+
+    // ── CNESST ──────────────────────────────────────────
+    if (cnesst.length > 0) {
+      sectionTitle(doc, "Incidents CNESST", C.red);
+      ensureColumnTable(
+        doc,
+        "Declarations",
+        ["Date", "Lieu", "Type", "Absent (j)", "Statut"],
+        [1.1, 2, 1.4, 0.8, 1],
+        cnesst.map((c) => [
+          formatDateShort(c.incidentDate),
+          c.location,
+          c.injuryType || "—",
+          c.daysAbsent != null ? String(c.daysAbsent) : "—",
+          c.status,
+        ]),
+      );
+      // Descriptions detaillees
+      cnesst.forEach((c) => {
+        ensureSpace(doc, 40);
+        const x = 50;
+        const w = doc.page.width - 100;
+        doc.fillColor(C.red).font("Helvetica-Bold").fontSize(8.5)
+          .text(`${formatDateShort(c.incidentDate)} — ${sanitize(c.location)}`,
+            x, doc.y, { width: w, lineBreak: false });
+        doc.y += 12;
+        doc.fillColor(C.text).font("Helvetica").fontSize(8.5)
+          .text(sanitize(c.description), x, doc.y, { width: w });
+        doc.moveDown(0.4);
+      });
+    }
+  }, `Confidentiel — Document interne ${COMPANY.fullName} · Genere le ${todayStr}`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// 6. LETTRE DE CONFIRMATION DE CONGE
+// ═══════════════════════════════════════════════════════════
+export type LeaveLetterData = {
+  id: number;
+  type: string;
+  startDate: Date;
+  endDate: Date;
+  daysCount: number;
+  halfDay: string | null;
+  reviewedAt: Date | null;
+  reviewer: { fullName: string | null; email: string } | null;
+  admin: { fullName: string | null; email: string; position?: string | null };
+};
+
+const LEAVE_TYPE_LABEL: Record<string, string> = {
+  vacation: "Vacances",
+  sick: "Maladie",
+  parental: "Conge parental",
+  unpaid: "Sans solde",
+  bereavement: "Deces",
+  other: "Autre",
+};
+
+export async function generateLeaveLetterPdf(data: LeaveLetterData): Promise<Buffer> {
+  const todayStr = new Date().toLocaleDateString("fr-CA", {
+    day: "2-digit", month: "long", year: "numeric",
+  });
+  const empName = sanitize(data.admin.fullName) || sanitize(data.admin.email);
+  const typeLabel = LEAVE_TYPE_LABEL[data.type] ?? data.type;
+  const startStr = formatDate(data.startDate);
+  const endStr = formatDate(data.endDate);
+  const reviewer = data.reviewer
+    ? (sanitize(data.reviewer.fullName) || sanitize(data.reviewer.email))
+    : "la direction";
+  const reviewDateStr = data.reviewedAt ? formatDate(data.reviewedAt) : todayStr;
+  const halfNote = data.halfDay === "AM"
+    ? " (demi-journee matin)"
+    : data.halfDay === "PM"
+    ? " (demi-journee apres-midi)"
+    : "";
+
+  return capture((doc) => {
+    drawHeader(doc, "Lettre de confirmation de conge", empName);
+
+    const x = 50;
+    const w = doc.page.width - 100;
+
+    doc.fillColor(C.gray).font("Helvetica").fontSize(9.5)
+      .text(todayStr, x, doc.y, { width: w, align: "right", lineBreak: false });
+    doc.moveDown(1.2);
+
+    doc.fillColor(C.text).font("Helvetica-Bold").fontSize(11)
+      .text("A qui de droit,", x, doc.y, { width: w });
+    doc.moveDown(0.8);
+
+    doc.font("Helvetica").fontSize(10.5);
+
+    const p1 = `La presente confirme que ${empName} beneficie d'un conge de type ${typeLabel}${halfNote} du ${startStr} au ${endStr}, pour un total de ${data.daysCount} jour${data.daysCount > 1 ? "s" : ""}.`;
+    const p2 = `Cette demande a ete approuvee par ${reviewer} le ${reviewDateStr}.`;
+    const p3 = "Pour toute question relative a cette absence, veuillez contacter le service des ressources humaines de l'entreprise.";
+
+    for (const p of [p1, p2, p3]) {
+      const h = doc.heightOfString(p, { width: w });
+      ensureSpace(doc, h + 8);
+      doc.fillColor(C.text).text(p, x, doc.y, { width: w, align: "justify" });
+      doc.moveDown(0.7);
+    }
+
+    // Signature
+    doc.moveDown(1.6);
+    ensureSpace(doc, 90);
+    const sigW = (w - 12) / 2;
+    const sy = doc.y;
+    doc.roundedRect(x, sy, sigW, 70, 4).fillAndStroke(C.grayLight, C.border);
+    doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5)
+      .text("APPROUVE PAR", x + 12, sy + 8, { lineBreak: false, characterSpacing: 0.6 });
+    doc.fillColor(C.text).font("Helvetica-Bold").fontSize(10)
+      .text(reviewer, x + 12, sy + 22, { width: sigW - 24, lineBreak: false, ellipsis: true });
+    doc.fillColor(C.gray).font("Helvetica").fontSize(8.5)
+      .text(`Le ${reviewDateStr}`, x + 12, sy + 40, { width: sigW - 24, lineBreak: false });
+
+    const ex = x + sigW + 12;
+    doc.roundedRect(ex, sy, sigW, 70, 4).fillAndStroke(C.grayLight, C.border);
+    doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5)
+      .text("EMPLOYEUR", ex + 12, sy + 8, { lineBreak: false, characterSpacing: 0.6 });
+    doc.fillColor(C.text).font("Helvetica-Bold").fontSize(10)
+      .text(COMPANY.fullName, ex + 12, sy + 22, { width: sigW - 24, lineBreak: false, ellipsis: true });
+    doc.fillColor(C.gray).font("Helvetica").fontSize(8.5)
+      .text("Service des ressources humaines", ex + 12, sy + 40, { width: sigW - 24, lineBreak: false });
+
+    doc.y = sy + 90;
+  }, `Document genere automatiquement le ${todayStr} - ${COMPANY.fullName} - ${COMPANY.email}`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// 7. RELEVE ANNUEL DE CONGES
+// ═══════════════════════════════════════════════════════════
+export type LeaveAnnualReportData = {
+  admin: { fullName: string | null; email: string; position?: string | null };
+  periodStart: Date;
+  periodEnd: Date;
+  balance: {
+    vacationDaysRemaining: number;
+    vacationDaysTaken: number;
+    vacationDaysPlanned: number;
+    accruedDays?: number;
+    carriedOverDays?: number;
+    policyName?: string;
+  } | null;
+  requests: Array<{
+    id: number;
+    type: string;
+    status: string;
+    startDate: Date;
+    endDate: Date;
+    daysCount: number;
+    halfDay: string | null;
+  }>;
+};
+
+export async function generateLeaveAnnualReportPdf(data: LeaveAnnualReportData): Promise<Buffer> {
+  const empName = sanitize(data.admin.fullName) || sanitize(data.admin.email);
+  const startStr = formatDateShort(data.periodStart);
+  const endStr = formatDateShort(data.periodEnd);
+  const todayStr = new Date().toLocaleDateString("fr-CA");
+
+  // Agregation par type (uniquement approved)
+  const totalsByType = new Map<string, { count: number; days: number }>();
+  for (const r of data.requests) {
+    if (r.status !== "approved") continue;
+    const cur = totalsByType.get(r.type) ?? { count: 0, days: 0 };
+    cur.count++;
+    cur.days += Number(r.daysCount);
+    totalsByType.set(r.type, cur);
+  }
+
+  return capture((doc) => {
+    drawHeader(doc, "Releve annuel de conges", `${empName} - ${startStr} -> ${endStr}`);
+
+    // Bloc info employe + periode
+    drawInfoBlock(doc, "Employe", [
+      ["Nom", empName],
+      ["Courriel", sanitize(data.admin.email)],
+      ["Poste", sanitize(data.admin.position) || "-"],
+    ]);
+    drawInfoBlock(doc, "Periode de reference", [
+      ["Debut", formatDate(data.periodStart)],
+      ["Fin", formatDate(data.periodEnd)],
+      ["Politique", sanitize(data.balance?.policyName) || "Defaut"],
+    ], { accent: C.navy });
+
+    // Solde courant
+    if (data.balance) {
+      sectionTitle(doc, "Solde de vacances");
+      const x = 50;
+      const w = doc.page.width - 100;
+      ensureSpace(doc, 60);
+      const ry = doc.y;
+      const cells: Array<[string, string]> = [
+        ["Dispo", `${data.balance.vacationDaysRemaining} j`],
+        ["Pris", `${data.balance.vacationDaysTaken} j`],
+        ["Planifies", `${data.balance.vacationDaysPlanned} j`],
+        ["Accumules", `${data.balance.accruedDays ?? 0} j`],
+      ];
+      const cellW = (w - 12) / 4;
+      cells.forEach(([label, value], i) => {
+        const cx = x + i * (cellW + 4);
+        doc.roundedRect(cx, ry, cellW, 50, 5).fillAndStroke(C.blueLighter, C.border);
+        doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5)
+          .text(label.toUpperCase(), cx + 8, ry + 8, { width: cellW - 16, lineBreak: false, characterSpacing: 0.6 });
+        doc.fillColor(C.navy).font("Helvetica-Bold").fontSize(18)
+          .text(value, cx + 8, ry + 22, { width: cellW - 16, lineBreak: false });
+      });
+      doc.y = ry + 60;
+    }
+
+    // Tableau des demandes
+    sectionTitle(doc, "Detail des demandes");
+    const x = 50;
+    const w = doc.page.width - 100;
+    const colType = x + 6;
+    const colDates = x + 110;
+    const colDays = x + 320;
+    const colStatus = x + 400;
+
+    ensureSpace(doc, 20);
+    doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5)
+      .text("TYPE", colType, doc.y, { lineBreak: false, characterSpacing: 0.6 });
+    doc.text("PERIODE", colDates, doc.y, { lineBreak: false, characterSpacing: 0.6 });
+    doc.text("JOURS", colDays, doc.y, { lineBreak: false, characterSpacing: 0.6 });
+    doc.text("STATUT", colStatus, doc.y, { lineBreak: false, characterSpacing: 0.6 });
+    doc.y += 14;
+    doc.strokeColor(C.border).lineWidth(0.5).moveTo(x, doc.y).lineTo(x + w, doc.y).stroke();
+    doc.y += 4;
+
+    if (data.requests.length === 0) {
+      ensureSpace(doc, 20);
+      doc.fillColor(C.gray).font("Helvetica-Oblique").fontSize(9)
+        .text("Aucune demande enregistree sur la periode.", x + 6, doc.y, { width: w - 12 });
+      doc.y += 18;
+    } else {
+      data.requests.forEach((r, i) => {
+        ensureSpace(doc, 20);
+        const ry = doc.y;
+        if (i % 2 === 1) doc.rect(x, ry - 2, w, 18).fill(C.grayLight);
+        const halfStr = r.halfDay ? ` 1/2 ${r.halfDay}` : "";
+        doc.fillColor(C.text).font("Helvetica").fontSize(9)
+          .text(LEAVE_TYPE_LABEL[r.type] ?? r.type, colType, ry + 3, { width: 100, lineBreak: false, ellipsis: true });
+        doc.text(
+          `${formatDateShort(r.startDate)} - ${formatDateShort(r.endDate)}${halfStr}`,
+          colDates, ry + 3, { width: colDays - colDates - 6, lineBreak: false, ellipsis: true },
+        );
+        doc.font("Helvetica-Bold")
+          .text(`${Number(r.daysCount)}`, colDays, ry + 3, { width: colStatus - colDays - 6, lineBreak: false });
+        const statusColor =
+          r.status === "approved" ? C.green :
+          r.status === "rejected" ? C.red :
+          r.status === "pending" ? C.amber :
+          C.gray;
+        doc.fillColor(statusColor).font("Helvetica-Bold").fontSize(9)
+          .text(r.status, colStatus, ry + 3, { width: w - (colStatus - x) - 6, lineBreak: false });
+        doc.y = ry + 18;
+      });
+    }
+
+    // Totaux par type
+    if (totalsByType.size > 0) {
+      doc.moveDown(0.8);
+      sectionTitle(doc, "Totaux par type (approuves)");
+      const rows: Array<[string, string]> = Array.from(totalsByType.entries()).map(([t, v]) =>
+        [LEAVE_TYPE_LABEL[t] ?? t, `${v.days} j (${v.count} demande${v.count > 1 ? "s" : ""})`],
+      );
+      drawInfoBlock(doc, "Recapitulatif annuel", rows, { accent: C.green });
+    }
+  }, `${COMPANY.fullName} - ${COMPANY.email} - Genere le ${todayStr}`);
+}
+

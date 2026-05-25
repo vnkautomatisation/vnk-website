@@ -728,10 +728,10 @@ export function MessagesView({
       </div>
 
       {/* Sentinel + Sticky compact bar — caché sur mobile + tablet quand conv ouverte */}
-      <div ref={stickyBarSentinelRef} aria-hidden className={cn("h-px -mt-3", selectedId && "hidden lg:block")} />
+      <div ref={stickyBarSentinelRef} aria-hidden className={cn("h-px", selectedId && "hidden lg:block")} />
       {scrolled && (
         <div className={cn(
-          "sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b",
+          "sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in",
           selectedId && "hidden lg:block",
         )}>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">

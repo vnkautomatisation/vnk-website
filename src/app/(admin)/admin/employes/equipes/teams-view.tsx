@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Network, Plus, Edit, Trash2, Users as UsersIcon, Crown, GitBranch } from "lucide-react";
+import Link from "next/link";
+import { Network, Plus, Edit, Trash2, Users as UsersIcon, Crown, GitBranch, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -133,14 +134,15 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
                   ) : (
                     <div className="flex flex-wrap gap-1">
                       {t.members.slice(0, 6).map((m) => (
-                        <div
+                        <Link
                           key={m.id}
-                          className="h-7 w-7 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#15406d] flex items-center justify-center text-white text-[10px] font-semibold ring-2 ring-white"
-                          title={m.fullName || m.email}
+                          href={`/admin/employes/${m.id}/dossier`}
+                          className="h-7 w-7 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#15406d] flex items-center justify-center text-white text-[10px] font-semibold ring-2 ring-white hover:ring-amber-400 transition"
+                          title={`Voir le dossier — ${m.fullName || m.email}`}
                           style={m.avatarUrl ? { backgroundImage: `url(${m.avatarUrl})`, backgroundSize: "cover" } : undefined}
                         >
                           {!m.avatarUrl && (m.fullName || m.email).split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase()}
-                        </div>
+                        </Link>
                       ))}
                       {t.members.length > 6 && (
                         <div className="h-7 px-2 rounded-full bg-muted flex items-center text-[10px] font-medium text-muted-foreground">
@@ -375,6 +377,15 @@ function AssignMembersDialog({
                     Autre équipe
                   </Badge>
                 )}
+                <Link
+                  href={`/admin/employes/${a.id}/dossier`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[11px] inline-flex items-center gap-1 text-[#0F2D52] hover:underline shrink-0"
+                  title="Voir le dossier"
+                >
+                  <FolderOpen className="h-3 w-3" />
+                  Dossier
+                </Link>
               </label>
             );
           })}

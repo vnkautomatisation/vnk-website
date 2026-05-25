@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { calculateOvertimeForEntries } from "@/lib/services/overtime";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -72,7 +73,7 @@ export async function generatePayStubsAction(input: { periodId: number }): Promi
       approvedAt: { not: null },
       payStubId: null,
     },
-    select: { id: true, adminId: true, durationMin: true, category: true },
+    select: { id: true, adminId: true, clockIn: true, durationMin: true, category: true },
   });
   if (clocks.length === 0) return { success: false, error: "Aucun pointage approuvé à facturer" };
 
@@ -103,8 +104,13 @@ export async function generatePayStubsAction(input: { periodId: number }): Promi
       else if (e.category === "sick") mSick += min;
       else mWork += min;
     }
-    const hRegular = Math.min(mWork, 40 * 60) / 60;
-    const hOvertime = Math.max(0, mWork - 40 * 60) / 60;
+    // ── Heures supp : calculees semaine par semaine via le service centralise.
+    // Une seule source de verite (vs duplication inline du seuil 40h/semaine).
+    const weeklyOvertime = calculateOvertimeForEntries(entries);
+    const mOvertime = weeklyOvertime.reduce((s, w) => s + w.overtimeMin, 0);
+    const mRegular = Math.max(0, mWork - mOvertime);
+    const hRegular = mRegular / 60;
+    const hOvertime = mOvertime / 60;
     const hVacation = mVacation / 60;
     const hSick = mSick / 60;
     const overtimeRate = hourlyRate * 1.5;

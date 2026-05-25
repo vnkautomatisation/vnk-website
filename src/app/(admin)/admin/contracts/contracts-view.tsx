@@ -488,9 +488,9 @@ export function ContractsView({
       </div>
 
       {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
-      <div ref={stickyBarSentinelRef} aria-hidden className="h-px -mt-3" />
+      <div ref={stickyBarSentinelRef} aria-hidden className="h-px" />
       {scrolled && (
-        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
+        <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <FileSignature className="h-4 w-4" />

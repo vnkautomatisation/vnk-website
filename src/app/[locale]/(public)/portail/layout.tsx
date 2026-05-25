@@ -11,6 +11,7 @@ import { PortalBottomNav } from "@/components/portal/portal-bottom-nav";
 import { PortalUserMenu } from "@/components/portal/portal-user-menu";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import { PortalHeartbeat } from "@/components/portal/portal-heartbeat";
+import { NavigationFeedback } from "@/components/navigation-feedback";
 
 const getClient = cache(async (clientId: number) =>
   prisma.client.findUnique({
@@ -57,6 +58,11 @@ export default async function PortalLayout({
 
   return (
     <>
+      {/* Feedback navigation global VNK (cohérent avec admin + site public) */}
+      <Suspense fallback={null}>
+        <NavigationFeedback />
+      </Suspense>
+
       <style>{`
         body, html { overflow: hidden !important; height: 100vh !important; }
       `}</style>

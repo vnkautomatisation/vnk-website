@@ -3,6 +3,18 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════
+ * NATIVE PICKERS — couleur d'accent VNK
+ * Affecte les inputs natifs (date, time, checkbox, radio, range,
+ * progress) pour qu'ils reprennent le bleu navy au lieu du bleu
+ * Chrome par defaut. Le popup calendrier natif heritera de cette
+ * couleur pour la selection.
+ * ═══════════════════════════════════════════════════════════════ */
+html {
+  accent-color: #0F2D52;
+  color-scheme: light;
+}
+
+/* ═══════════════════════════════════════════════════════════════
  * VNK DESIGN TOKENS
  * Palette navy bleu profond — identique à main.css existant
  * ═══════════════════════════════════════════════════════════════ */
@@ -323,4 +335,32 @@
 }
 .animate-reveal-scale {
   animation: reveal-scale 0.5s ease-out forwards;
+}
+
+/* ─── Navigation progress bar (composant NavigationProgress) ─────────── */
+@keyframes nav-progress {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(0%); }
+  100% { transform: translateX(100%); }
+}
+.animate-nav-progress {
+  animation: nav-progress 1.6s ease-in-out infinite;
+}
+
+/* ─── Navigation overlay fade-in (composant NavigationOverlay) ────── */
+@keyframes overlay-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-overlay-fade-in {
+  animation: overlay-fade-in 0.2s ease-out forwards;
+}
+
+/* ─── Spin lent (anneau extérieur du NavigationOverlay) ─────────── */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 2s linear infinite;
 }

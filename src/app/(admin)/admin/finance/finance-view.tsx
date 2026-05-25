@@ -5,7 +5,6 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { cn } from "@/lib/utils";
 import {
   TrendingUp,
   TrendingDown,
@@ -148,7 +147,9 @@ export function FinanceView({
   const newPct = totalClientsWindow > 0 ? Math.round((kpis.newClientCount / totalClientsWindow) * 100) : 0;
   const returningPct = totalClientsWindow > 0 ? 100 - newPct : 0;
 
-  // Sticky scroll detection (Wix pattern) — la barre compact apparaît une fois les KPI passés
+  // Sticky scroll detection (Wix pattern) — la barre compact apparaît une fois les KPI passés.
+  // rootMargin -64px top compense le topbar sticky (h-[64px], z-30) : le sentinel est
+  // considéré "out" dès qu'il passe SOUS le topbar, pas seulement hors viewport.
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -156,7 +157,7 @@ export function FinanceView({
     if (!sentinel) return;
     const obs = new IntersectionObserver(
       ([entry]) => setScrolled(!entry.isIntersecting),
-      { threshold: 0 }
+      { threshold: 0, rootMargin: "-64px 0px 0px 0px" }
     );
     obs.observe(sentinel);
     return () => obs.disconnect();
@@ -262,17 +263,13 @@ export function FinanceView({
       </div>
 
       {/* Sentinel — détecte quand les KPI quittent le viewport */}
-      <div ref={sentinelRef} aria-hidden className="h-px -mt-3" />
+      <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Barre sticky compacte — apparaît une fois les KPI passés (pattern Wix) */}
-      <div
-        className={cn(
-          "sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 transition-all",
-          scrolled
-            ? "bg-background/95 backdrop-blur shadow-sm border-b"
-            : "bg-transparent pointer-events-none opacity-0 -translate-y-2"
-        )}
-      >
+      {/* Barre sticky compacte — apparaît une fois les KPI passés (pattern Wix).
+          Pas de -mx-* négatif : la barre garde la largeur naturelle du parent pour
+          rester alignée avec le hero/contenus et ne PAS déborder sous la sidebar (lg+). */}
+      {scrolled && (
+      <div className="sticky top-[64px] z-20 py-2 bg-background/95 backdrop-blur shadow-sm border-b rounded-md px-3 animate-overlay-fade-in">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
             <TrendingUp className="h-4 w-4" />
@@ -306,6 +303,7 @@ export function FinanceView({
           </span>
         </div>
       </div>
+      )}
 
       {/* GRAPHIQUE PRINCIPAL : Évolution journalière (style Wix) */}
       <div className="rounded-xl border bg-card p-5">

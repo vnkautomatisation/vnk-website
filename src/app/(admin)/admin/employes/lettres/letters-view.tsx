@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { promptDialog } from "@/components/admin/prompt-dialog";
 import { FileUploadInput } from "@/components/admin/file-upload-input";
-import { Mail, CheckCircle2, XCircle, Download } from "lucide-react";
+import { Mail, CheckCircle2, XCircle, FileText } from "lucide-react";
+import { PdfPreviewModal } from "@/components/admin/pdf-preview-modal";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ const PURPOSE: Record<string, string> = {
 export function LettersView({ requests }: { requests: Req[] }) {
   const router = useRouter();
   const [issueDialog, setIssueDialog] = useState<Req | null>(null);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
 
   const pending = requests.filter((r) => r.status === "pending");
   const others = requests.filter((r) => r.status !== "pending");
@@ -97,14 +99,17 @@ export function LettersView({ requests }: { requests: Req[] }) {
                     <p className="text-xs text-muted-foreground">{PURPOSE[r.purpose]} · {new Date(r.createdAt).toLocaleDateString("fr-CA")}</p>
                   </div>
                   {r.status === "issued" && (
-                    <Button asChild size="sm" variant="outline">
-                      <a
-                        href={r.letterUrl || `/api/admin/employment-letters/${r.id}/pdf`}
-                        target="_blank"
-                        rel="noopener"
-                      >
-                        <Download className="h-3.5 w-3.5 mr-1" />Télécharger PDF
-                      </a>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setPdfPreview({
+                        url: r.letterUrl || `/api/admin/employment-letters/${r.id}/pdf`,
+                        title: `Lettre d'emploi · ${PURPOSE[r.purpose] ?? r.purpose}`,
+                        description: r.admin.fullName || r.admin.email,
+                        filename: `lettre-emploi-${r.id}.pdf`,
+                      })}
+                    >
+                      <FileText className="h-3.5 w-3.5 mr-1" />Aperçu PDF
                     </Button>
                   )}
                 </div>
@@ -115,6 +120,15 @@ export function LettersView({ requests }: { requests: Req[] }) {
       )}
 
       <IssueLetterDialog req={issueDialog} onClose={() => setIssueDialog(null)} onSaved={() => router.refresh()} />
+
+      <PdfPreviewModal
+        open={!!pdfPreview}
+        url={pdfPreview?.url ?? null}
+        title={pdfPreview?.title ?? ""}
+        description={pdfPreview?.description}
+        downloadFilename={pdfPreview?.filename}
+        onClose={() => setPdfPreview(null)}
+      />
     </div>
   );
 }

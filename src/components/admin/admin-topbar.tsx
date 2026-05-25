@@ -6,12 +6,11 @@ import { useTranslations, useLocale } from "next-intl";
 import { ExternalLink, RefreshCw, User, LogOut, Settings } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -22,10 +21,12 @@ import { signOut } from "next-auth/react";
 export function AdminTopbar({
   adminName,
   adminEmail,
+  adminAvatarUrl,
   overdueCount = 0,
 }: {
   adminName: string;
   adminEmail: string;
+  adminAvatarUrl?: string | null;
   overdueCount?: number;
 }) {
   const t = useTranslations("admin.topbar");
@@ -115,59 +116,85 @@ export function AdminTopbar({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 rounded-full p-0.5 hover:bg-white/10 transition-colors" aria-label="Menu utilisateur">
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-8 w-8 ring-2 ring-white/20">
+                  {adminAvatarUrl && (
+                    <AvatarImage src={adminAvatarUrl} alt={adminName} className="object-cover" />
+                  )}
                   <AvatarFallback className="bg-white/20 text-white text-xs font-bold">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>
-                <div className="text-sm font-medium">{adminName}</div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {adminEmail}
+            <DropdownMenuContent align="end" className="w-64 p-0 overflow-hidden">
+              {/* Header navy gradient avec avatar + identité */}
+              <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-11 w-11 ring-2 ring-white/30 shrink-0">
+                    {adminAvatarUrl && (
+                      <AvatarImage src={adminAvatarUrl} alt={adminName} className="object-cover" />
+                    )}
+                    <AvatarFallback className="bg-white/20 text-white text-sm font-bold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate">{adminName}</p>
+                    <p className="text-[11px] text-white/70 truncate">{adminEmail}</p>
+                  </div>
                 </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <NextLink href="/admin/profile">
-                  <User className="h-4 w-4 mr-2" />
-                  Mon profil
-                </NextLink>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <NextLink href="/admin/settings">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Parametres
-                </NextLink>
-              </DropdownMenuItem>
+              </div>
+
+              {/* Items principaux */}
+              <div className="py-1">
+                <DropdownMenuItem asChild className="cursor-pointer focus:bg-[#0F2D52]/5 focus:text-[#0F2D52]">
+                  <NextLink href="/admin/profile">
+                    <User className="h-4 w-4 mr-2 text-[#0F2D52]" />
+                    Mon profil
+                  </NextLink>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="cursor-pointer focus:bg-[#0F2D52]/5 focus:text-[#0F2D52]">
+                  <NextLink href="/admin/settings">
+                    <Settings className="h-4 w-4 mr-2 text-[#0F2D52]" />
+                    Paramètres
+                  </NextLink>
+                </DropdownMenuItem>
+              </div>
+
               {/* ─── Actions cachées en mobile : refresh / langue / public ─── */}
-              <DropdownMenuSeparator className="sm:hidden" />
-              <DropdownMenuItem className="sm:hidden" onClick={() => window.location.reload()}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Rafraîchir
-              </DropdownMenuItem>
-              <DropdownMenuItem className="sm:hidden" asChild>
-                <a href="/" target="_blank" rel="noopener">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Voir le site public
-                </a>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="sm:hidden" onClick={toggleLocale} disabled={pending}>
-                <span className="h-4 w-4 mr-2 inline-flex items-center justify-center text-[10px] font-bold border rounded">
-                  {otherLabel}
-                </span>
-                Passer en {currentLocale === "fr" ? "Anglais" : "Français"}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => signOut({ callbackUrl: "/admin/login" })}
-                className="text-destructive"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Deconnexion
-              </DropdownMenuItem>
+              <div className="sm:hidden">
+                <DropdownMenuSeparator className="my-0" />
+                <div className="py-1">
+                  <DropdownMenuItem onClick={() => window.location.reload()} className="cursor-pointer focus:bg-[#0F2D52]/5 focus:text-[#0F2D52]">
+                    <RefreshCw className="h-4 w-4 mr-2 text-[#0F2D52]" />
+                    Rafraîchir
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer focus:bg-[#0F2D52]/5 focus:text-[#0F2D52]">
+                    <a href="/" target="_blank" rel="noopener">
+                      <ExternalLink className="h-4 w-4 mr-2 text-[#0F2D52]" />
+                      Voir le site public
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={toggleLocale} disabled={pending} className="cursor-pointer focus:bg-[#0F2D52]/5 focus:text-[#0F2D52]">
+                    <span className="h-4 w-4 mr-2 inline-flex items-center justify-center text-[10px] font-bold border border-[#0F2D52] text-[#0F2D52] rounded">
+                      {otherLabel}
+                    </span>
+                    Passer en {currentLocale === "fr" ? "Anglais" : "Français"}
+                  </DropdownMenuItem>
+                </div>
+              </div>
+
+              {/* Déconnexion : section dédiée fond rouge subtil */}
+              <DropdownMenuSeparator className="my-0" />
+              <div className="py-1 bg-red-50/40">
+                <DropdownMenuItem
+                  onClick={() => signOut({ callbackUrl: "/admin/login" })}
+                  className="cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-100 font-medium"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Déconnexion
+                </DropdownMenuItem>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

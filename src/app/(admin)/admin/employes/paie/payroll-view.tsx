@@ -3,8 +3,9 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Calculator, Plus, Lock, CheckCircle2, Calendar, DollarSign, ChevronLeft, ChevronRight, Search, Download,
+  Calculator, Plus, Lock, CheckCircle2, Calendar, DollarSign, ChevronLeft, ChevronRight, Search, FileText,
 } from "lucide-react";
+import { PdfPreviewModal } from "@/components/admin/pdf-preview-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +57,18 @@ export function PayrollView({
   const router = useRouter();
   const [tab, setTab] = useState<"my" | "periods" | "stubs">(isPayrollAdmin ? "periods" : "my");
   const [createOpen, setCreateOpen] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
+
+  const openStubPdf = (s: Stub) => {
+    const employeeName = s.admin?.fullName || s.admin?.email || "Employé";
+    const periodLabel = `${new Date(s.period.startDate).toLocaleDateString("fr-CA")} → ${new Date(s.period.endDate).toLocaleDateString("fr-CA")}`;
+    setPdfPreview({
+      url: `/api/admin/pay-stubs/${s.id}/pdf`,
+      title: `Bulletin de paie #${s.id}`,
+      description: `${employeeName} · ${periodLabel}`,
+      filename: `bulletin-paie-${s.id}.pdf`,
+    });
+  };
 
   const TABS: TabItem<"my" | "periods" | "stubs">[] = [
     { key: "my", label: "Mes bulletins", icon: DollarSign, count: myStubs.length },
@@ -97,7 +110,7 @@ export function PayrollView({
             </Card>
           )}
           {myStubs.map((s) => (
-            <MyStubCard key={s.id} stub={s} />
+            <MyStubCard key={s.id} stub={s} onOpenPdf={() => openStubPdf(s)} />
           ))}
         </div>
       )}
@@ -114,15 +127,24 @@ export function PayrollView({
       )}
 
       {tab === "stubs" && isPayrollAdmin && (
-        <StubsList stubs={allStubs} periods={periods} />
+        <StubsList stubs={allStubs} periods={periods} onOpenPdf={openStubPdf} />
       )}
 
       <CreatePeriodDialog open={createOpen} onClose={() => setCreateOpen(false)} onSaved={() => router.refresh()} />
+
+      <PdfPreviewModal
+        open={!!pdfPreview}
+        url={pdfPreview?.url ?? null}
+        title={pdfPreview?.title ?? ""}
+        description={pdfPreview?.description}
+        downloadFilename={pdfPreview?.filename}
+        onClose={() => setPdfPreview(null)}
+      />
     </div>
   );
 }
 
-function StubsList({ stubs, periods }: { stubs: Stub[]; periods: Period[] }) {
+function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Period[]; onOpenPdf: (s: Stub) => void }) {
   const [search, setSearch] = useState("");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all"); // all | released | draft
@@ -211,10 +233,8 @@ function StubsList({ stubs, periods }: { stubs: Stub[]; periods: Period[] }) {
                   Brouillon
                 </Badge>
               )}
-              <Button asChild size="icon" variant="ghost" className="h-7 w-7" aria-label="Télécharger PDF">
-                <a href={`/api/admin/pay-stubs/${s.id}/pdf`} target="_blank" rel="noopener">
-                  <Download className="h-3.5 w-3.5" />
-                </a>
+              <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Aperçu PDF" onClick={() => onOpenPdf(s)}>
+                <FileText className="h-3.5 w-3.5" />
               </Button>
             </div>
           ))}
@@ -293,7 +313,7 @@ function PeriodCard({ period, onChanged }: { period: Period; onChanged: () => vo
   );
 }
 
-function MyStubCard({ stub }: { stub: Stub }) {
+function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) {
   const totalDeductions = Number(stub.deductionFederal) + Number(stub.deductionProvincial) + Number(stub.deductionRrq) + Number(stub.deductionAe) + Number(stub.deductionRqap) + Number(stub.deductionOther);
   return (
     <Card className="overflow-hidden">
@@ -309,10 +329,8 @@ function MyStubCard({ stub }: { stub: Stub }) {
             <p className="text-xs uppercase tracking-wider opacity-80">Net à payer</p>
             <p className="text-2xl font-bold tabular-nums">{Number(stub.netPay).toFixed(2)} $</p>
           </div>
-          <Button asChild size="sm" variant="secondary" className="bg-white/15 text-white hover:bg-white/25 border-0 h-8">
-            <a href={`/api/admin/pay-stubs/${stub.id}/pdf`} target="_blank" rel="noopener">
-              <Download className="h-3.5 w-3.5 mr-1" />PDF
-            </a>
+          <Button size="sm" variant="secondary" className="bg-white/15 text-white hover:bg-white/25 border-0 h-8" onClick={onOpenPdf}>
+            <FileText className="h-3.5 w-3.5 mr-1" />Aperçu PDF
           </Button>
         </div>
       </div>

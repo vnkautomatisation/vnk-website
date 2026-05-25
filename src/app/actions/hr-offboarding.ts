@@ -84,6 +84,22 @@ export async function startOffboardingAction(input: z.infer<typeof startSchema>)
     entityId: row.id,
     changes: { adminId: parsed.data.adminId, reason: parsed.data.reason },
   });
+
+  // Notifier l'employé : processus de départ démarré.
+  await prisma.notification
+    .create({
+      data: {
+        recipientType: "admin",
+        recipientId: parsed.data.adminId,
+        type: "info",
+        title: "Processus de départ démarré",
+        body: `Votre dernier jour est fixé au ${new Date(parsed.data.lastDay).toLocaleDateString("fr-CA")}. Consultez les étapes restantes.`,
+        link: "/admin/mon-espace",
+        icon: "log-out",
+      },
+    })
+    .catch(() => null);
+
   revalidatePath("/admin/employes/offboarding");
   return { success: true, data: { id: row.id } };
 }
@@ -201,6 +217,30 @@ export async function completeOffboardingAction(input: { id: number }): Promise<
         adminEmail: offboarding.admin.email,
       },
     });
+
+    // Notifier tous les super_admin actifs que l'offboarding est complet.
+    const superAdmins = await prisma.admin.findMany({
+      where: { isActive: true, customRole: { name: "super_admin" } },
+      select: { id: true },
+    });
+    const targetLabel = offboarding.admin.fullName || offboarding.admin.email || `Employé #${offboarding.adminId}`;
+    await Promise.all(
+      superAdmins.map((sa) =>
+        prisma.notification
+          .create({
+            data: {
+              recipientType: "admin",
+              recipientId: sa.id,
+              type: "success",
+              title: `Offboarding complété pour ${targetLabel}`,
+              body: `Le compte a été désactivé et toutes les étapes du processus de départ sont terminées.`,
+              link: "/admin/employes/offboarding",
+              icon: "log-out",
+            },
+          })
+          .catch(() => null)
+      )
+    );
 
     revalidatePath("/admin/employes/offboarding");
     revalidatePath("/admin/settings/team");
