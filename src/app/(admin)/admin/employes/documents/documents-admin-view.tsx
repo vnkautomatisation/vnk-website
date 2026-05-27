@@ -10,6 +10,7 @@
 //   PersonalDocCard.
 // =============================================================
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -58,6 +59,7 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { SettingsTabs, type TabItem } from "@/components/admin/settings-tabs";
+import { cn } from "@/lib/utils";
 import { DocumentStatsCard } from "@/components/admin/document-stats-card";
 import { DocumentCard } from "@/components/admin/document-card";
 import { DocumentConformityTable } from "@/components/admin/document-conformity-table";
@@ -203,9 +205,11 @@ type TabKey =
 
 // ---------- Helpers ---------------------------------------------
 function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "-";
+  // Retour "—" (em dash) au lieu de "-" pour distinguer date manquante du
+  // tiret-separateur. Plus lisible quand affiche seul dans une cellule.
+  if (!iso) return "—";
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "-";
+  if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -296,7 +300,10 @@ export function DocumentsAdminView({
   const [reviewDialog, setReviewDialog] = useState<ReviewableRequest | null>(null);
   const [confirmCancelUpload, setConfirmCancelUpload] = useState<UploadRequestAdmin | null>(null);
 
-  // --- Sticky bar detection -----------------------------------
+  // --- Sticky bar detection (pattern Finance) -----------------------
+  // rootMargin -64px top compense le topbar sticky (h-[64px], z-30) : le
+  // sentinel est considere "out" des qu'il passe SOUS le topbar, pas
+  // seulement hors viewport. Sans ca, la barre apparait trop tard.
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -304,10 +311,19 @@ export function DocumentsAdminView({
     if (!el) return;
     const io = new IntersectionObserver(
       ([entry]) => setScrolled(!entry.isIntersecting),
-      { threshold: 0 }
+      { threshold: 0, rootMargin: "-64px 0px 0px 0px" }
     );
     io.observe(el);
     return () => io.disconnect();
+  }, []);
+
+  // --- Portal target pour KPIs dans la module-nav mobile -----------
+  // Le slot #vnk-module-nav-extra est defini dans module-sidebar-nav.tsx.
+  // On porte les KPIs (Conformite / En attente / Expirations) dedans quand
+  // scrolled, sur la MEME ligne que "Employes" → une seule bande compacte.
+  const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
   }, []);
 
   // Mission 1 : Set des templates inclus dans un cahier actif (filtre Tab
@@ -419,23 +435,37 @@ export function DocumentsAdminView({
   ];
 
   // --- Conformity callbacks (used by table & overview) -------
+  // Guard anti-double-clic : prevent un meme couple template+employes d'etre
+  // envoye 2 fois si l'user clique rapidement. La clef est templateId +
+  // employeeIds tries (insensible a l'ordre).
+  const pendingRequestKeysRef = useRef<Set<string>>(new Set());
   const handleRequest = useCallback(
     async (templateId: number, employeeIds: number[]) => {
-      const r = await createSignatureRequestAction({
-        templateId,
-        targets: { adminIds: employeeIds },
-        dueDate: null,
-        reason: null,
-      });
-      if (r.success) {
-        toast.success(
-          `${r.data.createdCount} demande${r.data.createdCount > 1 ? "s" : ""} creee${
-            r.data.createdCount > 1 ? "s" : ""
-          }` + (r.data.skipped > 0 ? ` - ${r.data.skipped} ignoree${r.data.skipped > 1 ? "s" : ""}` : "")
-        );
-        router.refresh();
-      } else {
-        toast.error(r.error || "");
+      const key = `${templateId}:${[...employeeIds].sort().join(",")}`;
+      if (pendingRequestKeysRef.current.has(key)) {
+        // Deja en cours, ignore le double-clic
+        return;
+      }
+      pendingRequestKeysRef.current.add(key);
+      try {
+        const r = await createSignatureRequestAction({
+          templateId,
+          targets: { adminIds: employeeIds },
+          dueDate: null,
+          reason: null,
+        });
+        if (r.success) {
+          toast.success(
+            `${r.data.createdCount} demande${r.data.createdCount > 1 ? "s" : ""} creee${
+              r.data.createdCount > 1 ? "s" : ""
+            }` + (r.data.skipped > 0 ? ` - ${r.data.skipped} ignoree${r.data.skipped > 1 ? "s" : ""}` : "")
+          );
+          router.refresh();
+        } else {
+          toast.error(r.error || "");
+        }
+      } finally {
+        pendingRequestKeysRef.current.delete(key);
       }
     },
     [router]
@@ -493,79 +523,81 @@ export function DocumentsAdminView({
 
   return (
     <div className="space-y-4">
-      {/* ====== Header navy gradient ====== */}
+      {/* ====== Header navy gradient ======
+          Responsive : title row + actions row, actions wrappent en grille
+          2 colonnes sur mobile (lisible), passent en ligne horizontale a sm+. */}
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"
           aria-hidden
         />
-        <div className="relative flex items-start justify-between gap-3 flex-wrap">
+        <div className="relative flex flex-col md:flex-row md:items-start md:justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-11 w-11 rounded-lg bg-white/15 backdrop-blur flex items-center justify-center ring-2 ring-white/20 shrink-0">
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold">Gestion des documents</h1>
-              <p className="text-xs text-white/80">
-                Templates legaux, conformite des signatures et dossiers documentaires des employes.
+              <h1 className="text-base sm:text-lg font-bold leading-tight">Gestion des documents</h1>
+              <p className="text-[11px] sm:text-xs text-white/80 leading-snug">
+                Templates legaux, conformite des signatures et dossiers documentaires.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 sm:flex-wrap">
             <Button
               size="sm"
               variant="outline"
               asChild
-              className="h-8 text-xs bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white"
+              className="h-8 text-[11px] sm:text-xs bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white justify-start sm:justify-center"
             >
               <Link href="/admin/employes/documents/bibliotheque">
-                <Library className="h-3.5 w-3.5 mr-1.5" />
-                Bibliotheque
+                <Library className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                <span className="truncate">Bibliotheque</span>
               </Link>
             </Button>
             <Button
               size="sm"
               variant="outline"
               asChild
-              className="h-8 text-xs bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white"
+              className="h-8 text-[11px] sm:text-xs bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white justify-start sm:justify-center"
             >
               <Link href="/admin/employes/documents/cahiers">
-                <BookOpen className="h-3.5 w-3.5 mr-1.5" />
-                Cahiers ({handbooks.length})
+                <BookOpen className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                <span className="truncate">Cahiers ({handbooks.length})</span>
               </Link>
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => setUploadRequestDialog({ open: true, presetEmployeeId: null })}
-              className="h-8 text-xs bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white"
+              className="h-8 text-[11px] sm:text-xs bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white justify-start sm:justify-center"
             >
-              <Upload className="h-3.5 w-3.5 mr-1.5" />
-              Demander un document
+              <Upload className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+              <span className="truncate">Demander doc</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => setRequestDialog({ open: true, template: null, customFieldValues: null })}
-              className="h-8 text-xs bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white"
+              className="h-8 text-[11px] sm:text-xs bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white justify-start sm:justify-center"
             >
-              <Send className="h-3.5 w-3.5 mr-1.5" />
-              Demande signature
+              <Send className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+              <span className="truncate">Demande signature</span>
             </Button>
             <Button
               size="sm"
               onClick={() => setEditDialog({ open: true, existing: null })}
-              className="h-8 text-xs bg-white text-[#0F2D52] hover:bg-white/90 font-semibold"
+              className="h-8 text-[11px] sm:text-xs bg-white text-[#0F2D52] hover:bg-white/90 font-semibold col-span-2 sm:col-span-1 justify-center"
             >
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Nouveau template
+              <Plus className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+              <span className="truncate">Nouveau template</span>
             </Button>
           </div>
         </div>
       </div>
 
       {/* ====== KPIs ====== */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         <DocumentStatsCard
           label="Templates actifs"
           value={kpis.templates}
@@ -603,51 +635,122 @@ export function DocumentsAdminView({
         />
       </div>
 
-      {/* Sticky bar sentinel */}
+      {/* Sentinel : detecte la sortie des KPIs pour activer le portal KPIs */}
       <div ref={sentinelRef} aria-hidden className="h-px" />
-      {scrolled && (
-        <div className="sticky top-[64px] z-20 py-2 bg-background/95 backdrop-blur shadow-sm border-b rounded-md px-3 animate-overlay-fade-in">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
-            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
-              <FileText className="h-4 w-4" />
-              Documents
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Conformite :</span>
-              <span
-                className={
-                  kpis.conformity >= 90
-                    ? "font-semibold text-emerald-600"
-                    : kpis.conformity >= 60
-                      ? "font-semibold text-amber-600"
-                      : "font-semibold text-red-600"
-                }
-              >
-                {kpis.conformity}%
-              </span>
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">En attente :</span>
-              <span className="font-semibold text-amber-600">{kpis.pendingRequests}</span>
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Expirations :</span>
-              <span
-                className={
-                  kpis.expiredCount > 0
-                    ? "font-semibold text-red-600"
-                    : "font-semibold text-amber-600"
-                }
-              >
-                {kpis.expiringSoon}
-              </span>
-            </span>
-          </div>
-        </div>
-      )}
 
-      {/* ====== Tabs ====== */}
-      <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Navigation documents" />
+      {/* Portal : on injecte les KPIs DANS la module-nav mobile (sur la
+          meme ligne que "Employes") au scroll. Plus de 2e bande !
+          Slot cible : #vnk-module-nav-extra (defini dans module-sidebar-nav).
+          Labels compacts <480px pour rentrer sur petits ecrans. */}
+      {navExtraEl && scrolled
+        ? createPortal(
+            <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
+              <span className="inline-flex items-baseline gap-1">
+                <span className="text-muted-foreground">
+                  <span className="min-[480px]:hidden">Conf :</span>
+                  <span className="hidden min-[480px]:inline">Conformite :</span>
+                </span>
+                <span
+                  className={
+                    kpis.conformity >= 90
+                      ? "font-semibold text-emerald-600"
+                      : kpis.conformity >= 60
+                        ? "font-semibold text-amber-600"
+                        : "font-semibold text-red-600"
+                  }
+                >
+                  {kpis.conformity}%
+                </span>
+              </span>
+              <span className="text-muted-foreground">·</span>
+              <span className="inline-flex items-baseline gap-1">
+                <span className="text-muted-foreground">
+                  <span className="min-[480px]:hidden">Att :</span>
+                  <span className="hidden min-[480px]:inline">En attente :</span>
+                </span>
+                <span className="font-semibold text-amber-600">{kpis.pendingRequests}</span>
+              </span>
+              <span className="text-muted-foreground">·</span>
+              <span className="inline-flex items-baseline gap-1">
+                <span className="text-muted-foreground">
+                  <span className="min-[480px]:hidden">Exp :</span>
+                  <span className="hidden min-[480px]:inline">Expirations :</span>
+                </span>
+                <span
+                  className={
+                    kpis.expiredCount > 0
+                      ? "font-semibold text-red-600"
+                      : "font-semibold text-amber-600"
+                  }
+                >
+                  {kpis.expiringSoon}
+                </span>
+              </span>
+            </div>,
+            navExtraEl,
+          )
+        : null}
+
+      {/* Sticky container : tabs uniquement (KPIs mobiles deplacees vers
+          la module-nav via portal ci-dessus). Sur desktop (lg+), la
+          module-nav devient sidebar verticale → on garde une mini-bar
+          interne pour le contexte. */}
+      <div
+        className={cn(
+          "sticky top-[92px] pt-4 lg:top-[64px] lg:pt-0 z-20 bg-background",
+          "-mx-4 sm:-mx-5 lg:mx-0 transition-shadow",
+          scrolled ? "shadow-sm border-b" : "border-b border-transparent",
+        )}
+      >
+        {/* Mini-bar info DESKTOP UNIQUEMENT (lg+).
+            Mobile : KPIs portales dans la module-nav (voir au-dessus). */}
+        <div
+          className={cn(
+            "hidden px-4 lg:px-4 items-center gap-x-5 py-2 text-xs",
+            scrolled ? "lg:flex" : "lg:hidden",
+          )}
+        >
+          <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r shrink-0">
+            <FileText className="h-4 w-4" />
+            Documents
+          </span>
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="text-muted-foreground">Conformite :</span>
+            <span
+              className={
+                kpis.conformity >= 90
+                  ? "font-semibold text-emerald-600"
+                  : kpis.conformity >= 60
+                    ? "font-semibold text-amber-600"
+                    : "font-semibold text-red-600"
+              }
+            >
+              {kpis.conformity}%
+            </span>
+          </span>
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="text-muted-foreground">En attente :</span>
+            <span className="font-semibold text-amber-600">{kpis.pendingRequests}</span>
+          </span>
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="text-muted-foreground">Expirations :</span>
+            <span
+              className={
+                kpis.expiredCount > 0
+                  ? "font-semibold text-red-600"
+                  : "font-semibold text-amber-600"
+              }
+            >
+              {kpis.expiringSoon}
+            </span>
+          </span>
+        </div>
+
+        {/* Tabs : toujours sticky */}
+        <div className="px-4 sm:px-5 lg:px-4">
+          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Navigation documents" />
+        </div>
+      </div>
 
       {/* ====== Tab content ====== */}
       {tab === "overview" && (
@@ -1509,10 +1612,10 @@ function RequestsTab({
                 <th className="px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
                   Statut
                 </th>
-                <th className="px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
+                <th className="hidden md:table-cell px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
                   Demandee par
                 </th>
-                <th className="px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
+                <th className="hidden lg:table-cell px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
                   Echeance
                 </th>
                 <th className="px-3 py-2 text-right font-semibold text-[10px] uppercase tracking-wider">
@@ -1591,11 +1694,11 @@ function RequestsTab({
                         </Badge>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="hidden md:table-cell px-3 py-2 text-xs">
                       <p className="truncate">{r.requestedBy.fullName ?? r.requestedBy.email}</p>
                       <p className="text-[10px] text-muted-foreground">{formatDate(r.requestedAt)}</p>
                     </td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="hidden lg:table-cell px-3 py-2 text-xs">
                       {r.dueDate ? (
                         <Badge
                           variant="outline"
@@ -1731,7 +1834,7 @@ function EmployeesTab({
                 <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider font-semibold">
                   Employe
                 </th>
-                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider font-semibold">
+                <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] uppercase tracking-wider font-semibold">
                   Equipe
                 </th>
                 <th className="px-3 py-2 text-center text-[10px] uppercase tracking-wider font-semibold">
@@ -1758,8 +1861,11 @@ function EmployeesTab({
                     <td className="px-3 py-2">
                       <p className="font-medium text-sm truncate">{e.fullName ?? e.email}</p>
                       <p className="text-[11px] text-muted-foreground truncate">{e.email}</p>
+                      <p className="sm:hidden text-[10px] text-muted-foreground truncate mt-0.5">
+                        {e.team?.name ?? "Sans equipe"}
+                      </p>
                     </td>
-                    <td className="px-3 py-2 text-xs">{e.team?.name ?? "-"}</td>
+                    <td className="hidden sm:table-cell px-3 py-2 text-xs">{e.team?.name ?? "-"}</td>
                     <td className="px-3 py-2 text-center">
                       {exp.length > 0 ? (
                         <Badge
@@ -2032,6 +2138,7 @@ function UploadRequestsTab({
                               setBusyId(null);
                             }
                           }}
+                          aria-label="Envoyer un rappel"
                         >
                           {busyId === r.id ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -2046,6 +2153,7 @@ function UploadRequestsTab({
                           size="icon"
                           className="h-7 w-7 hover:text-destructive"
                           onClick={() => onCancel(r)}
+                          aria-label="Annuler la demande"
                         >
                           <XCircle className="h-3.5 w-3.5" />
                         </Button>
@@ -2179,10 +2287,11 @@ function EmployeePersonalDocsDialog({
                     doc={d}
                     isAdmin
                     onPreview={() => setPreviewDoc(d)}
-                    onDownload={() => {
-                      const url = `/api/admin/employees/${employee.id}/personal-docs/${d.id}/file`;
-                      window.open(url, "_blank", "noopener,noreferrer");
-                    }}
+                    // Convention VNK : toujours PdfPreviewModal pour les PDF.
+                    // Le bouton "Telecharger" de la card reutilise donc le
+                    // meme PdfPreviewModal (l'utilisateur peut telecharger
+                    // depuis la modal via le bouton dedie).
+                    onDownload={() => setPreviewDoc(d)}
                     onDelete={() => setConfirmDel(d)}
                     onVerify={async (notes) => {
                       await handleVerify(d.id, notes);
@@ -2417,13 +2526,13 @@ function SignaturesTab({
                 <th className="px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
                   Document
                 </th>
-                <th className="px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
+                <th className="hidden lg:table-cell px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
                   Version
                 </th>
-                <th className="px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
+                <th className="hidden md:table-cell px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
                   Date signature
                 </th>
-                <th className="px-3 py-2 text-center font-semibold text-[10px] uppercase tracking-wider">
+                <th className="hidden sm:table-cell px-3 py-2 text-center font-semibold text-[10px] uppercase tracking-wider">
                   PDF
                 </th>
                 <th className="px-3 py-2 text-right font-semibold text-[10px] uppercase tracking-wider">
@@ -2470,8 +2579,12 @@ function SignaturesTab({
                             {CATEGORY_LABELS[template.category] ?? template.category}
                           </p>
                         )}
+                        {/* Sur mobile : recap inline (version + date) */}
+                        <p className="md:hidden text-[10px] text-muted-foreground mt-0.5">
+                          v{sig.version} · {formatDate(sig.signedAt)}
+                        </p>
                       </td>
-                      <td className="px-3 py-2 text-xs">
+                      <td className="hidden lg:table-cell px-3 py-2 text-xs">
                         <Badge
                           variant="outline"
                           className="text-[10px] border-[#0F2D52]/30 text-[#0F2D52]"
@@ -2479,8 +2592,8 @@ function SignaturesTab({
                           v{sig.version}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2 text-xs">{formatDate(sig.signedAt)}</td>
-                      <td className="px-3 py-2 text-center">
+                      <td className="hidden md:table-cell px-3 py-2 text-xs">{formatDate(sig.signedAt)}</td>
+                      <td className="hidden sm:table-cell px-3 py-2 text-center">
                         {hasPdf ? (
                           <Badge
                             variant="outline"

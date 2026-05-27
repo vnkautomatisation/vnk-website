@@ -327,22 +327,22 @@ export function SignatureRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[92vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-lg">
         {/* Header navy */}
-        <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4 shrink-0">
+        <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-base text-white flex items-center gap-2">
-              <HeaderIcon className="h-4 w-4" />
-              {copy.title}
+            <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
+              <HeaderIcon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{copy.title}</span>
             </DialogTitle>
-            <DialogDescription className="text-white/80 text-xs">
+            <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
               {copy.description} Une notification sera envoyée dans Mon espace.
             </DialogDescription>
           </DialogHeader>
         </div>
 
         {/* Body */}
-        <div className="p-5 space-y-5 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-5 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
           {/* Banniere rouge : champs manquants */}
           {inlinePlaceholders.length > 0 && missingInlineFields.length > 0 && (
             <div className="rounded-md border border-red-200 bg-red-50 text-red-700 px-3 py-2 flex items-start gap-2">
@@ -574,7 +574,7 @@ export function SignatureRequestDialog({
         </div>
 
         {/* Footer sticky */}
-        <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
+        <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button
             type="button"
             variant="outline"

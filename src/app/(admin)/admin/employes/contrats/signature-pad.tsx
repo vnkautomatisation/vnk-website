@@ -1,15 +1,30 @@
 "use client";
 // Canvas de signature minimaliste — pas de dépendance externe.
 // Renvoie la signature en data URL PNG via onChange dès qu'elle est non vide.
+//
+// Mode controle (optionnel) : si on passe `value` (data URL ou null),
+// le composant restaure le trait au mount/remount. Ca evite que la signature
+// disparaisse quand le composant est demonte/remonte (ex: switch d'onglets
+// dans HandbookSignatureMobile).
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Eraser } from "lucide-react";
 
-export function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) => void }) {
+export function SignaturePad({
+  onChange,
+  value,
+}: {
+  onChange: (dataUrl: string | null) => void;
+  value?: string | null;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [drawing, setDrawing] = useState(false);
   const [hasInk, setHasInk] = useState(false);
+  const [ready, setReady] = useState(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
+  // Marqueur : data URL deja emis par CE composant. Sert a ignorer les
+  // re-renders du parent qui repassent la meme valeur (evite boucle redraw).
+  const lastEmittedRef = useRef<string | null>(null);
 
   // Resize canvas à la largeur du conteneur
   useEffect(() => {
@@ -17,7 +32,7 @@ export function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) 
     if (!canvas) return;
     const resize = () => {
       const rect = canvas.parentElement?.getBoundingClientRect();
-      if (!rect) return;
+      if (!rect || rect.width === 0) return;
       const dpr = window.devicePixelRatio || 1;
       canvas.width = rect.width * dpr;
       canvas.height = 160 * dpr;
@@ -25,17 +40,67 @@ export function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) 
       canvas.style.height = `160px`;
       const ctx = canvas.getContext("2d");
       if (ctx) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(dpr, dpr);
         ctx.strokeStyle = "#0F2D52";
         ctx.lineWidth = 2;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
       }
+      setReady(true);
     };
     resize();
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
+
+  // Sync : `value` (parent) → canvas
+  // - value=null && canvas a de l'encre → clear
+  // - value=dataURL && canvas vide → redraw (restauration apres remount)
+  // - value === lastEmittedRef → no-op (vient de nous, deja a l'ecran)
+  useEffect(() => {
+    if (!ready) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    // Source = nous-meme : ignorer
+    if (value && value === lastEmittedRef.current) return;
+
+    if (!value) {
+      // Clear demande par le parent
+      if (!hasInk) return;
+      const dpr = window.devicePixelRatio || 1;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(dpr, dpr);
+      ctx.strokeStyle = "#0F2D52";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      setHasInk(false);
+      lastEmittedRef.current = null;
+      return;
+    }
+    // Restaurer le trait depuis la data URL
+    const img = new Image();
+    img.onload = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.width / dpr;
+      const h = canvas.height / dpr;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(dpr, dpr);
+      ctx.drawImage(img, 0, 0, w, h);
+      ctx.strokeStyle = "#0F2D52";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      setHasInk(true);
+      lastEmittedRef.current = value;
+    };
+    img.src = value;
+  }, [value, ready, hasInk]);
 
   const start = (e: React.PointerEvent<HTMLCanvasElement>) => {
     e.preventDefault();
@@ -57,13 +122,17 @@ export function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) 
     if (!hasInk) {
       setHasInk(true);
       // Émettre data URL au premier trait
-      onChange(canvas.toDataURL("image/png"));
+      const url = canvas.toDataURL("image/png");
+      lastEmittedRef.current = url;
+      onChange(url);
     }
   };
   const end = () => {
     if (drawing && hasInk) {
       // Émettre la version finale
-      onChange(canvasRef.current!.toDataURL("image/png"));
+      const url = canvasRef.current!.toDataURL("image/png");
+      lastEmittedRef.current = url;
+      onChange(url);
     }
     setDrawing(false);
     lastPoint.current = null;
@@ -72,8 +141,16 @@ export function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) 
   const clear = () => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.scale(dpr, dpr);
+    ctx.strokeStyle = "#0F2D52";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     setHasInk(false);
+    lastEmittedRef.current = null;
     onChange(null);
   };
 

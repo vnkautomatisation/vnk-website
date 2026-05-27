@@ -125,22 +125,35 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
           Le mini-header de page se positionne ensuite a top-[108px] sur mobile
           (64 topbar + 44 sub-header). HAUTEUR FIXE h-11 (44px).
           Les marges negatives -mx annulent le padding du parent (.p-4 / sm:.p-5
-          dans admin/layout) pour que la barre s'etende d'un bord a l'autre. */}
-      <div className="lg:hidden sticky top-[64px] z-[25] -mx-4 sm:-mx-5 px-4 sm:px-5 h-11 bg-card flex items-center justify-between gap-2">
+          dans admin/layout) pour que la barre s'etende d'un bord a l'autre.
+          PORTAL TARGET (#vnk-module-nav-extra) : les pages peuvent injecter
+          des KPIs / badges / contenus contextuels dans cette zone centrale
+          via createPortal, evitant ainsi une deuxieme sticky bar empilee. */}
+      <div className="lg:hidden sticky top-[64px] z-[25] -mx-4 sm:-mx-5 px-4 sm:px-5 h-11 bg-card flex items-center gap-2">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
-          className="inline-flex items-center gap-2 text-sm font-medium hover:text-[#0F2D52] transition"
+          className="inline-flex items-center gap-2 text-sm font-medium hover:text-[#0F2D52] transition shrink-0"
           aria-label={`Ouvrir le menu ${moduleLabel}`}
         >
           <Menu className="h-4 w-4" />
           <ModuleIcon className="h-4 w-4 text-[#0F2D52]" />
           <span className="font-semibold">{moduleLabel}</span>
         </button>
+        {/* Slot extras (KPIs page-specific via portal).
+            justify-start : les KPIs flow naturellement apres "Mon espace".
+            overflow-x-auto + min-w-0 : scroll horizontal si depasse. */}
+        <div
+          id="vnk-module-nav-extra"
+          className="flex-1 min-w-0 flex items-center justify-start gap-x-3 overflow-x-auto no-scrollbar"
+        />
         {activeItem && (
-          <span className="text-xs text-[#0F2D52] inline-flex items-center gap-1 truncate min-w-0 font-medium">
+          <span className="text-xs text-[#0F2D52] inline-flex items-center gap-1 truncate min-w-0 font-medium shrink-0">
             <activeItem.icon className="h-3 w-3 shrink-0" />
-            <span className="truncate">{activeItem.label}</span>
+            {/* Label cache sur petits ecrans (<480px) pour liberer la place
+                au slot extras (KPIs page-specific). L'icone seule suffit
+                comme indicateur visuel de la page active (lib utility 480). */}
+            <span className="hidden min-[480px]:inline truncate">{activeItem.label}</span>
           </span>
         )}
       </div>

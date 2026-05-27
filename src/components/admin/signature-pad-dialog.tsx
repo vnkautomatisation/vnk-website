@@ -39,11 +39,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  InteractiveDocumentView,
-  type CheckboxStates,
-  type SignatureScope,
-} from "@/components/admin/interactive-document-view";
+import { InteractiveDocumentView } from "@/components/admin/interactive-document-view";
+import type {
+  CheckboxStates,
+  SignatureScope,
+} from "@/components/admin/interactive-document-view-types";
 import { SignaturePad } from "@/app/(admin)/admin/employes/contrats/signature-pad";
 
 export type SignaturePadDialogDoc = {

@@ -34,6 +34,7 @@ import {
   BookOpen,
   CheckCircle2,
   Eraser,
+  ExternalLink,
   FileSignature,
   Loader2,
 } from "lucide-react";
@@ -50,25 +51,13 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import type {
   CheckboxStates,
-  SignatureScope,
-} from "@/components/admin/interactive-document-view";
+} from "@/components/admin/interactive-document-view-types";
 import { SignaturePad } from "@/app/(admin)/admin/employes/contrats/signature-pad";
-
-export interface HandbookSignatureDialogChapter {
-  templateId: number;
-  title: string;
-  bodyMarkdown: string;
-}
-
-export interface HandbookSignatureDialogHandbook {
-  id: number;
-  title: string;
-  subtitle?: string;
-  coverIntro?: string;
-  version: string;
-  signatureScope?: SignatureScope;
-  chapters: HandbookSignatureDialogChapter[];
-}
+import { HandbookSignatureMobile } from "@/components/admin/handbook-signature-mobile";
+// Types deplaces dans handbook-signature-types.ts pour permettre a
+// Fast Refresh de hot-reload ce composant (Fast Refresh impose que
+// les fichiers React n'exportent QUE des composants).
+import type { HandbookSignatureDialogHandbook } from "@/components/admin/handbook-signature-types";
 
 // Delai (ms) avant de pouvoir cocher la case finale : incentive lecture du PDF.
 const READ_DELAY_MS = 5_000;
@@ -90,6 +79,19 @@ export function HandbookSignatureDialog({
     checkboxStates: CheckboxStates,
   ) => Promise<void> | void;
 }) {
+  // Detection desktop (>= 1280px) : layout 2 colonnes (iframe PDF gauche
+   // | panneau actions droite). Sous 1280px : HandbookSignatureMobile avec
+   // UI 2 onglets ET iframe PDF inline dans l'onglet Apercu.
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(min-width: 1280px)");
+    setIsDesktop(mq.matches);
+    const listener = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", listener);
+    return () => mq.removeEventListener("change", listener);
+  }, []);
+
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [padKey, setPadKey] = useState(0);
@@ -227,6 +229,20 @@ export function HandbookSignatureDialog({
 
   if (!handbook) return null;
 
+  // Mobile/tablet (< xl, < 1280px) : delegue au wizard etape par etape.
+  // Le layout desktop 2 colonnes (iframe + actions) reste pour >= 1280px.
+  if (!isDesktop) {
+    return (
+      <HandbookSignatureMobile
+        open={open}
+        handbook={handbook}
+        employeeId={employeeId}
+        onClose={onClose}
+        onSigned={onSigned}
+      />
+    );
+  }
+
   // globalAccepted suit finalAckDone : la case "J'ai lu et compris" + initiales
   // suffit, pas besoin d'une 2e case d'acceptation globale redondante.
   const canSubmit =
@@ -285,11 +301,15 @@ export function HandbookSignatureDialog({
           </DialogHeader>
         </div>
 
-        {/* Body : grid 2 col desktop / 1 col mobile */}
+        {/* Body : grid 2 col desktop / 1 col mobile + tablet.
+            Breakpoint xl: (1280px+) : iframe + actions cote a cote.
+            En dessous : layout empile avec PDF compact (bouton "Ouvrir") en haut
+            et panneau actions scrollable en dessous (le footer du dialog ne
+            cache plus le contenu). */}
         <div className="flex-1 overflow-hidden bg-slate-100">
-          <div className="h-full grid grid-cols-1 lg:grid-cols-[3fr_2fr] overflow-hidden">
-            {/* ====== COLONNE GAUCHE : iframe PDF ====== */}
-            <div className="flex flex-col bg-slate-200 lg:border-r border-slate-300 overflow-hidden min-h-[260px]">
+          <div className="h-full grid grid-cols-1 xl:grid-cols-[3fr_2fr] overflow-hidden">
+            {/* ====== COLONNE GAUCHE : iframe PDF (xl+) ou bouton ouvrir ====== */}
+            <div className="flex flex-col bg-slate-200 xl:border-r border-slate-300 overflow-hidden shrink-0 xl:shrink xl:min-h-[260px]">
               <div className="px-3 py-2 bg-white border-b shrink-0 flex items-center gap-2">
                 <Book className="h-3.5 w-3.5 text-[#0F2D52]" />
                 <span className="text-[11px] uppercase tracking-wider font-semibold text-[#0F2D52]">
@@ -306,15 +326,49 @@ export function HandbookSignatureDialog({
                   </span>
                 )}
               </div>
-              <div className="flex-1 overflow-hidden bg-slate-200">
+              <div className="flex-1 overflow-hidden bg-slate-200 flex flex-col">
                 {pdfBlobUrl ? (
-                  <iframe
-                    src={pdfBlobUrl}
-                    className="w-full h-full min-h-[500px] border-0 bg-white"
-                    title={`Manuel - ${handbook.title}`}
-                  />
+                  <>
+                    {/* Mobile + Tablet (< xl, soit < 1280px) : iframe PDF
+                       peu fiable + prend trop de place et cache le panneau
+                       actions. On propose une carte compacte avec bouton qui
+                       ouvre le PDF en plein ecran. */}
+                    <div className="xl:hidden flex flex-col items-center justify-center p-4 sm:p-6 text-center bg-white">
+                      <BookOpen className="h-8 w-8 sm:h-10 sm:w-10 text-[#0F2D52] mb-2 sm:mb-3" />
+                      <p className="text-xs sm:text-sm font-semibold text-[#0F2D52] mb-1">
+                        Apercu disponible
+                      </p>
+                      <p className="text-[11px] sm:text-xs text-slate-600 mb-3 sm:mb-4 max-w-xs">
+                        Ouvrez le manuel dans votre navigateur pour le
+                        parcourir en plein ecran.
+                      </p>
+                      <Button
+                        asChild
+                        size="sm"
+                        className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white w-full max-w-xs"
+                      >
+                        <a
+                          href={pdfBlobUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Ouvrir le manuel
+                        </a>
+                      </Button>
+                      <p className="text-[10px] text-muted-foreground mt-2 sm:mt-3">
+                        Revenez ici une fois la lecture terminee pour signer.
+                      </p>
+                    </div>
+                    {/* Desktop large (>= xl, soit 1280px+) : iframe PDF inline. */}
+                    <iframe
+                      src={pdfBlobUrl}
+                      className="hidden xl:block w-full h-full min-h-[500px] border-0 bg-white"
+                      title={`Manuel - ${handbook.title}`}
+                    />
+                  </>
                 ) : (
-                  <div className="w-full h-full min-h-[500px] flex items-center justify-center bg-white">
+                  <div className="w-full h-full min-h-[260px] lg:min-h-[500px] flex items-center justify-center bg-white">
                     <div className="text-center text-[#0F2D52]">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                       <p className="text-xs">Generation de l&apos;apercu...</p>

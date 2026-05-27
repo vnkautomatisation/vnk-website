@@ -265,23 +265,23 @@ export function UploadDocumentResponseDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="max-w-xl max-h-[92vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-xl sm:h-auto sm:max-h-[92vh] sm:rounded-lg">
         {/* Header navy avec icône catégorie + contexte enrichi */}
         {(() => {
           const meta = CATEGORY_META[request.category as DocRequestCategory] ?? CATEGORY_META.other;
           const CatIcon = meta.icon;
           return (
-            <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4 shrink-0">
+            <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
               <DialogHeader>
-                <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-white/15 flex items-center justify-center shrink-0 ring-1 ring-white/30">
-                    <CatIcon className="h-5 w-5 text-white" />
+                <div className="flex items-start gap-3 pr-8">
+                  <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-white/15 flex items-center justify-center shrink-0 ring-1 ring-white/30">
+                    <CatIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <DialogTitle className="text-base text-white">
+                    <DialogTitle className="text-sm sm:text-base text-white truncate">
                       {request.title}
                     </DialogTitle>
-                    <DialogDescription className="text-white/80 text-xs mt-0.5">
+                    <DialogDescription className="text-white/80 text-[11px] sm:text-xs mt-0.5">
                       Catégorie : <strong>{getCategoryLabel(request.category)}</strong>
                     </DialogDescription>
                   </div>
@@ -310,7 +310,7 @@ export function UploadDocumentResponseDialog({
         })()}
 
         {/* Body */}
-        <div className="p-5 space-y-5 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-5 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
           {/* Bandeau d'explication contextuel */}
           {(() => {
             const meta = CATEGORY_META[request.category as DocRequestCategory] ?? CATEGORY_META.other;
@@ -421,7 +421,7 @@ export function UploadDocumentResponseDialog({
         </div>
 
         {/* Footer sticky */}
-        <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
+        <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button
             type="button"
             variant="outline"

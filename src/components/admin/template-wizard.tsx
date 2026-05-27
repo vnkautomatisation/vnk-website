@@ -390,16 +390,18 @@ export function TemplateWizard({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && onClose()}>
-      <DialogContent className="max-w-6xl w-[95vw] max-h-[95vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-6xl sm:h-auto sm:max-h-[95vh] sm:rounded-lg">
         {/* Header navy gradient */}
-        <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-5 py-4 shrink-0">
+        <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-base text-white flex items-center gap-2">
-              <Icon className="h-4 w-4" />
-              {mode === "edit" ? "Modifier " : "Nouveau "}
-              {TYPE_LABELS[type].singular}
+            <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {mode === "edit" ? "Modifier " : "Nouveau "}
+                {TYPE_LABELS[type].singular}
+              </span>
             </DialogTitle>
-            <DialogDescription className="text-white/80 text-xs">
+            <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
               {mode === "edit"
                 ? "Modifiez le contenu, le ciblage ou la version. Pensez a incrementer la version si le contenu change significativement."
                 : "Suivez les etapes pour creer un nouveau modele reutilisable, avec variables dynamiques et apercu."}
@@ -423,7 +425,7 @@ export function TemplateWizard({
         {/* Body */}
         <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           {step === 1 && mode === "create" && (
-            <div className="p-5 overflow-y-auto space-y-5">
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 sm:space-y-5">
               {/* 3 options de demarrage */}
               <div>
                 <h3 className="text-sm font-semibold text-foreground mb-1">
@@ -432,7 +434,7 @@ export function TemplateWizard({
                 <p className="text-[11px] text-muted-foreground mb-3">
                   Choisissez une option ci-dessous, puis personnalisez le contenu a l&apos;etape suivante.
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {/* Option 1 : Bibliotheque (deroule directement le browser ci-dessous) */}
                   <StartOptionCard
                     icon={Library}
@@ -474,7 +476,7 @@ export function TemplateWizard({
           )}
 
           {step === 2 && (
-            <div className="p-5 overflow-y-auto space-y-5">
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 sm:space-y-5">
               <FormSection icon={Layers} title="Identification">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field
@@ -542,7 +544,7 @@ export function TemplateWizard({
           )}
 
           {step === 3 && (
-            <div className="p-5 overflow-y-auto space-y-5">
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 sm:space-y-5">
               <FormSection
                 icon={Users}
                 title="Public cible"
@@ -710,8 +712,8 @@ export function TemplateWizard({
           {step === 4 && (
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-0 min-h-0 overflow-hidden">
               {/* Colonne editeur */}
-              <div className="flex flex-col min-h-0 border-r">
-                <div className="px-5 py-3 border-b bg-muted/30 shrink-0">
+              <div className="flex flex-col min-h-0 lg:border-r border-b lg:border-b-0">
+                <div className="px-4 sm:px-5 py-2 sm:py-3 border-b bg-muted/30 shrink-0">
                   <div className="flex items-center gap-2">
                     <FileText className="h-3.5 w-3.5 text-[#0F2D52]" />
                     <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">
@@ -721,7 +723,7 @@ export function TemplateWizard({
                 </div>
 
                 <div className="flex-1 grid grid-cols-1 min-h-0 overflow-hidden relative">
-                  <div className="overflow-y-auto p-4 min-h-0">
+                  <div className="overflow-y-auto p-3 sm:p-4 min-h-0">
                     <TemplateRichEditor
                       value={bodyMarkdown}
                       onChange={setBodyMarkdown}
@@ -769,13 +771,13 @@ export function TemplateWizard({
 
               {/* Colonne apercu PDF live */}
               <div className="flex flex-col min-h-0">
-                <div className="px-5 py-3 border-b bg-muted/30 shrink-0 flex items-center gap-2">
+                <div className="px-4 sm:px-5 py-2 sm:py-3 border-b bg-muted/30 shrink-0 flex items-center gap-2">
                   <FileText className="h-3.5 w-3.5 text-[#0F2D52]" />
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">
                     Apercu PDF live
                   </h4>
                 </div>
-                <div className="flex-1 px-4 py-3 min-h-0 overflow-hidden">
+                <div className="flex-1 px-3 sm:px-4 py-2 sm:py-3 min-h-0 overflow-hidden">
                   <TemplatePreview
                     bodyMarkdown={bodyMarkdown}
                     selectedEmployeeId={selectedPreviewId}
@@ -792,8 +794,8 @@ export function TemplateWizard({
         </div>
 
         {/* Footer sticky */}
-        <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0 gap-2 sm:justify-between">
-          <div className="flex items-center gap-2">
+        <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap sm:justify-between">
+          <div className="flex items-center gap-2 order-2 sm:order-1 w-full sm:w-auto">
             {((mode === "create" && step > 1) || (mode === "edit" && step > 2)) && (
               <Button
                 type="button"
@@ -801,14 +803,14 @@ export function TemplateWizard({
                 size="sm"
                 onClick={goPrev}
                 disabled={submitting}
-                className="gap-1.5"
+                className="gap-1.5 w-full sm:w-auto"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
                 Precedent
               </Button>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-initial">
             <Button
               type="button"
               variant="ghost"

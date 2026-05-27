@@ -22,7 +22,7 @@ const SECTIONS: NavSection[] = [
     group: "Mes documents",
     groupIcon: FolderOpen,
     items: [
-      { href: "/admin/mon-espace/documents", label: "Documents", icon: FileText },
+      { href: "/admin/mon-espace/documents", label: "Mes documents", icon: FileText },
       { href: "/admin/mon-espace/contrats", label: "Mes contrats", icon: FileSignature },
       { href: "/admin/mon-espace/politiques", label: "Politiques RH", icon: ScrollText },
     ],

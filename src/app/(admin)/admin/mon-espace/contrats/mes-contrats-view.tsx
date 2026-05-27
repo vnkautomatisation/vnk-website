@@ -10,6 +10,7 @@
 //   - Modal SignDialog (header navy + pad + accuse reception)
 // =============================================================
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -38,6 +39,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { DocumentStatsCard } from "@/components/admin/document-stats-card";
+import { cn } from "@/lib/utils";
 import { PdfPreviewModal } from "@/components/admin/pdf-preview-modal";
 import { ToneBadge } from "@/components/admin/tone-badge";
 import { SignatureStatusBadge } from "@/components/admin/signature-status-badge";
@@ -151,7 +153,7 @@ export function MesContratsView({
     return { aSigner, enCours, archives, autres };
   }, [contracts]);
 
-  // Sticky bar
+  // Sticky bar pattern STANDARD (ref my-documents-view.tsx)
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -159,10 +161,16 @@ export function MesContratsView({
     if (!el) return;
     const io = new IntersectionObserver(
       ([entry]) => setScrolled(!entry.isIntersecting),
-      { threshold: 0 },
+      { threshold: 0, rootMargin: "-64px 0px 0px 0px" },
     );
     io.observe(el);
     return () => io.disconnect();
+  }, []);
+
+  // Portal target KPIs dans module-nav mobile
+  const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
   }, []);
 
   return (
@@ -219,38 +227,75 @@ export function MesContratsView({
         />
       </div>
 
-      {/* Sticky bar sentinel */}
+      {/* Sentinel : detecte la sortie des KPIs */}
       <div ref={sentinelRef} aria-hidden className="h-px" />
-      {scrolled && (
-        <div className="sticky top-[108px] lg:top-[64px] z-20 py-2 bg-background/95 backdrop-blur shadow-sm border-b rounded-md px-3 animate-overlay-fade-in">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
-            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
-              <FileSignature className="h-4 w-4" />
-              Mes contrats
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Actifs :</span>
-              <span className="font-semibold text-emerald-600">{kpis.actifs}</span>
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">A signer :</span>
-              <span
-                className={
-                  kpis.aSigner > 0
-                    ? "font-semibold text-amber-600"
-                    : "font-semibold text-muted-foreground"
-                }
-              >
-                {kpis.aSigner}
+
+      {/* Portal KPIs vers module-nav mobile (sur la meme ligne que "Mon espace") */}
+      {navExtraEl && scrolled
+        ? createPortal(
+            <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
+              <span className="inline-flex items-baseline gap-1">
+                <span className="text-muted-foreground">
+                  <span className="min-[480px]:hidden">Act :</span>
+                  <span className="hidden min-[480px]:inline">Actifs :</span>
+                </span>
+                <span className="font-semibold text-emerald-600">{kpis.actifs}</span>
               </span>
+              <span className="text-muted-foreground">·</span>
+              <span className="inline-flex items-baseline gap-1">
+                <span className="text-muted-foreground">
+                  <span className="min-[480px]:hidden">À sig :</span>
+                  <span className="hidden min-[480px]:inline">A signer :</span>
+                </span>
+                <span className={kpis.aSigner > 0 ? "font-semibold text-amber-600" : "font-semibold"}>
+                  {kpis.aSigner}
+                </span>
+              </span>
+              <span className="text-muted-foreground">·</span>
+              <span className="inline-flex items-baseline gap-1">
+                <span className="text-muted-foreground">
+                  <span className="min-[480px]:hidden">Arch :</span>
+                  <span className="hidden min-[480px]:inline">Archives :</span>
+                </span>
+                <span className="font-semibold text-muted-foreground">{kpis.archives}</span>
+              </span>
+            </div>,
+            navExtraEl,
+          )
+        : null}
+
+      {/* Sticky container : mini-bar DESKTOP uniquement (mobile = portal) */}
+      <div
+        className={cn(
+          "sticky top-[92px] pt-4 lg:top-[64px] lg:pt-0 z-20 bg-background",
+          "-mx-4 sm:-mx-5 lg:mx-0 transition-shadow",
+          scrolled ? "shadow-sm border-b" : "border-b border-transparent",
+        )}
+      >
+        <div className={cn(
+          "hidden px-4 items-center gap-x-5 py-2 text-xs",
+          scrolled ? "lg:flex" : "lg:hidden",
+        )}>
+          <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r shrink-0">
+            <FileSignature className="h-4 w-4" />
+            Mes contrats
+          </span>
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="text-muted-foreground">Actifs :</span>
+            <span className="font-semibold text-emerald-600">{kpis.actifs}</span>
+          </span>
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="text-muted-foreground">A signer :</span>
+            <span className={kpis.aSigner > 0 ? "font-semibold text-amber-600" : "font-semibold text-muted-foreground"}>
+              {kpis.aSigner}
             </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Archives :</span>
-              <span className="font-semibold text-muted-foreground">{kpis.archives}</span>
-            </span>
-          </div>
+          </span>
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="text-muted-foreground">Archives :</span>
+            <span className="font-semibold text-muted-foreground">{kpis.archives}</span>
+          </span>
         </div>
-      )}
+      </div>
 
       {/* ====== Sections ====== */}
       {contracts.length === 0 ? (

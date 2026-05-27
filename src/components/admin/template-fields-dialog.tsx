@@ -97,15 +97,15 @@ export function TemplateFieldsDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !pending && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[92vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-lg">
         {/* Header navy gradient VNK */}
-        <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-5 py-4 shrink-0">
+        <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-base text-white flex items-center gap-2">
-              <ListChecks className="h-4 w-4" />
-              Completer les champs avant envoi
+            <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
+              <ListChecks className="h-4 w-4 shrink-0" />
+              <span className="truncate">Completer les champs avant envoi</span>
             </DialogTitle>
-            <DialogDescription className="text-white/80 text-xs">
+            <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
               {templateTitle} — remplissez les champs ci-dessous. Ils
               remplaceront automatiquement les `[CHAMP]` du document final.
             </DialogDescription>
@@ -113,7 +113,7 @@ export function TemplateFieldsDialog({
         </div>
 
         {/* Body */}
-        <div className="p-5 space-y-4 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-5 space-y-3 sm:space-y-4 overflow-y-auto flex-1">
           {placeholders.length === 0 ? (
             <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-4 flex items-start gap-2">
               <Sparkles className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
@@ -167,7 +167,7 @@ export function TemplateFieldsDialog({
         </div>
 
         {/* Footer sticky */}
-        <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0 gap-2">
+        <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button
             type="button"
             variant="outline"

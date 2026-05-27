@@ -86,22 +86,22 @@ export function PickEmployeeForPreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md p-0 overflow-hidden flex flex-col max-h-[80vh]">
+      <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-md sm:h-auto sm:max-h-[80vh] sm:rounded-lg">
         {/* Header navy */}
-        <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4 shrink-0">
+        <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-base text-white flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              {title}
+            <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
+              <Users className="h-4 w-4 shrink-0" />
+              <span className="truncate">{title}</span>
             </DialogTitle>
-            <DialogDescription className="text-white/80 text-xs">
+            <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
               {description}
             </DialogDescription>
           </DialogHeader>
         </div>
 
         {/* Search */}
-        <div className="p-4 border-b shrink-0">
+        <div className="p-3 sm:p-4 border-b shrink-0">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input

@@ -23,6 +23,15 @@ const nextConfig: NextConfig = {
     // qui en importe aussi (ex: vacation-window-banner → appel SubmitAppealDialog).
     // Cf. https://github.com/vercel/next.js/issues/57966 (similaire)
     optimizePackageImports: ["lucide-react"],
+    // Fix warning Chrome dev "was preloaded using link preload but not used".
+    // Cause : Next.js 15 par defaut emet `<link rel="preload" as="style">` pour
+    // chaque chunk CSS de route (cssChunking='loose'), mais la balise
+    // `<link rel="stylesheet">` correspondante est injectee plus tard par JS
+    // apres `window.load`, donc le browser considere la preload non utilisee.
+    // 'strict' charge les CSS dans l'ordre d'import (synchrone, sans preload
+    // separe en avance), ce qui supprime le warning.
+    // Cf. https://github.com/vercel/next.js/issues/63265
+    cssChunking: "strict",
   },
   // Reduce cold starts
   reactStrictMode: false,

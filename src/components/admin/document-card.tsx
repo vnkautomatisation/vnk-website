@@ -96,15 +96,18 @@ export function DocumentCard({
   const tone = ICON_TONE[iconTone];
   const hasActions = Boolean(onPreview || onDownload || onSign || onEdit || onDelete);
 
+  // `line-clamp-2 leading-snug break-words` : autorise jusqu'a 2 lignes
+  // avant troncature (au lieu de couper brutalement). break-words evite
+  // l'overflow horizontal sur les titres très longs sans espaces.
   const titleNode = href ? (
     <Link
       href={href}
-      className="text-sm font-semibold text-foreground hover:text-[#0F2D52] hover:underline truncate block"
+      className="text-sm font-semibold text-foreground hover:text-[#0F2D52] hover:underline line-clamp-2 leading-snug break-words block"
     >
       {title}
     </Link>
   ) : (
-    <p className="text-sm font-semibold text-foreground truncate">{title}</p>
+    <p className="text-sm font-semibold text-foreground line-clamp-2 leading-snug break-words">{title}</p>
   );
 
   return (
@@ -126,7 +129,7 @@ export function DocumentCard({
           <div className="min-w-0 flex-1">
             {titleNode}
             {subtitle && (
-              <p className="text-xs text-muted-foreground truncate mt-0.5">{subtitle}</p>
+              <p className="text-xs text-muted-foreground line-clamp-2 leading-snug mt-0.5 break-words">{subtitle}</p>
             )}
             {(status || (badges && badges.length > 0)) && (
               <div className="flex flex-wrap gap-1 mt-1.5">

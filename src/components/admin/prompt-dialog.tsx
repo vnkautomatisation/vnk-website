@@ -86,46 +86,48 @@ export function PromptDialogHost() {
 
   return (
     <Dialog open onOpenChange={(o) => !o && close(isConfirm ? false : null)}>
-      <DialogContent className="max-w-md p-0 overflow-hidden">
-        <div className={`px-5 py-4 text-white ${headerCls}`}>
+      <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-md sm:h-auto sm:max-h-[90vh] sm:rounded-lg">
+        <div className={`px-4 sm:px-5 py-3 sm:py-4 text-white shrink-0 ${headerCls}`}>
           <DialogHeader>
-            <DialogTitle className="text-base text-white">{state.title}</DialogTitle>
+            <DialogTitle className="text-sm sm:text-base text-white pr-8">{state.title}</DialogTitle>
             {state.description && (
-              <DialogDescription className="text-white/80 text-xs">{state.description}</DialogDescription>
+              <DialogDescription className="text-white/80 text-[11px] sm:text-xs">{state.description}</DialogDescription>
             )}
           </DialogHeader>
         </div>
         <form
           onSubmit={(e) => { e.preventDefault(); if (canConfirm) close(isConfirm ? true : value); }}
-          className="p-5 space-y-3"
+          className="flex-1 flex flex-col min-h-0"
         >
-          {promptState && (
-            <div className="space-y-1.5">
-              {promptState.label && (
-                <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                  {promptState.label}
-                </Label>
-              )}
-              {promptState.multiline ? (
-                <textarea
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  placeholder={promptState.placeholder}
-                  rows={4}
-                  autoFocus
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/30"
-                />
-              ) : (
-                <Input
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  placeholder={promptState.placeholder}
-                  autoFocus
-                />
-              )}
-            </div>
-          )}
-          <DialogFooter className="-mx-5 -mb-5 px-5 py-3 border-t bg-muted/30 gap-2 mt-4">
+          <div className="p-4 sm:p-5 space-y-3 overflow-y-auto flex-1">
+            {promptState && (
+              <div className="space-y-1.5">
+                {promptState.label && (
+                  <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                    {promptState.label}
+                  </Label>
+                )}
+                {promptState.multiline ? (
+                  <textarea
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    placeholder={promptState.placeholder}
+                    rows={4}
+                    autoFocus
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/30"
+                  />
+                ) : (
+                  <Input
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    placeholder={promptState.placeholder}
+                    autoFocus
+                  />
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
             <Button type="button" variant="outline" onClick={() => close(isConfirm ? false : null)}>
               {state.cancelLabel || "Annuler"}
             </Button>

@@ -53,21 +53,26 @@ export function EditModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("sm:max-w-lg", className)}>
-        <DialogHeader>
-          <div className="flex items-center gap-3">
+      <DialogContent
+        className={cn(
+          "p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-lg sm:h-auto sm:max-h-[90vh] sm:rounded-lg",
+          className
+        )}
+      >
+        <DialogHeader className="px-4 sm:px-5 py-3 sm:py-4 border-b shrink-0">
+          <div className="flex items-center gap-3 pr-8">
             <div
               className={cn(
-                "h-10 w-10 rounded-lg flex items-center justify-center text-white shrink-0",
+                "h-9 w-9 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center text-white shrink-0",
                 accent
               )}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <div>
-              <DialogTitle>{title}</DialogTitle>
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="text-sm sm:text-base truncate">{title}</DialogTitle>
               {description ? (
-                <DialogDescription className="mt-0.5">
+                <DialogDescription className="mt-0.5 text-[11px] sm:text-xs">
                   {description}
                 </DialogDescription>
               ) : (
@@ -79,11 +84,11 @@ export function EditModal({
           </div>
         </DialogHeader>
 
-        <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 sm:space-y-4">
           {children}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}

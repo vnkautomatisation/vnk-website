@@ -10,6 +10,8 @@
 //  - Modals VNK : header navy + FormSection/Field + footer sticky
 // =============================================================
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -74,7 +76,7 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
   const [bulkDialog, setBulkDialog] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
 
-  // Sticky bar (pattern Finance)
+  // Sticky bar pattern STANDARD (ref my-documents-view.tsx)
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -86,6 +88,12 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
     );
     io.observe(el);
     return () => io.disconnect();
+  }, []);
+
+  // Portal target KPIs dans module-nav mobile
+  const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
   }, []);
 
   const openPdf = useCallback((d: Doc) => {
@@ -208,47 +216,74 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
         />
       </div>
 
-      {/* Sticky bar sentinel */}
+      {/* Sentinel */}
       <div ref={sentinelRef} aria-hidden className="h-px" />
-      {scrolled && (
-        <div className="sticky top-[108px] lg:top-[64px] z-20 py-2 bg-background/95 backdrop-blur shadow-sm border-b rounded-md px-3 animate-overlay-fade-in">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
-            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
-              <FileText className="h-4 w-4" />
-              Documents fiscaux
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Total :</span>
-              <span className="font-semibold text-[#0F2D52]">{kpis.total}</span>
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Couverture :</span>
-              <span
-                className={
-                  kpis.coverage >= 90
-                    ? "font-semibold text-emerald-600"
-                    : kpis.coverage >= 60
-                      ? "font-semibold text-amber-600"
-                      : "font-semibold text-red-600"
-                }
-              >
-                {kpis.coverage}%
-              </span>
-            </span>
-            <Button
-              size="sm"
-              onClick={() => setIssueDialog(true)}
-              className="h-7 text-xs ml-auto bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
-            >
-              <Upload className="h-3.5 w-3.5 mr-1.5" />
-              Televerser
-            </Button>
-          </div>
-        </div>
-      )}
 
-      {/* ====== Tabs ====== */}
-      <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Navigation documents fiscaux" />
+      {/* Portal KPIs vers module-nav mobile */}
+      {navExtraEl && scrolled
+        ? createPortal(
+            <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
+              <span className="inline-flex items-baseline gap-1">
+                <span className="text-muted-foreground">
+                  <span className="min-[480px]:hidden">Tot :</span>
+                  <span className="hidden min-[480px]:inline">Total :</span>
+                </span>
+                <span className="font-semibold text-[#0F2D52]">{kpis.total}</span>
+              </span>
+              <span className="text-muted-foreground">·</span>
+              <span className="inline-flex items-baseline gap-1">
+                <span className="text-muted-foreground">
+                  <span className="min-[480px]:hidden">Couv :</span>
+                  <span className="hidden min-[480px]:inline">Couverture :</span>
+                </span>
+                <span className={kpis.coverage >= 90 ? "font-semibold text-emerald-600" : kpis.coverage >= 60 ? "font-semibold text-amber-600" : "font-semibold text-red-600"}>
+                  {kpis.coverage}%
+                </span>
+              </span>
+            </div>,
+            navExtraEl,
+          )
+        : null}
+
+      {/* Sticky container : mini-bar desktop + tabs (toujours) */}
+      <div
+        className={cn(
+          "sticky top-[92px] pt-4 lg:top-[64px] lg:pt-0 z-20 bg-background",
+          "-mx-4 sm:-mx-5 lg:mx-0 transition-shadow",
+          scrolled ? "shadow-sm border-b" : "border-b border-transparent",
+        )}
+      >
+        <div className={cn(
+          "hidden px-4 items-center gap-x-5 py-2 text-xs",
+          scrolled ? "lg:flex" : "lg:hidden",
+        )}>
+          <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r shrink-0">
+            <FileText className="h-4 w-4" />
+            Documents fiscaux
+          </span>
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="text-muted-foreground">Total :</span>
+            <span className="font-semibold text-[#0F2D52]">{kpis.total}</span>
+          </span>
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="text-muted-foreground">Couverture :</span>
+            <span className={kpis.coverage >= 90 ? "font-semibold text-emerald-600" : kpis.coverage >= 60 ? "font-semibold text-amber-600" : "font-semibold text-red-600"}>
+              {kpis.coverage}%
+            </span>
+          </span>
+          <Button
+            size="sm"
+            onClick={() => setIssueDialog(true)}
+            className="h-7 text-xs ml-auto bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
+          >
+            <Upload className="h-3.5 w-3.5 mr-1.5" />
+            Televerser
+          </Button>
+        </div>
+        <div className="px-4 sm:px-5 lg:px-4">
+          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Navigation documents fiscaux" />
+        </div>
+      </div>
 
       {/* ====== Tab content ====== */}
       {tab === "overview" && (

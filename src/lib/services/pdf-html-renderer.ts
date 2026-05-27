@@ -22,7 +22,7 @@
 // ─────────────────────────────────────────────────────────
 import "server-only";
 import { marked, type Tokens, type Token } from "marked";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import {
   renderTemplate,
   findVariable,
@@ -1980,7 +1980,11 @@ export function buildHandbookTocHtml(
  */
 function buildHandbookHtml(
   opts: HandbookHtmlPdfOptions,
-): { coverHtml: string; sections: Array<{ name: string; html: string }> } {
+): {
+  coverHtml: string;
+  bodyHtml: string;
+  sections: Array<{ name: string; html: string }>;
+} {
   const safeContext = opts.context ?? {};
   const scope = opts.handbook.signatureScope ?? "employee_only";
 
@@ -2308,10 +2312,10 @@ function buildHandbookHtml(
     page-break-after: avoid;
     break-after: avoid;
   }
-  /* REFONTE multi-PDF : les page-break-before forces sur .hb-chapter /
-     .hb-signature-page sont SUPPRIMES — chaque section est un PDF distinct
-     et le merge pdf-lib enchaine les PDFs sans page intermediaire. Forcer
-     un saut ici introduirait une page blanche au debut de chaque section. */
+  /* Multi-PDF (N PDFs separes mergeés via pdf-lib) : chaque section est
+     son propre PDF. Pas besoin de page-break-before — le merge enchaine
+     directement les PDFs. Forcer un break ici introduirait une page
+     blanche en debut de section. */
 
   /* ────────── PAGE DE GARDE (reliure navy) ────────── */
   /* La cover est rendue dans un PDF separe avec margin 0 (cf. coverPage.pdf
@@ -2599,9 +2603,7 @@ function buildHandbookHtml(
     align-items: center;
     justify-content: space-between;
     box-sizing: border-box;
-    /* Hauteur AUTO : la bande s'agrandit si le titre prend 2 lignes
-       (ex: "Acceptation de la politique de vacances annuelles").
-       min-height 22mm garantit la presence visuelle minimale. */
+    /* Hauteur AUTO : la bande s'agrandit si le titre prend 2 lignes. */
     min-height: 22mm;
     height: auto;
     page-break-after: avoid;
@@ -3338,8 +3340,7 @@ function buildHandbookHtml(
 </html>`;
 
   // Compose la liste ordonnee des sections : TOC, Introduction (optionnelle),
-  // chacun des N chapitres, puis Acceptation finale. Chaque entree est un
-  // document HTML autonome ; le renderer en aval rendra UN PDF par entree.
+  // chacun des N chapitres, puis Acceptation finale.
   const sections: Array<{ name: string; html: string }> = [];
   sections.push({ name: "toc", html: htmlWrap(tocHtml) });
   if (coverIntroHtml) {
@@ -3353,10 +3354,102 @@ function buildHandbookHtml(
   }
   sections.push({ name: "acceptance", html: htmlWrap(signaturePageHtml) });
 
+  // OPTIMISATION : bodyHtml = toutes les sections (TOC + intro + chapitres
+  // + acceptation) concatenees DANS UN SEUL document HTML wrappe. Permet
+  // au renderer de generer 2 PDFs total (cover + body) au lieu de N+1.
+  // ~10x plus rapide pour un cahier complet de 40+ chapitres.
+  const bodyInner = [
+    tocHtml,
+    coverIntroHtml ?? "",
+    ...chapterSectionsHtml.map((cs) => cs.html),
+    signaturePageHtml,
+  ].filter(Boolean).join("\n");
+
   return {
     coverHtml: htmlWrap(coverHtml),
+    bodyHtml: htmlWrap(bodyInner),
     sections,
   };
+}
+
+/**
+ * FIX pagination globale : Puppeteer ne sait pas paginer correctement sur un
+ * document MERGE (chaque sous-PDF a son propre compteur `pageNumber`/`totalPages`
+ * local). On ajoute donc le footer "Page X / Y" manuellement via pdf-lib APRES
+ * la concatenation, en utilisant `merged.getPageCount()` comme total reel.
+ *
+ * Layout du footer (aligne sur le footerTemplate Puppeteer historique) :
+ *   [VNK Automatisation Inc.]   [Manuel de l'employe · vX]   [Page N / Total]
+ *   gauche                       centre                       droite
+ *
+ * La police Helvetica (StandardFonts) est embarquee — pas besoin de fetch
+ * Google Fonts. Couleur slate-400 (#94A3B8) pour rester discret.
+ *
+ * La cover page (page 1) est SKIP : le footer dessine n'apparait qu'a partir
+ * de la TOC pour preserver le design du recto.
+ */
+async function addGlobalFooterToPdf(
+  pdfBuffer: Buffer,
+  handbookVersion: string,
+): Promise<Buffer> {
+  const doc = await PDFDocument.load(pdfBuffer);
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const pages = doc.getPages();
+  // Total des pages numérotées = TOTAL - 1 (la cover page n'est pas comptée).
+  // La TOC (vraie page 1 visible) affiche "Page 1 / N" ou N = total - 1.
+  const numberablePages = pages.length - 1;
+
+  const fontSize = 8;
+  const textColor = rgb(0.58, 0.64, 0.72); // slate-400 (#94A3B8)
+  const padX = 40;
+  const padY = 28;
+
+  const leftText = "VNK Automatisation Inc.";
+  const centerText = `Manuel de l'employe · v${handbookVersion}`;
+
+  pages.forEach((page, i) => {
+    const pageNum = i + 1;
+    // Skip cover page (page 1) : design dedie sans footer ni pagination.
+    if (pageNum === 1) return;
+
+    // Numerotation relative : page 2 du PDF = "Page 1" affichee, page 3 = "Page 2", etc.
+    const displayPageNum = pageNum - 1;
+
+    const { width } = page.getSize();
+    const rightText = `Page ${displayPageNum} / ${numberablePages}`;
+
+    // Footer gauche
+    page.drawText(leftText, {
+      x: padX,
+      y: padY,
+      size: fontSize,
+      font,
+      color: textColor,
+    });
+
+    // Footer centre (centre horizontalement sur la largeur de page)
+    const centerWidth = font.widthOfTextAtSize(centerText, fontSize);
+    page.drawText(centerText, {
+      x: (width - centerWidth) / 2,
+      y: padY,
+      size: fontSize,
+      font,
+      color: textColor,
+    });
+
+    // Footer droite (aligne sur la marge droite)
+    const rightWidth = font.widthOfTextAtSize(rightText, fontSize);
+    page.drawText(rightText, {
+      x: width - padX - rightWidth,
+      y: padY,
+      size: fontSize,
+      font,
+      color: textColor,
+    });
+  });
+
+  const out = await doc.save();
+  return Buffer.from(out);
 }
 
 export async function renderHandbookHtmlToPdf(
@@ -3398,17 +3491,21 @@ export async function renderHandbookHtmlToPdf(
   // Le header navy est INLINE dans le body de chaque section
   // (.vnk-section-header) — Puppeteer headerTemplate est donc neutralise
   // par un div vide pour eviter le header par defaut "document title".
-  // Le footer Puppeteer reste actif pour la pagination sur chaque page.
+  //
+  // FIX pagination : le footerTemplate Puppeteer est egalement vide. Chaque
+  // section etant rendue dans son propre PDF, les compteurs `pageNumber` /
+  // `totalPages` de Chromium sont LOCAUX a chaque PDF (1/3 sur la section
+  // Acceptation, 1/5 sur l'Introduction, etc.) — incorrect pour un manuel
+  // mergeable. On dessine donc le footer GLOBAL via pdf-lib apres le merge
+  // (cf. addGlobalFooterToPdf en aval), ce qui garantit "Page X / Y" sur
+  // l'integralite du document final.
+  //
+  // `displayHeaderFooter: true` est conserve pour que Chromium reserve la
+  // marge bottom de 20mm sur chaque page (sinon le contenu se collerait au
+  // bord du papier et notre footer pdf-lib chevaucherait le texte).
   // ─────────────────────────────────────────────────────────
-  const versionSafe = escapeHtmlSafe(opts.handbook.version);
-  const companyFullSafe = escapeHtmlSafe(COMPANY.fullName);
   const HEADER_TEMPLATE = `<div></div>`;
-  const FOOTER_TEMPLATE = `
-<div style="width:100%;height:14mm;font-size:8pt;color:#94a3b8;font-family:Helvetica,Arial,sans-serif;padding:0 14mm;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;border-top:0.5pt solid #e2e8f0;">
-  <span>${companyFullSafe}</span>
-  <span>Manuel de l'employe &middot; v${versionSafe}</span>
-  <span>Page <span class="pageNumber"></span> / <span class="totalPages"></span></span>
-</div>`;
+  const FOOTER_TEMPLATE = `<div></div>`;
 
   // Helper : rend UNE section HTML en PDF (Buffer). Encapsule la creation
   // / fermeture de la page Puppeteer et la difference de marges entre la
@@ -3459,8 +3556,9 @@ export async function renderHandbookHtmlToPdf(
   }
 
   try {
-    // Rend la cover + chaque section en parallele (limite implicite par
-    // le pool Puppeteer, mais N sections legitimes restent dans la limite).
+    // Multi-PDF : un PDF par section. Chaque section beneficie de son
+    // propre `@page :first` qui place le header navy edge-to-edge. Le
+    // merge pdf-lib enchaine les PDFs sans page intermediaire.
     const coverPdf = await renderSectionPdf(coverHtml, { isCover: true });
     const sectionPdfs: Buffer[] = [];
     for (const sec of sections) {
@@ -3470,10 +3568,6 @@ export async function renderHandbookHtmlToPdf(
     }
 
     // ─── Merge cover + toutes les sections via pdf-lib ──────
-    // pdf-lib enchaine les PDFs sans inserer de page intermediaire :
-    // la 1ere page de chaque PDF source devient directement la page
-    // suivante du document final. Plus de page blanche entre la cover
-    // et la TOC, ni entre 2 sections.
     const merged = await PDFDocument.create();
     const allPdfs = [coverPdf, ...sectionPdfs];
     for (const buf of allPdfs) {
@@ -3483,7 +3577,15 @@ export async function renderHandbookHtmlToPdf(
     }
 
     const mergedBytes = await merged.save();
-    return Buffer.from(mergedBytes);
+    // FIX pagination globale : on dessine le footer "Page X / Y" sur CHAQUE
+    // page (sauf cover) en utilisant le total reel post-merge (pdf-lib).
+    // Sans ce passage, chaque sous-PDF afficherait sa propre pagination locale
+    // (ex: "1/3" sur Acceptation alors que le cahier complet fait 82 pages).
+    const withFooter = await addGlobalFooterToPdf(
+      Buffer.from(mergedBytes),
+      opts.handbook.version,
+    );
+    return withFooter;
   } catch (e) {
     console.error(
       "[renderHandbookHtmlToPdf] echec Puppeteer, fallback PDFKit :",

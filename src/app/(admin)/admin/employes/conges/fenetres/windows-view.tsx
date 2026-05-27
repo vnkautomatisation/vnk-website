@@ -14,6 +14,8 @@
 // Le cron /api/cron/vacation-window-transitions gere les passages auto
 // (draft->open a openingDate, open->closed apres closingDate).
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -131,9 +133,7 @@ export function WindowsView({ windows }: { windows: Window[] }) {
   const [search, setSearch] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
 
-  // Sticky compress-on-scroll : sentinel + IntersectionObserver (pattern Finance).
-  // rootMargin -64px top compense le topbar sticky (h-[64px], z-30) : le sentinel est
-  // considéré "out" dès qu'il passe SOUS le topbar, pas seulement hors viewport.
+  // Sticky bar pattern STANDARD (ref my-documents-view.tsx)
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -145,6 +145,12 @@ export function WindowsView({ windows }: { windows: Window[] }) {
     );
     obs.observe(sentinel);
     return () => obs.disconnect();
+  }, []);
+
+  // Portal target KPIs dans module-nav mobile
+  const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
   }, []);
 
   const filtered = windows.filter((w) => {
@@ -276,15 +282,47 @@ export function WindowsView({ windows }: { windows: Window[] }) {
       {/* Sentinel : detecte sortie du hero+bandeau */}
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Mini-barre sticky qui apparait UNIQUEMENT au scroll (pattern Finance).
-          Mobile : top-[108px] (64 topbar + 44 sub-header z-[25]). Desktop : top-[64px]. */}
-      {scrolled && (
-      <div className="sticky top-[108px] lg:top-[64px] z-20 py-2 bg-background shadow-sm border-b animate-overlay-fade-in">
-        <div className="flex items-center gap-3 flex-wrap px-3">
+      {/* Portal KPIs vers module-nav mobile */}
+      {navExtraEl && scrolled
+        ? createPortal(
+            <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
+              <span className="inline-flex items-baseline gap-1">
+                <span className="text-muted-foreground">
+                  <span className="min-[480px]:hidden">Att :</span>
+                  <span className="hidden min-[480px]:inline">En attente :</span>
+                </span>
+                <span className={closedAwaitingAlloc > 0 ? "font-semibold text-amber-600" : "font-semibold"}>
+                  {closedAwaitingAlloc}
+                </span>
+              </span>
+              <span className="text-muted-foreground">·</span>
+              <span className="inline-flex items-baseline gap-1">
+                <span className="text-muted-foreground">
+                  <span className="min-[480px]:hidden">Att :</span>
+                  <span className="hidden min-[480px]:inline">Attribuees :</span>
+                </span>
+                <span className="font-semibold text-emerald-600">{allocatedCount}</span>
+              </span>
+            </div>,
+            navExtraEl,
+          )
+        : null}
+
+      {/* Sticky container : mini-bar desktop (mobile = portal) */}
+      <div
+        className={cn(
+          "sticky top-[92px] pt-4 lg:top-[64px] lg:pt-0 z-20 bg-background",
+          "-mx-4 sm:-mx-5 lg:mx-0 transition-shadow",
+          scrolled ? "shadow-sm border-b" : "border-b border-transparent",
+        )}
+      >
+        <div className={cn(
+          "hidden px-4 items-center gap-3 flex-wrap py-2",
+          scrolled ? "lg:flex" : "lg:hidden",
+        )}>
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 shrink-0">
             <CalendarRange className="h-4 w-4" />
-            <span className="hidden sm:inline">Fenetres de vacances</span>
-            <span className="sm:hidden">Fenetres</span>
+            Fenetres de vacances
           </span>
           <div className="flex items-center gap-1.5 ml-auto">
             <Button
@@ -293,8 +331,7 @@ export function WindowsView({ windows }: { windows: Window[] }) {
               onClick={() => setCreating(true)}
             >
               <Plus className="h-3.5 w-3.5 mr-1.5" />
-              <span className="hidden sm:inline">Nouvelle fenetre</span>
-              <span className="sm:hidden">Nouvelle</span>
+              Nouvelle fenetre
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -320,7 +357,6 @@ export function WindowsView({ windows }: { windows: Window[] }) {
           </div>
         </div>
       </div>
-      )}
 
       {/* Toolbar filtres */}
       <Card className="p-3 flex items-center gap-2 flex-wrap">

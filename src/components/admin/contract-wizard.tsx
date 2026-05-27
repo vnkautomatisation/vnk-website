@@ -504,17 +504,17 @@ export function ContractWizard({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[92vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-3xl sm:h-auto sm:max-h-[92vh] sm:rounded-lg">
         {/* ===== Header navy ===== */}
-        <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-5 py-4 shrink-0">
+        <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <DialogTitle className="text-base text-white flex items-center gap-2">
+                <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
                   <FileSignature className="h-4 w-4 shrink-0" />
                   Nouveau contrat
                 </DialogTitle>
-                <DialogDescription className="text-white/80 text-xs">
+                <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
                   Assistant en {STEPS.length} etapes : selection, personnalisation et signature.
                 </DialogDescription>
               </div>
@@ -581,7 +581,7 @@ export function ContractWizard({
         </div>
 
         {/* ===== Body ===== */}
-        <div className="p-5 overflow-y-auto flex-1 space-y-5">
+        <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4 sm:space-y-5">
           {step === 1 && (
             <StepEmployee
               employees={filteredEmployees}
@@ -678,12 +678,12 @@ export function ContractWizard({
         </div>
 
         {/* ===== Footer ===== */}
-        <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap">
+        <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button
             variant="ghost"
             onClick={onClose}
             disabled={submitting}
-            className="mr-auto"
+            className="sm:mr-auto"
           >
             Annuler
           </Button>
@@ -741,19 +741,19 @@ export function ContractWizard({
       {/* ===== Sheet : edition markdown du contrat ===== */}
       <Sheet open={editorSheetOpen} onOpenChange={setEditorSheetOpen}>
         <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col gap-0 p-0">
-          <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-5 py-4">
+          <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-4 sm:px-5 py-3 sm:py-4">
             <SheetHeader>
-              <SheetTitle className="text-white text-base flex items-center gap-2">
-                <Edit3 className="h-4 w-4" />
-                Modifier le contenu du contrat
+              <SheetTitle className="text-white text-sm sm:text-base flex items-center gap-2 pr-8">
+                <Edit3 className="h-4 w-4 shrink-0" />
+                <span className="truncate">Modifier le contenu du contrat</span>
               </SheetTitle>
-              <SheetDescription className="text-white/80 text-xs">
+              <SheetDescription className="text-white/80 text-[11px] sm:text-xs">
                 Modifications appliquees uniquement a ce contrat. Le template d'origine
                 reste inchange.
               </SheetDescription>
             </SheetHeader>
           </div>
-          <div className="p-5 flex-1 overflow-y-auto">
+          <div className="p-4 sm:p-5 flex-1 overflow-y-auto">
             <p className="text-[11px] text-muted-foreground italic mb-2">
               Les champs dynamiques (ex. Nom complet, Date d&apos;embauche) sont
               affiches comme pastilles bleues et seront remplaces par les valeurs
@@ -766,7 +766,7 @@ export function ContractWizard({
               placeholder="Commencez a rediger le contrat…"
             />
           </div>
-          <div className="border-t bg-muted/30 px-5 py-3 flex justify-end gap-2">
+          <div className="border-t bg-muted/30 px-3 sm:px-5 py-2 sm:py-3 flex flex-wrap justify-end gap-2 [&>button]:flex-1 sm:[&>button]:flex-initial">
             <Button variant="outline" onClick={() => setEditorSheetOpen(false)}>
               Annuler
             </Button>

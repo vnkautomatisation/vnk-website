@@ -103,19 +103,19 @@ export function RequestConflictsDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4 shrink-0">
+      <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-lg sm:h-auto sm:max-h-[90vh] sm:rounded-lg">
+        <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader className="space-y-1">
-            <DialogTitle className="text-base text-white flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Collègues en conflit
+            <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
+              <Users className="h-4 w-4 shrink-0" />
+              <span className="truncate">Collègues en conflit</span>
             </DialogTitle>
-            <DialogDescription className="text-white/80 text-xs">
+            <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
               {leaveLabel || `Demande #${leaveId}`}
             </DialogDescription>
           </DialogHeader>
         </div>
-        <div className="p-5 space-y-3 flex-1 overflow-y-auto">
+        <div className="p-4 sm:p-5 space-y-3 flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-8 text-xs text-muted-foreground gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -171,7 +171,7 @@ export function RequestConflictsDialog({
             </ul>
           )}
         </div>
-        <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
+        <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button variant="outline" onClick={onClose}>
             Fermer
           </Button>

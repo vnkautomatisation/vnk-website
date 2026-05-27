@@ -19,17 +19,16 @@
 // ─────────────────────────────────────────────────────────
 import { useEffect, useMemo, useRef, useState, Fragment } from "react";
 import { marked } from "marked";
+// Types deplaces dans interactive-document-view-types.ts pour permettre
+// a Fast Refresh de hot-reload ce composant (les fichiers React ne
+// doivent exporter QUE des composants).
+import type {
+  CheckboxStates,
+  SignatureScope,
+  SignatureAnchor,
+} from "@/components/admin/interactive-document-view-types";
 
-export type CheckboxStates = Record<number, boolean>;
-
-/** Cf. SignatureScope dans pdf-html-renderer.ts — meme semantique. */
-export type SignatureScope =
-  | "employee_only"
-  | "employer_only"
-  | "both"
-  | "none";
-
-export interface InteractiveDocumentViewProps {
+interface InteractiveDocumentViewProps {
   /** Markdown brut (avec {{vars}} non résolues) — fallback si pas de resolvedMarkdown. */
   bodyMarkdown: string;
   /** Markdown avec variables déjà résolues côté serveur. */
@@ -87,8 +86,6 @@ const SIGNATURE_ANCHOR_RE = /\[Signature\s+([^\]]+)\]/gi;
 // Titre/section "Signatures" en bas de doc — on le masque aussi (notre
 // composant rend déjà un bloc Signatures séparé).
 const SIGNATURES_SECTION_RE = /^#{1,3}\s+Signatures?\s*$/gim;
-
-export type SignatureAnchor = { label: string; role: string };
 
 function preprocessMarkdown(md: string): {
   processed: string;

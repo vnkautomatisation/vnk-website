@@ -10,6 +10,7 @@
 //   PdfPreviewModal.
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -49,6 +50,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SettingsTabs, type TabItem } from "@/components/admin/settings-tabs";
+import { cn } from "@/lib/utils";
 import { DocumentStatsCard } from "@/components/admin/document-stats-card";
 import { DocumentCard } from "@/components/admin/document-card";
 import {
@@ -81,10 +83,8 @@ import { signLegalDocAction } from "@/app/actions/hr-legal-docs";
 import { requestEmploymentLetterAction } from "@/app/actions/hr-tax-docs";
 import { deletePersonalDocAction } from "@/app/actions/hr-personal-docs";
 import { signHandbookAction } from "@/app/actions/hr-document-handbooks";
-import {
-  HandbookSignatureDialog,
-  type HandbookSignatureDialogHandbook,
-} from "@/components/admin/handbook-signature-dialog";
+import { HandbookSignatureDialog } from "@/components/admin/handbook-signature-dialog";
+import type { HandbookSignatureDialogHandbook } from "@/components/admin/handbook-signature-types";
 import { BookOpen } from "lucide-react";
 
 // ---------- Types ------------------------------------------------
@@ -241,9 +241,10 @@ const CONTRACT_STATUS_LABEL: Record<string, { label: string; tone: "success" | "
 };
 
 function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "-";
+  // Retour "—" (em dash) plus lisible que "-" pour distinguer date manquante.
+  if (!iso) return "—";
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "-";
+  if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -399,7 +400,10 @@ export function MyDocumentsView({
     createdAt: r.createdAt,
   }));
 
-  // --- Sticky bar ---------------------------------------------
+  // --- Sticky bar (pattern Finance) ---------------------------------
+  // rootMargin -64px top compense le topbar sticky (h-[64px], z-30) : le
+  // sentinel est considere "out" des qu'il passe SOUS le topbar, pas
+  // seulement hors viewport. Sans ca, la barre apparait trop tard.
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -407,10 +411,20 @@ export function MyDocumentsView({
     if (!el) return;
     const io = new IntersectionObserver(
       ([entry]) => setScrolled(!entry.isIntersecting),
-      { threshold: 0 }
+      { threshold: 0, rootMargin: "-64px 0px 0px 0px" }
     );
     io.observe(el);
     return () => io.disconnect();
+  }, []);
+
+  // --- Portal target pour KPIs dans la module-nav mobile -----------
+  // Le slot #vnk-module-nav-extra est defini dans module-sidebar-nav.tsx.
+  // On porte les KPIs (A signer / Contrats / Dossier) dedans quand scrolled,
+  // sur la MEME ligne que "Mon espace" → une seule bande compacte au scroll.
+  // mounted = true uniquement apres hydration cote client (createPortal SSR-safe).
+  const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
   }, []);
 
   const openSignByTemplateId = (templateId: number) => {
@@ -477,21 +491,23 @@ export function MyDocumentsView({
 
   return (
     <div className="space-y-4">
-      {/* ====== Header navy ====== */}
+      {/* ====== Header navy ======
+          Responsive : title row stack au-dessus du bouton sur mobile,
+          ligne horizontale a partir de sm+. */}
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"
           aria-hidden
         />
-        <div className="relative flex items-start justify-between gap-3 flex-wrap">
+        <div className="relative flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-11 w-11 rounded-lg bg-white/15 backdrop-blur flex items-center justify-center ring-2 ring-white/20 shrink-0">
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold">Mes documents</h1>
-              <p className="text-xs text-white/80">
-                Contrats, bulletins de paie, documents fiscaux, lettres d'emploi et dossier personnel.
+              <h1 className="text-base sm:text-lg font-bold leading-tight">Mes documents</h1>
+              <p className="text-[11px] sm:text-xs text-white/80 leading-snug">
+                Contrats, paie, documents fiscaux, lettres et dossier personnel.
               </p>
             </div>
           </div>
@@ -499,17 +515,17 @@ export function MyDocumentsView({
             <Button
               size="sm"
               onClick={() => setLetterDialog(true)}
-              className="h-8 text-xs bg-white text-[#0F2D52] hover:bg-white/90 font-semibold"
+              className="h-8 text-[11px] sm:text-xs bg-white text-[#0F2D52] hover:bg-white/90 font-semibold w-full sm:w-auto"
             >
-              <Mail className="h-3.5 w-3.5 mr-1.5" />
-              Demander une lettre
+              <Mail className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+              <span className="truncate">Demander une lettre</span>
             </Button>
           </div>
         </div>
       </div>
 
       {/* ====== KPIs ====== */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         <DocumentStatsCard
           label="A signer"
           value={toSignTotal}
@@ -550,34 +566,99 @@ export function MyDocumentsView({
         />
       </div>
 
-      {/* ====== Sticky bar ====== */}
+      {/* Sentinel : detecte la sortie des KPIs pour activer le portal KPIs */}
       <div ref={sentinelRef} aria-hidden className="h-px" />
-      {scrolled && (
-        <div className="sticky top-[64px] z-20 py-2 bg-background/95 backdrop-blur shadow-sm border-b rounded-md px-3 animate-overlay-fade-in">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
-            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
-              <FileText className="h-4 w-4" />
-              Mes documents
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">A signer :</span>
-              <span className={toSignTotal > 0 ? "font-semibold text-amber-600" : "font-semibold text-emerald-600"}>
-                {toSignTotal}
+
+      {/* Portal : on injecte les KPIs DANS la module-nav mobile (sur la
+          meme ligne que "Mon espace") au scroll. Plus de 2e bande !
+          Slot cible : #vnk-module-nav-extra (defini dans module-sidebar-nav).
+          createPortal est SSR-safe (rendu seulement apres hydration).
+          Labels compacts pour rentrer sur tres petits ecrans :
+          - <480px : "À sign / Contr / Doss"
+          - >=480px : "A signer / Contrats / Dossier" (complet) */}
+      {navExtraEl && scrolled
+        ? createPortal(
+            <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
+              <span className="inline-flex items-baseline gap-1">
+                <span className="text-muted-foreground">
+                  <span className="min-[480px]:hidden">À sign :</span>
+                  <span className="hidden min-[480px]:inline">A signer :</span>
+                </span>
+                <span className={toSignTotal > 0 ? "font-semibold text-amber-600" : "font-semibold text-emerald-600"}>
+                  {toSignTotal}
+                </span>
               </span>
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Contrats :</span>
-              <span className="font-semibold">{activeContracts}</span>
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Dossier :</span>
-              <span className={personalDocsExpired.length > 0 ? "font-semibold text-red-600" : "font-semibold"}>
-                {personalDocs.length}
+              <span className="text-muted-foreground">·</span>
+              <span className="inline-flex items-baseline gap-1">
+                <span className="text-muted-foreground">
+                  <span className="min-[480px]:hidden">Contr :</span>
+                  <span className="hidden min-[480px]:inline">Contrats :</span>
+                </span>
+                <span className="font-semibold">{activeContracts}</span>
               </span>
+              <span className="text-muted-foreground">·</span>
+              <span className="inline-flex items-baseline gap-1">
+                <span className="text-muted-foreground">
+                  <span className="min-[480px]:hidden">Doss :</span>
+                  <span className="hidden min-[480px]:inline">Dossier :</span>
+                </span>
+                <span className={personalDocsExpired.length > 0 ? "font-semibold text-red-600" : "font-semibold"}>
+                  {personalDocs.length}
+                </span>
+              </span>
+            </div>,
+            navExtraEl,
+          )
+        : null}
+
+      {/* Sticky container : tabs uniquement (mini-bar deplacee vers la
+          module-nav via portal ci-dessus). Pattern conges + filtre KPIs
+          dans module-nav au scroll.
+          - Mobile : top-[92px] pt-4 → overlap 16px cache derriere module-nav.
+          - Desktop (lg+) : top-[64px] pt-0 + mini-bar visible (pas de
+            module-nav en haut sur desktop, elle devient sidebar). */}
+      <div
+        className={cn(
+          "sticky top-[92px] pt-4 lg:top-[64px] lg:pt-0 z-20 bg-background",
+          "-mx-4 sm:-mx-5 lg:mx-0 transition-shadow",
+          scrolled ? "shadow-sm border-b" : "border-b border-transparent",
+        )}
+      >
+        {/* Mini-bar info DESKTOP UNIQUEMENT (lg+).
+            Mobile : les KPIs sont portales dans la module-nav (voir au-dessus). */}
+        <div
+          className={cn(
+            "hidden lg:flex px-4 lg:px-4 items-center gap-x-5 py-2 text-xs",
+            scrolled ? "lg:flex" : "lg:hidden",
+          )}
+        >
+          <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r shrink-0">
+            <FileText className="h-4 w-4" />
+            Mes documents
+          </span>
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="text-muted-foreground">A signer :</span>
+            <span className={toSignTotal > 0 ? "font-semibold text-amber-600" : "font-semibold text-emerald-600"}>
+              {toSignTotal}
             </span>
-          </div>
+          </span>
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="text-muted-foreground">Contrats :</span>
+            <span className="font-semibold">{activeContracts}</span>
+          </span>
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="text-muted-foreground">Dossier :</span>
+            <span className={personalDocsExpired.length > 0 ? "font-semibold text-red-600" : "font-semibold"}>
+              {personalDocs.length}
+            </span>
+          </span>
         </div>
-      )}
+
+        {/* Tabs : toujours sticky */}
+        <div className="px-4 sm:px-5 lg:px-4">
+          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Navigation documents" />
+        </div>
+      </div>
 
       {/* ====== Bandeau demandes upload RH ====== */}
       <MyUploadRequestsBanner
@@ -602,21 +683,32 @@ export function MyDocumentsView({
             {handbooksToSign.map((hb) => (
               <div
                 key={hb.id}
-                className="rounded-md border bg-card px-3 py-2.5 flex items-start gap-2.5"
+                className="rounded-md border bg-card p-3 flex flex-col gap-2.5"
               >
-                <div className="h-9 w-9 rounded-md bg-[#0F2D52]/10 flex items-center justify-center shrink-0">
-                  <BookOpen className="h-4 w-4 text-[#0F2D52]" />
+                {/* Ligne 1 : icone + titre + meta (peut wrap sur 2 lignes) */}
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <div className="h-9 w-9 rounded-md bg-[#0F2D52]/10 flex items-center justify-center shrink-0">
+                    <BookOpen className="h-4 w-4 text-[#0F2D52]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold line-clamp-2 leading-snug break-words">{hb.title}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                      <span>{hb.items.length} politique{hb.items.length > 1 ? "s" : ""}</span>
+                      <span className="mx-1">·</span>
+                      <span>v{hb.version}</span>
+                      {hb.isRequired && (
+                        <>
+                          <span className="mx-1">·</span>
+                          <span className="text-red-700 font-medium">Obligatoire</span>
+                        </>
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold truncate">{hb.title}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {hb.items.length} politique{hb.items.length > 1 ? "s" : ""} - v{hb.version}
-                    {hb.isRequired ? " - Obligatoire" : ""}
-                  </p>
-                </div>
+                {/* Ligne 2 : bouton full-width pour clic facile sur mobile */}
                 <Button
                   size="sm"
-                  className="h-7 text-[11px] bg-[#0F2D52] hover:bg-[#1a3a66] text-white shrink-0"
+                  className="h-8 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white w-full"
                   onClick={() => {
                     setHandbookDialog({
                       id: hb.id,
@@ -650,10 +742,8 @@ export function MyDocumentsView({
       {/* ====== Bandeau signature urgent ====== */}
       <SignatureRequestBanner requests={bannerRequests} onSign={(tplId) => openSignByTemplateId(tplId)} />
 
-      {/* ====== Tabs ====== */}
-      <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Navigation documents" />
-
-      {/* ====== Tab content ====== */}
+      {/* ====== Tab content ======
+          NB : SettingsTabs deja dans le sticky container plus haut. */}
       {tab === "to-sign" && (
         <ToSignTab
           legalToSign={legalToSign}
@@ -951,19 +1041,9 @@ function ContractsTab({
               status={{ label: meta.label, tone: meta.tone }}
               date={formatDate(c.createdAt)}
               onPreview={c.pdfUrl ? () => onPreview(c) : undefined}
-              onDownload={
-                c.pdfUrl
-                  ? () => {
-                      if (!c.pdfUrl) return;
-                      const a = document.createElement("a");
-                      a.href = c.pdfUrl;
-                      a.download = `${c.title}.pdf`;
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                    }
-                  : undefined
-              }
+              // Convention VNK : Download via PdfPreviewModal (downloadFilename
+              // est passe au modal qui a un bouton Telecharger interne).
+              onDownload={c.pdfUrl ? () => onPreview(c) : undefined}
             />
             <div className="flex flex-wrap gap-1.5 pl-1">
               <SignatureStatusBadge
@@ -1100,7 +1180,9 @@ function PayrollTab({
                 iconTone="success"
                 date={`Emis le ${formatDate(d.issuedAt)}`}
                 onPreview={() => onPreviewTax(d)}
-                onDownload={() => window.open(d.fileUrl, "_blank", "noopener,noreferrer")}
+                // Convention VNK : Telecharger reutilise la PdfPreviewModal
+                // (qui contient son propre bouton Telecharger interne).
+                onDownload={() => onPreviewTax(d)}
               />
             ))}
           </div>
@@ -1168,11 +1250,8 @@ function LettersTab({
                 status={statusBadge}
                 date={l.issuedAt ? `Emise le ${formatDate(l.issuedAt)}` : `Demande le ${formatDate(l.createdAt)}`}
                 onPreview={l.letterUrl ? () => onPreview(l) : undefined}
-                onDownload={
-                  l.letterUrl
-                    ? () => window.open(l.letterUrl!, "_blank", "noopener,noreferrer")
-                    : undefined
-                }
+                // Convention VNK : Telecharger via PdfPreviewModal.
+                onDownload={l.letterUrl ? () => onPreview(l) : undefined}
               />
             );
           })}

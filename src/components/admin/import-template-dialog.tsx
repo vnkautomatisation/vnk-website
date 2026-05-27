@@ -344,15 +344,15 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !analyzing && onClose()}>
-      <DialogContent className="max-w-5xl w-[95vw] max-h-[95vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-5xl sm:h-auto sm:max-h-[95vh] sm:rounded-lg">
         {/* Header navy gradient */}
-        <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-5 py-4 shrink-0">
+        <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-base text-white flex items-center gap-2">
-              <Wand2 className="h-4 w-4" />
-              Importer un document
+            <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
+              <Wand2 className="h-4 w-4 shrink-0" />
+              <span className="truncate">Importer un document</span>
             </DialogTitle>
-            <DialogDescription className="text-white/80 text-xs">
+            <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
               Collez un document existant ou téléversez-le. Le système détecte
               automatiquement les valeurs à transformer en variables dynamiques.
             </DialogDescription>
@@ -362,7 +362,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
         {/* Body */}
         <div className="flex-1 overflow-y-auto min-h-0">
           {!hasResult ? (
-            <div className="p-5">
+            <div className="p-4 sm:p-5">
               <Tabs value={tab} onValueChange={(v) => setTab(v as "paste" | "upload")}>
                 <TabsList className="grid grid-cols-2 w-full max-w-md">
                   <TabsTrigger value="paste" className="gap-1.5">
@@ -457,7 +457,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
               )}
             </div>
           ) : (
-            <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div className="p-4 sm:p-5 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
               {/* Colonne 1 : metadonnees + variables */}
               <div className="space-y-5 min-w-0">
                 <FormSection icon={Sparkles} title="Détection automatique">
@@ -601,17 +601,18 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
         </div>
 
         {/* Footer sticky */}
-        <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0 gap-2 sm:justify-between">
+        <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap sm:justify-between">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={onClose}
             disabled={analyzing}
+            className="w-full sm:w-auto"
           >
             Annuler
           </Button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-initial">
             {hasResult && (
               <Button
                 type="button"

@@ -160,15 +160,15 @@ export function RequestDocumentUploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[92vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-lg">
         {/* Header navy */}
-        <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4 shrink-0">
+        <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-base text-white flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Demander un document
+            <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
+              <FileText className="h-4 w-4 shrink-0" />
+              <span className="truncate">Demander un document</span>
             </DialogTitle>
-            <DialogDescription className="text-white/80 text-xs">
+            <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
               L'employé recevra une notification et pourra téléverser le document
               demandé depuis Mon espace.
             </DialogDescription>
@@ -176,7 +176,7 @@ export function RequestDocumentUploadDialog({
         </div>
 
         {/* Body */}
-        <div className="p-5 space-y-5 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-5 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
           {/* Cible : employé */}
           <FormSection icon={User} title="Employé concerné">
             {selectedEmp && presetEmployeeId ? (
@@ -302,7 +302,7 @@ export function RequestDocumentUploadDialog({
         </div>
 
         {/* Footer sticky */}
-        <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
+        <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button
             type="button"
             variant="outline"
