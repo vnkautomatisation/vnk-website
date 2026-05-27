@@ -39,6 +39,11 @@ restartPolicyMaxRetries = 5
 # schedule = "0 4 * * *"              # quotidien 4h UTC (1h après retention)
 # command = """curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" "https://$RAILWAY_PUBLIC_DOMAIN/api/cron/expired-invitations" """
 #
+# [[crons]]
+# name = "personal-doc-expiry"
+# schedule = "30 3 * * *"             # quotidien 3h30 UTC
+# command = """curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" "https://$RAILWAY_PUBLIC_DOMAIN/api/cron/personal-doc-expiry" """
+#
 # Note : Railway ne supporte pas encore les [[crons]] en railway.toml directement.
 # Il faut soit utiliser un service worker dédié (Worker service avec cron),
 # soit configurer les crons depuis le dashboard Railway (Settings → Cron Schedule).

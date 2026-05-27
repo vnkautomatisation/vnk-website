@@ -22,11 +22,14 @@ export default async function MonEspaceHome() {
   startOfWeek.setHours(0, 0, 0, 0);
   const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+  // Note : unsignedDocs n'est PLUS fetche directement depuis LegalDocumentTemplate
+  // (cela listait les 50+ starters bibliotheque comme faux documents
+  // obligatoires). On le derive plus bas a partir des signature requests
+  // ciblees pour cet employe (cf. filteredSignatureRequests).
   const [
     me,
     openClock,
     weekHours,
-    unsignedDocs,
     pendingContracts,
     expiringLicenses,
     expiringTrainings,
@@ -68,14 +71,6 @@ export default async function MonEspaceHome() {
       where: { adminId, clockIn: { gte: startOfWeek }, clockOut: { not: null } },
       _sum: { durationMin: true },
     }),
-    prisma.legalDocumentTemplate.findMany({
-      where: {
-        isActive: true,
-        isRequired: true,
-        signatures: { none: { adminId } },
-      },
-      select: { id: true, title: true, version: true },
-    }).catch(() => []),
     prisma.employeeContract.findMany({
       where: { adminId, status: "sent" },
       select: { id: true, title: true },
@@ -152,6 +147,61 @@ export default async function MonEspaceHome() {
     prisma.bankInfo.findUnique({ where: { adminId }, select: { id: true } }).catch(() => null),
     prisma.familyDependent.count({ where: { adminId } }).catch(() => 0),
   ]);
+
+  // Demandes RH/manager en attente (téléversement + signature ciblée employé/all)
+  // + activité récente (dernières notifications de l'employé)
+  const [pendingUploadRequests, pendingSignatureRequests, recentNotifications] = await Promise.all([
+    prisma.documentUploadRequest.findMany({
+      where: { targetAdminId: adminId, status: "pending" },
+      orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+      select: {
+        id: true, title: true, dueDate: true, isRequired: true, category: true,
+        requestedBy: { select: { fullName: true, email: true } },
+      },
+    }).catch(() => []),
+    prisma.documentSignatureRequest.findMany({
+      where: {
+        completedAt: null,
+        status: "pending",
+        OR: [{ targetAdminId: adminId }, { targetAll: true }],
+      },
+      orderBy: [{ dueDate: "asc" }, { requestedAt: "desc" }],
+      select: {
+        id: true, dueDate: true, reason: true, targetAll: true,
+        template: { select: { id: true, title: true, version: true } },
+      },
+    }).catch(() => []),
+    prisma.notification.findMany({
+      where: { recipientType: "admin", recipientId: adminId },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      select: { id: true, title: true, body: true, type: true, link: true, icon: true, createdAt: true, readAt: true },
+    }).catch(() => []),
+  ]);
+
+  // Filtre les SignatureRequest pour lesquelles l'employé a déjà signé la version courante
+  const signedTemplateIds = await prisma.legalDocumentSignature.findMany({
+    where: { adminId, templateId: { in: pendingSignatureRequests.map((r) => r.template.id) } },
+    select: { templateId: true, version: true },
+  }).catch(() => []);
+  const signedByTemplate = new Map(signedTemplateIds.map((s) => [s.templateId, s.version]));
+  const filteredSignatureRequests = pendingSignatureRequests.filter(
+    (r) => signedByTemplate.get(r.template.id) !== r.template.version,
+  );
+
+  // unsignedDocs derive UNIQUEMENT des signature requests ciblant cet employe
+  // (dedup par templateId pour ne pas montrer un meme doc plusieurs fois).
+  const unsignedDocs: Array<{ id: number; title: string; version: string }> = [];
+  const seenUnsigned = new Set<number>();
+  for (const r of filteredSignatureRequests) {
+    if (seenUnsigned.has(r.template.id)) continue;
+    seenUnsigned.add(r.template.id);
+    unsignedDocs.push({
+      id: r.template.id,
+      title: r.template.title,
+      version: r.template.version,
+    });
+  }
 
   if (!me) redirect("/admin/login");
 
@@ -236,6 +286,9 @@ export default async function MonEspaceHome() {
       taxDocuments={JSON.parse(JSON.stringify(taxDocuments))}
       completionPct={completionPct}
       completionSteps={JSON.parse(JSON.stringify(completionSteps))}
+      pendingUploadRequests={JSON.parse(JSON.stringify(pendingUploadRequests))}
+      pendingSignatureRequests={JSON.parse(JSON.stringify(filteredSignatureRequests))}
+      recentNotifications={JSON.parse(JSON.stringify(recentNotifications))}
     />
   );
 }

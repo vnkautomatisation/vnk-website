@@ -3,6 +3,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { seedDocumentTemplates } from "./seed-document-templates";
 
 const prisma = new PrismaClient();
 
@@ -294,6 +295,13 @@ async function main() {
     });
   }
   console.log("✓ Service catalog seedé (" + catalog.length + " services)");
+
+  // 5) Bibliothèque de templates de documents FR-QC (28 templates)
+  try {
+    await seedDocumentTemplates();
+  } catch (err) {
+    console.error("⚠️  Seed templates de documents : échec —", err);
+  }
 
   console.log("🌱 Seed : terminé.");
 }

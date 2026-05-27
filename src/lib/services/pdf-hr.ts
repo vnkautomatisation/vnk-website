@@ -444,11 +444,25 @@ export type ContractData = {
 };
 export type Person = { fullName: string | null; email: string };
 
+// Labels en ASCII (PDF avec font Helvetica sans accent)
+// Couvre les nouvelles valeurs QC + les anciennes (legacy).
 const CONTRACT_TYPE_LABELS: Record<string, string> = {
-  cdi: "Contrat a duree indeterminee (CDI)",
-  cdd: "Contrat a duree determinee (CDD)",
-  contractuel: "Contractuel",
-  stagiaire: "Stagiaire",
+  // Nouvelles valeurs QC
+  permanent_full_time: "Permanent temps plein",
+  permanent_part_time: "Permanent temps partiel",
+  temporary: "Temporaire (duree determinee)",
+  seasonal: "Saisonnier",
+  on_call: "Sur appel",
+  student: "Etudiant (temps partiel)",
+  internship: "Stage remunere",
+  freelance: "Pigiste / Travailleur autonome",
+  // Anciennes valeurs (rétro-compat)
+  cdi: "Permanent temps plein",
+  cdd: "Temporaire (duree determinee)",
+  contractuel: "Pigiste / Travailleur autonome",
+  stagiaire: "Stage remunere",
+  etudiant: "Etudiant (temps partiel)",
+  permanent: "Permanent temps plein",
   autre: "Autre",
 };
 

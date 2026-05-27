@@ -8,6 +8,18 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { getClientIpFromHeaders } from "@/lib/security/rate-limit";
+import {
+  CONTRACT_TYPES,
+  LEGACY_CONTRACT_TYPE_MAP,
+} from "@/lib/document-templates/contract-types";
+
+// Valeurs acceptées pour contractType : nouvelles QC + legacy (rétro-compat) + "autre"
+const CONTRACT_TYPE_VALUES = [
+  ...CONTRACT_TYPES.map((t) => t.value),
+  ...Object.keys(LEGACY_CONTRACT_TYPE_MAP),
+  "autre",
+] as const;
+const contractTypeSchema = z.enum(CONTRACT_TYPE_VALUES as unknown as [string, ...string[]]);
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -30,13 +42,15 @@ async function requireHrWrite(): Promise<number | null> {
 const templateSchema = z.object({
   name: z.string().min(1).max(160),
   positionId: z.number().int().nullable().optional(),
-  contractType: z.enum(["cdi", "cdd", "contractuel", "stagiaire", "autre"]),
+  contractType: contractTypeSchema,
   bodyMarkdown: z.string().min(20),
   defaultSalary: z.number().nullable().optional(),
   defaultRate: z.number().nullable().optional(),
   defaultHoursPerWeek: z.number().int().nullable().optional(),
   defaultVacationPct: z.number().nullable().optional(),
   probationDays: z.number().int().nullable().optional(),
+  targetPositions: z.array(z.string()).optional(),
+  targetDepartments: z.array(z.string()).optional(),
 });
 
 export async function createContractTemplateAction(input: z.infer<typeof templateSchema>): Promise<Result<{ id: number }>> {
@@ -56,6 +70,8 @@ export async function createContractTemplateAction(input: z.infer<typeof templat
       defaultHoursPerWeek: parsed.data.defaultHoursPerWeek ?? null,
       defaultVacationPct: parsed.data.defaultVacationPct ?? 4.0,
       probationDays: parsed.data.probationDays ?? 90,
+      targetPositions: parsed.data.targetPositions ?? [],
+      targetDepartments: parsed.data.targetDepartments ?? [],
     },
     select: { id: true },
   });
@@ -82,10 +98,61 @@ export async function updateContractTemplateAction(input: z.infer<typeof templat
       defaultHoursPerWeek: parsed.data.defaultHoursPerWeek ?? null,
       defaultVacationPct: parsed.data.defaultVacationPct ?? null,
       probationDays: parsed.data.probationDays ?? null,
+      ...(parsed.data.targetPositions !== undefined ? { targetPositions: parsed.data.targetPositions } : {}),
+      ...(parsed.data.targetDepartments !== undefined ? { targetDepartments: parsed.data.targetDepartments } : {}),
     },
   });
   await logAudit({ adminId, action: "update", entityType: "contract_template", entityId: parsed.data.id });
   revalidatePath("/admin/employes/contrats");
+  return { success: true };
+}
+
+// Duplique un template de contrat : copie avec suffix " (copie)" + isStarter = false
+export async function duplicateContractTemplateAction(input: { id: number }): Promise<Result<{ id: number; name: string }>> {
+  const adminId = await requireHrWrite();
+  if (!adminId) return { success: false, error: "Non autorisé" };
+
+  const src = await prisma.contractTemplate.findUnique({ where: { id: input.id } });
+  if (!src) return { success: false, error: "Modèle introuvable" };
+
+  const newName = `${src.name} (copie)`;
+  const copy = await prisma.contractTemplate.create({
+    data: {
+      name: newName,
+      positionId: src.positionId,
+      contractType: src.contractType,
+      bodyMarkdown: src.bodyMarkdown,
+      defaultSalary: src.defaultSalary,
+      defaultRate: src.defaultRate,
+      defaultHoursPerWeek: src.defaultHoursPerWeek,
+      defaultVacationPct: src.defaultVacationPct,
+      probationDays: src.probationDays,
+      isActive: true,
+      targetPositions: src.targetPositions,
+      targetDepartments: src.targetDepartments,
+      variables: src.variables ?? undefined,
+      isStarter: false,
+    },
+    select: { id: true, name: true },
+  });
+
+  await logAudit({ adminId, action: "create", entityType: "contract_template", entityId: copy.id, changes: { duplicatedFrom: src.id } });
+  revalidatePath("/admin/employes/contrats");
+  revalidatePath("/admin/employes/documents/bibliotheque");
+  return { success: true, data: { id: copy.id, name: copy.name } };
+}
+
+// Archive / desarchive un template de contrat (toggle isActive)
+export async function toggleContractTemplateActiveAction(input: { id: number; isActive: boolean }): Promise<Result> {
+  const adminId = await requireHrWrite();
+  if (!adminId) return { success: false, error: "Non autorisé" };
+  await prisma.contractTemplate.update({
+    where: { id: input.id },
+    data: { isActive: input.isActive },
+  });
+  await logAudit({ adminId, action: "update", entityType: "contract_template", entityId: input.id, changes: { isActive: input.isActive } });
+  revalidatePath("/admin/employes/contrats");
+  revalidatePath("/admin/employes/documents/bibliotheque");
   return { success: true };
 }
 
@@ -109,7 +176,7 @@ const contractSchema = z.object({
   adminId: z.number().int(),
   templateId: z.number().int().nullable().optional(),
   title: z.string().min(1).max(200),
-  contractType: z.enum(["cdi", "cdd", "contractuel", "stagiaire", "autre"]),
+  contractType: contractTypeSchema,
   bodyMarkdown: z.string().min(20),
   startDate: z.string(),
   endDate: z.string().nullable().optional(),

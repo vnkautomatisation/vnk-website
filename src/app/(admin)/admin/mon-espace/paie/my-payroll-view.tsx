@@ -1,0 +1,492 @@
+"use client";
+// =============================================================
+// MyPayrollView - vue employe Mon espace > Ma paie (refonte VNK)
+//
+// Conventions :
+//  - Header navy gradient + KPI cards
+//  - Sticky bar (pattern Finance)
+//  - Tabs : Mes bulletins / Documents fiscaux
+//  - PDFs via PdfPreviewModal
+// =============================================================
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Wallet, Receipt, DollarSign, FileText, Eye, Calendar, Sparkles,
+  Search, Archive,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SettingsTabs, type TabItem } from "@/components/admin/settings-tabs";
+import { DocumentStatsCard } from "@/components/admin/document-stats-card";
+import { ActionTooltip } from "@/components/ui/action-tooltip";
+import { PdfPreviewModal } from "@/components/admin/pdf-preview-modal";
+
+type Stub = {
+  id: number;
+  hoursRegular: number;
+  hoursOvertime: number;
+  hoursVacation: number;
+  hoursSick: number;
+  rate: number;
+  grossPay: number;
+  deductionFederal: number;
+  deductionProvincial: number;
+  deductionRrq: number;
+  deductionAe: number;
+  deductionRqap: number;
+  deductionOther: number;
+  netPay: number;
+  releasedAt: string | null;
+  period: { id?: number; startDate: string; endDate: string; payDate?: string };
+};
+
+type TaxDoc = {
+  id: number;
+  type: string;
+  taxYear: number | null;
+  title: string;
+  fileUrl: string;
+  issuedAt: string;
+};
+
+const TAX_TYPE_META: Record<string, { label: string; short: string }> = {
+  t4: { label: "T4 (Canada)", short: "T4" },
+  releve1: { label: "Releve 1 (Quebec)", short: "RL-1" },
+  nr4: { label: "NR4", short: "NR4" },
+  t2200: { label: "T2200 (frais teletravail)", short: "T2200" },
+  employment_letter: { label: "Lettre d'emploi", short: "Lettre" },
+  other: { label: "Autre", short: "Autre" },
+};
+
+type TabKey = "stubs" | "tax";
+
+function formatMoney(v: number | string): string {
+  const n = typeof v === "number" ? v : Number(v);
+  if (Number.isNaN(n)) return "-";
+  return new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD" }).format(n);
+}
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function isThisYear(iso: string | null | undefined): boolean {
+  if (!iso) return false;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return false;
+  return d.getFullYear() === new Date().getFullYear();
+}
+
+export function MyPayrollView({
+  stubs, taxDocs,
+}: {
+  stubs: Stub[];
+  taxDocs: TaxDoc[];
+}) {
+  const [tab, setTab] = useState<TabKey>("stubs");
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
+
+  // Sticky bar
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setScrolled(!entry.isIntersecting),
+      { threshold: 0, rootMargin: "-64px 0px 0px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const openStubPdf = useCallback((s: Stub) => {
+    setPdfPreview({
+      url: `/api/admin/pay-stubs/${s.id}/pdf`,
+      title: `Bulletin de paie #${s.id}`,
+      description: `${formatDate(s.period.startDate)} - ${formatDate(s.period.endDate)}`,
+      filename: `bulletin-paie-${s.id}.pdf`,
+    });
+  }, []);
+
+  const openTaxPdf = useCallback((d: TaxDoc) => {
+    const meta = TAX_TYPE_META[d.type] ?? { label: d.type, short: d.type };
+    setPdfPreview({
+      url: d.fileUrl,
+      title: d.title,
+      description: `${meta.label}${d.taxYear ? ` - ${d.taxYear}` : ""}`,
+      filename: `${meta.short}-${d.taxYear ?? "doc"}-${d.id}.pdf`,
+    });
+  }, []);
+
+  // KPIs
+  const kpis = useMemo(() => {
+    const released = stubs.filter((s) => s.releasedAt);
+    const ytd = released
+      .filter((s) => isThisYear(s.releasedAt))
+      .reduce((sum, s) => sum + Number(s.netPay), 0);
+    const grossYtd = released
+      .filter((s) => isThisYear(s.releasedAt))
+      .reduce((sum, s) => sum + Number(s.grossPay), 0);
+    const last = released[0] ?? null;
+    return { count: released.length, ytd, grossYtd, last, taxCount: taxDocs.length };
+  }, [stubs, taxDocs]);
+
+  const TABS: TabItem<TabKey>[] = [
+    { key: "stubs", label: "Mes bulletins", icon: Wallet, count: kpis.count },
+    { key: "tax", label: "Documents fiscaux", icon: FileText, count: taxDocs.length },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Header navy */}
+      <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"
+          aria-hidden
+        />
+        <div className="relative flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-11 w-11 rounded-lg bg-white/15 backdrop-blur flex items-center justify-center ring-2 ring-white/20 shrink-0">
+              <Wallet className="h-5 w-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold">Ma paie</h1>
+              <p className="text-xs text-white/80">
+                Consultez vos bulletins de paie et documents fiscaux (T4, Releve 1).
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <DocumentStatsCard
+          label="Bulletins disponibles"
+          value={kpis.count}
+          icon={Receipt}
+          accent="info"
+          hint={kpis.last
+            ? `Dernier : ${formatDate(kpis.last.period.startDate)}`
+            : "Aucun bulletin pour le moment"}
+          onClick={() => setTab("stubs")}
+        />
+        <DocumentStatsCard
+          label="Net cumule YTD"
+          value={formatMoney(kpis.ytd)}
+          icon={Wallet}
+          accent="success"
+          hint={`Annee ${new Date().getFullYear()}`}
+        />
+        <DocumentStatsCard
+          label="Brut cumule YTD"
+          value={formatMoney(kpis.grossYtd)}
+          icon={DollarSign}
+          accent="navy"
+          hint="Avant deductions a la source"
+        />
+        <DocumentStatsCard
+          label="Documents fiscaux"
+          value={kpis.taxCount}
+          icon={FileText}
+          accent={kpis.taxCount > 0 ? "info" : "navy"}
+          hint="T4, Releve 1, lettres..."
+          onClick={() => setTab("tax")}
+        />
+      </div>
+
+      {/* Sticky bar */}
+      <div ref={sentinelRef} aria-hidden className="h-px" />
+      {scrolled && (
+        <div className="sticky top-[108px] lg:top-[64px] z-20 py-2 bg-background/95 backdrop-blur shadow-sm border-b rounded-md px-3 animate-overlay-fade-in">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
+            <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
+              <Wallet className="h-4 w-4" />
+              Ma paie
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground">Bulletins :</span>
+              <span className="font-semibold text-[#0F2D52]">{kpis.count}</span>
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground">Net YTD :</span>
+              <span className="font-semibold text-emerald-700">{formatMoney(kpis.ytd)}</span>
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground">Docs fiscaux :</span>
+              <span className="font-semibold text-[#0F2D52]">{kpis.taxCount}</span>
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Navigation ma paie" />
+
+      {tab === "stubs" && <MyStubsTab stubs={stubs} onOpenPdf={openStubPdf} />}
+      {tab === "tax" && <MyTaxDocsTab docs={taxDocs} onOpenPdf={openTaxPdf} />}
+
+      <PdfPreviewModal
+        open={!!pdfPreview}
+        url={pdfPreview?.url ?? null}
+        title={pdfPreview?.title ?? ""}
+        description={pdfPreview?.description}
+        downloadFilename={pdfPreview?.filename}
+        onClose={() => setPdfPreview(null)}
+      />
+    </div>
+  );
+}
+
+// =============================================================
+// TAB : MY STUBS
+// =============================================================
+function MyStubsTab({ stubs, onOpenPdf }: { stubs: Stub[]; onOpenPdf: (s: Stub) => void }) {
+  if (stubs.length === 0) {
+    return (
+      <Card className="p-10 text-center space-y-3">
+        <Wallet className="h-10 w-10 mx-auto text-muted-foreground/40" />
+        <p className="text-sm text-muted-foreground">
+          Aucun bulletin de paie disponible pour le moment.
+        </p>
+        <p className="text-[11px] text-muted-foreground/80">
+          Vos bulletins apparaitront ici une fois la periode de paie marquee payee.
+        </p>
+      </Card>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {stubs.map((s) => (
+        <MyStubCard key={s.id} stub={s} onOpenPdf={() => onOpenPdf(s)} />
+      ))}
+    </div>
+  );
+}
+
+function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) {
+  const totalDeductions =
+    Number(stub.deductionFederal) + Number(stub.deductionProvincial) +
+    Number(stub.deductionRrq) + Number(stub.deductionAe) +
+    Number(stub.deductionRqap) + Number(stub.deductionOther);
+
+  return (
+    <Card className="overflow-hidden vnk-card-hover">
+      <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-4 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 rounded-lg bg-white/15 backdrop-blur flex items-center justify-center ring-2 ring-white/20 shrink-0">
+            <Receipt className="h-5 w-5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wider opacity-80">Periode</p>
+            <h3 className="font-bold text-sm truncate">
+              {formatDate(stub.period.startDate)} - {formatDate(stub.period.endDate)}
+            </h3>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wider opacity-80">Net a payer</p>
+            <p className="text-2xl font-bold tabular-nums">{formatMoney(stub.netPay)}</p>
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="bg-white/15 text-white hover:bg-white/25 border-0 h-8"
+            onClick={onOpenPdf}
+          >
+            <Eye className="h-3.5 w-3.5 mr-1.5" />
+            Apercu PDF
+          </Button>
+        </div>
+      </div>
+      <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+            Heures regulieres
+          </p>
+          <p className="font-mono">
+            {Number(stub.hoursRegular).toFixed(2)} h x {formatMoney(stub.rate)}
+          </p>
+        </div>
+        {Number(stub.hoursOvertime) > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              Heures supplementaires
+            </p>
+            <p className="font-mono">{Number(stub.hoursOvertime).toFixed(2)} h x 1.5</p>
+          </div>
+        )}
+        {Number(stub.hoursVacation) > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              Vacances
+            </p>
+            <p className="font-mono">{Number(stub.hoursVacation).toFixed(2)} h</p>
+          </div>
+        )}
+        <div className="col-span-full border-t pt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+          <div>
+            <span className="text-muted-foreground">Brut : </span>
+            <strong className="tabular-nums">{formatMoney(stub.grossPay)}</strong>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Federal : </span>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionFederal)}</strong>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Provincial : </span>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionProvincial)}</strong>
+          </div>
+          <div>
+            <span className="text-muted-foreground">RRQ : </span>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionRrq)}</strong>
+          </div>
+          <div>
+            <span className="text-muted-foreground">AE : </span>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionAe)}</strong>
+          </div>
+          <div>
+            <span className="text-muted-foreground">RQAP : </span>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionRqap)}</strong>
+          </div>
+          <div className="md:col-span-2">
+            <span className="text-muted-foreground">Total deductions : </span>
+            <strong className="tabular-nums">-{formatMoney(totalDeductions)}</strong>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// =============================================================
+// TAB : MY TAX DOCS
+// =============================================================
+function MyTaxDocsTab({ docs, onOpenPdf }: { docs: TaxDoc[]; onOpenPdf: (d: TaxDoc) => void }) {
+  const [search, setSearch] = useState("");
+  const [yearFilter, setYearFilter] = useState<string>("all");
+
+  const years = useMemo(
+    () => Array.from(new Set(docs.map((d) => d.taxYear).filter((y): y is number => y !== null))).sort((a, b) => b - a),
+    [docs],
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return docs.filter((d) => {
+      if (yearFilter !== "all" && String(d.taxYear ?? "none") !== yearFilter) return false;
+      if (q && !d.title.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [docs, search, yearFilter]);
+
+  const byYear = useMemo(() => {
+    const map = new Map<number | string, TaxDoc[]>();
+    for (const d of filtered) {
+      const y = d.taxYear ?? "Sans annee";
+      if (!map.has(y)) map.set(y, []);
+      map.get(y)!.push(d);
+    }
+    return Array.from(map.entries()).sort((a, b) => {
+      const aY = typeof a[0] === "number" ? a[0] : -Infinity;
+      const bY = typeof b[0] === "number" ? b[0] : -Infinity;
+      return bY - aY;
+    });
+  }, [filtered]);
+
+  if (docs.length === 0) {
+    return (
+      <Card className="p-10 text-center space-y-3">
+        <FileText className="h-10 w-10 mx-auto text-muted-foreground/40" />
+        <p className="text-sm text-muted-foreground">
+          Aucun document fiscal disponible pour le moment.
+        </p>
+        <p className="text-[11px] text-muted-foreground/80">
+          Vos T4, Releves 1 et autres documents apparaitront ici une fois emis par les RH.
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <Card className="p-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher un document..."
+              className="h-9 text-sm pl-7"
+            />
+          </div>
+          <Select value={yearFilter} onValueChange={setYearFilter}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Annee" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les annees</SelectItem>
+              {years.map((y) => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </Card>
+
+      {byYear.length === 0 ? (
+        <Card className="p-8 text-center text-sm text-muted-foreground">
+          Aucun resultat avec ces filtres.
+        </Card>
+      ) : (
+        byYear.map(([year, list]) => (
+          <section key={String(year)} className="space-y-2">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52] inline-flex items-center gap-2">
+              <Calendar className="h-3.5 w-3.5" />
+              Annee {year}
+              <Badge variant="outline" className="text-[10px]">
+                {list.length} document{list.length > 1 ? "s" : ""}
+              </Badge>
+            </h2>
+            <Card className="overflow-hidden">
+              <div className="divide-y">
+                {list.map((d) => {
+                  const meta = TAX_TYPE_META[d.type] ?? { label: d.type, short: d.type };
+                  return (
+                    <div key={d.id} className="p-3 flex items-center gap-3 hover:bg-[#0F2D52]/5 transition">
+                      <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/8 ring-1 ring-[#0F2D52]/15 flex items-center justify-center shrink-0">
+                        <FileText className="h-4 w-4 text-[#0F2D52]" />
+                      </div>
+                      <Badge variant="outline" className="text-[10px] uppercase shrink-0">{meta.short}</Badge>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{d.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {meta.label} - emis le {formatDate(d.issuedAt)}
+                        </p>
+                      </div>
+                      <ActionTooltip label="Apercu PDF">
+                        <Button
+                          size="icon" variant="ghost" className="h-8 w-8"
+                          aria-label="Apercu PDF"
+                          onClick={() => onOpenPdf(d)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </ActionTooltip>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          </section>
+        ))
+      )}
+    </div>
+  );
+}

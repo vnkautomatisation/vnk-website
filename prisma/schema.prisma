@@ -80,6 +80,15 @@ model Admin {
   birthdate         DateTime? @map("birthdate") @db.Date // pour anniversaires + dossier employé
   internalNotes     String?  @map("internal_notes")
 
+  // ── Genre + civilité (pour accord grammatical FR-CA dans templates PDF) ──
+  // civility : "M." | "Mme" | "Mx" | null (titre de civilité affiché)
+  // gender   : "male" | "female" | "non_binary" | "prefer_not_to_say" | null
+  // preferredPronouns : libre, ex "il/lui", "elle/elle", "iel/iel" (override custom)
+  // Tous optionnels — si null, le moteur de rendu utilise la forme épicène "Employé(e)".
+  civility          String?  @map("civility")
+  gender            String?  @map("gender")
+  preferredPronouns String?  @map("preferred_pronouns")
+
   // ── Fondateur : un super_admin sans superieur hierarchique a le droit de tout faire,
   // y compris approuver ses propres heures. Les autres super_admin/managers ne peuvent
   // pas approuver leurs propres heures — leur superieur le fait.
@@ -164,6 +173,22 @@ model Admin {
   offboardingSuccessor     OffboardingChecklist[] @relation("OffboardingSuccessor")
   hrPolicies               HrPolicy[] @relation("HrPolicies")
 
+  // ── Documents personnels employé (permis, diplômes, certifications, etc.) ──
+  personalDocuments        EmployeePersonalDocument[] @relation("EmployeePersonalDocs")
+  verifiedEmployeeDocs     EmployeePersonalDocument[] @relation("VerifiedEmployeeDocs")
+
+  // ── Demandes de signature ciblées (admin -> employé(s)) ─────
+  signatureRequestsSent     DocumentSignatureRequest[] @relation("SignatureRequester")
+  signatureRequestsReceived DocumentSignatureRequest[] @relation("SignatureTarget")
+
+  // ── Signatures de cahiers (handbooks) ─────────────────────
+  handbookSignatures        DocumentHandbookSignature[] @relation("HandbookSignatures")
+
+  // ── Demandes d'upload de document (RH demande, employé répond) ─
+  docUploadRequestsReceived DocumentUploadRequest[] @relation("DocReqTarget")
+  docUploadRequestsSent     DocumentUploadRequest[] @relation("DocReqRequester")
+  docUploadRequestsReviewed DocumentUploadRequest[] @relation("DocReqReviewer")
+
   position         Position? @relation(fields: [positionId], references: [id])
   customRole       Role?     @relation(fields: [roleId], references: [id])
 
@@ -224,6 +249,19 @@ model ContractTemplate {
   defaultVacationPct  Decimal? @default(4.0) @map("default_vacation_pct") @db.Decimal(4, 2)
   probationDays  Int?     @default(90) @map("probation_days")
   isActive       Boolean  @default(true) @map("is_active")
+
+  // ── Ciblage employes ────────────────────────────────────
+  // Si vide => template applicable a tous. Sinon limite aux postes / departements listes.
+  targetPositions    String[] @default([]) @map("target_positions")
+  targetDepartments  String[] @default([]) @map("target_departments")
+
+  // Liste des variables {{...}} detectees automatiquement dans bodyMarkdown
+  // (cache pour eviter re-parsing ; format: ["employee.fullName", ...])
+  variables      Json?
+
+  // Template livre par defaut (bibliotheque starter, seede au demarrage)
+  isStarter      Boolean  @default(false) @map("is_starter")
+
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -286,10 +324,43 @@ model LegalDocumentTemplate {
   bodyMarkdown String   @map("body_markdown") @db.Text
   isRequired   Boolean  @default(true) @map("is_required")
   isActive     Boolean  @default(true) @map("is_active")
+
+  // ── Ciblage employes ────────────────────────────────────
+  // Si vide => document applicable a tous les employes. Sinon limite aux postes / departements listes.
+  targetPositions    String[] @default([]) @map("target_positions")
+  targetDepartments  String[] @default([]) @map("target_departments")
+
+  // Liste des variables {{...}} detectees automatiquement dans bodyMarkdown
+  variables    Json?
+
+  // Template livre par defaut (bibliotheque starter, seede au demarrage)
+  isStarter    Boolean  @default(false) @map("is_starter")
+
+  // ── Signataires requis ────────────────────────────────────
+  // Definit qui doit signer le document genere a partir de ce template :
+  //  - "employee_only"  : seul l'employe signe (politiques, codes de conduite)
+  //  - "employer_only"  : seul l'employeur signe (lettres, attestations VNK)
+  //  - "both"           : double signature (contrats, ententes)
+  //  - "none"           : aucune signature (documents informatifs)
+  // Les ancres `[Signature employe]` / `[Signature employeur]` du markdown
+  // sont filtrees selon ce scope au moment du rendu PDF et de l'apercu UI.
+  signatureScope String @default("employee_only") @map("signature_scope")
+
+  // ── Type d'engagement employe ─────────────────────────────
+  // Determine la nature de l'engagement requis :
+  //  - "reading_only" : juste une case "J'ai lu et compris" + horodatage.
+  //    Pour la grande majorite des documents (politiques, codes, communications).
+  //  - "signature"    : signature manuscrite obligatoire en plus.
+  //    Reserve aux contrats legaux et ententes formelles.
+  // Quand reading_only, signatureScope est ignore (force "none" cote serveur).
+  acknowledgmentMode String @default("reading_only") @map("acknowledgment_mode")
+
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
-  signatures   LegalDocumentSignature[]
+  signatures        LegalDocumentSignature[]
+  signatureRequests DocumentSignatureRequest[]
+  handbookItems     DocumentHandbookItem[]
 
   @@map("legal_document_templates")
 }
@@ -303,6 +374,16 @@ model LegalDocumentSignature {
   signedAt    DateTime @default(now()) @map("signed_at")
   ipAddress   String?  @map("ip_address")
   userAgent   String?  @map("user_agent")
+
+  // États des cases à cocher au moment de la signature (workflow Docusign-like)
+  // Format : { "0": true, "1": false, ... } où la clé est l'index de la checkbox
+  // dans le corps du document (ordre d'apparition).
+  checkboxStates Json? @map("checkbox_states")
+
+  // URL du PDF final avec les coches embarquées (généré post-signature, Phase 2).
+  // Optionnel : si null, le rendu se fait à la volée à partir de bodyMarkdown +
+  // checkboxStates + signatureData.
+  finalPdfUrl String? @map("final_pdf_url")
 
   template    LegalDocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
   admin       Admin    @relation("LegalSignatures", fields: [adminId], references: [id], onDelete: Cascade)
@@ -1082,6 +1163,13 @@ model HrPolicy {
   effectiveFrom DateTime @map("effective_from") @db.Date
   isActive     Boolean  @default(true) @map("is_active")
   publishedBy  Int      @map("published_by")
+
+  // Liste des variables {{...}} detectees automatiquement dans bodyMarkdown
+  variables    Json?
+
+  // Politique livree par defaut (bibliotheque starter, seedee au demarrage)
+  isStarter    Boolean  @default(false) @map("is_starter")
+
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -2593,4 +2681,205 @@ model SignatureEvent {
   @@index([clientId])
   @@index([createdAt])
   @@map("signature_events")
+}
+
+// ════════════════════════════════════════════════════════════
+// DOCUMENTS EMPLOYÉS — personnels + demandes de signature ciblées
+// ════════════════════════════════════════════════════════════
+
+// ── Documents personnels d'un employé (permis, diplôme, certif...) ──
+// Distinct de :
+//   - LegalDocumentTemplate/Signature (docs corporate à signer)
+//   - TaxDocument (T4/R1 émis par l'employeur)
+//   - EmployeeContract (contrats de travail)
+//   - ProfessionalLicense / TrainingRecord (déjà couvert par cron expiration)
+// Cas d'usage : copie permis SAAQ, diplôme universitaire, certif premiers
+// secours, etc. L'employé uploade, l'admin RH vérifie.
+model EmployeePersonalDocument {
+  id                Int       @id @default(autoincrement())
+  adminId           Int       @map("admin_id")
+  category          String    // licence | diploma | certification | id_card | passport | medical | other
+  title             String
+  description       String?
+  fileUrl           String?   @map("file_url")
+  fileName          String?   @map("file_name")
+  fileSize          Int?      @map("file_size")
+  fileMimeType      String?   @map("file_mime_type")
+  issuedAt          DateTime? @map("issued_at") @db.Date
+  expiresAt         DateTime? @map("expires_at") @db.Date // pour alertes expiration
+  issuer            String?   // ex: "SAAQ", "Université Laval"
+  referenceNumber   String?   @map("reference_number") // numéro permis, etc.
+
+  // Vérification admin
+  verifiedByAdminId Int?      @map("verified_by_admin_id")
+  verifiedAt        DateTime? @map("verified_at")
+  verificationNotes String?   @map("verification_notes")
+  isVerified        Boolean   @default(false) @map("is_verified")
+
+  // Visibilité : true = doc privé non visible aux RH (sauf super_admin)
+  isPrivate         Boolean   @default(false) @map("is_private")
+
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  admin             Admin     @relation("EmployeePersonalDocs", fields: [adminId], references: [id], onDelete: Cascade)
+  verifiedBy        Admin?    @relation("VerifiedEmployeeDocs", fields: [verifiedByAdminId], references: [id], onDelete: SetNull)
+
+  // Demandes d'upload qui ont créé ce document (après approbation RH)
+  uploadRequests    DocumentUploadRequest[]
+
+  @@index([adminId, category])
+  @@index([expiresAt])
+  @@map("employee_personal_documents")
+}
+
+// ── Demande de signature ciblée (au-delà des templates obligatoires) ──
+// Un admin RH peut demander à un employé spécifique (ou une équipe / tous)
+// de signer un LegalDocumentTemplate dans un délai donné.
+// Une demande est marquée "completed" automatiquement quand l'employé
+// signe le template (cf signLegalDocAction).
+model DocumentSignatureRequest {
+  id              Int       @id @default(autoincrement())
+  templateId      Int       @map("template_id") // référence LegalDocumentTemplate
+  requestedById   Int       @map("requested_by_id") // admin RH
+  requestedAt     DateTime  @default(now()) @map("requested_at")
+  dueDate         DateTime? @map("due_date") @db.Date
+  reason          String?
+  status          String    @default("pending") // pending | completed | cancelled
+  completedAt     DateTime? @map("completed_at")
+
+  // Cible : individu / équipe / tous (au moins une true/non-null)
+  targetAdminId   Int?      @map("target_admin_id")
+  targetTeamId    Int?      @map("target_team_id")
+  targetAll       Boolean   @default(false) @map("target_all")
+
+  // Valeurs saisies par le RH pour les `[CHAMP]` du markdown qui ne sont pas
+  // des variables auto-resolvables (ex. DATE, SUJET INITIAL, FAIT 1 ...).
+  // Format : { "DATE": "15 mars 2025", "SUJET INITIAL": "Retard chronique" }
+  customFieldValues Json?    @map("custom_field_values") @db.JsonB
+
+  template        LegalDocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  requestedBy     Admin     @relation("SignatureRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  targetAdmin     Admin?    @relation("SignatureTarget", fields: [targetAdminId], references: [id], onDelete: Cascade)
+
+  @@index([targetAdminId, status])
+  @@index([status, dueDate])
+  @@map("document_signature_requests")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CAHIER EMPLOYE (handbook)
+// Regroupe N templates legaux (politiques internes) en un seul livre.
+// L'employe signe UNE fois ce livre et toutes les politiques incluses
+// sont considerees comme acceptees.
+// ─────────────────────────────────────────────────────────────
+model DocumentHandbook {
+  id              Int      @id @default(autoincrement())
+  key             String   @unique
+  title           String
+  subtitle        String?
+  // Texte d'introduction markdown affiche sur la page de garde du PDF.
+  coverIntro      String?  @map("cover_intro") @db.Text
+  version         String   @default("1.0")
+  isActive        Boolean  @default(true) @map("is_active")
+  isRequired      Boolean  @default(false) @map("is_required")
+  // "employee_only" | "employer_only" | "both" | "none"
+  signatureScope  String   @default("employee_only") @map("signature_scope")
+  // Demande 7 : valeurs RH pour les placeholders [CHAMP] des chapitres
+  // (ex: { "DATE": "2026-01-15", "EVENEMENT": "Reunion Q1" }).
+  // Appliquees au rendu PDF via applyPlaceholderValues sur chaque chapitre.
+  customFieldValues Json?  @map("custom_field_values") @db.JsonB
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  items           DocumentHandbookItem[]
+  signatures      DocumentHandbookSignature[]
+
+  @@map("document_handbooks")
+}
+
+model DocumentHandbookItem {
+  id          Int @id @default(autoincrement())
+  handbookId  Int @map("handbook_id")
+  templateId  Int @map("template_id")
+  orderIndex  Int @default(0) @map("order_index")
+
+  handbook    DocumentHandbook       @relation(fields: [handbookId], references: [id], onDelete: Cascade)
+  template    LegalDocumentTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([handbookId, templateId])
+  @@index([handbookId, orderIndex])
+  @@map("document_handbook_items")
+}
+
+model DocumentHandbookSignature {
+  id              Int @id @default(autoincrement())
+  handbookId      Int      @map("handbook_id")
+  adminId         Int      @map("admin_id")
+  version         String
+  signedAt        DateTime @default(now()) @map("signed_at")
+  signatureData   String   @map("signature_data") @db.Text
+  ipAddress       String?  @map("ip_address")
+  userAgent       String?  @map("user_agent")
+  checkboxStates  Json?    @map("checkbox_states")
+  finalPdfUrl     String?  @map("final_pdf_url")
+
+  handbook        DocumentHandbook @relation(fields: [handbookId], references: [id], onDelete: Cascade)
+  admin           Admin            @relation("HandbookSignatures", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@unique([handbookId, adminId, version])
+  @@index([adminId, signedAt])
+  @@map("document_handbook_signatures")
+}
+
+// ── Demande d'upload de document (RH demande, employé répond) ─────
+// Workflow : RH (ou manager direct) crée une demande "Téléverse ton permis classe 5"
+// ciblant un employé → l'employé voit la demande en pending dans Mon espace →
+// uploade le fichier → la demande passe en "uploaded" → RH valide ou rejette.
+// Si approuvée, on crée un EmployeePersonalDocument officiel lié à la demande.
+model DocumentUploadRequest {
+  id Int @id @default(autoincrement())
+
+  // Cible et demandeur
+  targetAdminId Int @map("target_admin_id")
+  requestedById Int @map("requested_by_id")
+
+  // Contenu de la demande
+  title       String                                  // ex "Permis de conduire classe 5"
+  description String?                                 // instructions complémentaires
+  category    String                                  // licence | diploma | certification | id_card | passport | medical | other
+  dueDate     DateTime? @map("due_date") @db.Date
+  isRequired  Boolean   @default(true) @map("is_required")
+
+  // Réponse de l'employé
+  status       String   @default("pending")           // pending | uploaded | approved | rejected | cancelled
+  uploadedAt   DateTime? @map("uploaded_at")
+  fileUrl      String?  @map("file_url")
+  fileName     String?  @map("file_name")
+  fileSize     Int?     @map("file_size")
+  fileMimeType String?  @map("file_mime_type")
+
+  // Validation RH
+  reviewedById Int?      @map("reviewed_by_id")
+  reviewedAt   DateTime? @map("reviewed_at")
+  reviewNotes  String?   @map("review_notes")
+
+  // Lien vers document personnel créé après approbation
+  personalDocumentId Int? @map("personal_document_id")
+
+  // Rappels envoyés
+  remindersSent  Int       @default(0) @map("reminders_sent")
+  lastReminderAt DateTime? @map("last_reminder_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  targetAdmin       Admin                      @relation("DocReqTarget",    fields: [targetAdminId],      references: [id], onDelete: Cascade)
+  requestedBy       Admin                      @relation("DocReqRequester", fields: [requestedById],      references: [id], onDelete: Cascade)
+  reviewedBy        Admin?                     @relation("DocReqReviewer",  fields: [reviewedById],       references: [id], onDelete: SetNull)
+  personalDocument  EmployeePersonalDocument?  @relation(fields: [personalDocumentId], references: [id], onDelete: SetNull)
+
+  @@index([targetAdminId, status])
+  @@index([status, dueDate])
+  @@map("document_upload_requests")
 }

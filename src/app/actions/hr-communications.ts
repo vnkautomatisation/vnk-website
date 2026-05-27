@@ -158,3 +158,56 @@ export async function upsertHrPolicyAction(input: z.infer<typeof policySchema>):
   revalidatePath("/admin/mon-espace/politiques");
   return { success: true, data: { id: row.id } };
 }
+
+// Duplique une politique RH : copie avec suffix " (copie)" + isStarter = false
+export async function duplicateHrPolicyAction(input: { id: number }): Promise<Result<{ id: number; title: string }>> {
+  const publishedBy = await requireHrWrite();
+  if (!publishedBy) return { success: false, error: "Non autorisé" };
+
+  const src = await prisma.hrPolicy.findUnique({ where: { id: input.id } });
+  if (!src) return { success: false, error: "Politique introuvable" };
+
+  // Cle unique : key_copy, key_copy_2, …
+  const baseKey = `${src.key}_copy`;
+  let newKey = baseKey;
+  let n = 2;
+  while (await prisma.hrPolicy.findUnique({ where: { key: newKey }, select: { id: true } })) {
+    newKey = `${baseKey}_${n++}`;
+    if (n > 50) return { success: false, error: "Trop de copies existantes" };
+  }
+
+  const newTitle = `${src.title} (copie)`;
+  const copy = await prisma.hrPolicy.create({
+    data: {
+      key: newKey,
+      title: newTitle,
+      version: src.version,
+      bodyMarkdown: src.bodyMarkdown,
+      effectiveFrom: src.effectiveFrom,
+      isActive: true,
+      publishedBy,
+      variables: src.variables ?? undefined,
+      isStarter: false,
+    },
+    select: { id: true, title: true },
+  });
+
+  await logAudit({ adminId: publishedBy, action: "create", entityType: "hr_policy", entityId: copy.id, changes: { duplicatedFrom: src.id } });
+  revalidatePath("/admin/employes/politiques");
+  revalidatePath("/admin/employes/documents/bibliotheque");
+  return { success: true, data: { id: copy.id, title: copy.title } };
+}
+
+// Archive / desarchive une politique RH (toggle isActive)
+export async function toggleHrPolicyActiveAction(input: { id: number; isActive: boolean }): Promise<Result> {
+  const publishedBy = await requireHrWrite();
+  if (!publishedBy) return { success: false, error: "Non autorisé" };
+  await prisma.hrPolicy.update({
+    where: { id: input.id },
+    data: { isActive: input.isActive },
+  });
+  await logAudit({ adminId: publishedBy, action: "update", entityType: "hr_policy", entityId: input.id, changes: { isActive: input.isActive } });
+  revalidatePath("/admin/employes/politiques");
+  revalidatePath("/admin/employes/documents/bibliotheque");
+  return { success: true };
+}

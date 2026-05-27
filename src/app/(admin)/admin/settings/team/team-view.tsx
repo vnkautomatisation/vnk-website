@@ -93,6 +93,10 @@ export type UserRow = {
   defaultLanding: string | null;
   bio: string | null;
   internalNotes: string | null;
+  // Genre + civilité pour accord grammatical FR-CA dans documents PDF
+  civility: string | null;          // "M." | "Mme" | "Mx" | null
+  gender: string | null;            // "male" | "female" | "non_binary" | "prefer_not_to_say" | null
+  preferredPronouns: string | null; // ex "il/lui", "elle/elle", "iel/iel" (override custom)
   createdAt: string;
   updatedAt: string;
   roleId: number | null;

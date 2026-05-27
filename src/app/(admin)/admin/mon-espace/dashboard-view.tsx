@@ -9,7 +9,7 @@ import {
   Calculator, CalendarDays, GraduationCap, Megaphone, ArrowRight,
   Pin, ShieldCheck, Laptop, Smartphone, Briefcase, Cake, FileText,
   UserCheck, ClipboardList, Mail, BookOpen, Plane, Download, Wallet,
-  HeartHandshake, FileBadge,
+  HeartHandshake, FileBadge, Upload, Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +104,9 @@ export function MonEspaceDashboard({
   leaveBalance, myEquipment, upcomingBirthdays,
   taxDocuments, completionPct, completionSteps,
   availableJobCodes,
+  pendingUploadRequests = [],
+  pendingSignatureRequests = [],
+  recentNotifications = [],
 }: {
   me: Me;
   openClock: { id: number; clockIn: string; category: string; pausedAt: string | null; totalBreakMin: number } | null;
@@ -123,11 +126,15 @@ export function MonEspaceDashboard({
   completionPct: number;
   completionSteps: CompletionStep[];
   availableJobCodes: JobCode[];
+  pendingUploadRequests?: Array<{ id: number; title: string; dueDate: string | null; isRequired: boolean; category: string; requestedBy: { fullName: string | null; email: string } | null }>;
+  pendingSignatureRequests?: Array<{ id: number; dueDate: string | null; reason: string | null; targetAll: boolean; template: { id: number; title: string; version: string } }>;
+  recentNotifications?: Array<{ id: number; title: string; body: string | null; type: string; link: string | null; icon: string | null; createdAt: string; readAt: string | null }>;
 }) {
   const router = useRouter();
   const totalActions =
     unsignedDocs.length + pendingContracts.length + expiringLicenses.length +
-    expiringTrainings.length + (me.twoFactorEnabled ? 0 : 1);
+    expiringTrainings.length + (me.twoFactorEnabled ? 0 : 1) +
+    pendingUploadRequests.length + pendingSignatureRequests.length;
 
   // Dialog de selection du code au clock-in
   const [showJobCodeDialog, setShowJobCodeDialog] = useState(false);
@@ -314,6 +321,26 @@ export function MonEspaceDashboard({
               Actions requises ({totalActions})
             </h2>
             <div className="space-y-1.5">
+              {pendingUploadRequests.map((u) => (
+                <ActionRow
+                  key={`u-${u.id}`}
+                  icon={Upload}
+                  label={`Téléverser : ${u.title}${u.requestedBy ? ` (demandé par ${u.requestedBy.fullName ?? u.requestedBy.email})` : ""}`}
+                  href="/admin/mon-espace/documents"
+                  cta="Téléverser"
+                  urgent={u.isRequired}
+                />
+              ))}
+              {pendingSignatureRequests.map((s) => (
+                <ActionRow
+                  key={`sr-${s.id}`}
+                  icon={FileSignature}
+                  label={`Signer : ${s.template.title} (v${s.template.version})${s.targetAll ? " — pour tous les employés" : ""}`}
+                  href="/admin/mon-espace/documents"
+                  cta="Signer"
+                  urgent={!!s.dueDate && new Date(s.dueDate).getTime() - Date.now() < 3 * 86400000}
+                />
+              ))}
               {!me.twoFactorEnabled && (
                 <ActionRow
                   icon={ShieldCheck}
@@ -406,6 +433,48 @@ export function MonEspaceDashboard({
           )}
         </div>
       </Card>
+
+      {/* Activité récente — dernières notifications de l'employé */}
+      {recentNotifications.length > 0 && (
+        <Card className="overflow-hidden">
+          <div className="p-4 border-b flex items-center justify-between">
+            <h2 className="font-bold text-sm flex items-center gap-2">
+              <Bell className="h-4 w-4 text-[#0F2D52]" />
+              Activité récente
+            </h2>
+            <Link href="/admin/notifications" className="text-xs text-[#0F2D52] hover:underline">
+              Toutes →
+            </Link>
+          </div>
+          <div className="divide-y">
+            {recentNotifications.slice(0, 6).map((n) => {
+              const isUnread = !n.readAt;
+              return (
+                <div key={n.id} className={`p-3 flex items-start gap-3 ${isUnread ? "bg-[#0F2D52]/5" : ""}`}>
+                  <div className="h-7 w-7 rounded-full bg-[#0F2D52]/10 flex items-center justify-center shrink-0">
+                    <Bell className="h-3.5 w-3.5 text-[#0F2D52]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-semibold truncate">{n.title}</p>
+                      {isUnread && <span className="h-1.5 w-1.5 rounded-full bg-[#0F2D52] shrink-0" />}
+                    </div>
+                    {n.body && <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{n.body}</p>}
+                    <p className="text-[10px] text-muted-foreground mt-1 tabular-nums">
+                      {new Date(n.createdAt).toLocaleString("fr-CA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  {n.link && (
+                    <Link href={n.link} className="text-[11px] text-[#0F2D52] hover:underline shrink-0 self-center">
+                      Voir
+                    </Link>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Grille 3 colonnes equilibrees : annonces a gauche, equipe au milieu, finances/equip a droite.
           Pas de max-h interne : tout coule naturellement avec le scroll de page (evite le double-scroll). */}

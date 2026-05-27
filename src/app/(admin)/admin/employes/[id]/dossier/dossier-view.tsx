@@ -9,7 +9,7 @@ import {
   Briefcase, User, Mail, Phone, MapPin, Calendar, Crown, Building2,
   Plus, Edit, Trash2, FileText, ShieldAlert, ThumbsUp, Eye, Stethoscope,
   GraduationCap, LogOut, Award, Package, FilePen, Download, FileDown,
-  AlertTriangle, Banknote, FolderClosed, Heart, ClipboardList,
+  AlertTriangle, Banknote, FolderClosed, Heart, ClipboardList, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormSection, Field } from "@/components/admin/form-section";
 import { MarkdownEditor } from "@/components/admin/markdown-editor";
 import { PdfPreviewModal } from "@/components/admin/pdf-preview-modal";
+import { RequestDocumentUploadDialog } from "@/components/admin/request-document-upload-dialog";
 import {
   createEmployeeNoteAction,
   updateEmployeeNoteAction,
@@ -45,6 +46,9 @@ type AdminFull = {
   bio: string | null;
   internalNotes: string | null;
   isActive: boolean;
+  civility: string | null;
+  gender: string | null;
+  preferredPronouns: string | null;
   position: { id: number; name: string; color: string | null } | null;
   customRole: { id: number; name: string; color: string | null } | null;
   team: { id: number; name: string; color: string | null } | null;
@@ -243,6 +247,16 @@ function seniorityLabel(start: string | null): string {
   return m === 0 ? `${y} an${y > 1 ? "s" : ""}` : `${y} an${y > 1 ? "s" : ""} ${m} mois`;
 }
 
+function genderLabel(g: string | null | undefined): string {
+  switch (g) {
+    case "male": return "Homme";
+    case "female": return "Femme";
+    case "non_binary": return "Non-binaire";
+    case "prefer_not_to_say": return "Préfère ne pas dire";
+    default: return "—";
+  }
+}
+
 // ─── Composant principal ──────────────────────────────────────────
 export function DossierView(props: {
   actorId: number;
@@ -271,6 +285,7 @@ export function DossierView(props: {
   const [noteDialog, setNoteDialog] = useState<{ open: boolean; note: Note | null }>({ open: false, note: null });
   const [confirmDel, setConfirmDel] = useState<Note | null>(null);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
+  const [docRequestOpen, setDocRequestOpen] = useState(false);
 
   const employeeLabel = admin.fullName || admin.email;
 
@@ -344,6 +359,15 @@ export function DossierView(props: {
               variant="outline"
               size="sm"
               className="bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white"
+              onClick={() => setDocRequestOpen(true)}
+            >
+              <Upload className="h-4 w-4 mr-1.5" />
+              Demander un document
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white"
               onClick={() => setPdfPreview({
                 url: `/api/admin/employees/${admin.id}/dossier/pdf`,
                 title: `Dossier employé · ${employeeLabel}`,
@@ -357,6 +381,21 @@ export function DossierView(props: {
           </div>
         </div>
       </Card>
+
+      <RequestDocumentUploadDialog
+        open={docRequestOpen}
+        presetEmployeeId={admin.id}
+        onClose={() => setDocRequestOpen(false)}
+        onCreated={() => router.refresh()}
+        availableEmployees={[
+          {
+            id: admin.id,
+            fullName: admin.fullName,
+            email: admin.email,
+            team: admin.team ? { id: admin.team.id, name: admin.team.name } : null,
+          },
+        ]}
+      />
 
       <Tabs defaultValue="identity" className="w-full">
         <TabsList className="flex flex-wrap h-auto justify-start gap-1">
@@ -388,6 +427,11 @@ export function DossierView(props: {
                 <InfoRow icon={Calendar} label="Anciennete" value={seniorityLabel(admin.startDate)} />
                 <InfoRow icon={Calendar} label="Date de fin" value={fmtDate(admin.endDate)} />
                 <InfoRow icon={Calendar} label="Naissance" value={fmtDate(admin.birthdate)} />
+                <InfoRow icon={User} label="Civilité" value={admin.civility || "—"} />
+                <InfoRow icon={User} label="Genre" value={genderLabel(admin.gender)} />
+                {admin.preferredPronouns && (
+                  <InfoRow icon={User} label="Pronoms" value={admin.preferredPronouns} />
+                )}
               </div>
             </FormSection>
           </Card>

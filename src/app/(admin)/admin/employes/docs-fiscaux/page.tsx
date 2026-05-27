@@ -1,15 +1,23 @@
-// HR · Émission T4 / Relevé 1 par employé.
+// HR · Emission T4 / Releve 1 par employe.
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { TaxDocsView } from "./tax-docs-view";
+
+export const metadata: Metadata = { title: "Employes — Documents fiscaux" };
+export const dynamic = "force-dynamic";
 
 export default async function TaxDocsAdminPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
 
   const [employees, docs] = await Promise.all([
-    prisma.admin.findMany({ where: { isActive: true }, orderBy: { fullName: "asc" }, select: { id: true, fullName: true, email: true } }),
+    prisma.admin.findMany({
+      where: { isActive: true },
+      orderBy: { fullName: "asc" },
+      select: { id: true, fullName: true, email: true },
+    }),
     prisma.taxDocument.findMany({
       orderBy: [{ taxYear: "desc" }, { issuedAt: "desc" }],
       include: { admin: { select: { id: true, fullName: true, email: true } } },

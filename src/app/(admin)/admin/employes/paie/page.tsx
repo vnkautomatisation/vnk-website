@@ -5,6 +5,7 @@ import { PayrollView } from "./payroll-view";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Employés — Paie" };
+export const dynamic = "force-dynamic";
 
 export default async function PaiePage() {
   const session = await auth();

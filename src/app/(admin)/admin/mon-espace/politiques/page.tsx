@@ -10,8 +10,16 @@ export default async function HrPoliciesPage() {
 
   const policies = await prisma.hrPolicy.findMany({
     where: { isActive: true },
-    orderBy: { title: "asc" },
-    include: { publisher: { select: { fullName: true, email: true } } },
+    orderBy: [{ effectiveFrom: "desc" }, { title: "asc" }],
+    select: {
+      id: true,
+      key: true,
+      title: true,
+      version: true,
+      bodyMarkdown: true,
+      effectiveFrom: true,
+      publisher: { select: { fullName: true, email: true } },
+    },
   });
 
   return <PoliciesEmployeeView policies={JSON.parse(JSON.stringify(policies))} />;

@@ -35,7 +35,17 @@ export function PdfPreviewModal({
   // Refactor : on ne sort plus du composant avant le Dialog (sinon l'animation
   // d'ouverture/fermeture est cassée). On garde une URL optionnelle et on
   // affiche un état "Aucune URL fournie" si null.
-  const fullUrl = url ? `${url}${url.includes("?") ? "&" : "?"}_t=${stamp}` : null;
+  //
+  // IMPORTANT : les blob URL (`blob:...`) et data URL (`data:...`) ne supportent
+  // PAS de query string — y ajouter `?_t=...` casse l'iframe avec un message
+  // "fichier deplace ou supprime". On applique le cache-buster uniquement sur
+  // les URL HTTP(S).
+  const isOpaqueUrl = !!url && (url.startsWith("blob:") || url.startsWith("data:"));
+  const fullUrl = url
+    ? (isOpaqueUrl
+      ? url
+      : `${url}${url.includes("?") ? "&" : "?"}_t=${stamp}`)
+    : null;
 
   const download = () => {
     if (!fullUrl) return;
@@ -87,7 +97,9 @@ export function PdfPreviewModal({
                   <FileText className="h-12 w-12 text-muted-foreground/40 mb-3" />
                   <p className="text-sm font-medium text-foreground">Aperçu indisponible</p>
                   <p className="text-xs text-muted-foreground mt-1 max-w-md">
-                    Votre navigateur ne peut pas afficher ce PDF inline. Utilisez les boutons ci-dessous pour le télécharger ou l&apos;ouvrir dans un nouvel onglet.
+                    Le PDF n&apos;a pas pu être chargé. Le document a peut-être expiré, été supprimé,
+                    ou votre navigateur ne sait pas l&apos;afficher inline. Utilisez les boutons
+                    ci-dessous pour le télécharger ou l&apos;ouvrir dans un nouvel onglet.
                   </p>
                 </div>
               ) : (

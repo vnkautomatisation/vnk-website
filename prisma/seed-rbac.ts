@@ -66,12 +66,30 @@ const ROLE_TEMPLATES: Record<string, PermissionsMatrix> = {
 };
 
 const POSITION_TEMPLATES = [
+  // ─── Direction & administration (existants — conserver) ──────
   { name: "Super administrateur", description: "Accès complet au portail incluant la gestion des autres administrateurs.", defaultRoleName: "super_admin", department: "Direction", color: "#0F2D52" },
   { name: "Administrateur", description: "Gestion complète des données métier sans accès aux comptes administrateurs.", defaultRoleName: "admin", department: "Direction", color: "#1A5FB4" },
   { name: "Comptable", description: "Comptabilité, facturation, paiements, déclarations fiscales, dépenses.", defaultRoleName: "accountant", department: "Comptabilité", color: "#26A269" },
   { name: "Vendeur", description: "Gestion des clients, devis, contrats, calendrier et messages.", defaultRoleName: "sales", department: "Ventes", color: "#E5A50A" },
   { name: "Support client", description: "Messagerie, documents, litiges, prise de rendez-vous.", defaultRoleName: "support", department: "Support", color: "#613583" },
   { name: "Technicien", description: "Mandats en cours, workflow, documents techniques, calendrier.", defaultRoleName: "technician", department: "Technique", color: "#C01C28" },
+
+  // ─── Ingénierie & automatisation (postes VNK) ────────────────
+  { name: "Programmeur automatisation", description: "Programmation PLC, SCADA, IHM (B&R, Allen-Bradley, Siemens).", defaultRoleName: "technician", department: "Ingénierie", color: "#1565C0" },
+  { name: "Programmeur robotique", description: "Programmation robots industriels (FANUC, ABB, KUKA).", defaultRoleName: "technician", department: "Ingénierie", color: "#0277BD" },
+  { name: "Technicien automatisation", description: "Installation, mise en service, dépannage systèmes automatisés.", defaultRoleName: "technician", department: "Technique", color: "#C01C28" },
+  { name: "Technicien électrique", description: "Câblage, panneaux de contrôle, mise en service électrique.", defaultRoleName: "technician", department: "Technique", color: "#B71C1C" },
+  { name: "Technicien mécanique", description: "Assemblage mécanique, alignement, maintenance préventive.", defaultRoleName: "technician", department: "Technique", color: "#880E4F" },
+  { name: "Ingénieur électrique", description: "Conception schémas électriques, calculs charges, sélection composants.", defaultRoleName: "technician", department: "Ingénierie", color: "#0D47A1" },
+  { name: "Ingénieur mécanique", description: "Conception mécanique, modélisation CAO 3D, calculs structures.", defaultRoleName: "technician", department: "Ingénierie", color: "#1A237E" },
+  { name: "Ingénieur logiciel / automatisation", description: "Architecture logicielle systèmes industriels, intégration HMI/MES.", defaultRoleName: "technician", department: "Ingénierie", color: "#311B92" },
+  { name: "Concepteur / Dessinateur", description: "Plans CAO (AutoCAD, EPLAN, SolidWorks).", defaultRoleName: "technician", department: "Ingénierie", color: "#4527A0" },
+  { name: "Chargé de projet", description: "Gestion de projets clients : échéanciers, budget, coordination équipes.", defaultRoleName: "admin", department: "Gestion de projet", color: "#00695C" },
+  { name: "Soumissionnaire / Estimateur", description: "Préparation devis techniques, chiffrage projets automatisation.", defaultRoleName: "sales", department: "Ventes", color: "#F57F17" },
+  { name: "Représentant des ventes", description: "Développement nouveaux comptes, suivi clients existants.", defaultRoleName: "sales", department: "Ventes", color: "#E65100" },
+  { name: "Coordonnateur SAV", description: "Service après-vente, support technique post-installation.", defaultRoleName: "support", department: "Service après-vente", color: "#4A148C" },
+  { name: "Coordonnateur RH", description: "Gestion ressources humaines, paie, conformité CNESST.", defaultRoleName: "admin", department: "Ressources humaines", color: "#1B5E20" },
+  { name: "Adjoint(e) administratif", description: "Soutien administratif général, accueil, gestion documents.", defaultRoleName: "admin", department: "Administration", color: "#827717" },
 ];
 
 const ROLE_DEFS = [

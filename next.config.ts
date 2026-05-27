@@ -8,7 +8,14 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [{ protocol: "https", hostname: "**" }],
   },
-  serverExternalPackages: ["pdfkit", "fontkit", "restructure", "iconv-lite"],
+  serverExternalPackages: [
+    "pdfkit",
+    "fontkit",
+    "restructure",
+    "iconv-lite",
+    "puppeteer-core",
+    "@sparticuz/chromium",
+  ],
   experimental: {
     serverActions: { bodySizeLimit: "10mb" },
     // Note: "sonner" retiré car bug Next.js — son barrel-optimize duplique l'import

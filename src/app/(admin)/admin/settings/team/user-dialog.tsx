@@ -78,6 +78,10 @@ export function UserDialog({
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [loginAlertsEnabled, setLoginAlertsEnabled] = useState(true);
   const [defaultLanding, setDefaultLanding] = useState("dashboard");
+  // Genre + civilité (utilisés par les templates PDF pour accord grammatical FR-CA)
+  const [civility, setCivility] = useState<string>("none");
+  const [gender, setGender] = useState<string>("none");
+  const [preferredPronouns, setPreferredPronouns] = useState("");
 
   // Avatar
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null); // data URL ou null
@@ -111,6 +115,9 @@ export function UserDialog({
         setRecoveryEmail(user.recoveryEmail ?? "");
         setLoginAlertsEnabled(user.loginAlertsEnabled ?? true);
         setDefaultLanding(user.defaultLanding ?? "dashboard");
+        setCivility(user.civility ?? "none");
+        setGender(user.gender ?? "none");
+        setPreferredPronouns(user.preferredPronouns ?? "");
       } else {
         setEmail(""); setFullName(""); setPhone(""); setTitle("");
         setDepartment(""); setRoleId("none"); setPositionId("none");
@@ -118,6 +125,7 @@ export function UserDialog({
         setStartDate(""); setEndDate("");
         setIsActive(true); setPassword(generatePassword());
         setAvatarPreview(null);
+        setCivility("none"); setGender("none"); setPreferredPronouns("");
       }
     }
   }, [open, user]);
@@ -260,6 +268,9 @@ export function UserDialog({
           recoveryEmail: recoveryEmail || null,
           loginAlertsEnabled,
           defaultLanding,
+          civility: civility === "none" ? null : (civility as "M." | "Mme" | "Mx"),
+          gender: gender === "none" ? null : (gender as "male" | "female" | "non_binary" | "prefer_not_to_say"),
+          preferredPronouns: preferredPronouns || null,
           // Optimistic locking : on envoie l'updatedAt connu au moment d'ouvrir le dialogue
           expectedUpdatedAt: user.updatedAt,
         });
@@ -512,6 +523,47 @@ export function UserDialog({
                   </Field>
                 </div>
               </FormSection>
+
+              {mode === "edit" && (
+                <FormSection icon={User} title="Genre et civilité" description="Utilisé pour l'accord grammatical dans les contrats et documents PDF (Employé(e) → Employée si Femme, etc.)">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Field label="Civilité" hint="Titre court affiché sur documents">
+                      <Select value={civility} onValueChange={setCivility}>
+                        <SelectTrigger><SelectValue placeholder="Aucune" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">— Aucune —</SelectItem>
+                          <SelectItem value="M.">M.</SelectItem>
+                          <SelectItem value="Mme">Mme</SelectItem>
+                          <SelectItem value="Mx">Mx (neutre)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field label="Genre" hint="Détermine l'accord grammatical FR">
+                      <Select value={gender} onValueChange={setGender}>
+                        <SelectTrigger><SelectValue placeholder="Préfère ne pas dire" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Préfère ne pas dire</SelectItem>
+                          <SelectItem value="male">Homme</SelectItem>
+                          <SelectItem value="female">Femme</SelectItem>
+                          <SelectItem value="non_binary">Non-binaire</SelectItem>
+                          <SelectItem value="prefer_not_to_say">Préfère ne pas dire</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field label="Pronoms personnalisés" hint="Optionnel · ex « iel/iel », « they/them »">
+                      <Input
+                        value={preferredPronouns}
+                        onChange={(e) => setPreferredPronouns(e.target.value)}
+                        placeholder="il/lui, elle/elle, iel/iel..."
+                        maxLength={40}
+                      />
+                    </Field>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
+                    Si aucun genre n&apos;est sélectionné, les documents utilisent la forme épicène « Employé(e) » / « il ou elle » (conforme à la recommandation OQLF).
+                  </p>
+                </FormSection>
+              )}
 
               <FormSection icon={Briefcase} title="Poste & Rôle">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

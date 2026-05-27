@@ -6,7 +6,7 @@ import {
   Clock, Calculator, CalendarDays, GitBranch, BadgeCheck, AlertTriangle,
   GraduationCap, BarChart, Award, MessageSquare, Megaphone, Cake,
   LogOut, FileBarChart, ScrollText, Laptop, CalendarRange,
-  UsersRound, FolderOpen, Timer, Wrench, HeartPulse, Radio, Archive,
+  UsersRound, FolderOpen, Timer, Wrench, HeartPulse, Radio, Archive, BookOpen,
 } from "lucide-react";
 import { ModuleSidebarNav, type NavSection } from "@/components/admin/module-sidebar-nav";
 
@@ -27,7 +27,9 @@ const SECTIONS: NavSection[] = [
     groupIcon: FolderOpen,
     items: [
       { href: "/admin/employes/contrats", label: "Contrats", icon: FileSignature },
-      { href: "/admin/employes/documents", label: "Documents légaux", icon: FileText },
+      { href: "/admin/employes/documents", label: "Documents", icon: FileText },
+      { href: "/admin/employes/documents/cahiers", label: "Cahiers", icon: BookOpen },
+      { href: "/admin/employes/documents/bibliotheque", label: "Bibliothèque", icon: BookOpen },
       { href: "/admin/employes/politiques", label: "Politiques", icon: ScrollText },
     ],
   },

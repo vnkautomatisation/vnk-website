@@ -34,7 +34,15 @@ export default async function ContratsPage() {
     prisma.admin.findMany({
       where: { isActive: true },
       orderBy: { fullName: "asc" },
-      select: { id: true, fullName: true, email: true },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        avatarUrl: true,
+        department: true,
+        position: { select: { name: true } },
+        team: { select: { name: true } },
+      },
     }),
     prisma.position.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.admin.findUnique({

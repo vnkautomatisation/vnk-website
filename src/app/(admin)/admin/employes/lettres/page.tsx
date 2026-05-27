@@ -9,7 +9,11 @@ export default async function LettersAdminPage() {
 
   const requests = await prisma.employmentLetterRequest.findMany({
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-    include: { admin: { select: { id: true, fullName: true, email: true } } },
+    include: {
+      admin: {
+        select: { id: true, fullName: true, email: true, avatarUrl: true },
+      },
+    },
   });
 
   return <LettersView requests={JSON.parse(JSON.stringify(requests))} />;

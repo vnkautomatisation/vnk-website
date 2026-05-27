@@ -876,6 +876,10 @@ const updateSchema = z.object({
   loginAlertsEnabled: z.boolean().optional(),
   defaultLanding: z.string().max(80).nullable().optional(),
   bio: z.string().max(280).nullable().optional(),
+  // Genre + civilité (pour accord grammatical FR-CA dans documents PDF)
+  civility: z.enum(["M.", "Mme", "Mx", ""]).nullable().optional(),
+  gender: z.enum(["male", "female", "non_binary", "prefer_not_to_say", ""]).nullable().optional(),
+  preferredPronouns: z.string().max(40).nullable().optional(),
   // Offboarding : transfert du portefeuille à un autre admin lors d'une désactivation
   reassignToAdminId: z.number().int().nullable().optional(),
   // Optimistic locking : si fourni, on rejette la mise à jour si updatedAt a changé.
@@ -952,6 +956,9 @@ export async function updateUserAction(input: z.infer<typeof updateSchema>): Pro
       ...rest,
       // Normaliser recoveryEmail vide → null
       recoveryEmail: rest.recoveryEmail === "" ? null : rest.recoveryEmail,
+      // Normaliser civility / gender vides → null
+      civility: rest.civility === "" ? null : rest.civility,
+      gender: rest.gender === "" ? null : rest.gender,
       startDate: startDate === undefined ? undefined : startDate ? new Date(startDate) : null,
       endDate: endDate === undefined ? undefined : endDate ? new Date(endDate) : null,
       managerId: managerId === undefined ? undefined : managerId,

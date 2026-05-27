@@ -25,9 +25,32 @@ export type UploadResult =
 
 function backend(): StorageBackend {
   const v = (process.env.STORAGE_BACKEND || "").toLowerCase();
-  if (v === "r2" || v === "s3") return v;
+  if (v === "r2" || v === "s3") {
+    // Bulletproof : si l'utilisateur a STORAGE_BACKEND=r2|s3 mais les variables
+    // requises ne sont pas configurées (.env incomplet en dev), on retombe sur
+    // local automatiquement plutôt que de throw "Invalid URL" plus tard dans
+    // signedRequest.
+    const hasBucket = !!process.env.STORAGE_BUCKET;
+    const hasKeys = !!process.env.STORAGE_ACCESS_KEY_ID
+      && !!process.env.STORAGE_SECRET_ACCESS_KEY;
+    const hasR2Endpoint = v === "s3" ? true : !!process.env.STORAGE_ENDPOINT;
+    if (!hasBucket || !hasKeys || !hasR2Endpoint) {
+      // Affiche un warning UNE seule fois pour ne pas spammer
+      if (!warnedAboutFallback) {
+        console.warn(
+          `[object-storage] STORAGE_BACKEND="${v}" mais config incomplète `
+          + `(bucket=${hasBucket}, keys=${hasKeys}, endpoint=${hasR2Endpoint}). `
+          + `Fallback sur "local" (dataUrl base64 stockée en BD).`,
+        );
+        warnedAboutFallback = true;
+      }
+      return "local";
+    }
+    return v;
+  }
   return "local";
 }
+let warnedAboutFallback = false;
 
 function bucket(): string {
   const b = process.env.STORAGE_BUCKET;
