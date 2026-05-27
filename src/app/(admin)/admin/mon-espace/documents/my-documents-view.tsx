@@ -212,7 +212,7 @@ type UploadRequest = {
   requestedBy: { id: number; fullName: string | null; email: string };
 };
 
-type TabKey = "to-sign" | "contracts" | "payroll" | "letters" | "personal";
+type TabKey = "to-sign" | "contracts" | "payroll" | "letters" | "personal" | "signed";
 
 // ---------- Helpers ----------------------------------------------
 const PURPOSE_LABEL: Record<string, string> = {
@@ -487,6 +487,7 @@ export function MyDocumentsView({
     { key: "payroll", label: "Paie & fiscal", icon: Receipt, count: payStubs.length + taxDocs.length },
     { key: "letters", label: "Lettres", icon: Mail, count: letterRequests.length },
     { key: "personal", label: "Mon dossier", icon: Award, count: personalDocs.length },
+    { key: "signed", label: "Signes", icon: CheckCircle2, count: mySignatures.length },
   ];
 
   return (
@@ -830,6 +831,27 @@ export function MyDocumentsView({
             });
           }}
           onDelete={(d) => setConfirmDelDoc(d)}
+        />
+      )}
+
+      {tab === "signed" && (
+        <SignedTab
+          signatures={mySignatures}
+          legalDocs={legalDocs}
+          onPreview={(sig, tpl) => {
+            // PDF final si dispo, sinon preview du template legal
+            const finalUrl = sig.finalPdfUrl;
+            if (finalUrl) {
+              setPreviewPdf({
+                url: finalUrl,
+                title: tpl?.title ?? `Document #${sig.templateId}`,
+                description: `Signe le ${formatDate(sig.signedAt)} - v${sig.version}`,
+                filename: `${(tpl?.key ?? "document")}-signe.pdf`,
+              });
+            } else {
+              toast.info("PDF en cours de generation. Reessayez dans quelques instants.");
+            }
+          }}
         />
       )}
 
@@ -1432,6 +1454,83 @@ function PersonalTab({
         </div>
       )}
       </section>
+    </div>
+  );
+}
+
+// ================================================================
+//                       TAB : SIGNED
+// ================================================================
+// Historique des signatures de documents legaux pour l'employe.
+// - Liste triee par date de signature decroissante (plus recent en haut).
+// - Cards avec icone CheckCircle (emerald) + titre template + version + date.
+// - Bouton "Voir le PDF" qui ouvre PdfPreviewModal sur finalPdfUrl (ou
+//   message d'attente si PDF en cours de generation).
+// - Empty state pro si aucune signature.
+function SignedTab({
+  signatures,
+  legalDocs,
+  onPreview,
+}: {
+  signatures: Signature[];
+  legalDocs: LegalDoc[];
+  onPreview: (sig: Signature, tpl: LegalDoc | undefined) => void;
+}) {
+  const tplMap = useMemo(() => {
+    const m = new Map<number, LegalDoc>();
+    for (const d of legalDocs) m.set(d.id, d);
+    return m;
+  }, [legalDocs]);
+
+  // Tri : plus recente signature d'abord
+  const sorted = useMemo(
+    () => [...signatures].sort(
+      (a, b) => new Date(b.signedAt).getTime() - new Date(a.signedAt).getTime(),
+    ),
+    [signatures],
+  );
+
+  if (sorted.length === 0) {
+    return (
+      <Card className="p-10 text-center space-y-3">
+        <CheckCircle2 className="h-10 w-10 mx-auto text-muted-foreground/40" />
+        <p className="text-sm font-semibold">Aucune signature enregistree</p>
+        <p className="text-xs text-muted-foreground">
+          Vos signatures de documents legaux apparaitront ici une fois realisees.
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        {sorted.length} signature{sorted.length > 1 ? "s" : ""} enregistree{sorted.length > 1 ? "s" : ""}.
+        Cliquez sur une carte pour voir le PDF sign&eacute;.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {sorted.map((sig) => {
+          const tpl = tplMap.get(sig.templateId);
+          const title = tpl?.title ?? `Document #${sig.templateId}`;
+          const subtitle = `v${sig.version} - Signe le ${formatDate(sig.signedAt)}`;
+          return (
+            <DocumentCard
+              key={sig.id}
+              icon={CheckCircle2}
+              title={title}
+              subtitle={subtitle}
+              iconTone="success"
+              status={{
+                label: sig.finalPdfUrl ? "PDF disponible" : "PDF en cours...",
+                tone: sig.finalPdfUrl ? "success" : "warning",
+              }}
+              date={formatDate(sig.signedAt)}
+              onPreview={sig.finalPdfUrl ? () => onPreview(sig, tpl) : undefined}
+              onDownload={sig.finalPdfUrl ? () => onPreview(sig, tpl) : undefined}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
