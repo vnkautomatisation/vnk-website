@@ -3,6 +3,7 @@
 // ce qui suffit pour valider la mise en page avant export.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { adminApiForbiddenAll } from "@/lib/permissions";
 
 const SAMPLE_VARS: Record<string, string> = {
   client_name: "Jean Tremblay",
@@ -46,6 +47,9 @@ export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbiddenAll([["settings", "write"], ["pdf_templates", "write"]])) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
 
   try {

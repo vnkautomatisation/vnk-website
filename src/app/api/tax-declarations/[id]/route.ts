@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 
@@ -21,6 +22,9 @@ export async function GET(
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
+  if (await adminApiForbidden("tax_declarations", "read")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+  }
   const { id } = await params;
   const declaration = await prisma.taxDeclaration.findUnique({ where: { id: Number(id) } });
   if (!declaration) {
@@ -36,6 +40,9 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbidden("tax_declarations", "write")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
   const { id } = await params;
   const declId = Number(id);
@@ -79,6 +86,9 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbidden("tax_declarations", "delete")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
   const { id } = await params;
   const declId = Number(id);

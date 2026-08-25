@@ -12,6 +12,10 @@ type Result<T = void> = ({ success: true } & (T extends void ? object : { data: 
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return null;
+  // Enforcement matrice : ecriture requise sur la/les ressource(s) du module.
+  const { getCurrentAdminPermissions, canAct } = await import("@/lib/permissions");
+  const perms = await getCurrentAdminPermissions();
+  if (!(canAct(perms, "settings", "write") || canAct(perms, "integrations", "write"))) return null;
   return session.user.adminId!;
 }
 

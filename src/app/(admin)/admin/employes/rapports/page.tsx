@@ -1,6 +1,7 @@
 // HR · Rapports & people analytics.
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
 import { FileBarChart, TrendingUp, Users, AlertTriangle, Clock, Calendar, FileDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { HrReportPdfButton } from "./hr-report-pdf-button";
 export default async function ReportsPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
+  if (!(await isHrAdmin(session.user.adminId!))) redirect("/admin/employes/organigramme");
 
   const today = new Date();
   const yearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());

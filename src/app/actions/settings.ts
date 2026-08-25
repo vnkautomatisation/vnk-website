@@ -29,6 +29,14 @@ export async function updateSettingsAction(
   if (!session?.user || session.user.role !== "admin") {
     return { success: false, error: "Non autorisé" };
   }
+  {
+    // Enforcement matrice : settings.write requis.
+    const { getCurrentAdminPermissions, canAct } = await import("@/lib/permissions");
+    const perms = await getCurrentAdminPermissions();
+    if (!canAct(perms, "settings", "write") && !canAct(perms, "client_portal", "write") && !canAct(perms, "website", "write")) {
+      return { success: false, error: "Permission refusée (settings)" };
+    }
+  }
   const adminId = session.user.adminId!;
 
   // 2) Validation
@@ -104,6 +112,14 @@ export async function resetCategoryAction(
   if (!session?.user || session.user.role !== "admin") {
     return { success: false, error: "Non autorisé" };
   }
+  {
+    // Enforcement matrice : settings.write requis.
+    const { getCurrentAdminPermissions, canAct } = await import("@/lib/permissions");
+    const perms = await getCurrentAdminPermissions();
+    if (!canAct(perms, "settings", "write") && !canAct(perms, "client_portal", "write") && !canAct(perms, "website", "write")) {
+      return { success: false, error: "Permission refusée (settings)" };
+    }
+  }
   const adminId = session.user.adminId!;
 
   // TODO: réimporter les valeurs par défaut depuis seed.ts
@@ -125,6 +141,14 @@ export async function testConnectionAction(
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return { success: false, error: "Non autorisé" };
+  }
+  {
+    // Enforcement matrice : settings.write requis.
+    const { getCurrentAdminPermissions, canAct } = await import("@/lib/permissions");
+    const perms = await getCurrentAdminPermissions();
+    if (!canAct(perms, "settings", "write") && !canAct(perms, "client_portal", "write") && !canAct(perms, "website", "write")) {
+      return { success: false, error: "Permission refusée (settings)" };
+    }
   }
 
   try {

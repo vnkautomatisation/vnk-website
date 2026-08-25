@@ -1,6 +1,7 @@
 // Settings · Maintenance — fenêtres planifiées, incidents, bandeau d'annonce.
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getCurrentAdminPermissions, canAct } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { MaintenanceView } from "./maintenance-view";
 import type { Metadata } from "next";
@@ -10,6 +11,9 @@ export const metadata: Metadata = { title: "Maintenance — VNK" };
 export default async function MaintenancePage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
+  // Acces reglages : settings.write requis.
+  const perms = await getCurrentAdminPermissions();
+  if (!canAct(perms, "settings", "write") && !canAct(perms, "client_portal", "write") && !canAct(perms, "website", "write")) redirect("/admin");
 
   const [windows, incidents, bannerSettings] = await Promise.all([
     prisma.maintenanceWindow.findMany({ orderBy: { startsAt: "desc" } }),

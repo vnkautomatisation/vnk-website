@@ -34,7 +34,7 @@ async function requireHrWrite(): Promise<number | null> {
   if (!admin) return null;
   const perms = (admin.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
   const isSuper = admin.customRole?.name === "super_admin";
-  const canHr = isSuper || (perms.users ?? []).includes("write") || (perms.hr ?? []).includes("write");
+  const canHr = isSuper || (perms.users ?? []).includes("write") || (perms.hr ?? []).includes("write") || (perms.hr_documents ?? []).includes("write");
   return canHr ? adminId : null;
 }
 

@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { createWorkflowEvent } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
@@ -85,6 +86,9 @@ export async function POST(req: Request) {
   // Note interne reservee admin
   if (parsed.data.isInternalNote && session.user.role !== "admin") {
     return NextResponse.json({ error: "Notes internes réservées admin" }, { status: 403 });
+  }
+  if (await adminApiForbidden("messages", "write")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
 
   // Validation taille pieces jointes

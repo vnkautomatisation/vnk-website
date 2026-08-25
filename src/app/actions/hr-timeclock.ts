@@ -24,7 +24,7 @@ async function requirePayrollWrite(): Promise<number | null> {
   if (!admin) return null;
   const perms = (admin.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
   const isSuper = admin.customRole?.name === "super_admin";
-  return (isSuper || (perms.payroll ?? []).includes("write") || (perms.users ?? []).includes("write")) ? adminId : null;
+  return (isSuper || (perms.payroll ?? []).includes("write") || (perms.users ?? []).includes("write") || (perms.timeclock ?? []).includes("write") || (perms.hr ?? []).includes("write")) ? adminId : null;
 }
 
 async function isSuperAdmin(adminId: number): Promise<boolean> {
@@ -79,7 +79,8 @@ async function assertCanReviewAdmin(actorId: number, targetAdminId: number): Pro
   const isHr =
     (perms.users ?? []).includes("write")
     || (perms.hr ?? []).includes("write")
-    || (perms.payroll ?? []).includes("write");
+    || (perms.payroll ?? []).includes("write")
+    || (perms.timeclock ?? []).includes("write");
   if (isHr) return true;
 
   // Sinon, le target doit etre dans le scope hierarchique de l'acteur
@@ -126,7 +127,8 @@ async function assertCanReviewMany(actorId: number, targetAdminIds: number[]): P
   const isHr =
     (perms.users ?? []).includes("write")
     || (perms.hr ?? []).includes("write")
-    || (perms.payroll ?? []).includes("write");
+    || (perms.payroll ?? []).includes("write")
+    || (perms.timeclock ?? []).includes("write");
   if (isHr) return true;
 
   // (3) Sinon : pre-load tous les targets et les teams en 2 queries, verif en memoire

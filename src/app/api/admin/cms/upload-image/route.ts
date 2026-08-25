@@ -3,6 +3,7 @@
 // l'URL utilisable directement dans <img src>. Limite : 5 Mo, formats image.
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { adminApiForbiddenAll } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import crypto from "crypto";
@@ -14,6 +15,9 @@ export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbiddenAll([["settings", "write"], ["blog", "write"], ["pages", "write"], ["website", "write"]])) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
   const adminId = session.user.adminId!;
 

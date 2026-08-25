@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { revalidateAdminViews } from "@/lib/revalidate";
 
@@ -35,6 +36,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
   if (Date.now() - msg.createdAt.getTime() > EDIT_WINDOW_MS && session.user.role !== "admin") {
     return NextResponse.json({ error: "Délai de modification dépassé (5 min)" }, { status: 409 });
+  }
+  if (await adminApiForbidden("messages", "write")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
 
   const body = await req.json();

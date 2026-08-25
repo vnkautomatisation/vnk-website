@@ -1,6 +1,7 @@
 // HR · Vue centralisée des onboardings (qui n'a pas signé quoi, qui manque d'éléments)
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ScrollText, AlertCircle, CheckCircle2, ShieldCheck, FileSignature, Fingerprint } from "lucide-react";
@@ -10,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 export default async function OnboardingCentralPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
+  if (!(await isHrAdmin(session.user.adminId!))) redirect("/admin/employes/organigramme");
 
   const [admins, requiredDocs, allSignatures, passkeys] = await Promise.all([
     prisma.admin.findMany({

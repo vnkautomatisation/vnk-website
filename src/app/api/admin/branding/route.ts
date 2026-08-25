@@ -9,6 +9,7 @@
 //   - pdf      : logo pour entête PDF (factures, devis)
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { adminApiForbiddenAll } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 
@@ -21,6 +22,9 @@ export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbiddenAll([["settings", "write"], ["branding", "write"], ["website", "write"], ["client_portal", "write"]])) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
   const adminId = session.user.adminId!;
 
@@ -80,6 +84,9 @@ export async function DELETE(request: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbiddenAll([["settings", "write"], ["branding", "write"], ["website", "write"], ["client_portal", "write"]])) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
   const adminId = session.user.adminId!;
 

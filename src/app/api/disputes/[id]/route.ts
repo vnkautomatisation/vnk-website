@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { createWorkflowEvent } from "@/lib/workflow";
@@ -48,6 +49,9 @@ export async function GET(
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorise" }, { status: 401 });
   }
+  if (await adminApiForbidden("disputes", "read")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+  }
   const { id } = await params;
   const dispute = await prisma.dispute.findUnique({
     where: { id: Number(id) },
@@ -72,6 +76,9 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  }
+  if (await adminApiForbidden("disputes", "write")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
   const { id } = await params;
   const disputeId = Number(id);
@@ -132,6 +139,9 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  }
+  if (await adminApiForbidden("disputes", "delete")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
   const { id } = await params;
   const disputeId = Number(id);

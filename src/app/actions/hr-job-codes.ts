@@ -18,7 +18,7 @@ async function requireUsersWrite(): Promise<number | null> {
   if (!admin) return null;
   const perms = (admin.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
   const isSuper = admin.customRole?.name === "super_admin";
-  return (isSuper || (perms.users ?? []).includes("write") || (perms.payroll ?? []).includes("write")) ? adminId : null;
+  return (isSuper || (perms.users ?? []).includes("write") || (perms.payroll ?? []).includes("write") || (perms.timeclock ?? []).includes("write") || (perms.hr ?? []).includes("write")) ? adminId : null;
 }
 
 function revalidateAll() {

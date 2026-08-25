@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { revalidateAdminViews } from "@/lib/revalidate";
@@ -49,6 +50,9 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  }
+  if (await adminApiForbidden("contracts", "write")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
   const { id } = await params;
   const contractId = Number(id);
@@ -104,6 +108,9 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  }
+  if (await adminApiForbidden("contracts", "delete")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
   const { id } = await params;
   const contractId = Number(id);

@@ -4,6 +4,7 @@
 // pour clients qui exigent une preuve de signature renforcée).
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { sendSignatureRequest, isDropboxSignAvailable } from "@/lib/integrations/dropbox-sign";
 import { logAudit } from "@/lib/audit";
@@ -13,6 +14,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbidden("contracts", "write")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
 
   if (!(await isDropboxSignAvailable())) {

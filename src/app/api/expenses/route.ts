@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 
@@ -29,6 +30,9 @@ export async function GET() {
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
+  if (await adminApiForbidden("expenses", "read")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+  }
 
   const expenses = await prisma.expense.findMany({
     orderBy: { expenseDate: "desc" },
@@ -41,6 +45,9 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbidden("expenses", "write")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
 
   const body = await req.json();

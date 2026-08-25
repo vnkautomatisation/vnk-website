@@ -3,6 +3,7 @@
 // Action irreversible : apres soumission, la declaration ne peut plus etre modifiee ni supprimee.
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 
@@ -13,6 +14,9 @@ export async function POST(
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbidden("tax_declarations", "write")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
   const { id } = await params;
   const declId = Number(id);

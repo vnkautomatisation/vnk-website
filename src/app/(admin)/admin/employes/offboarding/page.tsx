@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
 import { OffboardingView } from "./offboarding-view";
 
 export default async function OffboardingPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
+  if (!(await isHrAdmin(session.user.adminId!))) redirect("/admin/employes/organigramme");
 
   const [checklists, candidates] = await Promise.all([
     prisma.offboardingChecklist.findMany({

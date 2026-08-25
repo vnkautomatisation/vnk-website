@@ -3,6 +3,7 @@
 // Inclut les taxes payees (CTI) sur les depenses de la meme periode pour calculer le net a remettre.
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { generateTaxDeclarationPdf } from "@/lib/services/pdf-export";
 
@@ -18,6 +19,9 @@ export async function GET(
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbidden("tax_declarations", "read")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
 
   const { id } = await params;

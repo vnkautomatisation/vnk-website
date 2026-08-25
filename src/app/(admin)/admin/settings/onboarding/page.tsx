@@ -1,6 +1,7 @@
 // Settings · Onboarding — assistant guidé pour la configuration initiale.
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getCurrentAdminPermissions, canAct } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { OnboardingWizard } from "./onboarding-wizard";
 import type { Metadata } from "next";
@@ -10,6 +11,9 @@ export const metadata: Metadata = { title: "Configuration guidée — VNK" };
 export default async function OnboardingPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
+  // Acces reglages : settings.write requis.
+  const perms = await getCurrentAdminPermissions();
+  if (!canAct(perms, "settings", "write")) redirect("/admin");
 
   // Pré-charger les settings existants pour pré-remplir les étapes
   const [settings, hasLogo, hasRprp, adminsCount, fiscalCount] = await Promise.all([

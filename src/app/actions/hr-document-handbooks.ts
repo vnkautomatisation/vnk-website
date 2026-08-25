@@ -41,6 +41,7 @@ async function requireHrWrite(): Promise<number | null> {
   return isSuper
     || (perms.users ?? []).includes("write")
     || (perms.hr ?? []).includes("write")
+    || (perms.hr_documents ?? []).includes("write")
     ? adminId
     : null;
 }

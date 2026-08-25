@@ -11,7 +11,7 @@ export default async function CompensationPage() {
 
   const me = await prisma.admin.findUnique({ where: { id: adminId }, include: { customRole: true } });
   const perms = (me?.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
-  const isHr = me?.customRole?.name === "super_admin" || (perms.hr ?? []).includes("write") || (perms.users ?? []).includes("write");
+  const isHr = me?.customRole?.name === "super_admin" || (perms.hr ?? []).includes("write") || (perms.users ?? []).includes("write") || (perms.payroll ?? []).includes("write");
   if (!isHr) redirect("/admin/employes");
 
   const [employees, salaryHistory, bonuses] = await Promise.all([

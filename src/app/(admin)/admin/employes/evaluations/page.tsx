@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Award, Plus } from "lucide-react";
@@ -9,8 +10,14 @@ import { EvaluationsList } from "./evaluations-list";
 export default async function EvaluationsPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
+  const adminId = session.user.adminId!;
 
+  // RH : toutes les evaluations. Non-RH (manager / employe) : uniquement
+  // celles ou il est evaluateur ou evalue — meme regle que la page detail
+  // [id] qui n'accepte que reviewer / sujet / RH.
+  const isHr = await isHrAdmin(adminId, { domain: "performance" });
   const reviews = await prisma.performanceReview.findMany({
+    where: isHr ? undefined : { OR: [{ adminId }, { reviewerId: adminId }] },
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     include: {
       admin: { select: { id: true, fullName: true, email: true } },

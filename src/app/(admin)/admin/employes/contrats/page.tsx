@@ -52,7 +52,7 @@ export default async function ContratsPage() {
   ]);
 
   const perms = (me?.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
-  const isHr = me?.customRole?.name === "super_admin" || (perms.users ?? []).includes("write") || (perms.hr ?? []).includes("write");
+  const isHr = me?.customRole?.name === "super_admin" || (perms.users ?? []).includes("write") || (perms.hr ?? []).includes("write") || (perms.hr_documents ?? []).includes("write");
 
   return (
     <ContractsView

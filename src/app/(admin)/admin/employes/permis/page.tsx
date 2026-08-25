@@ -1,6 +1,7 @@
 // HR · Vue d'ensemble des permis pros (toutes équipes) + alertes expiration
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
 import { BadgeCheck, AlertTriangle, AlertCircle, XCircle, CheckCircle2, type LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 export default async function HrLicensesPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
+  if (!(await isHrAdmin(session.user.adminId!, { domain: "safety" }))) redirect("/admin/employes/organigramme");
 
   const today = new Date();
   const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);

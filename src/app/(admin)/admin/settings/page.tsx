@@ -2,6 +2,8 @@
 // Charge tous les settings groupés par catégorie + métriques d'overview du no-code
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentAdminPermissions, canAccessSettingsArea } from "@/lib/permissions";
+import { redirect } from "next/navigation";
 import { SettingsView } from "./settings-view";
 import type { Metadata } from "next";
 
@@ -14,6 +16,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SettingsPage() {
+  // Hub reglages : settings.write OU une ressource de la famille config
+  // (informaticien : portail client / site web / integrations / contenu).
+  const perms = await getCurrentAdminPermissions();
+  if (!perms) redirect("/admin/login");
+  if (!canAccessSettingsArea(perms)) redirect("/admin");
+
   // Settings + KPIs en parallèle
   const [
     rows, adminsActive, roles, positions, catalogItems,

@@ -1,6 +1,7 @@
 // Page Équipes — CRUD des sous-équipes avec hiérarchie + assignation membres.
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
 import { TeamsView } from "./teams-view";
 import type { Metadata } from "next";
@@ -10,6 +11,7 @@ export const metadata: Metadata = { title: "Employés — Équipes" };
 export default async function EmployesTeamsPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
+  if (!(await isHrAdmin(session.user.adminId!))) redirect("/admin/employes/organigramme");
 
   const [teams, admins] = await Promise.all([
     prisma.team.findMany({

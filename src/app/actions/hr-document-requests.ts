@@ -60,7 +60,8 @@ async function requireRequesterAccess(
   const isHr =
     isSuper
     || (perms.users ?? []).includes("write")
-    || (perms.hr ?? []).includes("write");
+    || (perms.hr ?? []).includes("write")
+    || (perms.hr_documents ?? []).includes("write");
   const isManager = target.managerId === actorId;
   if (!isHr && !isManager) return null;
   return { actorId, isHr, isSuper, isManager };
@@ -81,7 +82,8 @@ async function requireHrWrite(): Promise<{ actorId: number; isSuper: boolean } |
   const isHr =
     isSuper
     || (perms.users ?? []).includes("write")
-    || (perms.hr ?? []).includes("write");
+    || (perms.hr ?? []).includes("write")
+    || (perms.hr_documents ?? []).includes("write");
   if (!isHr) return null;
   return { actorId, isSuper };
 }

@@ -15,7 +15,7 @@ async function getMe(): Promise<{ id: number; isHr: boolean } | null> {
   const me = await prisma.admin.findUnique({ where: { id }, include: { customRole: true } });
   if (!me) return null;
   const perms = (me.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
-  const isHr = me.customRole?.name === "super_admin" || (perms.hr ?? []).includes("write") || (perms.users ?? []).includes("write");
+  const isHr = me.customRole?.name === "super_admin" || (perms.hr ?? []).includes("write") || (perms.users ?? []).includes("write") || (perms.performance ?? []).includes("write");
   return { id, isHr };
 }
 

@@ -2,6 +2,7 @@
 // Idempotent : ne re-cree pas un template dont le shortcut existe deja
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 
@@ -157,6 +158,9 @@ export async function POST() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbidden("message_templates", "write")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
 
   let created = 0, skipped = 0;

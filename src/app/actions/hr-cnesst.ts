@@ -29,6 +29,7 @@ const incidentSchema = z.object({
 export async function upsertCnesstIncidentAction(input: z.infer<typeof incidentSchema>): Promise<Result<{ id: number }>> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: "Non autorisé (SST/RH requis)" };
   const actorId = session.user.adminId!;
 
   const parsed = incidentSchema.safeParse(input);
@@ -97,6 +98,7 @@ export async function upsertCnesstIncidentAction(input: z.infer<typeof incidentS
 export async function deleteCnesstIncidentAction(input: { id: number }): Promise<Result> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: "Non autorisé (SST/RH requis)" };
   const me = await prisma.admin.findUnique({ where: { id: session.user.adminId! }, include: { customRole: true } });
   if (me?.customRole?.name !== "super_admin") {
     return { success: false, error: "Seul un super-admin peut supprimer une déclaration CNESST" };
@@ -110,6 +112,7 @@ export async function deleteCnesstIncidentAction(input: { id: number }): Promise
 export async function markCnesstReportedAction(input: { id: number; date?: string }): Promise<Result> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: "Non autorisé (SST/RH requis)" };
   const actorId = session.user.adminId!;
   try {
     const reportedAt = input.date ? new Date(input.date) : new Date();
@@ -135,6 +138,7 @@ export async function markCnesstReportedAction(input: { id: number; date?: strin
 export async function markCnesstReturnedAction(input: { id: number; date: string }): Promise<Result> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: "Non autorisé (SST/RH requis)" };
   const actorId = session.user.adminId!;
   try {
     const returnedAt = new Date(input.date);
@@ -155,4 +159,15 @@ export async function markCnesstReturnedAction(input: { id: number; date: string
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : "Erreur" };
   }
+}
+
+// Garde SST : super_admin / users.write / hr.write / safety.write.
+async function hasSafetyWrite(adminId: number): Promise<boolean> {
+  const me = await prisma.admin.findUnique({ where: { id: adminId }, include: { customRole: true } });
+  if (!me) return false;
+  const perms = (me.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
+  return me.customRole?.name === "super_admin"
+    || (perms.users ?? []).includes("write")
+    || (perms.hr ?? []).includes("write")
+    || (perms.safety ?? []).includes("write");
 }

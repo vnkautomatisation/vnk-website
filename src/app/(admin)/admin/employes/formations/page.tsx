@@ -1,6 +1,7 @@
 // HR · Matrice formations (qui a quoi) · alertes expiration
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
 import { GraduationCap } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 export default async function HrTrainingsPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
+  if (!(await isHrAdmin(session.user.adminId!, { domain: "safety" }))) redirect("/admin/employes/organigramme");
 
   const today = new Date();
   const trainings = await prisma.trainingRecord.findMany({

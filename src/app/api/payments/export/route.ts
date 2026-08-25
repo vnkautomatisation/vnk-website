@@ -3,6 +3,7 @@
 // Genere un fichier d'export comptable pour les paiements de la periode (ou de la selection)
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 
@@ -161,6 +162,9 @@ export async function GET(req: Request) {
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
+  if (await adminApiForbidden("payments", "read")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+  }
 
   const { searchParams } = new URL(req.url);
   const format = (searchParams.get("format") ?? "csv_standard").toLowerCase();
@@ -194,6 +198,9 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbidden("payments", "write")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);

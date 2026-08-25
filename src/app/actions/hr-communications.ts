@@ -15,7 +15,7 @@ async function requireHrWrite(): Promise<number | null> {
   const me = await prisma.admin.findUnique({ where: { id }, include: { customRole: true } });
   if (!me) return null;
   const perms = (me.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
-  return (me.customRole?.name === "super_admin" || (perms.hr ?? []).includes("write") || (perms.users ?? []).includes("write")) ? id : null;
+  return (me.customRole?.name === "super_admin" || (perms.hr ?? []).includes("write") || (perms.users ?? []).includes("write") || (perms.hr_comms ?? []).includes("write") || (perms.hr_documents ?? []).includes("write")) ? id : null;
 }
 
 // ═══════════════════════════════════════════════════════════

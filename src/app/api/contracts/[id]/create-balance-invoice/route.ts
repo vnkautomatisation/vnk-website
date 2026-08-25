@@ -2,6 +2,7 @@
 // A appeler manuellement par admin a la livraison des travaux.
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { adminApiForbidden } from "@/lib/permissions";
 import { createBalanceInvoice } from "@/lib/workflow";
 import { logAudit } from "@/lib/audit";
 import { revalidateAdminViews } from "@/lib/revalidate";
@@ -13,6 +14,9 @@ export async function POST(
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbidden("contracts", "write")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
 
   const { id } = await params;

@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/services/email";
 import { renderChatEmail } from "@/lib/services/email-message-template";
@@ -20,6 +21,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const session = await auth();
   if (!session?.user || session.user.role !== "admin" || !session.user.email) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  if (await adminApiForbidden("message_templates", "write")) {
+    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
   }
 
   const { id } = await params;
