@@ -727,7 +727,7 @@ export function MonEspaceDashboard({
             {availableJobCodes.length === 0 ? (
               <div className="text-sm text-muted-foreground text-center py-6">
                 Aucun code de tâche disponible pour votre poste.<br />
-                Demandez à votre superviseur d&apos;en créer dans <em>Employés → Codes de tâche</em>.
+                Demandez à votre superviseur d&apos;en créer dans <em>RH → Codes de tâche</em>.
               </div>
             ) : (
               availableJobCodes.map((jc) => (

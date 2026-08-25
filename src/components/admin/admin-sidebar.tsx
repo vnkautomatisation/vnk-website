@@ -8,7 +8,7 @@
 // - Auto-expand du groupe contenant l'item actif
 // - Etat persisté localStorage
 // - Responsive : drawer mobile <1024px, sidebar fixe ≥1024px
-import { useState, useEffect, useRef, createContext, useContext, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, createContext, useContext, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
@@ -284,9 +284,74 @@ function getSiblingGroupKeys(entries: NavEntry[], targetKey: string): string[] |
 // Précalculé une fois — la liste des href ne change pas
 const ALL_LEAF_HREFS = getAllLeafHrefs(NAV);
 
-export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
+// Ressource requise EN LECTURE pour afficher chaque entrée du menu.
+// Clés absentes = toujours visibles (dashboard, mon_espace, employes, profile).
+// "settings" est traité à part (exige settings.write, pas read).
+// La sécurité réelle reste côté pages/API — ce filtre est cosmétique.
+const KEY_RESOURCE: Record<string, string> = {
+  workflow: "workflow",
+  clients: "clients",
+  mandates: "mandates",
+  requests: "requests",
+  calendar: "calendar",
+  quotes: "quotes",
+  invoices: "invoices",
+  messages: "messages",
+  message_templates: "message_templates",
+  documents: "documents",
+  contracts: "contracts",
+  disputes: "disputes",
+  finance_summary: "finance",
+  all_payments: "payments",
+  settlements: "finance",
+  payouts: "finance",
+  receipts: "finance",
+  transactions: "transactions",
+  reconciliation: "reconciliation",
+  refunds: "refunds",
+  expenses: "expenses",
+  fx_rates: "finance",
+  tax_declarations: "tax_declarations",
+  statistics: "statistics",
+  audit_trail: "audit_trail",
+};
+
+function filterNavByAccess(
+  entries: NavEntry[],
+  readable: string[] | undefined,
+  canSettings: boolean,
+): NavEntry[] {
+  if (!readable) return entries; // pas de matrice fournie -> tout afficher
+  const readableSet = new Set(readable);
+  const visible = (key: string): boolean => {
+    if (key === "settings") return canSettings;
+    const res = KEY_RESOURCE[key];
+    return !res || readableSet.has(res);
+  };
+  const walk = (list: NavEntry[]): NavEntry[] =>
+    list
+      .map((e) => (isGroup(e) ? { ...e, children: walk(e.children) } : e))
+      .filter((e) => (isGroup(e) ? e.children.length > 0 : visible(e.key)));
+  return walk(entries);
+}
+
+export function AdminSidebar({
+  counts = {},
+  readableResources,
+  canSettings = true,
+}: {
+  counts?: SidebarCounts;
+  /** Ressources lisibles par l'admin courant (matrice). Omis = tout visible. */
+  readableResources?: string[];
+  /** Accès au hub Réglages (settings.write). */
+  canSettings?: boolean;
+}) {
   const t = useTranslations("admin.sidebar");
   const pathname = usePathname();
+  const nav = useMemo(
+    () => filterNavByAccess(NAV, readableResources, canSettings),
+    [readableResources, canSettings],
+  );
   const activeHref = findActiveLeafHref(ALL_LEAF_HREFS, pathname);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -400,6 +465,7 @@ export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
         aria-label="Navigation admin"
       >
         <SidebarContent
+          entries={nav}
           activeHref={activeHref}
           t={t}
           counts={counts}
@@ -446,6 +512,7 @@ export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
               </button>
             </div>
             <SidebarContent
+              entries={nav}
               activeHref={activeHref}
               t={t}
               counts={counts}
@@ -463,6 +530,7 @@ export function AdminSidebar({ counts = {} }: { counts?: SidebarCounts }) {
 }
 
 function SidebarContent({
+  entries,
   activeHref,
   t,
   counts = {},
@@ -472,6 +540,7 @@ function SidebarContent({
   toggleGroup,
   onNavigate,
 }: {
+  entries: NavEntry[];
   activeHref: string | null;
   t: (key: string) => string;
   counts?: SidebarCounts;
@@ -484,7 +553,7 @@ function SidebarContent({
   return (
     <nav className="flex-1 min-h-0 overflow-y-auto py-2 px-2 admin-sidebar-scroll" aria-label="Navigation principale">
       <ul className="space-y-0.5">
-        {NAV.map((entry) => (
+        {entries.map((entry) => (
           <NavRow
             key={entry.key}
             entry={entry}

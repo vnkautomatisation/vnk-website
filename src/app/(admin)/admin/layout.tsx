@@ -7,6 +7,7 @@ import { cache, Suspense } from "react";
 import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCurrentAdminPermissions, canAccessSettingsArea, readableResources } from "@/lib/permissions";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminTopbar } from "@/components/admin/admin-topbar";
 import { CommandPalette } from "@/components/admin/command-palette";
@@ -60,11 +61,16 @@ export default async function AdminLayout({
   }
 
   const adminId = session!.user.adminId;
-  const [admin, overdueCount, sidebarCounts] = await Promise.all([
+  const [admin, overdueCount, sidebarCounts, perms] = await Promise.all([
     adminId ? getAdmin(adminId) : null,
     getOverdueCount(),
     getSidebarCounts(),
+    getCurrentAdminPermissions(),
   ]);
+  // Filtrage du menu par la matrice de permissions (cosmetique — la
+  // securite reelle est sur les pages/API).
+  const sidebarReadable = readableResources(perms);
+  const sidebarCanSettings = canAccessSettingsArea(perms);
 
   // Lecture du cookie pour pré-définir la CSS var sidebar (évite CLS au chargement)
   const cookieStore = await cookies();
@@ -112,7 +118,11 @@ export default async function AdminLayout({
           />
 
           {/* Sidebar — sous le topbar */}
-          <AdminSidebar counts={sidebarCounts} />
+          <AdminSidebar
+            counts={sidebarCounts}
+            readableResources={sidebarReadable}
+            canSettings={sidebarCanSettings}
+          />
 
           {/* Contenu principal — sous le topbar, suit dynamiquement la largeur de la sidebar
               via la CSS variable --admin-sidebar-w (mise à jour par AdminSidebar selon mode compact) */}

@@ -86,13 +86,63 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-export function EmployesNav() {
+// Visibilite des pages restreintes du module, par domaine RH fin.
+// Valeur = domaine requis en ecriture ("hr" = passe-partout uniquement).
+// Les hrefs ABSENTS de cette map restent visibles pour tous : Organigramme,
+// Contrats (vue "Mes contrats"), Pointage + Conges (scope hierarchique),
+// Calendrier, Equipement (lecture), Evaluations + 1-on-1 (auto-filtres),
+// Anniversaires. Chaque page reste gated cote serveur — le menu n'est que
+// cosmetique.
+const HREF_DOMAIN: Record<string, string> = {
+  "/admin/employes": "hr",
+  "/admin/employes/equipes": "hr",
+  "/admin/employes/roles": "hr",
+  "/admin/employes/postes": "hr",
+  "/admin/employes/documents": "hr_documents",
+  "/admin/employes/documents/cahiers": "hr_documents",
+  "/admin/employes/documents/bibliotheque": "hr_documents",
+  "/admin/employes/politiques": "hr_documents",
+  "/admin/employes/codes-taches": "timeclock",
+  "/admin/employes/conges/fenetres": "leaves",
+  "/admin/employes/conges/politiques": "leaves",
+  "/admin/employes/paie": "payroll",
+  "/admin/employes/compensation": "payroll",
+  "/admin/employes/docs-fiscaux": "payroll",
+  "/admin/employes/permis": "safety",
+  "/admin/employes/formations": "safety",
+  "/admin/employes/cnesst": "safety",
+  "/admin/employes/onboarding": "hr",
+  "/admin/employes/annonces": "hr_comms",
+  "/admin/employes/lettres": "hr",
+  "/admin/employes/offboarding": "hr",
+  "/admin/employes/rapports": "hr",
+};
+
+export function EmployesNav({
+  isHr = true,
+  domains = [],
+}: {
+  isHr?: boolean;
+  domains?: string[];
+}) {
+  const granted = new Set(domains);
+  const visible = (href: string): boolean => {
+    const req = HREF_DOMAIN[href];
+    if (!req) return true; // page ouverte a tous
+    if (isHr) return true; // passe-partout RH
+    return req !== "hr" && granted.has(req);
+  };
+  const sections = isHr
+    ? SECTIONS
+    : SECTIONS
+        .map((s) => ({ ...s, items: s.items.filter((i) => visible(i.href)) }))
+        .filter((s) => s.items.length > 0);
   return (
     <ModuleSidebarNav
-      moduleLabel="Employés"
+      moduleLabel="RH"
       moduleIcon={Users}
       moduleTagline="VNK · Module RH"
-      sections={SECTIONS}
+      sections={sections}
       storageKey="employes-nav-collapsed"
     />
   );
