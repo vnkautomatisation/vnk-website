@@ -66,15 +66,32 @@ async function getDevAdmin(): Promise<DevAdmin> {
   return fallback;
 }
 
-// ─── auth() — TOUJOURS connecte comme super_admin ───────────────────────────
-export async function auth() {
+// ─── Types de session partages ──────────────────────────────────────────────
+// Le type de retour d'auth() doit couvrir les DEUX roles (admin ET client),
+// sinon tout le code portail client (`session.user.clientId`) est type-errone
+// et compile a l'aveugle. L'implementation bypass ne retourne que des sessions
+// admin pour l'instant, mais le CONTRAT de type reste celui de la vraie auth.
+export type AppSessionUser = {
+  id: string;
+  email: string;
+  name: string;
+  role: "admin" | "client";
+  adminRole?: string | null;
+  adminId?: number;
+  clientId?: number;
+  sessionId?: string;
+};
+export type AppSession = { user: AppSessionUser; expires: string };
+
+// ─── auth() — TOUJOURS connecte comme super_admin (bypass dev) ──────────────
+export async function auth(): Promise<AppSession | null> {
   const admin = await getDevAdmin();
   return {
     user: {
       id: `admin-${admin.id}`,
       email: admin.email,
       name: admin.fullName ?? admin.email,
-      role: "admin" as const,
+      role: "admin",
       adminRole: admin.role ?? "super_admin",
       adminId: admin.id,
     },
