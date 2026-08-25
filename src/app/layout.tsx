@@ -60,11 +60,38 @@ export const viewport: Viewport = {
 
 import { PwaRegister } from "@/components/pwa-register";
 
+// Filtre dev-only : Next.js 15 + HMR re-emet des <link rel=preload as=style>
+// pour chaque rebuild Fast Refresh, et Chrome warn "preloaded but not used".
+// Aucun impact en prod (build sans HMR). cssChunking=strict aide mais ne
+// supprime pas tous les cas. Patch console.warn pour ignorer ce message
+// precis, garde tous les autres warnings utiles.
+const DEV_CONSOLE_FILTER = `
+(function() {
+  if (typeof window === 'undefined') return;
+  var orig = console.warn.bind(console);
+  console.warn = function() {
+    var msg = arguments[0];
+    if (typeof msg === 'string' && msg.indexOf('was preloaded using link preload but not used') !== -1) {
+      return; // Bruit Next.js 15 dev mode, on ignore
+    }
+    return orig.apply(null, arguments);
+  };
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr" className={inter.variable} suppressHydrationWarning>
+      <head>
+        {process.env.NODE_ENV !== "production" && (
+          <script
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{ __html: DEV_CONSOLE_FILTER }}
+          />
+        )}
+      </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         {children}
         <PwaRegister />
