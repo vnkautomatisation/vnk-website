@@ -320,6 +320,7 @@ function PolicyCard({
             title={policy.title}
             documentType="policy"
             metadata={{ version: policy.version }}
+            signatureScope="none"
             size="sm"
             variant="outline"
             className="h-8 text-xs flex-1"
@@ -401,6 +402,7 @@ function PolicyReaderSheet({
                   title={policy.title}
                   documentType="policy"
                   metadata={{ version: policy.version }}
+                  signatureScope="none"
                   size="sm"
                   variant="outline"
                   trigger={

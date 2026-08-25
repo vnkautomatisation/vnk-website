@@ -25,6 +25,7 @@ async function requireHrWrite(): Promise<number | null> {
   return isSuper
     || (perms.users ?? []).includes("write")
     || (perms.hr ?? []).includes("write")
+    || (perms.hr_documents ?? []).includes("write")
     ? adminId
     : null;
 }
@@ -79,17 +80,17 @@ export async function createSignatureRequestAction(
     return { success: false, error: "L'échéance ne peut pas être dans le passé" };
   }
 
-  // Normalise les valeurs des champs libres : trim + uniquement les chaines
-  // non vides, encodage JSON-friendly pour la colonne JsonB.
+  // Normalise les valeurs des champs libres : trim. Les valeurs VIDES ("")
+  // sont CONSERVEES intentionnellement : elles signalent au renderer PDF
+  // qu'il faut SUPPRIMER la ligne du markdown (cas "Fait 2 / Fait 3 non
+  // remplis" -> on retire les bullets vides du document final).
   const cleanedFieldValues = (() => {
     const src = parsed.data.customFieldValues ?? null;
     if (!src) return null;
     const out: Record<string, string> = {};
     for (const [k, v] of Object.entries(src)) {
       if (typeof v !== "string") continue;
-      const trimmed = v.trim();
-      if (!trimmed) continue;
-      out[k] = trimmed;
+      out[k] = v.trim(); // "" reste "" -> marqueur de suppression de ligne
     }
     return Object.keys(out).length > 0 ? out : null;
   })();
@@ -178,7 +179,12 @@ export async function createSignatureRequestAction(
     });
     const validSet = new Set(valid.map((v) => v.id));
 
-    // Skip ceux déjà pending OU déjà signataires de cette version
+    // Skip ceux qui ont DEJA une demande pending pour ce template (evite
+    // les doublons de notifications). En revanche, on N'IGNORE PLUS les
+    // employes qui ont deja signe la version courante : si le RH renvoie
+    // explicitement une demande, c'est pour qu'ils re-signent (corrections,
+    // mise a jour, etc.). signLegalDocAction est en upsert et remplace
+    // l'ancienne signature par la nouvelle.
     const existingPending = await prisma.documentSignatureRequest.findMany({
       where: {
         templateId: tpl.id,
@@ -191,19 +197,7 @@ export async function createSignatureRequestAction(
       existingPending.map((r) => r.targetAdminId).filter((x): x is number => x !== null),
     );
 
-    const alreadySigned = await prisma.legalDocumentSignature.findMany({
-      where: {
-        templateId: tpl.id,
-        version: tpl.version,
-        adminId: { in: Array.from(validSet) },
-      },
-      select: { adminId: true },
-    });
-    const signedSet = new Set(alreadySigned.map((s) => s.adminId));
-
-    const toCreate = Array.from(validSet).filter(
-      (id) => !pendingSet.has(id) && !signedSet.has(id),
-    );
+    const toCreate = Array.from(validSet).filter((id) => !pendingSet.has(id));
     skipped += ids.length - toCreate.length;
 
     if (toCreate.length > 0) {
@@ -324,13 +318,17 @@ export async function remindSignatureRequestAction(input: { id: number }): Promi
     targetIds = all.map((a) => a.id);
   }
 
-  // Exclure ceux qui ont déjà signé la version courante
+  // Exclure UNIQUEMENT ceux qui ont signe APRES la creation de la demande.
+  // Si la signature precede la demande (cas de re-signing : employe avait
+  // signe v1.0, RH renvoie une demande pour faire re-signer), on garde le
+  // destinataire — il doit etre rappele.
   if (targetIds.length > 0) {
     const signed = await prisma.legalDocumentSignature.findMany({
       where: {
         templateId: req.template.id,
         version: req.template.version,
         adminId: { in: targetIds },
+        signedAt: { gte: req.requestedAt },
       },
       select: { adminId: true },
     });

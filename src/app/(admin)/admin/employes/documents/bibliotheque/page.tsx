@@ -23,7 +23,8 @@ export default async function BibliothequePage() {
   const isHr =
     isSuper
     || (perms.users ?? []).includes("write")
-    || (perms.hr ?? []).includes("write");
+    || (perms.hr ?? []).includes("write")
+    || (perms.hr_documents ?? []).includes("write");
 
   if (!isHr) redirect("/admin/mon-espace/documents");
 

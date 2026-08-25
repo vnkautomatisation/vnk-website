@@ -58,6 +58,18 @@ export interface TemplatePdfPreviewButtonProps {
   };
   /** Contexte additionnel a injecter ({{key}} => value). */
   extraContext?: Record<string, string>;
+  /**
+   * Scope de signature du template. Si fourni, l'apercu PDF affiche uniquement
+   * les blocs signature correspondants (employee_only -> EMPLOYE seul,
+   * employer_only -> EMPLOYEUR seul, both -> les deux, none -> aucun).
+   * Si omis, defaut "both" pour retrocompat.
+   */
+  signatureScope?: "employee_only" | "employer_only" | "both" | "none";
+  /**
+   * Cle du template (ex. "engagement_cpa_accountant") — sert au serveur
+   * a appliquer un poste suggere pour l'apercu (CPA -> Comptable, etc.).
+   */
+  templateKey?: string;
   /** Element declencheur custom (par defaut : Button "Aperçu PDF"). */
   trigger?: React.ReactNode;
   /** Variante par defaut du bouton si pas de trigger custom. */
@@ -133,6 +145,8 @@ export function TemplatePdfPreviewButton(props: TemplatePdfPreviewButtonProps) {
           contractId: props.contractId,
           metadata: props.metadata,
           extraContext: props.extraContext,
+          signatureScope: props.signatureScope,
+          templateKey: props.templateKey,
         }),
         signal: controller.signal,
       });

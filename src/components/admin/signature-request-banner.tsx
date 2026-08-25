@@ -171,21 +171,8 @@ export function SignatureRequestBanner({
           )}
         </div>
       </div>
-
-      {/* Bouton CTA pour le 1er document quand mobile */}
-      {requests.length === 1 && (
-        <Button
-          type="button"
-          onClick={() => onSign(requests[0].template.id)}
-          className={cn(
-            "shrink-0 text-white h-9 text-xs font-semibold",
-            palette.btn
-          )}
-        >
-          <FileSignature className="h-3.5 w-3.5 mr-1.5" />
-          Signer maintenant
-        </Button>
-      )}
+      {/* Bouton "Signer maintenant" retire : doublon visuel avec le bouton
+          "Signer" en bout de chaque ligne. Le per-item suffit. */}
     </div>
   );
 }

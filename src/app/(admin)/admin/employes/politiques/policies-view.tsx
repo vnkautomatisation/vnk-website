@@ -415,6 +415,7 @@ function PolicyPdfPreviewAutoTrigger({
         title={policy.title}
         documentType="policy"
         metadata={{ version: policy.version }}
+        signatureScope="none"
         onError={(err) => {
           toast.error(err.message || "Apercu indisponible");
           onDone();
@@ -485,6 +486,7 @@ function PolicyPreviewDialog({
               title={policy.title}
               documentType="policy"
               metadata={{ version: policy.version }}
+              signatureScope="none"
               onError={(err) => toast.error(err.message || "Apercu indisponible")}
               trigger={
                 <Button variant="outline">

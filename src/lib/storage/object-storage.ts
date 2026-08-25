@@ -23,6 +23,21 @@ export type UploadResult =
   | { kind: "remote"; url: string; key: string }
   | { kind: "local"; dataUrl: string };
 
+// Detecte les placeholders non remplaces dans une valeur d'env. La doc fournit
+// des exemples comme "https://<account>.r2.cloudflarestorage.com" et l'user
+// peut oublier de remplacer `<account>`. Si on detecte ces marqueurs, on
+// considere la config invalide et on fallback sur local.
+function hasUnresolvedPlaceholder(value: string | undefined): boolean {
+  if (!value) return false;
+  return (
+    value.includes("<")
+    || value.includes(">")
+    || value.includes("YOUR_")
+    || value.includes("xxxxxxxx")
+    || value.includes("REPLACE_ME")
+  );
+}
+
 function backend(): StorageBackend {
   const v = (process.env.STORAGE_BACKEND || "").toLowerCase();
   if (v === "r2" || v === "s3") {
@@ -30,16 +45,24 @@ function backend(): StorageBackend {
     // requises ne sont pas configurées (.env incomplet en dev), on retombe sur
     // local automatiquement plutôt que de throw "Invalid URL" plus tard dans
     // signedRequest.
-    const hasBucket = !!process.env.STORAGE_BUCKET;
-    const hasKeys = !!process.env.STORAGE_ACCESS_KEY_ID
-      && !!process.env.STORAGE_SECRET_ACCESS_KEY;
-    const hasR2Endpoint = v === "s3" ? true : !!process.env.STORAGE_ENDPOINT;
+    const bucketVal = process.env.STORAGE_BUCKET;
+    const accessKeyVal = process.env.STORAGE_ACCESS_KEY_ID;
+    const secretKeyVal = process.env.STORAGE_SECRET_ACCESS_KEY;
+    const endpointVal = process.env.STORAGE_ENDPOINT;
+    const hasBucket = !!bucketVal && !hasUnresolvedPlaceholder(bucketVal);
+    const hasKeys = !!accessKeyVal && !hasUnresolvedPlaceholder(accessKeyVal)
+      && !!secretKeyVal && !hasUnresolvedPlaceholder(secretKeyVal);
+    const hasR2Endpoint = v === "s3"
+      ? true
+      : (!!endpointVal && !hasUnresolvedPlaceholder(endpointVal));
     if (!hasBucket || !hasKeys || !hasR2Endpoint) {
       // Affiche un warning UNE seule fois pour ne pas spammer
       if (!warnedAboutFallback) {
         console.warn(
-          `[object-storage] STORAGE_BACKEND="${v}" mais config incomplète `
-          + `(bucket=${hasBucket}, keys=${hasKeys}, endpoint=${hasR2Endpoint}). `
+          `[object-storage] STORAGE_BACKEND="${v}" mais config incomplète ou `
+          + `placeholders non remplaces (bucket=${hasBucket}, keys=${hasKeys}, `
+          + `endpoint=${hasR2Endpoint}). `
+          + `Verifiez que .env ne contient PAS <account>, YOUR_, xxxxxxxx, REPLACE_ME. `
           + `Fallback sur "local" (dataUrl base64 stockée en BD).`,
         );
         warnedAboutFallback = true;

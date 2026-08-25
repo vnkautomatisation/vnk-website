@@ -27,6 +27,16 @@ type SeedLegalTemplate = {
   targetDepartments?: string[];
 };
 
+// Bloc signatures pose explicitement dans chaque template. L'editeur Tiptap
+// affiche les ancres `{{signature.employee/employer}}` comme des pills,
+// signalant clairement au RH la presence de blocs signature.
+//
+// REGLE D'OR : l'editeur est la SEULE source de verite pour les signatures.
+// Le PDF refletera exactement ce qui est dans le markdown — si le RH retire
+// {{signature.employer}} en editant, le PDF n'aura qu'une signature.
+//
+// preprocessSignatures cote renderer transforme chaque ancre en bloc HTML
+// (avec image signature embarquee si fournie via opts.signatures).
 const SIGNATURES_BLOCK = `
 ## Signatures
 
@@ -95,20 +105,27 @@ const TEMPLATE_CLASSIFICATION: Record<string, { ack: AckMode; scope: SigScope }>
   client_systems_access_policy:      { ack: "reading_only", scope: "none" },
   it_ot_cybersecurity_policy:        { ack: "reading_only", scope: "none" },
 
-  // ── Lettres / attestations employeur (signature unilaterale) ───────────
-  letter_employment_confirmation:    { ack: "signature",    scope: "employer_only" },
-  letter_promotion:                  { ack: "signature",    scope: "employer_only" },
-  letter_salary_confirmation:        { ack: "signature",    scope: "employer_only" },
-  letter_reference:                  { ack: "signature",    scope: "employer_only" },
-  letter_disciplinary_warning:       { ack: "signature",    scope: "employer_only" },
-  letter_termination:                { ack: "signature",    scope: "employer_only" },
-  letter_position_change:            { ack: "signature",    scope: "employer_only" },
-  letter_probation_passed:           { ack: "signature",    scope: "employer_only" },
-  letter_probation_extended:         { ack: "signature",    scope: "employer_only" },
-  letter_disciplinary_warning_2:     { ack: "signature",    scope: "employer_only" },
-  letter_disciplinary_warning_final: { ack: "signature",    scope: "employer_only" },
-  letter_temporary_layoff:           { ack: "signature",    scope: "employer_only" },
-  letter_recall_to_work:             { ack: "signature",    scope: "employer_only" },
+  // ── Confirmations / attestations recues par l'employe ──────────────────
+  // Logique : l'employeur emet le document, mais c'est l'EMPLOYE qui signe
+  // pour accuser reception. Une seule signature (employe), pas d'employeur
+  // dans le PDF final.
+  letter_employment_confirmation:    { ack: "signature",    scope: "employee_only" },
+  letter_salary_confirmation:        { ack: "signature",    scope: "employee_only" },
+  letter_reference:                  { ack: "signature",    scope: "employer_only" }, // lettre de reference : seul l'employeur signe (donnee a tiers)
+  letter_probation_passed:           { ack: "signature",    scope: "employee_only" },
+  letter_recall_to_work:             { ack: "signature",    scope: "employee_only" },
+
+  // ── Lettres bilaterales : employeur emet + employe accepte ──────────────
+  // Avertissements, promotions, changements, mise a pied : enjeu legal des
+  // deux cotes -> les deux parties signent.
+  letter_promotion:                  { ack: "signature",    scope: "both" },
+  letter_disciplinary_warning:       { ack: "signature",    scope: "both" },
+  letter_termination:                { ack: "signature",    scope: "both" },
+  letter_position_change:            { ack: "signature",    scope: "both" },
+  letter_probation_extended:         { ack: "signature",    scope: "both" },
+  letter_disciplinary_warning_2:     { ack: "signature",    scope: "both" },
+  letter_disciplinary_warning_final: { ack: "signature",    scope: "both" },
+  letter_temporary_layoff:           { ack: "signature",    scope: "both" },
 
   // ── Onboarding (accuses, checklists, manuel) ───────────────────────────
   onboarding_manual_acknowledgment:        { ack: "reading_only", scope: "none" },
@@ -216,6 +233,31 @@ function adaptTemplateBody(
     preamble = `**Engagement de l'{{employee.employed}}**\n\nJe soussigné{{employee.accordE}}, **{{employee.fullName}}**, occupant le poste de **{{employee.position}}** au sein de **{{company.fullName}}**, m'engage par la présente à respecter les conditions énoncées dans le présent document.\n\n`;
   } else if (scope === "employer_only") {
     preamble = `**Document émis par {{company.fullName}}**\n\n- **Destinataire :** {{employee.fullName}}\n- **Poste :** {{employee.position}}\n- **Date :** {{date.todayFr}}\n\n---\n\n`;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Ajuste le bloc signatures selon le scope. La SIGNATURES_BLOCK constante
+  // contient les deux ancres ({{signature.employee}} + {{signature.employer}})
+  // pour les templates "both". On retire ce qui ne s'applique pas :
+  //   - scope = "none"          -> supprime tout le bloc Signatures
+  //   - scope = "employee_only" -> retire {{signature.employer}}
+  //   - scope = "employer_only" -> retire {{signature.employee}}
+  //   - scope = "both"          -> conserve les deux ancres
+  //
+  // L'EDITEUR Tiptap lira ensuite la bodyMarkdown ainsi adaptee : ce qui
+  // est dans le markdown = ce qui s'affiche en pills = ce qui sortira dans
+  // le PDF. Une SEULE source de verite.
+  // ─────────────────────────────────────────────────────────────────────
+  if (scope === "none") {
+    // Supprime la section Signatures (heading + ancres + lignes vides residuelles)
+    rest = rest.replace(
+      /\n*##\s+Signatures\s*\n[\s\S]*?(\{\{\s*signature\.(employee|employer)\s*\}\}\s*\n*)+/g,
+      "\n",
+    );
+  } else if (scope === "employee_only") {
+    rest = rest.replace(/\{\{\s*signature\.employer\s*\}\}\s*\n*/g, "");
+  } else if (scope === "employer_only") {
+    rest = rest.replace(/\{\{\s*signature\.employee\s*\}\}\s*\n*/g, "");
   }
 
   const heading = headingLine ? `${headingLine}\n\n` : "";

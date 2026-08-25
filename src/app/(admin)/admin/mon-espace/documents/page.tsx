@@ -36,9 +36,19 @@ export default async function MyDocumentsPage() {
     activeHandbooks,
     myHandbookSignatures,
   ] = await Promise.all([
+    // Fix : on inclut le titre + key du template pour pouvoir afficher
+    // dans le tab "Signes" meme si le template a ete archive/desactive
+    // (auquel cas il n'est plus dans legalDocs).
     prisma.legalDocumentSignature.findMany({
       where: { adminId },
-      select: { id: true, templateId: true, version: true, signedAt: true, finalPdfUrl: true },
+      select: {
+        id: true,
+        templateId: true,
+        version: true,
+        signedAt: true,
+        finalPdfUrl: true,
+        template: { select: { title: true, key: true, category: true } },
+      },
     }),
     prisma.taxDocument.findMany({
       where: { adminId },
@@ -139,7 +149,9 @@ export default async function MyDocumentsPage() {
         },
       },
     }),
-    // Mes signatures de cahier (toutes versions, pour comparer)
+    // Mes signatures de cahier (toutes versions, pour comparer).
+    // On inclut le titre du handbook pour affichage dans tab "Signes" meme
+    // si le handbook est archive/desactive plus tard.
     prisma.documentHandbookSignature.findMany({
       where: { adminId },
       select: {
@@ -148,6 +160,7 @@ export default async function MyDocumentsPage() {
         version: true,
         signedAt: true,
         finalPdfUrl: true,
+        handbook: { select: { title: true, key: true } },
       },
     }),
   ]);
@@ -155,9 +168,20 @@ export default async function MyDocumentsPage() {
   // Bug fix : on derive la liste "legalDocs" UNIQUEMENT a partir des templates
   // cibles par une signature request active de cet employe (et dont le template
   // est encore actif). Plus de starters bibliotheque listes automatiquement.
-  const signedVersionByTemplate = new Map(
-    mySignatures.map((s) => [s.templateId, s.version] as const),
-  );
+  //
+  // Map cle->signature la plus recente pour ce template (avec date) pour
+  // determiner si la demande est posterieure (= re-signing requis).
+  const latestSignatureByTemplate = new Map<
+    number,
+    { version: string; signedAt: Date }
+  >();
+  for (const s of mySignatures) {
+    const cur = latestSignatureByTemplate.get(s.templateId);
+    const at = new Date(s.signedAt);
+    if (!cur || at > cur.signedAt) {
+      latestSignatureByTemplate.set(s.templateId, { version: s.version, signedAt: at });
+    }
+  }
 
   // Templates couverts par un cahier que l'employe a deja signe (version
   // courante du cahier). On les exclut de "a signer" individuellement.
@@ -173,9 +197,17 @@ export default async function MyDocumentsPage() {
 
   const legalDocs = signatureRequests
     .filter((r) => r.template.isActive)
-    .filter(
-      (r) => signedVersionByTemplate.get(r.template.id) !== r.template.version,
-    )
+    // Inclut le template si :
+    //   - pas de signature -> oui
+    //   - signature sur une version differente -> oui
+    //   - signature anterieure a la demande (re-signing requis par RH) -> oui
+    //   - signature posterieure ou egale a la demande sur la meme version -> non (deja fait)
+    .filter((r) => {
+      const sig = latestSignatureByTemplate.get(r.template.id);
+      if (!sig) return true;
+      if (sig.version !== r.template.version) return true;
+      return sig.signedAt < new Date(r.requestedAt);
+    })
     // Exclut les templates qui sont couverts par un cahier deja signe.
     .filter((r) => !templatesCoveredByHandbook.has(r.template.id))
     .map((r) => r.template)

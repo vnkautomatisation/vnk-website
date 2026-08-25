@@ -23,7 +23,8 @@ export default async function HandbooksAdminPage() {
   const isHr =
     isSuper
     || (perms.users ?? []).includes("write")
-    || (perms.hr ?? []).includes("write");
+    || (perms.hr ?? []).includes("write")
+    || (perms.hr_documents ?? []).includes("write");
   if (!isHr) redirect("/admin/mon-espace/documents");
 
   const [handbooks, templates, employees] = await Promise.all([

@@ -68,7 +68,11 @@ import {
   type SignatureRequestTemplate,
 } from "@/components/admin/signature-request-dialog";
 import { TemplateFieldsDialog } from "@/components/admin/template-fields-dialog";
+import { StartDraftDialog } from "@/components/admin/start-draft-dialog";
+import { DocumentDraftEditor } from "@/components/admin/document-draft-editor";
+import { SignaturePad } from "@/app/(admin)/admin/employes/contrats/signature-pad";
 import { detectPlaceholders } from "@/lib/document-templates/placeholder-detector";
+import { isLongFormTemplate } from "@/lib/document-templates/fill-field-parser";
 import { PdfPreviewModal } from "@/components/admin/pdf-preview-modal";
 import {
   PersonalDocCard,
@@ -82,6 +86,7 @@ import {
   upsertLegalDocAction,
   deleteLegalDocAction,
   regenerateSignedPdfAction,
+  employerSignLegalDocAction,
 } from "@/app/actions/hr-legal-docs";
 import {
   cancelSignatureRequestAction,
@@ -124,6 +129,9 @@ type Signature = {
   signedAt: string;
   finalPdfUrl: string | null;
   signatureData: string | null;
+  /** Contresignature employeur (null tant que le RH n'a pas contresigné).
+   *  Optionnel : absent si le client Prisma n'est pas encore régénéré. */
+  employerSignedAt?: string | null;
 };
 type Employee = {
   id: number;
@@ -289,6 +297,14 @@ export function DocumentsAdminView({
     open: boolean;
     template: Template | null;
   }>({ open: false, template: null });
+  // Dialog "Demarrer un brouillon" — pour les templates long-form qui passent
+  // par le workflow Brouillon -> Editeur -> Envoyer-signature (pas inline).
+  const [startDraftDialog, setStartDraftDialog] = useState<{
+    open: boolean;
+    template: Template | null;
+  }>({ open: false, template: null });
+  // ID du brouillon ouvert dans l'editeur plein ecran
+  const [editorDraftId, setEditorDraftId] = useState<number | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<PendingRequest | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
 
@@ -481,7 +497,14 @@ export function DocumentsAdminView({
         return;
       }
       const fields = detectPlaceholders(tpl.bodyMarkdown);
-      if (fields.length > 0) {
+      const isLongForm = isLongFormTemplate(tpl.bodyMarkdown);
+      // Long-form -> ouvre StartDraftDialog (selection employe), puis
+      // l'editeur 2 colonnes plein ecran avec autosave.
+      // Court avec [CHAMP] -> TemplateFieldsDialog inline puis demande direct.
+      // Aucun champ -> dialog demande direct (rien a remplir).
+      if (isLongForm) {
+        setStartDraftDialog({ open: true, template: tpl });
+      } else if (fields.length > 0) {
         setFieldsDialog({ open: true, template: tpl });
       } else {
         setRequestDialog({
@@ -1054,6 +1077,27 @@ export function DocumentsAdminView({
             customFieldValues: vals,
           });
         }}
+      />
+
+      {/* Flow brouillon (templates long-form Evaluation 30/60/90, etc.) :
+          1. StartDraftDialog -> selectionne employe + cree brouillon
+          2. DocumentDraftEditor -> editeur 2 colonnes plein ecran avec autosave
+             + bouton "Envoyer pour signature" qui cree DSR + archive brouillon */}
+      <StartDraftDialog
+        open={startDraftDialog.open}
+        templateId={startDraftDialog.template?.id ?? null}
+        templateTitle={startDraftDialog.template?.title ?? ""}
+        onClose={() => setStartDraftDialog({ open: false, template: null })}
+        onCreated={(draftId) => {
+          setStartDraftDialog({ open: false, template: null });
+          setEditorDraftId(draftId);
+        }}
+      />
+      <DocumentDraftEditor
+        open={editorDraftId !== null}
+        draftId={editorDraftId}
+        onClose={() => setEditorDraftId(null)}
+        onSent={() => router.refresh()}
       />
 
       {selectedEmployee && (
@@ -2380,6 +2424,8 @@ function DocsTemplatePreviewAutoTrigger({
         documentType={documentType}
         employeeId={employeeId}
         metadata={{ version: template.version }}
+        signatureScope={template.signatureScope}
+        templateKey={template.key}
         onError={(err) => {
           toast.error(err.message || "Apercu indisponible");
           onDone();
@@ -2423,6 +2469,15 @@ function SignaturesTab({
     signedAt: string;
   } | null>(null);
   const [regenBusyId, setRegenBusyId] = useState<number | null>(null);
+  // Contresignature employeur : dialog avec pad, pour les templates dont le
+  // scope prevoit une signature employeur et pas encore contresignes.
+  const [employerSignFor, setEmployerSignFor] = useState<{
+    sigId: number;
+    docTitle: string;
+    employeeLabel: string;
+  } | null>(null);
+  const [employerPadValue, setEmployerPadValue] = useState<string | null>(null);
+  const [employerSignBusy, setEmployerSignBusy] = useState(false);
 
   const templateById = useMemo(
     () => new Map(templates.map((t) => [t.id, t])),
@@ -2649,6 +2704,38 @@ function SignaturesTab({
                             </Button>
                           </ActionTooltip>
                         )}
+                        {(() => {
+                          // Contresignature employeur : scope both/employer_only,
+                          // mode signature, pas encore contresigne.
+                          const scope = (template as { signatureScope?: string } | undefined)
+                            ?.signatureScope;
+                          const ack = (template as { acknowledgmentMode?: string } | undefined)
+                            ?.acknowledgmentMode;
+                          const needsEmployer =
+                            (scope === "both" || scope === "employer_only")
+                            && ack !== "reading_only";
+                          if (!needsEmployer || sig.employerSignedAt) return null;
+                          return (
+                            <ActionTooltip label="Contresigner (employeur)">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-amber-600 hover:text-amber-700"
+                                onClick={() => {
+                                  setEmployerPadValue(null);
+                                  setEmployerSignFor({
+                                    sigId: sig.id,
+                                    docTitle,
+                                    employeeLabel,
+                                  });
+                                }}
+                                aria-label="Contresigner (employeur)"
+                              >
+                                <FileSignature className="h-4 w-4" />
+                              </Button>
+                            </ActionTooltip>
+                          );
+                        })()}
                         {sig.signatureData && (
                           <ActionTooltip label="Voir la signature manuscrite">
                             <Button
@@ -2686,6 +2773,76 @@ function SignaturesTab({
         description={pdfPreview?.description}
         onClose={() => setPdfPreview(null)}
       />
+
+      {/* Dialog contresignature employeur */}
+      <Dialog
+        open={!!employerSignFor}
+        onOpenChange={(o) => !o && !employerSignBusy && setEmployerSignFor(null)}
+      >
+        <DialogContent className="p-0 overflow-hidden flex flex-col w-[95vw] max-w-lg rounded-lg" aria-describedby={undefined}>
+          <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-3 shrink-0">
+            <DialogHeader>
+              <DialogTitle className="text-white text-sm flex items-center gap-2">
+                <FileSignature className="h-4 w-4" />
+                Contresignature employeur
+              </DialogTitle>
+              <DialogDescription className="text-white/80 text-[11px]">
+                {employerSignFor?.docTitle} · signé par {employerSignFor?.employeeLabel}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="p-5 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Votre signature sera ajoutée au bloc « Signature employeur » du
+              PDF final, qui sera régénéré avec les deux signatures.
+            </p>
+            <div className="rounded-md border bg-white p-3">
+              <SignaturePad value={employerPadValue} onChange={setEmployerPadValue} />
+            </div>
+          </div>
+          <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEmployerSignFor(null)}
+              disabled={employerSignBusy}
+            >
+              Annuler
+            </Button>
+            <Button
+              size="sm"
+              className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
+              disabled={!employerPadValue || employerSignBusy}
+              onClick={async () => {
+                if (!employerSignFor || !employerPadValue) return;
+                setEmployerSignBusy(true);
+                try {
+                  const r = await employerSignLegalDocAction({
+                    signatureId: employerSignFor.sigId,
+                    signatureDataUrl: employerPadValue,
+                  });
+                  if (r.success) {
+                    toast.success("Document contresigné");
+                    setEmployerSignFor(null);
+                    router.refresh();
+                  } else {
+                    toast.error(r.error || "Échec de la contresignature");
+                  }
+                } finally {
+                  setEmployerSignBusy(false);
+                }
+              }}
+            >
+              {employerSignBusy ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <FileSignature className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              Contresigner
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={!!sigPreview}

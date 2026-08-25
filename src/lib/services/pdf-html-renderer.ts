@@ -107,6 +107,31 @@ export interface HtmlPdfOptions {
    * - "none"          : supprime tous les blocs signature.
    */
   signatureScope?: SignatureScope;
+  /**
+   * Bloc "Accuse de reception" final (pattern handbook). Si fourni, un
+   * encart est ajoute a la fin du document avec :
+   *   - une case a cocher "J'ai lu..." (cochee selon `acknowledged`)
+   *   - le nom de l'employe + date courante
+   *   - image signature si presente dans `signatures.employee.dataUrl`
+   *
+   * A utiliser pour la preview live cote employe (signature-preview-pdf)
+   * pour reproduire le pattern d'acceptation du cahier de l'employe.
+   */
+  acknowledgmentBlock?: {
+    /** Case cochee ? */
+    acknowledged: boolean;
+    /** Libelle de la case (defaut : "J'ai lu et accepte..."). */
+    label?: string;
+    /** Nom employe affiche sous la signature. */
+    employeeName?: string;
+  };
+  /**
+   * Valeurs des champs "long form" (sequences `___` du markdown) saisies
+   * via le LongFormWizard. Cles `fill_0`, `fill_1`, ... dans l'ordre
+   * d'apparition. Substituees AVANT la transformation `_____ -> fill-line`.
+   * Les champs vides laissent les underscores tels quels (= ligne a remplir).
+   */
+  fillFieldValues?: Record<string, string>;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -513,19 +538,73 @@ function configureMarked() {
     renderer: {
       // Checkbox markdown : on emet un span CSS au lieu d'un <input> natif
       // (Chromium n'imprime pas correctement les inputs en mode print).
+      // Note : marked v15 ne CALL PAS toujours ce renderer (depend si le
+      // checkbox token est dans item.tokens). On emet aussi la checkbox
+      // dans listitem ci-dessous comme filet de securite.
       checkbox(this: unknown, { checked }: Tokens.Checkbox): string {
         return `<span class="md-checkbox${checked ? " checked" : ""}" aria-hidden="true"></span> `;
       },
       // Listitem : applique la classe md-task pour les items checkbox.
+      // FIX : marked v15 met `item.task` + `item.checked` mais ne met PAS
+      // toujours le token checkbox dans item.tokens. On emet donc la
+      // checkbox manuellement quand task=true pour garantir l'affichage.
+      //
+      // CRITICAL : `parser.parseInline(item.tokens)` lance "Token with 'h'
+      // type was not found" si item.tokens contient un token BLOCK (heading,
+      // paragraph, list imbriquee, html block). On detecte le cas et on
+      // bascule vers parser.parse() qui gere les deux.
       listitem(item: Tokens.ListItem): string {
         const parser = (
           this as unknown as {
-            parser: { parseInline: (tokens: Token[]) => string };
+            parser: {
+              parseInline: (tokens: Token[]) => string;
+              parse: (tokens: Token[], top?: boolean) => string;
+            };
           }
         ).parser;
-        const inner = parser.parseInline(item.tokens);
+
+        // Detecte la presence de tokens block dans item.tokens.
+        // Tokens inline typiques : text, em, strong, codespan, link, image,
+        // br, escape, html (inline), del, checkbox.
+        // Tout autre type = block -> parseInline echouera.
+        const INLINE_TYPES = new Set([
+          "text",
+          "em",
+          "strong",
+          "codespan",
+          "link",
+          "image",
+          "br",
+          "escape",
+          "del",
+          "checkbox",
+        ]);
+        const hasBlockToken = (item.tokens ?? []).some(
+          (t: Token) =>
+            !INLINE_TYPES.has((t as { type?: string }).type ?? "")
+            // html token peut etre inline ou block selon raw : on accepte
+            && (t as { type?: string }).type !== "html",
+        );
+
+        let inner: string;
+        try {
+          inner = hasBlockToken
+            ? parser.parse(item.tokens, !!item.loose)
+            : parser.parseInline(item.tokens);
+        } catch {
+          // Filet de securite ultime : si parse echoue, on tombe sur le texte
+          // brut concatene pour ne JAMAIS crasher marked.parse complet.
+          inner = (item.tokens ?? [])
+            .map((t: Token) => (t as { raw?: string }).raw ?? "")
+            .join("");
+        }
+
         if (item.task) {
-          return `<li class="md-task${item.checked ? " checked" : ""}">${inner}</li>\n`;
+          const alreadyHasCheckbox = inner.includes('class="md-checkbox');
+          const checkboxHtml = alreadyHasCheckbox
+            ? ""
+            : `<span class="md-checkbox${item.checked ? " checked" : ""}" aria-hidden="true"></span> `;
+          return `<li class="md-task${item.checked ? " checked" : ""}">${checkboxHtml}${inner}</li>\n`;
         }
         return `<li>${inner}</li>\n`;
       },
@@ -547,6 +626,7 @@ function processMarkdownToHtml(
   signatures?: HtmlPdfOptions["signatures"],
   checkboxStates?: Record<string, boolean>,
   signatureScope: SignatureScope = "both",
+  fillFieldValues?: Record<string, string>,
 ): { html: string; renderError: string | null; unresolvedCount: number } {
   let renderError: string | null = null;
   let s: string;
@@ -561,6 +641,53 @@ function processMarkdownToHtml(
 
   // ETAPE 3 : strip backticks (seeds legacy wrappent les variables en `code`).
   s = s.replace(/`/g, "");
+
+  // ETAPE 3-zero-A : substitue les sequences `___+` par les valeurs saisies
+  // dans le LongFormWizard (cles `fill_0`, `fill_1`, ...). Les champs vides
+  // restent en `___+` pour etre transformes en `<span class="fill-line">`
+  // par l'etape suivante. CRITIQUE : doit se faire AVANT la transformation
+  // fill-line, sinon les underscores ont deja disparu.
+  //
+  // Auto-detection : si fillFieldValues n'est pas fourni explicitement, on
+  // recupere les cles `fill_N` directement depuis le context (= elles
+  // viennent de customFieldValues du DSR cote serveur).
+  if (!fillFieldValues || Object.keys(fillFieldValues).length === 0) {
+    const autoFill: Record<string, string> = {};
+    for (const [k, v] of Object.entries(context ?? {})) {
+      if (/^fill_\d+$/.test(k) && typeof v === "string") {
+        autoFill[k] = v;
+      }
+    }
+    if (Object.keys(autoFill).length > 0) {
+      fillFieldValues = autoFill;
+    }
+  }
+  if (fillFieldValues && Object.keys(fillFieldValues).length > 0) {
+    let counter = 0;
+    s = s.replace(/_{3,}/g, () => {
+      const key = `fill_${counter++}`;
+      const value = fillFieldValues[key];
+      if (typeof value !== "string" || value.trim() === "") {
+        // Retourne au moins 5 underscores pour que l'etape suivante
+        // les transforme en fill-line (seuil 5+).
+        return "___________";
+      }
+      // Echappe les caracteres HTML mais preserve le contenu utilisateur.
+      const safe = value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      return `<span class="filled-field">${safe}</span>`;
+    });
+  }
+
+  // ETAPE 3-zero-B : convertit les sequences de 5+ underscores en lignes CSS
+  // propres (`<span class="fill-line"></span>`). Les seeds utilisent
+  // `__________` pour materialiser des lignes a remplir a la main ; en PDF
+  // ces underscores littéraux rendent moche. On les remplace par un span
+  // stylise (sous-ligne fine). On preserve les underscores courts (1-4)
+  // qui peuvent etre du markdown italique `_mot_`.
+  s = s.replace(/_{5,}/g, '<span class="fill-line"></span>');
 
   // ETAPE 3-bis : pre-coche les checkboxes (a partir des etats sauvegardes
   // lors de la signature). Doit se faire AVANT marked.parse mais APRES la
@@ -1102,6 +1229,44 @@ function buildHtmlDocument(htmlBody: string, opts: HtmlPdfOptions): string {
     print-color-adjust: exact;
   }
 
+  /* Lignes a remplir : sequences de 5+ underscores dans le markdown source
+     deviennent une sous-ligne fine elegante au lieu d'underscores litteraux.
+     Min-width garantit la visibilite meme en contexte court (ex: Date : ...).
+     flex: 1 1 auto permet l'extension quand seule sur une ligne. */
+  .fill-line {
+    display: inline-block;
+    min-width: 120px;
+    flex: 1 1 auto;
+    border-bottom: 1px solid #94a3b8;
+    height: 0.9em;
+    vertical-align: baseline;
+    margin: 0 2px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Quand la fill-line est en fin de paragraphe, on l'etire jusqu'au bout
+     de la colonne pour un look formulaire propre. */
+  p > .fill-line:last-child,
+  li > .fill-line:last-child {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  /* Valeurs saisies via le LongFormWizard : quand l'admin a rempli un champ
+     via le wizard, on remplace les underscores par un span filled-field
+     avec la valeur. Style : navy en gras pour bien distinguer du texte du
+     template (meme look que var-resolved). */
+  .filled-field {
+    color: #0F2D52;
+    font-weight: 600;
+    background: rgba(15, 45, 82, 0.06);
+    padding: 0 4px;
+    border-radius: 2px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   /* ── Tables — vrai look de tableau avec grille complete ── */
   /* Bordures visibles sur TOUS les cotes de chaque cellule (grille complete).
      Header navy avec lignes separatrices blanches subtiles entre colonnes.
@@ -1254,6 +1419,208 @@ function buildHtmlDocument(htmlBody: string, opts: HtmlPdfOptions): string {
     break-after: page;
     height: 0;
     visibility: hidden;
+  }
+
+  /* ── Bottom grid : Signatures + Accusé côte à côte ── */
+  .bottom-grid {
+    display: table;
+    width: 100%;
+    border-spacing: 14px 0;
+    margin-top: 28px;
+    table-layout: fixed;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .bottom-col {
+    display: table-cell;
+    vertical-align: top;
+    width: 50%;
+  }
+  /* Quand le grid est actif, ces blocs internes ne doivent pas reprendre
+     leur marge top (sinon decalage entre les 2 colonnes). */
+  .bottom-col .signature-row,
+  .bottom-col .ack-block {
+    margin-top: 0;
+  }
+  /* La section Signatures n'a plus besoin de son heading h2 quand elle est
+     dans le grid (le badge EMPLOYEUR/EMPLOYE suffit visuellement). */
+  .bottom-col-sig > h1,
+  .bottom-col-sig > h2,
+  .bottom-col-sig > h3 {
+    display: none;
+  }
+  /* La signature-row dans le grid prend toute la largeur de sa colonne */
+  .bottom-col .signature-row {
+    width: 100%;
+  }
+  .bottom-col .signature-row .signature-block {
+    width: 100%;
+    display: block;
+  }
+
+  /* ── Bloc Accusé de réception (pattern handbook acceptation finale) ── */
+  .ack-block {
+    margin: 28px 0 12px;
+    padding: 0;
+    border: 1.5px solid #0F2D52;
+    border-radius: 10px;
+    background: #ffffff;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden;
+    position: relative;
+  }
+  .ack-stamp {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    font-size: 7.5pt;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #0F2D52;
+    border: 1.5px solid #0F2D52;
+    padding: 3px 8px;
+    border-radius: 3px;
+    transform: rotate(-4deg);
+    opacity: 0.85;
+  }
+  .ack-banner {
+    background: linear-gradient(135deg, #0F2D52 0%, #15406d 100%);
+    color: #ffffff;
+    padding: 12px 18px;
+  }
+  .ack-banner-title {
+    font-size: 11.5pt;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .ack-banner-subtitle {
+    font-size: 8.5pt;
+    color: rgba(255,255,255,0.85);
+    margin-top: 2px;
+    letter-spacing: 0.4px;
+  }
+  .ack-body {
+    padding: 16px 18px 18px;
+  }
+  .ack-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .ack-checkbox {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid #0F2D52;
+    border-radius: 3px;
+    background: #ffffff;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 13pt;
+    line-height: 14px;
+    color: #0F2D52;
+    font-weight: 900;
+    margin-top: 1px;
+  }
+  .ack-checkbox.checked {
+    background: #0F2D52;
+    color: #ffffff;
+  }
+  .ack-text {
+    flex: 1;
+    font-size: 10pt;
+    line-height: 1.55;
+    color: #0F172A;
+    font-weight: 500;
+  }
+  .ack-sig-area {
+    display: table;
+    width: 100%;
+    border-spacing: 18px 0;
+  }
+  .ack-sig-cell {
+    display: table-cell;
+    width: 60%;
+    vertical-align: bottom;
+  }
+  .ack-sig-cell-date {
+    width: 40%;
+  }
+  .ack-sig-line {
+    border-bottom: 1.5px solid #334155;
+    height: 50px;
+    padding-bottom: 2px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+  .ack-sig-date-line {
+    font-size: 11pt;
+    color: #0F2D52;
+    font-weight: 600;
+    padding-bottom: 4px;
+  }
+  .ack-signature-img {
+    max-height: 48px;
+    max-width: 100%;
+    display: block;
+  }
+  .ack-signature-placeholder {
+    font-size: 8pt;
+    color: #94A3B8;
+    font-style: italic;
+  }
+  .ack-sig-label {
+    font-size: 7pt;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-top: 4px;
+  }
+  .ack-sig-name {
+    font-size: 9pt;
+    color: #0F2D52;
+    font-weight: 600;
+    margin-top: 1px;
+  }
+  /* Placeholder ligne (avant signature) : gris discret pour ne pas suggerer
+     que le document est deja signe. */
+  .ack-placeholder-line {
+    color: #94A3B8;
+    font-weight: 400;
+    letter-spacing: 1px;
+  }
+  /* Ack-block en mode grid (cote a cote avec Signatures) : padding reduit pour
+     equilibrer visuellement avec le bloc signature. */
+  .bottom-col .ack-block {
+    margin: 0;
+  }
+  .bottom-col .ack-banner {
+    padding: 10px 14px;
+  }
+  .bottom-col .ack-banner-title {
+    font-size: 10pt;
+  }
+  .bottom-col .ack-banner-subtitle {
+    font-size: 7.5pt;
+  }
+  .bottom-col .ack-body {
+    padding: 12px 14px 14px;
+  }
+  .bottom-col .ack-row {
+    margin-bottom: 12px;
+  }
+  .bottom-col .ack-text {
+    font-size: 9pt;
+  }
+  .bottom-col .ack-sig-line {
+    height: 42px;
+  }
+  .bottom-col .ack-sig-area {
+    border-spacing: 12px 0;
   }
 
   /* ── Bandeau d'avertissement ── */
@@ -1579,15 +1946,32 @@ export async function renderTemplateHtmlToPdf(
  */
 export function renderTemplateAsHtml(opts: HtmlPdfOptions): string {
   const safeContext = opts.context ?? {};
-  const rawBody = opts.bodyMarkdown ?? "";
+  let rawBody = opts.bodyMarkdown ?? "";
 
-  const { html: htmlBody, renderError, unresolvedCount } =
+  // L'EDITEUR EST LA SEULE SOURCE DE VERITE.
+  // Pas d'injection automatique, pas de filtrage selon le scope. Le PDF
+  // refletera EXACTEMENT ce que le RH a mis dans l'editeur :
+  //   - Si l'editeur contient 0 ancre signature -> PDF a 0 bloc signature
+  //   - Si l'editeur contient 1 ancre (employe) -> PDF a 1 bloc EMPLOYE
+  //   - Si l'editeur contient 2 ancres -> PDF a 2 blocs cote a cote
+  //
+  // Les ancres sont posees par le RH dans le markdown via :
+  //   - `[Signature employe]` / `[Signature employeur]` (litteral)
+  //   - `{{signature.employee}}` / `{{signature.employer}}` (variables
+  //     resolues au runtime par le contexte)
+  //
+  // preprocessSignatures se charge de transformer chaque ancre en bloc HTML
+  // (avec image signature embarquee si fournie via opts.signatures).
+  const effectiveScope = opts.signatureScope ?? "both";
+
+  const { html: rawHtmlBody, renderError, unresolvedCount } =
     processMarkdownToHtml(
       rawBody,
       safeContext,
       opts.signatures,
       opts.checkboxStates,
-      opts.signatureScope ?? "both",
+      effectiveScope,
+      opts.fillFieldValues,
     );
 
   // Bandeau d'avertissement
@@ -1598,7 +1982,86 @@ export function renderTemplateAsHtml(opts: HtmlPdfOptions): string {
     warning = `<div class="warning-banner">Apercu avec valeurs par defaut - ${unresolvedCount} variable(s) non resolue(s) surlignee(s).</div>`;
   }
 
+  // Bloc Accuse de reception final (pattern handbook)
+  const ackHtml = opts.acknowledgmentBlock
+    ? renderAcknowledgmentBlock(opts.acknowledgmentBlock, opts.signatures?.employee)
+    : "";
+
+  // ─── Layout final : Accuse de reception EN HAUT, Signatures (employer /
+  // employe / les deux) EN BAS. Pattern semantique handbook : l'acceptation
+  // formelle de l'employe est mise en evidence en premier, puis les blocs
+  // signature company/witness viennent ensuite. Les signatures multiples sont
+  // deja rendues cote a cote grace au CSS .signature-row (display:table).
+  let htmlBody = rawHtmlBody;
+  if (ackHtml) {
+    // On cherche le heading Signatures ou la signature-row pour inserer
+    // l'Accuse JUSTE AVANT. Si aucune signature dans le body, on append a la fin.
+    const headingRe = /<h[1-3]\b[^>]*>\s*Signatures?\s*<\/h[1-3]>/i;
+    const rowRe = /<div class="signature-row">/i;
+    const headingMatch = htmlBody.match(headingRe);
+    const rowMatch = htmlBody.match(rowRe);
+    // Determine la premiere occurrence (heading OU row sans heading)
+    const insertIndex = (() => {
+      const hIdx = headingMatch?.index ?? -1;
+      const rIdx = rowMatch?.index ?? -1;
+      if (hIdx >= 0 && rIdx >= 0) return Math.min(hIdx, rIdx);
+      if (hIdx >= 0) return hIdx;
+      if (rIdx >= 0) return rIdx;
+      return -1;
+    })();
+
+    if (insertIndex >= 0) {
+      // Injecte le bloc Accuse JUSTE AVANT la section Signatures
+      htmlBody = htmlBody.slice(0, insertIndex)
+        + ackHtml
+        + htmlBody.slice(insertIndex);
+    } else {
+      // Pas de section Signatures dans le body : append a la fin
+      htmlBody = htmlBody + ackHtml;
+    }
+  }
+
   return buildHtmlDocument(warning + htmlBody, opts);
+}
+
+/**
+ * Rend l'encart "Accuse de reception" affiche EN HAUT (au-dessus des
+ * signatures). Bloc compact : banniere navy + checkbox + libelle.
+ *
+ * La signature manuscrite + nom + date sont des blocs separes (rendus par
+ * preprocessSignatures cote a cote : EMPLOYEUR | EMPLOYE).
+ *
+ * Le stamp "LU ET ACCEPTE" n'est visible que quand `acknowledged: true`.
+ */
+function renderAcknowledgmentBlock(
+  block: NonNullable<HtmlPdfOptions["acknowledgmentBlock"]>,
+  _employeeSig?: EmbeddedSignature,
+): string {
+  const isAcknowledged = block.acknowledged === true;
+  const checkedClass = isAcknowledged ? "checked" : "";
+  const checkmark = isAcknowledged ? "&#10003;" : "&nbsp;";
+  const label = block.label
+    ?? "J'ai lu et compris integralement le present document et j'en accepte les termes en toute connaissance de cause.";
+
+  // Stamp LU ET ACCEPTE : visible seulement quand la case est cochee
+  const stampHtml = isAcknowledged
+    ? `<div class="ack-stamp">LU ET ACCEPTÉ</div>`
+    : "";
+
+  return `
+<div class="ack-block" lang="fr">
+  ${stampHtml}
+  <div class="ack-banner">
+    <div class="ack-banner-title">Accusé de réception et acceptation</div>
+    <div class="ack-banner-subtitle">Confirmation de lecture et de prise de connaissance</div>
+  </div>
+  <div class="ack-body">
+    <div class="ack-row">
+      <span class="ack-checkbox ${checkedClass}">${checkmark}</span>
+      <span class="ack-text">${escapeHtml(label)}</span>
+    </div>
+  </div>
+</div>`;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -3057,6 +3520,35 @@ function buildHandbookHtml(
     padding-left: 0;
   }
   .hb-chapter-body li.md-task::marker { content: none; }
+
+  /* Lignes a remplir dans le cahier (mirror du contexte legal). */
+  .hb-chapter-body .fill-line {
+    display: inline-block;
+    min-width: 120px;
+    flex: 1 1 auto;
+    border-bottom: 1px solid #94a3b8;
+    height: 0.9em;
+    vertical-align: baseline;
+    margin: 0 2px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .hb-chapter-body p > .fill-line:last-child,
+  .hb-chapter-body li > .fill-line:last-child {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+  }
+  .hb-chapter-body .filled-field {
+    color: #0F2D52;
+    font-weight: 600;
+    background: rgba(15, 45, 82, 0.06);
+    padding: 0 4px;
+    border-radius: 2px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   .hb-chapter-body .md-fallback {
     background: #fef3c7;
     border: 1px solid #fbbf24;

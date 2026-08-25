@@ -74,14 +74,23 @@ export async function buildContextFromEmployee(
     const firstName = parts.length > 0 ? parts[0] : "";
     const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
 
-    ctx["employee.fullName"] = fullName;
-    ctx["employee.firstName"] = firstName;
-    ctx["employee.lastName"] = lastName;
+    // Fallback visible pour les champs critiques manquants : evite le rendu
+    // `**poste de ****`  (markdown vide qui collapse en rien) — preferable
+    // d'afficher un placeholder explicite [Poste non defini] que le RH voit
+    // immediatement comme manquant et peut completer dans la fiche employe.
+    const fallbackIfEmpty = (value: string | null | undefined, label: string): string => {
+      const v = (value ?? "").trim();
+      return v.length > 0 ? v : `[${label} non defini]`;
+    };
+
+    ctx["employee.fullName"] = fallbackIfEmpty(fullName, "Nom complet");
+    ctx["employee.firstName"] = firstName || "[Prenom non defini]";
+    ctx["employee.lastName"] = lastName || "[Nom non defini]";
     ctx["employee.email"] = employee.email ?? "";
     ctx["employee.phone"] = formatPhone(employee.phone);
     ctx["employee.address"] = ""; // Pas de champ address direct sur Admin
-    ctx["employee.position"] = employee.position?.name ?? "";
-    ctx["employee.department"] = employee.department ?? "";
+    ctx["employee.position"] = fallbackIfEmpty(employee.position?.name, "Poste");
+    ctx["employee.department"] = fallbackIfEmpty(employee.department, "Departement");
     ctx["employee.team"] = employee.team?.name ?? "";
     ctx["employee.startDate"] = formatDateIso(employee.startDate);
     ctx["employee.startDateFr"] = formatDateFrLong(employee.startDate);

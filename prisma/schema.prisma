@@ -125,6 +125,7 @@ model Admin {
   contracts        EmployeeContract[] @relation("EmployeeContracts")
   employerContractSignatures EmployeeContract[] @relation("EmployerSignatures")
   legalSignatures  LegalDocumentSignature[] @relation("LegalSignatures")
+  legalEmployerSignatures LegalDocumentSignature[] @relation("LegalEmployerSignatures")
   timeClocks       TimeClock[] @relation("TimeClocks")
   timeClockApprovals TimeClock[] @relation("TimeClockApprovers")
   timeClockEditRequests       TimeClockEditRequest[] @relation("TimeClockEditRequests")
@@ -180,6 +181,8 @@ model Admin {
   // ── Demandes de signature ciblées (admin -> employé(s)) ─────
   signatureRequestsSent     DocumentSignatureRequest[] @relation("SignatureRequester")
   signatureRequestsReceived DocumentSignatureRequest[] @relation("SignatureTarget")
+  documentDraftsAuthored    DocumentDraft[]            @relation("DraftAuthor")
+  documentDraftsAsTarget    DocumentDraft[]            @relation("DraftTarget")
 
   // ── Signatures de cahiers (handbooks) ─────────────────────
   handbookSignatures        DocumentHandbookSignature[] @relation("HandbookSignatures")
@@ -360,6 +363,7 @@ model LegalDocumentTemplate {
 
   signatures        LegalDocumentSignature[]
   signatureRequests DocumentSignatureRequest[]
+  drafts            DocumentDraft[]
   handbookItems     DocumentHandbookItem[]
 
   @@map("legal_document_templates")
@@ -385,8 +389,20 @@ model LegalDocumentSignature {
   // checkboxStates + signatureData.
   finalPdfUrl String? @map("final_pdf_url")
 
+  // Valeurs [CHAMP] saisies par l'employé au moment de signer (numéro OIQ/CPA,
+  // permis…), déjà échappées. Persistées pour que toute régénération du PDF
+  // reproduise le document EXACT signé.
+  fieldValues Json? @map("field_values") @db.JsonB
+
+  // Contresignature employeur (templates avec signatureScope both/employer_only).
+  // Capturée APRÈS la signature employé par un RH via employerSignLegalDocAction.
+  employerSignatureData String?   @map("employer_signature_data") @db.Text
+  employerSignedAt      DateTime? @map("employer_signed_at")
+  employerSignedById    Int?      @map("employer_signed_by_id")
+
   template    LegalDocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
   admin       Admin    @relation("LegalSignatures", fields: [adminId], references: [id], onDelete: Cascade)
+  employerSignedBy Admin? @relation("LegalEmployerSignatures", fields: [employerSignedById], references: [id], onDelete: SetNull)
 
   @@unique([templateId, adminId, version])
   @@index([adminId])
@@ -2758,6 +2774,10 @@ model DocumentSignatureRequest {
   // Format : { "DATE": "15 mars 2025", "SUJET INITIAL": "Retard chronique" }
   customFieldValues Json?    @map("custom_field_values") @db.JsonB
 
+  // Dernier rappel AUTOMATIQUE envoyé par le cron signature-reminders
+  // (anti-spam : max un rappel auto / 3 jours par demande).
+  lastAutoRemindAt DateTime? @map("last_auto_remind_at")
+
   template        LegalDocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
   requestedBy     Admin     @relation("SignatureRequester", fields: [requestedById], references: [id], onDelete: Cascade)
   targetAdmin     Admin?    @relation("SignatureTarget", fields: [targetAdminId], references: [id], onDelete: Cascade)
@@ -2765,6 +2785,60 @@ model DocumentSignatureRequest {
   @@index([targetAdminId, status])
   @@index([status, dueDate])
   @@map("document_signature_requests")
+}
+
+// ─────────────────────────────────────────────────────────────
+// DOCUMENT DRAFT (brouillon de document long)
+// ─────────────────────────────────────────────────────────────
+// Pour les templates "long form" (Evaluation 30/60/90, entretien
+// annuel, plan de developpement) que le RH/manager prepare en
+// plusieurs sessions avant d'envoyer a l'employe pour signature.
+//
+// Workflow :
+//   1. Manager cree un brouillon vide (template + employe cible)
+//   2. Il remplit progressivement (auto-save toutes les ~10s)
+//   3. Quand pret, il declenche "Envoyer pour signature" -> cree
+//      une DocumentSignatureRequest avec les customFieldValues
+//      du brouillon et marque le brouillon comme "sent".
+//   4. Brouillons "sent" archives N jours puis cleanup auto.
+// ─────────────────────────────────────────────────────────────
+model DocumentDraft {
+  id              Int       @id @default(autoincrement())
+  templateId      Int       @map("template_id")
+  // Auteur du brouillon (qui prepare l'evaluation, peut etre le manager
+  // direct OU un RH).
+  authorId        Int       @map("author_id")
+  // Employe cible du document (sera le futur signataire).
+  targetAdminId   Int       @map("target_admin_id")
+
+  // Valeurs saisies dans le wizard : fill_0, fill_1, ... + eventuels
+  // [CHAMP] / {{placeholder}} classiques.
+  customFieldValues Json?   @map("custom_field_values") @db.JsonB
+
+  // Etat du brouillon :
+  //   - "draft"  : encore en cours de saisie (defaut)
+  //   - "ready"  : marque comme pret, prochaine etape = envoyer signature
+  //   - "sent"   : signature request creee, brouillon archive
+  status          String    @default("draft")
+
+  // Date prevue pour l'envoi (optionnel, info indicative).
+  scheduledFor    DateTime? @map("scheduled_for") @db.Date
+
+  // Notes internes du manager pour lui-meme (pas inclus dans le PDF final).
+  notes           String?
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  sentAt          DateTime? @map("sent_at")
+
+  template        LegalDocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  author          Admin     @relation("DraftAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  target          Admin     @relation("DraftTarget", fields: [targetAdminId], references: [id], onDelete: Cascade)
+
+  @@index([authorId, status])
+  @@index([targetAdminId, status])
+  @@index([templateId, status])
+  @@map("document_drafts")
 }
 
 // ─────────────────────────────────────────────────────────────

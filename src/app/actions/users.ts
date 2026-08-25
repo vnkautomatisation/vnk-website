@@ -853,6 +853,12 @@ export async function createUserAction(input: z.infer<typeof createSchema>): Pro
     metadata: { newAdminId: created.id },
   });
 
+  // Auto-assignation des documents requis (onboarding) — best-effort.
+  const { assignRequiredDocsToNewEmployee } = await import(
+    "@/lib/services/onboarding-docs"
+  );
+  await assignRequiredDocsToNewEmployee(created.id, adminId);
+
   revalidatePath("/admin/settings");
   return { success: true, data: { id: created.id } };
 }

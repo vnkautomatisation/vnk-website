@@ -54,6 +54,20 @@ interface PostPayload {
     documentNumber?: string;
   };
   extraContext?: Record<string, string>;
+  /**
+   * Scope de signature : filtre les blocs Signature dans le PDF.
+   * - "employee_only" : seul l'EMPLOYE
+   * - "employer_only" : seul l'EMPLOYEUR
+   * - "both"          : les deux (defaut)
+   * - "none"          : aucun (reading_only)
+   */
+  signatureScope?: "employee_only" | "employer_only" | "both" | "none";
+  /**
+   * Cle du template (ex. "engagement_cpa_accountant") — sert a deduire un
+   * poste suggere pour l'apercu quand le poste de l'employe ne correspond
+   * pas au sujet du template (ex. preview d'un template CPA avec un manager).
+   */
+  templateKey?: string;
 }
 
 async function requireAdmin() {
@@ -149,27 +163,61 @@ function pdfResponse(buffer: Buffer, filename: string, download: boolean) {
 async function loadTemplateFromDb(
   templateType: TemplateTypeDb,
   templateId: number,
-): Promise<{ bodyMarkdown: string; title: string; version?: string } | null> {
+): Promise<
+  | {
+      bodyMarkdown: string;
+      title: string;
+      version?: string;
+      signatureScope?: "employee_only" | "employer_only" | "both" | "none";
+      key?: string;
+    }
+  | null
+> {
   if (templateType === "legal") {
     const row = await prisma.legalDocumentTemplate.findUnique({
       where: { id: templateId },
-      select: { bodyMarkdown: true, title: true, version: true },
+      select: {
+        bodyMarkdown: true,
+        title: true,
+        version: true,
+        signatureScope: true,
+        key: true,
+      },
     });
-    return row ?? null;
+    if (!row) return null;
+    return {
+      bodyMarkdown: row.bodyMarkdown,
+      title: row.title,
+      version: row.version,
+      signatureScope: (row.signatureScope as
+        | "employee_only"
+        | "employer_only"
+        | "both"
+        | "none"
+        | null
+        | undefined) ?? undefined,
+      key: row.key,
+    };
   }
   if (templateType === "contract") {
     const row = await prisma.contractTemplate.findUnique({
       where: { id: templateId },
       select: { bodyMarkdown: true, name: true },
     });
-    return row ? { bodyMarkdown: row.bodyMarkdown, title: row.name } : null;
+    // Les contrats sont bilateraux par defaut (pas de cle, donc pas
+    // d'override de poste suggere — le contrat utilise le poste reel
+    // de l'employe).
+    return row
+      ? { bodyMarkdown: row.bodyMarkdown, title: row.name, signatureScope: "both" }
+      : null;
   }
   if (templateType === "policy") {
     const row = await prisma.hrPolicy.findUnique({
       where: { id: templateId },
-      select: { bodyMarkdown: true, title: true, version: true },
+      select: { bodyMarkdown: true, title: true, version: true, key: true },
     });
-    return row ?? null;
+    // Les politiques sont reading_only par defaut
+    return row ? { ...row, signatureScope: "none" } : null;
   }
   return null;
 }
@@ -223,6 +271,18 @@ export async function POST(req: NextRequest) {
   if (payload.extraContext) {
     context = { ...context, ...payload.extraContext };
   }
+  // Override poste suggere selon le template (pour les apercus uniquement).
+  // Si le template cible un role specifique (CPA, OIQ, etc.) et que l'employe
+  // a un autre poste, on utilise le role attendu pour rendre l'apercu coherent.
+  if (payload.templateKey) {
+    const { getSuggestedPositionForTemplate } = await import(
+      "@/lib/document-templates/template-suggested-position"
+    );
+    const suggested = getSuggestedPositionForTemplate(payload.templateKey);
+    if (suggested) {
+      context["employee.position"] = suggested;
+    }
+  }
   // Filet de securite : date.todayFr toujours present
   if (!context["date.todayFr"]) {
     context["date.todayFr"] = new Date().toLocaleDateString("fr-CA", {
@@ -231,6 +291,14 @@ export async function POST(req: NextRequest) {
   }
 
   const download = new URL(req.url).searchParams.get("download") === "1";
+  // Scope de signature : si fourni explicitement par le client, on l'utilise.
+  // Sinon defaut "both" (retrocompat — l'apercu generique sans contexte
+  // affiche les deux blocs).
+  const validScopes = ["employee_only", "employer_only", "both", "none"] as const;
+  const sigScope: "employee_only" | "employer_only" | "both" | "none" =
+    payload.signatureScope && validScopes.includes(payload.signatureScope)
+      ? payload.signatureScope
+      : "both";
   try {
     const pdf = await renderTemplateToPdf({
       bodyMarkdown,
@@ -238,6 +306,7 @@ export async function POST(req: NextRequest) {
       title,
       documentType,
       metadata: payload.metadata,
+      signatureScope: sigScope,
     });
     return pdfResponse(pdf, safeFilename(title, "apercu"), download);
   } catch (err) {
@@ -350,6 +419,17 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  // Override poste suggere selon la cle template (apercus seulement)
+  if (tpl.key) {
+    const { getSuggestedPositionForTemplate } = await import(
+      "@/lib/document-templates/template-suggested-position"
+    );
+    const suggested = getSuggestedPositionForTemplate(tpl.key);
+    if (suggested) {
+      context["employee.position"] = suggested;
+    }
+  }
+
   const docType = dbTypeToDocType(templateType);
   try {
     const pdf = await renderTemplateToPdf({
@@ -361,6 +441,9 @@ export async function GET(req: NextRequest) {
         version: tpl.version,
         employeeName: context["employee.fullName"] || undefined,
       },
+      // Le scope du template DB est source de verite pour l'apercu :
+      // confirmations -> employee_only, contrats/avis -> both, policies -> none
+      signatureScope: tpl.signatureScope,
     });
     return pdfResponse(pdf, safeFilename(tpl.title, "apercu"), download);
   } catch (err) {

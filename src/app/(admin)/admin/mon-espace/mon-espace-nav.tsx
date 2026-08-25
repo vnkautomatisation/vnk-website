@@ -3,41 +3,31 @@
 // Délègue à ModuleSidebarNav (scroll + collapse + a11y + mobile drawer).
 import {
   Home, FileText, Clock, Calculator, CalendarDays, Briefcase, GraduationCap,
-  Heart, CreditCard, Users, FileSignature, Megaphone, UserCircle, ScrollText,
-  Sparkles, FolderOpen, Wallet, FolderClosed, Building2,
+  Heart, CreditCard, Users, Megaphone, UserCircle,
+  Sparkles, FolderClosed, Building2,
 } from "lucide-react";
 import { ModuleSidebarNav, type NavSection } from "@/components/admin/module-sidebar-nav";
 
+// Refonte du menu : on consolide "Mes documents" et "Ma rémunération" dans
+// les groupes existants (Mon quotidien + Mon dossier) car ils ne contenaient
+// qu'un seul item chacun apres le nettoyage (Politiques RH + Mes contrats
+// retires car redondants avec les tabs de /mon-espace/documents).
 const SECTIONS: NavSection[] = [
   {
     group: "Mon quotidien",
     groupIcon: Sparkles,
     items: [
       { href: "/admin/mon-espace", label: "Tableau de bord", icon: Home },
+      { href: "/admin/mon-espace/documents", label: "Mes documents", icon: FileText },
       { href: "/admin/mon-espace/pointage", label: "Mon pointage", icon: Clock },
       { href: "/admin/mon-espace/conges", label: "Mes congés", icon: CalendarDays },
-    ],
-  },
-  {
-    group: "Mes documents",
-    groupIcon: FolderOpen,
-    items: [
-      { href: "/admin/mon-espace/documents", label: "Mes documents", icon: FileText },
-      { href: "/admin/mon-espace/contrats", label: "Mes contrats", icon: FileSignature },
-      { href: "/admin/mon-espace/politiques", label: "Politiques RH", icon: ScrollText },
-    ],
-  },
-  {
-    group: "Ma rémunération",
-    groupIcon: Wallet,
-    items: [
-      { href: "/admin/mon-espace/paie", label: "Mes bulletins", icon: Calculator },
     ],
   },
   {
     group: "Mon dossier",
     groupIcon: FolderClosed,
     items: [
+      { href: "/admin/mon-espace/paie", label: "Mes bulletins", icon: Calculator },
       { href: "/admin/mon-espace/equipement", label: "Mon équipement", icon: Briefcase },
       { href: "/admin/mon-espace/formations", label: "Formations & permis", icon: GraduationCap },
       { href: "/admin/mon-espace/urgence", label: "Contacts d'urgence", icon: Heart },

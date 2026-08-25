@@ -61,7 +61,10 @@ export function PdfPreviewModal({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       {/* Responsive : fullscreen mobile (< sm), modal 95vw desktop. min-h-[100dvh] sur mobile
           pour utiliser TOUT l'écran disponible (dvh gère barre URL Safari iOS). */}
-      <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-4xl sm:max-h-[92vh] sm:h-auto sm:rounded-lg">
+      <DialogContent
+        className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-4xl sm:max-h-[92vh] sm:h-auto sm:rounded-lg"
+        aria-describedby={undefined}
+      >
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
             <DialogTitle className="text-white text-sm sm:text-base flex items-center gap-2 pr-8">

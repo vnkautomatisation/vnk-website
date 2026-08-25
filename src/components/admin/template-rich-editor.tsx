@@ -1194,6 +1194,11 @@ export function TemplateRichEditor({
         // séparateurs visuels).
         codeBlock: false,
         heading: { levels: [1, 2, 3] },
+        // StarterKit v3 inclut deja Link et Underline. On les desactive ici
+        // pour les ajouter en bas avec notre configuration custom (Link avec
+        // HTMLAttributes rel/target, Underline plain).
+        link: false,
+        underline: false,
       }),
       Placeholder.configure({
         placeholder: placeholder ?? "Commencez a rediger…",

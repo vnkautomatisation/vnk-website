@@ -79,13 +79,16 @@ import { TemplatePdfPreviewButton } from "@/components/admin/template-pdf-previe
 import { SignatureStatusBadge } from "@/components/admin/signature-status-badge";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { FormSection, Field } from "@/components/admin/form-section";
-import { signLegalDocAction } from "@/app/actions/hr-legal-docs";
+import {
+  signLegalDocAction,
+  regenerateMyOwnSignedPdfAction,
+} from "@/app/actions/hr-legal-docs";
 import { requestEmploymentLetterAction } from "@/app/actions/hr-tax-docs";
 import { deletePersonalDocAction } from "@/app/actions/hr-personal-docs";
 import { signHandbookAction } from "@/app/actions/hr-document-handbooks";
 import { HandbookSignatureDialog } from "@/components/admin/handbook-signature-dialog";
 import type { HandbookSignatureDialogHandbook } from "@/components/admin/handbook-signature-types";
-import { BookOpen } from "lucide-react";
+import { BookOpen, ScrollText } from "lucide-react";
 
 // ---------- Types ------------------------------------------------
 type LegalDoc = {
@@ -107,6 +110,9 @@ type Signature = {
   /** URL du PDF final embarquant signature + cases cochées (null si encore en
    *  génération ou si la génération a échoué : preview fallback à la volée). */
   finalPdfUrl: string | null;
+  /** Infos template embarquees (titre disponible meme si template archive/
+   *  desactive donc plus dans legalDocs cote employe). */
+  template?: { title: string; key: string; category: string } | null;
 };
 type TaxDoc = {
   id: number;
@@ -199,6 +205,8 @@ type HandbookSignature = {
   version: string;
   signedAt: string;
   finalPdfUrl: string | null;
+  /** Infos handbook embarquees pour affichage dans tab "Signes". */
+  handbook?: { title: string; key: string } | null;
 };
 
 type UploadRequest = {
@@ -291,7 +299,7 @@ export function MyDocumentsView({
   signatureRequests,
   pendingUploadRequests,
   handbooksToSign = [],
-  myHandbookSignatures: _myHandbookSignatures = [],
+  myHandbookSignatures = [],
 }: {
   employeeId: number;
   legalDocs: LegalDoc[];
@@ -306,7 +314,6 @@ export function MyDocumentsView({
   handbooksToSign?: HandbookToSign[];
   myHandbookSignatures?: HandbookSignature[];
 }) {
-  void _myHandbookSignatures;
   const router = useRouter();
 
   // --- Derived datasets --------------------------------------
@@ -326,12 +333,20 @@ export function MyDocumentsView({
     });
   }, [legalDocs, signedMap]);
 
-  // Filtre les demandes ciblees pour ne garder que celles dont le template
-  // n'est pas deja signe a la version courante
+  // Filtre les demandes ciblees :
+  //   - pas de signature -> on garde
+  //   - signature anterieure a la demande -> RH veut re-signing -> on garde
+  //   - signature POSTERIEURE a la demande sur la version courante -> deja fait -> on cache
+  //   - version differente -> on garde (nouvelle version a signer)
   const pendingSignatureRequests = useMemo(() => {
     return signatureRequests.filter((r) => {
       const sig = signedMap.get(r.template.id);
-      return !sig || sig.version !== r.template.version;
+      if (!sig) return true;
+      if (sig.version !== r.template.version) return true;
+      const sigTime = new Date(sig.signedAt).getTime();
+      const reqTime = new Date(r.requestedAt).getTime();
+      // Signe AVANT la demande = re-signing requis -> on garde la demande visible
+      return sigTime < reqTime;
     });
   }, [signatureRequests, signedMap]);
 
@@ -433,31 +448,48 @@ export function MyDocumentsView({
       toast.error("Document introuvable");
       return;
     }
+    // Recherche la demande de signature ciblee associee pour passer son
+    // requestId au PDF preview (-> applique customFieldValues remplis par RH).
+    const req = signatureRequests.find((r) => r.template.id === templateId);
     setSignDialog({
       templateId: tpl.id,
+      signatureRequestId: req?.id,
       title: tpl.title,
       version: tpl.version,
       bodyMarkdown: tpl.bodyMarkdown,
       subtitle: tpl.isRequired ? "Document obligatoire" : "Document optionnel",
       signatureScope: tpl.signatureScope ?? "employee_only",
       acknowledgmentMode: tpl.acknowledgmentMode ?? "reading_only",
+      employeeId,
     });
   };
 
   const submitSignature = async (
     signatureDataUrl: string,
-    checkboxStates: Record<number, boolean>,
+    checkboxStates: Record<string | number, unknown>,
   ) => {
     if (!signDialog) return;
-    // Convertit les clés numériques en string pour le transport JSON / Zod
+    // Extrait `__employeeFieldValues` (objet Record<string,string>) si present
+    // — encode par signature-pad-dialog pour transporter les valeurs `[CHAMP]`
+    // remplies par l'employe (numero de membre OIQ/CPA, permis...).
+    let employeeFieldValues: Record<string, string> | undefined;
     const checkboxStatesStr: Record<string, boolean> = {};
     for (const [k, v] of Object.entries(checkboxStates)) {
-      checkboxStatesStr[String(k)] = v;
+      if (k === "__employeeFieldValues" && v && typeof v === "object") {
+        const obj: Record<string, string> = {};
+        for (const [fk, fv] of Object.entries(v as Record<string, unknown>)) {
+          if (typeof fv === "string") obj[fk] = fv;
+        }
+        if (Object.keys(obj).length > 0) employeeFieldValues = obj;
+        continue;
+      }
+      if (typeof v === "boolean") checkboxStatesStr[String(k)] = v;
     }
     const r = await signLegalDocAction({
       templateId: signDialog.templateId,
       signatureData: signatureDataUrl,
       checkboxStates: checkboxStatesStr,
+      employeeFieldValues,
     });
     if (r.success) {
       toast.success("Document signe");
@@ -487,7 +519,15 @@ export function MyDocumentsView({
     { key: "payroll", label: "Paie & fiscal", icon: Receipt, count: payStubs.length + taxDocs.length },
     { key: "letters", label: "Lettres", icon: Mail, count: letterRequests.length },
     { key: "personal", label: "Mon dossier", icon: Award, count: personalDocs.length },
-    { key: "signed", label: "Signes", icon: CheckCircle2, count: mySignatures.length },
+    {
+      key: "signed",
+      label: "Signes",
+      icon: CheckCircle2,
+      count:
+        mySignatures.length
+        + myHandbookSignatures.length
+        + contracts.filter((c) => c.employeeSignedAt).length,
+    },
   ];
 
   return (
@@ -661,14 +701,21 @@ export function MyDocumentsView({
         </div>
       </div>
 
-      {/* ====== Bandeau demandes upload RH ====== */}
-      <MyUploadRequestsBanner
-        requests={bannerUploadRequests}
-        onUpload={openResponseFor}
-      />
+      {/* ====== Bandeaux d'actions urgentes ======
+          Visibles UNIQUEMENT sur les tabs "to-sign" (signatures, cahiers)
+          et "personal" (uploads en attente). Pas sur Contrats/Paie/Lettres/
+          Signes pour ne pas polluer la lecture passive. */}
+
+      {/* Bandeau demandes upload RH : visible sur to-sign + personal */}
+      {(tab === "to-sign" || tab === "personal") && (
+        <MyUploadRequestsBanner
+          requests={bannerUploadRequests}
+          onUpload={openResponseFor}
+        />
+      )}
 
       {/* ====== Cahiers a signer (PRIORITAIRE : avant les docs individuels) ====== */}
-      {handbooksToSign.length > 0 && (
+      {tab === "to-sign" && handbooksToSign.length > 0 && (
         <div className="rounded-md border border-[#0F2D52]/20 bg-gradient-to-br from-[#0F2D52]/5 to-[#15406d]/5 p-3 space-y-2">
           <div className="flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-[#0F2D52]" />
@@ -740,8 +787,10 @@ export function MyDocumentsView({
         </div>
       )}
 
-      {/* ====== Bandeau signature urgent ====== */}
-      <SignatureRequestBanner requests={bannerRequests} onSign={(tplId) => openSignByTemplateId(tplId)} />
+      {/* ====== Bandeau signature urgent : uniquement sur "to-sign" ====== */}
+      {tab === "to-sign" && (
+        <SignatureRequestBanner requests={bannerRequests} onSign={(tplId) => openSignByTemplateId(tplId)} />
+      )}
 
       {/* ====== Tab content ======
           NB : SettingsTabs deja dans le sticky container plus haut. */}
@@ -837,16 +886,16 @@ export function MyDocumentsView({
       {tab === "signed" && (
         <SignedTab
           signatures={mySignatures}
+          handbookSignatures={myHandbookSignatures}
+          contracts={contracts}
           legalDocs={legalDocs}
-          onPreview={(sig, tpl) => {
-            // PDF final si dispo, sinon preview du template legal
-            const finalUrl = sig.finalPdfUrl;
-            if (finalUrl) {
+          onOpenPdf={(item) => {
+            if (item.pdfUrl) {
               setPreviewPdf({
-                url: finalUrl,
-                title: tpl?.title ?? `Document #${sig.templateId}`,
-                description: `Signe le ${formatDate(sig.signedAt)} - v${sig.version}`,
-                filename: `${(tpl?.key ?? "document")}-signe.pdf`,
+                url: item.pdfUrl,
+                title: item.title,
+                description: item.description,
+                filename: item.filename,
               });
             } else {
               toast.info("PDF en cours de generation. Reessayez dans quelques instants.");
@@ -1098,45 +1147,25 @@ function ToSignCard({
   urgent?: boolean;
   onSign: () => void;
 }) {
+  // Note : le bouton "Apercu avant signature" a ete retire — il rendait le
+  // template brut avec les placeholders `[A completer : XXX]` visibles
+  // (workflow admin/template builder), ce que l'employe ne doit JAMAIS voir.
+  // L'employe verra le document avec ses valeurs resolues directement dans
+  // le dialog "Lire et signer".
   return (
-    <div className="space-y-1.5">
-      <DocumentCard
-        icon={FileSignature}
-        title={doc.title}
-        subtitle={subtitle ?? `v${doc.version}`}
-        iconTone={iconTone}
-        status={badge}
-        primaryAction={{
-          label: "Lire et signer",
-          icon: FileSignature,
-          onClick: onSign,
-          tone: urgent ? "danger" : "primary",
-        }}
-      />
-      <div className="flex justify-end pr-1">
-        <TemplatePdfPreviewButton
-          bodyMarkdown={doc.bodyMarkdown}
-          title={doc.title}
-          documentType="legal"
-          metadata={{ version: doc.version }}
-          size="sm"
-          variant="ghost"
-          trigger={
-            <ActionTooltip label="Apercu du document avant signature">
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-7 text-[11px] text-muted-foreground hover:text-[#0F2D52]"
-              >
-                <FileText className="h-3 w-3 mr-1" />
-                Apercu avant signature
-              </Button>
-            </ActionTooltip>
-          }
-        />
-      </div>
-    </div>
+    <DocumentCard
+      icon={FileSignature}
+      title={doc.title}
+      subtitle={subtitle ?? `v${doc.version}`}
+      iconTone={iconTone}
+      status={badge}
+      primaryAction={{
+        label: "Lire et signer",
+        icon: FileSignature,
+        onClick: onSign,
+        tone: urgent ? "danger" : "primary",
+      }}
+    />
   );
 }
 
@@ -1461,72 +1490,195 @@ function PersonalTab({
 // ================================================================
 //                       TAB : SIGNED
 // ================================================================
-// Historique des signatures de documents legaux pour l'employe.
-// - Liste triee par date de signature decroissante (plus recent en haut).
-// - Cards avec icone CheckCircle (emerald) + titre template + version + date.
-// - Bouton "Voir le PDF" qui ouvre PdfPreviewModal sur finalPdfUrl (ou
-//   message d'attente si PDF en cours de generation).
-// - Empty state pro si aucune signature.
+// Historique UNIFIE de tout ce que l'employe a signe :
+//   - Politiques / NDA / acknowledgments (LegalDocumentSignature)
+//   - Cahiers / handbooks (DocumentHandbookSignature)
+//   - Contrats d'emploi (EmployeeContract avec employeeSignedAt non-null)
+//
+// Tri global par date de signature decroissante (plus recent en haut).
+// Chaque card a un badge "Type" pour distinguer (Politique / Cahier / Contrat).
+// Click ouvre le PDF si disponible.
+
+type SignedItem = {
+  key: string;
+  type: "Politique" | "Cahier" | "Contrat";
+  title: string;
+  description: string;
+  date: string; // ISO
+  pdfUrl: string | null;
+  filename: string;
+  /** Si politique : id signature legale pour permettre la regeneration cote
+   *  employe (regenerateMyOwnSignedPdfAction). Null pour Cahier/Contrat. */
+  legalSignatureId: number | null;
+};
+
 function SignedTab({
   signatures,
+  handbookSignatures,
+  contracts,
   legalDocs,
-  onPreview,
+  onOpenPdf,
 }: {
   signatures: Signature[];
+  handbookSignatures: HandbookSignature[];
+  contracts: Contract[];
   legalDocs: LegalDoc[];
-  onPreview: (sig: Signature, tpl: LegalDoc | undefined) => void;
+  onOpenPdf: (item: SignedItem) => void;
 }) {
+  const router = useRouter();
+  // Auto-regen silencieuse : si des signatures legales ont finalPdfUrl null
+  // (echec generation initiale, ex : storage R2 non configure), on les
+  // regenere en arriere-plan a l'ouverture du tab. L'employe ne voit RIEN
+  // de cassé, juste un loader bref puis les PDFs apparaissent.
+  // Flag pour eviter de re-tenter en boucle si une signature regen aussi.
+  const autoRegenTriedRef = useRef<Set<number>>(new Set());
+  const [autoRegenBusy, setAutoRegenBusy] = useState(false);
+
+  useEffect(() => {
+    const broken = signatures.filter(
+      (s) => !s.finalPdfUrl && !autoRegenTriedRef.current.has(s.id),
+    );
+    if (broken.length === 0) return;
+    broken.forEach((s) => autoRegenTriedRef.current.add(s.id));
+    setAutoRegenBusy(true);
+    Promise.all(
+      broken.map((s) =>
+        regenerateMyOwnSignedPdfAction({ signatureId: s.id }).catch(() => ({
+          success: false as const,
+          error: "Echec silencieux",
+        })),
+      ),
+    )
+      .then((results) => {
+        const okCount = results.filter((r) => r.success).length;
+        if (okCount > 0) router.refresh();
+      })
+      .finally(() => setAutoRegenBusy(false));
+  }, [signatures, router]);
   const tplMap = useMemo(() => {
     const m = new Map<number, LegalDoc>();
     for (const d of legalDocs) m.set(d.id, d);
     return m;
   }, [legalDocs]);
 
-  // Tri : plus recente signature d'abord
-  const sorted = useMemo(
-    () => [...signatures].sort(
-      (a, b) => new Date(b.signedAt).getTime() - new Date(a.signedAt).getTime(),
-    ),
-    [signatures],
-  );
+  // Construction d'une liste unifiee : politiques + cahiers + contrats signes.
+  const items = useMemo<SignedItem[]>(() => {
+    const result: SignedItem[] = [];
 
-  if (sorted.length === 0) {
+    // 1) Signatures de documents legaux (politiques, NDA, etc.)
+    for (const sig of signatures) {
+      const tpl = tplMap.get(sig.templateId);
+      const title = sig.template?.title ?? tpl?.title ?? `Document #${sig.templateId}`;
+      const keySuffix = sig.template?.key ?? tpl?.key ?? "document";
+      result.push({
+        key: `legal-${sig.id}`,
+        type: "Politique",
+        title,
+        description: `v${sig.version} - Signe le ${formatDate(sig.signedAt)}`,
+        date: sig.signedAt,
+        pdfUrl: sig.finalPdfUrl,
+        filename: `${keySuffix}-signe.pdf`,
+        legalSignatureId: sig.id,
+      });
+    }
+
+    // 2) Signatures de cahiers (handbooks)
+    for (const hs of handbookSignatures) {
+      const title = hs.handbook?.title ?? `Cahier #${hs.handbookId}`;
+      const keySuffix = hs.handbook?.key ?? "cahier";
+      result.push({
+        key: `handbook-${hs.id}`,
+        type: "Cahier",
+        title,
+        description: `v${hs.version} - Signe le ${formatDate(hs.signedAt)}`,
+        date: hs.signedAt,
+        pdfUrl: hs.finalPdfUrl,
+        filename: `${keySuffix}-signe.pdf`,
+        legalSignatureId: null,
+      });
+    }
+
+    // 3) Contrats d'emploi signes par l'employe
+    for (const c of contracts) {
+      if (!c.employeeSignedAt) continue;
+      const fullySigned = !!c.employerSignedAt;
+      result.push({
+        key: `contract-${c.id}`,
+        type: "Contrat",
+        title: c.title,
+        description: fullySigned
+          ? `${c.contractType} - Signe le ${formatDate(c.employeeSignedAt)} (contresigne)`
+          : `${c.contractType} - Signe le ${formatDate(c.employeeSignedAt)} (en attente RH)`,
+        date: c.employeeSignedAt,
+        pdfUrl: c.pdfUrl,
+        filename: `${c.title.replace(/\s+/g, "-").toLowerCase()}.pdf`,
+        legalSignatureId: null,
+      });
+    }
+
+    // Tri global par date desc
+    result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return result;
+  }, [signatures, handbookSignatures, contracts, tplMap]);
+
+  if (items.length === 0) {
     return (
       <Card className="p-10 text-center space-y-3">
         <CheckCircle2 className="h-10 w-10 mx-auto text-muted-foreground/40" />
         <p className="text-sm font-semibold">Aucune signature enregistree</p>
         <p className="text-xs text-muted-foreground">
-          Vos signatures de documents legaux apparaitront ici une fois realisees.
+          Vos signatures (politiques, cahiers, contrats) apparaitront ici une fois realisees.
         </p>
       </Card>
     );
   }
 
+  // Icone par type pour visuel distinctif
+  const iconByType: Record<SignedItem["type"], typeof CheckCircle2> = {
+    Politique: ScrollText,
+    Cahier: BookOpen,
+    Contrat: FileCheck,
+  };
+
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        {sorted.length} signature{sorted.length > 1 ? "s" : ""} enregistree{sorted.length > 1 ? "s" : ""}.
-        Cliquez sur une carte pour voir le PDF sign&eacute;.
+        {items.length} signature{items.length > 1 ? "s" : ""} enregistree{items.length > 1 ? "s" : ""}.
+        Politiques, cahiers et contrats reunis. Cliquez pour voir le PDF.
       </p>
+      {autoRegenBusy && (
+        <div className="rounded-md border border-[#0F2D52]/20 bg-[#0F2D52]/5 px-3 py-2 text-xs text-[#0F2D52] inline-flex items-center gap-2">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          Generation des PDFs en cours...
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {sorted.map((sig) => {
-          const tpl = tplMap.get(sig.templateId);
-          const title = tpl?.title ?? `Document #${sig.templateId}`;
-          const subtitle = `v${sig.version} - Signe le ${formatDate(sig.signedAt)}`;
+        {items.map((item) => {
+          const Icon = iconByType[item.type];
+          // Si finalPdfUrl null pour une politique : auto-regen est en cours
+          // (voir useEffect ci-dessus). On affiche "Generation..." discret.
+          // Si null pour cahier/contrat : "Indisponible" sans alarmer.
+          const isPolicy = item.legalSignatureId !== null;
+          const statusLabel = item.pdfUrl
+            ? "PDF disponible"
+            : isPolicy
+              ? "Generation..."
+              : "Indisponible";
           return (
             <DocumentCard
-              key={sig.id}
-              icon={CheckCircle2}
-              title={title}
-              subtitle={subtitle}
+              key={item.key}
+              icon={Icon}
+              title={item.title}
+              subtitle={item.description}
               iconTone="success"
               status={{
-                label: sig.finalPdfUrl ? "PDF disponible" : "PDF en cours...",
-                tone: sig.finalPdfUrl ? "success" : "warning",
+                label: statusLabel,
+                tone: item.pdfUrl ? "success" : "neutral",
               }}
-              date={formatDate(sig.signedAt)}
-              onPreview={sig.finalPdfUrl ? () => onPreview(sig, tpl) : undefined}
-              onDownload={sig.finalPdfUrl ? () => onPreview(sig, tpl) : undefined}
+              badges={[{ label: item.type, tone: "info" }]}
+              date={formatDate(item.date)}
+              onPreview={item.pdfUrl ? () => onOpenPdf(item) : undefined}
+              onDownload={item.pdfUrl ? () => onOpenPdf(item) : undefined}
             />
           );
         })}

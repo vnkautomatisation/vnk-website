@@ -3,11 +3,18 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { DocumentsAdminView } from "./documents-admin-view";
+import { DocumentsAdminViewV2 } from "./documents-admin-view-v2";
 
 export const metadata: Metadata = { title: "Employes - Documents" };
 export const dynamic = "force-dynamic";
 
-export default async function DocumentsAdminPage() {
+export default async function DocumentsAdminPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ v?: string }>;
+}) {
+  const sp = (await searchParams) ?? {};
+  const useV2 = sp.v === "2";
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
   const adminId = session.user.adminId!;
@@ -23,7 +30,8 @@ export default async function DocumentsAdminPage() {
   const isHr =
     isSuper
     || (perms.users ?? []).includes("write")
-    || (perms.hr ?? []).includes("write");
+    || (perms.hr ?? []).includes("write")
+    || (perms.hr_documents ?? []).includes("write");
 
   if (!isHr) {
     // Un non-RH n'a rien a faire ici, on le renvoie vers Mon espace
@@ -63,17 +71,10 @@ export default async function DocumentsAdminPage() {
           (r as { acknowledgmentMode?: string }).acknowledgmentMode ?? "reading_only",
       })),
     ),
-    prisma.legalDocumentSignature.findMany({
-      select: {
-        id: true,
-        adminId: true,
-        templateId: true,
-        version: true,
-        signedAt: true,
-        finalPdfUrl: true,
-        signatureData: true,
-      },
-    }),
+    // Ligne complete (pas de select) : les colonnes recentes (fieldValues,
+    // employerSignedAt...) sont incluses des que le client Prisma est
+    // regenere, sans risquer un "Unknown field" avec un client stale.
+    prisma.legalDocumentSignature.findMany(),
     prisma.admin.findMany({
       where: { isActive: true },
       orderBy: { fullName: "asc" },
@@ -155,6 +156,21 @@ export default async function DocumentsAdminPage() {
   const templateIdsInActiveHandbooks = new Set<number>();
   for (const h of activeHandbooks) {
     for (const it of h.items) templateIdsInActiveHandbooks.add(it.templateId);
+  }
+
+  if (useV2) {
+    return (
+      <DocumentsAdminViewV2
+        templates={JSON.parse(JSON.stringify(templates))}
+        allSignatures={JSON.parse(JSON.stringify(allSignatures))}
+        employees={JSON.parse(JSON.stringify(allEmployees))}
+        pendingRequests={JSON.parse(JSON.stringify(pendingRequests))}
+        completedRequests={JSON.parse(JSON.stringify(completedRequests))}
+        uploadRequests={JSON.parse(JSON.stringify(uploadRequests))}
+        templateIdsInActiveHandbooks={Array.from(templateIdsInActiveHandbooks)}
+        isSuper={isSuper}
+      />
+    );
   }
 
   return (

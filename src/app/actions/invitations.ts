@@ -119,5 +119,12 @@ export async function acceptInvitationAction(input: z.infer<typeof schema>): Pro
     metadata: { ip, source: "invitation_accept", at: new Date().toISOString() },
   });
 
+  // Auto-assignation des documents requis (onboarding) — best-effort.
+  // requestedById = l'inviteur (RH) si connu.
+  const { assignRequiredDocsToNewEmployee } = await import(
+    "@/lib/services/onboarding-docs"
+  );
+  await assignRequiredDocsToNewEmployee(result.id, invitation.invitedById ?? null);
+
   return { success: true, data: { adminId: result.id } };
 }
