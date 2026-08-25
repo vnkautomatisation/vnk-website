@@ -19,26 +19,28 @@ import type { RoleRow } from "./team-view";
 // Liste des ressources (doit rester synchronisée avec src/lib/rbac.ts)
 const RESOURCE_GROUPS: { label: string; resources: { key: string; label: string }[] }[] = [
   {
-    label: "Données métier",
+    label: "Données métier (clients)",
     resources: [
       { key: "clients", label: "Clients" },
       { key: "invoices", label: "Factures" },
       { key: "quotes", label: "Devis" },
-      { key: "contracts", label: "Contrats" },
+      { key: "contracts", label: "Contrats clients" },
       { key: "mandates", label: "Mandats" },
       { key: "payments", label: "Paiements" },
       { key: "expenses", label: "Dépenses" },
       { key: "refunds", label: "Remboursements" },
       { key: "disputes", label: "Litiges" },
-      { key: "documents", label: "Documents" },
+      { key: "documents", label: "Documents clients" },
+      { key: "requests", label: "Demandes clients" },
     ],
   },
   {
     label: "Communication",
     resources: [
       { key: "messages", label: "Messages" },
-      { key: "calendar", label: "Calendrier" },
+      { key: "calendar", label: "Calendrier (RDV clients)" },
       { key: "appointments", label: "Rendez-vous" },
+      { key: "message_templates", label: "Modèles de messages" },
     ],
   },
   {
@@ -51,10 +53,38 @@ const RESOURCE_GROUPS: { label: string; resources: { key: string; label: string 
     ],
   },
   {
+    // Module RH (/admin/employes). « Écrire » = accès gestion.
+    // « Dossiers employés » (hr) est le passe-partout : écrire ici donne
+    // aussi tous les domaines RH ci-dessous.
+    // L'accès « mon équipe » des managers vient de la hiérarchie
+    // (manager direct / chef d'équipe), pas de ces cases.
+    label: "Ressources humaines",
+    resources: [
+      { key: "hr", label: "Dossiers employés (passe-partout RH)" },
+      { key: "hr_documents", label: "Documents RH & contrats d'emploi" },
+      { key: "leaves", label: "Congés" },
+      { key: "timeclock", label: "Pointage & codes de tâche" },
+      { key: "payroll", label: "Paie & docs fiscaux" },
+      { key: "performance", label: "Évaluations & 1-on-1" },
+      { key: "safety", label: "SST, formations & permis" },
+      { key: "hr_comms", label: "Annonces internes" },
+    ],
+  },
+  {
+    // Config du portail client et du site web PILOTEE DEPUIS L'ADMIN.
+    // Pensee pour les informaticiens/developpeurs qui gerent les deux.
+    label: "Portail client & site web",
+    resources: [
+      { key: "client_portal", label: "Portail client (config & visuel)" },
+      { key: "website", label: "Site web public" },
+    ],
+  },
+  {
     label: "Système",
     resources: [
       { key: "workflow", label: "Workflow" },
       { key: "audit_trail", label: "Journal d'audit" },
+      { key: "statistics", label: "Statistiques" },
     ],
   },
   {

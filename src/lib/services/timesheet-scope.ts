@@ -55,7 +55,7 @@ export async function getTimesheetScope(currentAdminId: number): Promise<Timeshe
     me.customRole?.name === "super_admin"
     || (perms.users ?? []).includes("write")
     || (perms.hr ?? []).includes("write")
-    || (perms.payroll ?? []).includes("write");
+    || (perms.payroll ?? []).includes("write") || (perms.timeclock ?? []).includes("write");
 
   if (isFounder) {
     return { isHr: true, isFounder: true, allowedAdminIds: null, excludeSelfId: null, myTeams: [] };
@@ -141,7 +141,7 @@ export async function assertCanReviewLeave(
   const isHr =
     (perms.users ?? []).includes("write")
     || (perms.hr ?? []).includes("write")
-    || (perms.payroll ?? []).includes("write")
+    || (perms.payroll ?? []).includes("write") || (perms.timeclock ?? []).includes("write")
     || (perms.leaves ?? []).includes("write");
   if (isHr) return true;
 

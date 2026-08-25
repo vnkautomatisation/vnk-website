@@ -63,6 +63,41 @@ export async function requirePermission(resource: Resource, action: Action): Pro
   return { adminId: perms.adminId };
 }
 
+// Accès à la ZONE Réglages (hub + sidebar) : settings.write complet, OU
+// n'importe quelle ressource de la famille configuration en écriture
+// (informaticien : portail client, site web, intégrations, contenu...).
+// Chaque sous-page garde ensuite son propre garde plus précis.
+const SETTINGS_AREA_RESOURCES: Resource[] = [
+  "settings", "integrations", "automations", "branding",
+  "blog", "pages", "email_templates", "pdf_templates",
+  "client_portal", "website",
+];
+export function canAccessSettingsArea(perms: CurrentAdminPermissions | null): boolean {
+  if (!perms) return false;
+  if (perms.isSuperAdmin) return true;
+  return SETTINGS_AREA_RESOURCES.some((r) => canAct(perms, r, "write"));
+}
+
+// Pour les routes API : refuse si la session est un ADMIN sans la
+// permission demandée. Les sessions client ne sont pas concernées (retourne
+// false — leurs propres checks s'appliquent). super_admin passe toujours.
+export async function adminApiForbidden(resource: Resource, action: Action): Promise<boolean> {
+  const perms = await getCurrentAdminPermissions();
+  if (!perms) return false; // pas une session admin
+  return !canAct(perms, resource, action);
+}
+
+// Variante multi-ressources : refuse si l'admin n'a AUCUNE des permissions
+// listées (utile quand plusieurs ressources donnent légitimement accès,
+// ex. branding : settings OU branding OU website OU client_portal).
+export async function adminApiForbiddenAll(
+  pairs: Array<[Resource, Action]>,
+): Promise<boolean> {
+  const perms = await getCurrentAdminPermissions();
+  if (!perms) return false;
+  return !pairs.some(([r, a]) => canAct(perms, r, a));
+}
+
 // Helper pour lister toutes les ressources accessibles en lecture
 // (utile pour construire la nav latérale dynamiquement).
 export function readableResources(perms: CurrentAdminPermissions | null): Resource[] {
