@@ -1,8 +1,5 @@
-// Signed token behind the "Ce n'etait pas moi" link in the new-login email.
-// HMAC SHA-256 over sessionId + adminId with AUTH_SECRET, valid 7 days.
-//
-// Lives here and not in the route: a route file may only export handlers, and
-// exporting the builder from it broke the production build.
+// Token behind the "Ce n'etait pas moi" link: HMAC over sessionId + adminId, 7 days.
+// Not in the route file: a route may only export handlers.
 import crypto from "crypto";
 
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;

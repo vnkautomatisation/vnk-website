@@ -1,20 +1,6 @@
-// Source deductions for a Quebec pay period.
-//
-// Replaces the flat 10% / 5% placeholders: this follows the shape of the
-// official formulas (CRA T4127 option 1, Revenu Quebec TP-1015.F) — annualize
-// the period's pay, run it through the brackets, subtract the credits, divide
-// back by the number of periods.
-//
-// Statutory contributions are computed from year-to-date EARNINGS rather than
-// year-to-date contributions, so the exemption, the two QPP bands and every
-// annual maximum land exactly right, including on the period that crosses a cap.
-//
-// Simplifications, all conservative and all on the tax side:
-//   - only the basic personal amounts are credited (no TD1 extra claims)
-//   - no RRSP, union dues, alimony or other authorized deductions
-//   - no commissions, no bonuses spread over the year
-// An employee with extra TD1 claims will have slightly too much tax withheld
-// and is made whole at the annual return.
+// Quebec source deductions, following CRA T4127 and Revenu Quebec TP-1015.F.
+// Contributions are driven by year-to-date EARNINGS so every cap lands right.
+// Only the basic personal amounts are credited: no TD1 extras, RRSP or dues.
 
 import { getPayrollRates, type PayrollRates, type TaxBracket } from "@/lib/services/payroll-rates";
 
@@ -54,20 +40,12 @@ function taxOnBrackets(income: number, brackets: TaxBracket[]): number {
   return Math.max(0, tax);
 }
 
-/**
- * Contribution owed on the slice of earnings falling in this period.
- * `annual` maps total year earnings to the total contribution owed on them, so
- * the period's share is simply the difference.
- */
+/** The period's share: owed on the year so far, minus owed before. */
 function periodShare(ytd: number, gross: number, annual: (earnings: number) => number): number {
   return Math.max(0, annual(ytd + gross) - annual(ytd));
 }
 
-/**
- * QPP for one period. The $3,500 exemption is annual but consumed period by
- * period, exactly as the official formula prorates it; the pensionable slice
- * is what is left under the year's maximum.
- */
+/** QPP for one period; the annual exemption is prorated, as the formula prescribes. */
 function qppForPeriod(gross: number, ytd: number, P: number, r: PayrollRates["qpp"]): {
   total: number; base: number; enhanced: number;
 } {
@@ -93,8 +71,7 @@ export function calculateDeductions(input: DeductionInput): Deductions {
   const ei = periodShare(ytdGross, gross, (e) => Math.min(e, rates.ei.maxInsurable) * rates.ei.rate);
   const qpip = periodShare(ytdGross, gross, (e) => Math.min(e, rates.qpip.maxInsurable) * rates.qpip.rate);
 
-  // Annualized income drives the brackets. The enhanced QPP contribution is a
-  // deduction from income; the base one, like EI and QPIP, is a credit.
+  // Enhanced QPP is deducted from income; the base one, like EI and QPIP, is credited.
   const annualIncome = Math.max(0, gross * P - qppParts.enhanced * P);
   const annualContributions = (qppParts.base + ei + qpip) * P;
 

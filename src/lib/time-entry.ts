@@ -1,10 +1,4 @@
-// Single source of truth for time-entry arithmetic.
-//
-// Worked minutes, gross bracket and break totals used to be recomputed inline
-// in every action, route and component — six implementations with three
-// different rounding modes for the same quantity. That is why "brut",
-// "travail" and "pause" could disagree from one screen to the next.
-// Every read and every write goes through here.
+// Single source of truth for time-entry arithmetic. Floors everywhere.
 
 /** Accepts Prisma rows (Date) and serialized payloads (ISO string). */
 export type TimeLike = Date | string;
@@ -26,10 +20,7 @@ export type TimingInput = {
 
 const ms = (t: TimeLike): number => (t instanceof Date ? t : new Date(t)).getTime();
 
-/**
- * Max gap between two punches that a merge may bridge. Beyond it, the time in
- * between was not worked and merging would invent hours.
- */
+/** Widest gap a merge may bridge; beyond it the time was not worked. */
 export const MERGE_MAX_GAP_MIN = 15;
 
 /** Whole minutes between two instants, never negative. Floored, like the rest. */
@@ -37,10 +28,7 @@ export function minutesBetween(from: TimeLike, to: TimeLike): number {
   return Math.max(0, Math.floor((ms(to) - ms(from)) / 60_000));
 }
 
-/**
- * Gross bracket in minutes. Floored — the module's single rounding rule.
- * Mixing floor and round here is what produced off-by-one drifts.
- */
+/** Gross bracket in minutes, floored. */
 export function grossMin(clockIn: TimeLike, clockOut: TimeLike): number;
 export function grossMin(clockIn: TimeLike, clockOut?: TimeLike | null): number | null;
 export function grossMin(clockIn: TimeLike, clockOut?: TimeLike | null): number | null {
@@ -70,11 +58,7 @@ export type OpenBreakState = {
   paidBreakMin?: number | null;
 };
 
-/**
- * Close a running pause at `at`, sending the minutes to the right bucket.
- * The kiosk used to push every running pause into totalBreakMin, so ending the
- * day from the tablet during a PAID break deducted it from paid time.
- */
+/** Close a running pause, sending its minutes to the right bucket. */
 export function closeRunningBreak(open: OpenBreakState, at: TimeLike): {
   totalBreakMin: number;
   paidBreakMin: number;

@@ -1,17 +1,6 @@
-// Statutory payroll parameters, by calendar year.
-//
-// These change every January (indexation, new maximums, rate cuts). They live
-// here, in one dated table, so the yearly update is a single edit and never a
-// hunt through the calculation code.
-//
-// Sources to check each January:
-//   - Federal: CRA T4127 "Payroll Deductions Formulas"
-//   - Quebec:  Revenu Quebec TP-1015.F "Formulas to Calculate Source Deductions"
-//   - QPP / QPIP / EI maximums: Retraite Quebec, RQAP, Canada Employment Insurance
-//
-// A year with no table of its own falls back to the most recent one and is
-// flagged `provisional`: the engine still runs, but the UI warns that the
-// stubs must be checked against the official tables before the money goes out.
+// Statutory payroll parameters by year; update every January.
+// Sources: CRA T4127, Revenu Quebec TP-1015.F, Retraite Quebec, RQAP, EI.
+// A year with no table falls back to the latest and is flagged `provisional`.
 
 export type TaxBracket = { upTo: number | null; rate: number };
 
@@ -87,9 +76,7 @@ const RATES: PayrollRates[] = [
     qpip: { rate: 0.00494, maxInsurable: 98_000 },
   },
   {
-    // Published figures. Federal indexation 2.0%, Quebec 2.05%. The lowest
-    // federal rate is 14% for a full year (it was cut mid-2025), and both the
-    // QPP and QPIP rates went down.
+    // Published. Federal indexation 2.0%, Quebec 2.05%; QPP and QPIP rates down.
     year: 2026,
     provisional: false,
     federal: {
@@ -116,8 +103,7 @@ const RATES: PayrollRates[] = [
       basicPersonalAmount: 18_952,
     },
     qpp: {
-      // 6.3% = 5.3% base + 1.0% additional. Max employee contribution
-      // (74 600 - 3 500) x 6.3% = 4 479.30 $.
+      // 6.3% = 5.3% base + 1.0% additional; max 4 479,30 $.
       maxPensionable: 74_600,
       basicExemption: 3_500,
       rate: 0.063,

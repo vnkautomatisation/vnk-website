@@ -1,9 +1,5 @@
-// NextAuth v5. Four ways in: admin password, admin passkey, client portal
-// password, and SSO (Google / Microsoft Entra) when the env vars are set.
-//
-// A dev-only bypass lives at the bottom of this file. It cannot engage in
-// production: it needs NODE_ENV !== "production" AND an explicit
-// AUTH_DEV_BYPASS=1. Everything else here is the real authentication.
+// NextAuth v5: admin password, passkey, client portal, and SSO when configured.
+// A dev-only bypass sits at the bottom; it cannot engage in production.
 import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
@@ -538,12 +534,8 @@ export type AppSessionUser = {
 export type AppSession = { user: AppSessionUser; expires: string };
 
 // ─── Development bypass ─────────────────────────────────────────────────────
-// Signs you in as the first active admin without a password. Two conditions,
-// both required, so it can never be reached from a deployed build:
-//   - NODE_ENV is not "production"
-//   - AUTH_DEV_BYPASS=1 is set explicitly
-// Set it in .env.local to work without logging in; remove it to test the real
-// sign-in flow.
+// Signs you in as the first active admin. Needs NODE_ENV != production AND
+// AUTH_DEV_BYPASS=1; drop the line from .env.local to test the real sign-in.
 const DEV_BYPASS =
   process.env.NODE_ENV !== "production" && process.env.AUTH_DEV_BYPASS === "1";
 

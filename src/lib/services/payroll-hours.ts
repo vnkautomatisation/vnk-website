@@ -1,7 +1,4 @@
-// How a period's approved punches turn into paid hour buckets.
-//
-// Kept pure and dependency-free so the money math is testable: this is the one
-// place that decides what gets paid at 1x, 1.5x and 2x.
+// Approved punches -> paid hour buckets. Pure, so the money math is testable.
 
 export type EntryForPayroll = {
   clockIn: Date;
@@ -22,19 +19,11 @@ export type MinuteSplit = {
   holiday: number;
   vacation: number;
   sick: number;
-  /**
-   * Every worked entry, holidays included: hours worked on a holiday still
-   * count toward the weekly threshold. They just never get the 1.5x on top of
-   * their 2x — `paidHours` caps overtime at the non-holiday minutes.
-   */
+  /** Every worked entry, holidays included: they count toward the threshold. */
   overtimeBase: EntryForPayroll[];
 };
 
-/**
- * A @db.Date column (pay period bounds, holidays) comes back at UTC midnight.
- * Reading it with the local getters lands a day early anywhere west of
- * Greenwich; this returns its real calendar day as a local Date.
- */
+/** A @db.Date arrives at UTC midnight; this is its calendar day, local. */
 export function storedDayToLocal(d: Date): Date {
   return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
@@ -94,17 +83,7 @@ export function grossPay(hours: PaidHours, hourlyRate: number): number {
 
 // ── Overtime ───────────────────────────────────────────────────────────────
 
-/**
- * Overtime minutes over a set of entries, week by week.
- *
- * Two rules meet here: hours worked on a paid holiday count toward the weekly
- * threshold like any other worked hour, but they are already paid double and
- * never take the 1.5x on top — so the overtime of a week is capped at its
- * non-holiday minutes.
- *
- * `weekKeyOf` decides where a week starts (the project week runs Sunday to
- * Saturday); it is passed in to keep this module dependency-free.
- */
+/** Weekly overtime, capped at the week's non-holiday minutes. */
 export function overtimeMinutes(
   entries: EntryForPayroll[],
   weekKeyOf: (d: Date) => string,
@@ -128,16 +107,11 @@ export function overtimeMinutes(
   return total;
 }
 
-// ── Paid holiday NOT worked ─────────────────────────────────────────────────
-// LNT art. 62: the indemnity equals 1/20 of the wages earned during the 4
-// complete weeks of pay preceding the week of the holiday, overtime excluded.
+// ── Paid holiday NOT worked: LNT art. 62, 1/20 of the 4 preceding weeks ──
 
 export const HOLIDAY_INDEMNITY_DIVISOR = 20;
 
-/**
- * Regular (non-overtime) minutes per week, capped at the weekly threshold so
- * overtime never inflates the indemnity.
- */
+/** Regular minutes per week, capped so overtime never inflates the indemnity. */
 export function regularMinutesByWeek(
   entries: EntryForPayroll[],
   weekKeyOf: (d: Date) => string,

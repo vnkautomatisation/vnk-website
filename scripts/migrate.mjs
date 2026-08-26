@@ -1,12 +1,5 @@
-// Schema migrations, applied automatically at start-up.
-//
-// This project uses `prisma db push` rather than a migrations folder, so the
-// columns added by a deploy have to be created explicitly. Every statement
-// here is idempotent, so running it on every boot costs one round trip and
-// nothing else. Wired into `npm start`: an unreachable database or a failed
-// ALTER stops the boot rather than serving requests against a stale schema.
-//
-// Run it by hand with: node scripts/migrate.mjs
+// Idempotent schema migrations, run by `npm start` before the server boots.
+// This project uses `prisma db push`, so new columns are created explicitly here.
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient({ log: ["warn", "error"] });
@@ -19,8 +12,7 @@ async function timeclockMergeMeta() {
       ADD COLUMN IF NOT EXISTS merged_gap_min INTEGER,
       ADD COLUMN IF NOT EXISTS restored_from_snapshot_id INTEGER
   `);
-  // Backfill from the legacy "[FUSION de N pointages]" / "[RESTAURÉ]" prefixes,
-  // then strip them: `notes` belongs to the employee.
+  // Backfill from the legacy note prefixes, then strip them.
   const rows = await prisma.$queryRawUnsafe(`
     SELECT id, notes FROM time_clocks
     WHERE notes LIKE '[FUSION%' OR notes LIKE '[RESTAUR%'

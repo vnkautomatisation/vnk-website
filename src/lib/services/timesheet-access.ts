@@ -1,12 +1,5 @@
-// Access rules for endpoints that take an ?adminId.
-//
-// Kept dependency-free on purpose: the refusal paths cannot be reached from a
-// founder session, so they are only ever exercised by tests, and a module that
-// pulls in Prisma cannot be imported by one.
-//
-// These rules used to be re-implemented in each route with three different
-// behaviours: one enforced excludeSelfId, the others did not; one refused
-// reading your own entries while the others allowed it.
+// Access rules for endpoints taking an ?adminId.
+// Dependency-free: the refusal paths are only ever reached by the tests.
 
 /** The part of TimesheetScope the decision actually depends on. */
 export type ScopeLike = {
