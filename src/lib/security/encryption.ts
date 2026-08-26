@@ -12,10 +12,12 @@ const IV_LENGTH = 12;
 const KEY_LENGTH = 32;
 
 function getKey(): Buffer {
-  const hex = process.env.ENCRYPTION_KEY;
+  // Falls back to CREDENTIALS_ENCRYPTION_KEY, the key actually configured
+  // in this project. Without it this module always threw.
+  const hex = process.env.ENCRYPTION_KEY || process.env.CREDENTIALS_ENCRYPTION_KEY;
   if (!hex) {
     throw new Error(
-      "ENCRYPTION_KEY non configurée. Générer avec : node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+      "ENCRYPTION_KEY (ou CREDENTIALS_ENCRYPTION_KEY) non configurée. Générer avec : node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
     );
   }
   const buf = Buffer.from(hex, "hex");

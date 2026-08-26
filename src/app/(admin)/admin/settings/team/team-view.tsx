@@ -1845,6 +1845,7 @@ export function TeamView({
         initialTab={userDialog.initialTab}
         roles={roles}
         positions={positions}
+        knownDepartments={users.map((u) => u.department ?? "").filter(Boolean)}
         onSaved={() => router.refresh()}
       />
       <RoleDialog

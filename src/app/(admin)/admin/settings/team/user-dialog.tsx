@@ -33,7 +33,7 @@ function generatePassword(): string {
 
 export function UserDialog({
   open, onOpenChange, user, roles, positions, onSaved, initialTab = "info",
-  teams = [], allAdmins = [],
+  teams = [], allAdmins = [], knownDepartments = [],
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,6 +44,8 @@ export function UserDialog({
   initialTab?: Tab;
   teams?: Array<{ id: number; name: string }>;
   allAdmins?: Array<{ id: number; fullName: string | null; email: string }>;
+  /** Existing departments, to avoid "Production"/"production" duplicates. */
+  knownDepartments?: string[];
 }) {
   const mode: Mode = user ? "edit" : "create";
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -129,6 +131,15 @@ export function UserDialog({
       }
     }
   }, [open, user]);
+
+  // Departments already in use, plus those set on positions.
+  const departmentSuggestions = Array.from(
+    new Set(
+      [...knownDepartments, ...positions.map((p) => p.defaultDepartment ?? "")]
+        .map((d) => d.trim())
+        .filter(Boolean),
+    ),
+  ).sort((a, b) => a.localeCompare(b));
 
   // Auto-fill department & roleId quand on choisit un poste
   const handlePositionChange = (v: string) => {
@@ -589,8 +600,25 @@ export function UserDialog({
                       </SelectContent>
                     </Select>
                   </Field>
-                  <Field label="Département">
-                    <Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="Comptabilité" />
+                  <Field
+                    label="Département"
+                    hint={departmentSuggestions.length > 0
+                      ? "Choisissez un département existant ou saisissez-en un nouveau"
+                      : undefined}
+                  >
+                    <Input
+                      value={department}
+                      onChange={(e) => setDepartment(e.target.value)}
+                      placeholder="Comptabilité"
+                      list="vnk-departments"
+                      autoComplete="off"
+                    />
+                    {/* Existing departments are suggested from the first keystroke. */}
+                    <datalist id="vnk-departments">
+                      {departmentSuggestions.map((d) => (
+                        <option key={d} value={d} />
+                      ))}
+                    </datalist>
                   </Field>
                 </div>
               </FormSection>

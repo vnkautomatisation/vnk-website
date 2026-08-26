@@ -7,6 +7,7 @@ import {
   GraduationCap, BarChart, Award, MessageSquare, Megaphone, Cake,
   LogOut, FileBarChart, ScrollText, Laptop, CalendarRange,
   UsersRound, FolderOpen, Timer, Wrench, HeartPulse, Radio, Archive, BookOpen,
+  SlidersHorizontal,
 } from "lucide-react";
 import { ModuleSidebarNav, type NavSection } from "@/components/admin/module-sidebar-nav";
 
@@ -38,6 +39,7 @@ const SECTIONS: NavSection[] = [
     groupIcon: Timer,
     items: [
       { href: "/admin/employes/pointage", label: "Pointage", icon: Clock },
+      { href: "/admin/employes/pointage/parametres", label: "Paramètres pointage", icon: SlidersHorizontal },
       { href: "/admin/employes/codes-taches", label: "Codes de tâche", icon: Briefcase },
       { href: "/admin/employes/conges", label: "Congés", icon: CalendarDays },
       { href: "/admin/employes/conges/fenetres", label: "Fenêtres de sélection", icon: CalendarRange },
@@ -102,6 +104,7 @@ const HREF_DOMAIN: Record<string, string> = {
   "/admin/employes/documents/cahiers": "hr_documents",
   "/admin/employes/documents/bibliotheque": "hr_documents",
   "/admin/employes/politiques": "hr_documents",
+  "/admin/employes/pointage/parametres": "timeclock",
   "/admin/employes/codes-taches": "timeclock",
   "/admin/employes/conges/fenetres": "leaves",
   "/admin/employes/conges/politiques": "leaves",
