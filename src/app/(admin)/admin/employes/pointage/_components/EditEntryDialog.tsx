@@ -4,10 +4,11 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Pencil } from "lucide-react";
+import { Calendar, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { FormSection } from "@/components/admin/form-section";
 import { DurationPicker } from "@/components/admin/time-picker";
 import { updateTimeClockAction } from "@/app/actions/hr-timeclock";
 import type { Entry } from "../_types";
@@ -93,9 +94,8 @@ export function EditEntryDialog({
             </DialogDescription>
           </DialogHeader>
         </div>
-        <div className="p-5 space-y-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Jour & durée totale</Label>
+        <div className="p-5 space-y-5">
+          <FormSection icon={Calendar} title="Jour et durée totale">
             <DurationPicker
               date={date}
               durationMin={durationMin}
@@ -105,15 +105,14 @@ export function EditEntryDialog({
               Total : <span className="font-mono font-bold text-[#0F2D52]">{formattedDuration}</span>
               {" · "}début à {String(initialStartHM.h).padStart(2, "0")}:{String(initialStartHM.m).padStart(2, "0")}
             </p>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Notes (optionnel)</Label>
+          </FormSection>
+          <FormSection icon={FileText} title="Notes (optionnel)">
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Détail de la tâche…" />
-          </div>
+          </FormSection>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
-          <Button onClick={submit} disabled={pending}>{pending ? "..." : "Enregistrer"}</Button>
+          <Button onClick={submit} disabled={pending || durationMin <= 0}>{pending ? "..." : "Enregistrer"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -7,6 +7,7 @@
 // Appel via Railway cron :
 //   curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://<APP>.up.railway.app/api/cron/timeclock-reminders
 import { NextResponse } from "next/server";
+import { startOfWeek, endOfWeek } from "@/lib/week";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 
@@ -19,14 +20,6 @@ function authorize(req: Request): boolean {
   return header === `Bearer ${expected}`;
 }
 
-function startOfWeekMonday(d: Date): Date {
-  const n = new Date(d);
-  n.setHours(0, 0, 0, 0);
-  const day = n.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  n.setDate(n.getDate() + diff);
-  return n;
-}
 
 const SUBMITTABLE = new Set(["work", "meeting", "training"]);
 
@@ -179,7 +172,7 @@ export async function POST(req: Request) {
   const now = new Date();
   const dow = now.getDay(); // 0 dim, 1 lun, ..., 5 ven, 6 sam
   const hour = now.getHours();
-  const currentWeekStart = startOfWeekMonday(now);
+  const currentWeekStart = startOfWeek(now);
   const currentWeekEnd = new Date(currentWeekStart);
   currentWeekEnd.setDate(currentWeekEnd.getDate() + 7);
   const lastWeekStart = new Date(currentWeekStart);
@@ -192,9 +185,12 @@ export async function POST(req: Request) {
     result.reminded = await sendReminderUnsubmitted(currentWeekStart, currentWeekEnd);
   }
 
-  // Dimanche (0) : auto-submit semaine ecoulee (lundi -> dimanche actuels)
+  // Sunday (0): auto-submit the week that just ENDED (previous Sunday ->
+  // Saturday). Project week = Sunday -> Saturday, so on Sunday morning the
+  // current week has just started and the finished week is [lastWeekStart,
+  // currentWeekStart).
   if (dow === 0) {
-    result.autoSubmitted = await autoSubmitOpenWeeks(currentWeekStart, currentWeekEnd);
+    result.autoSubmitted = await autoSubmitOpenWeeks(lastWeekStart, currentWeekStart);
   }
 
   // Lundi (1) : alerte admin
@@ -202,9 +198,61 @@ export async function POST(req: Request) {
     result.adminAlerted = await notifyPendingApprovals();
   }
 
+  // Daily 48h escalation: entries submitted 48-72h ago and still unapproved
+  // -> renotify the direct manager (copy to super_admins when no manager).
+  // The [48h, 72h) window + daily run = one escalation per submission batch;
+  // older stragglers are covered by the Monday alert above.
+  {
+    const from72 = new Date(now.getTime() - 72 * 3600 * 1000);
+    const to48 = new Date(now.getTime() - 48 * 3600 * 1000);
+    const stale = await prisma.timeClock.findMany({
+      where: {
+        submittedAt: { gte: from72, lte: to48 },
+        approvedAt: null,
+        payStubId: null,
+      },
+      select: {
+        adminId: true,
+        admin: { select: { fullName: true, email: true, managerId: true } },
+      },
+      distinct: ["adminId"],
+      take: 100,
+    });
+    let escalated = 0;
+    for (const s of stale) {
+      const name = s.admin?.fullName ?? s.admin?.email ?? `Admin#${s.adminId}`;
+      const recipients: number[] = [];
+      if (s.admin?.managerId) {
+        recipients.push(s.admin.managerId);
+      } else {
+        const supers = await prisma.admin.findMany({
+          where: { customRole: { name: "super_admin" }, isActive: true },
+          select: { id: true },
+        });
+        recipients.push(...supers.map((x) => x.id));
+      }
+      await Promise.all(
+        recipients.map((rid) =>
+          prisma.notification.create({
+            data: {
+              recipientType: "admin",
+              recipientId: rid,
+              type: "warning",
+              title: "Heures soumises depuis plus de 48 h",
+              body: `Les heures de ${name} attendent votre approbation depuis plus de 48 h.`,
+              link: `/admin/employes/pointage?tab=to-approve&focus=${s.adminId}`,
+              icon: "clock",
+            },
+          }).catch(() => null),
+        ),
+      );
+      escalated++;
+    }
+    result.escalated48h = escalated;
+  }
+
   await logAudit({ action: "update", entityType: "cron_timeclock_reminders", changes: result }).catch(() => {});
 
-  // Reference pour eviter un warning sur lastWeekStart (lecture symbolique)
   result.lastWeekStart = lastWeekStart.toISOString();
 
   return NextResponse.json({ success: true, ...result, timestamp: now.toISOString() });

@@ -24,6 +24,13 @@ model Admin {
   isActive      Boolean   @default(true) @map("is_active")
   twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
   twoFactorSecret  String? @map("two_factor_secret")
+  // Kiosk punch PIN: hash identifies at the kiosk, AES copy lets the employee
+  // re-display it after a password check. Null = no kiosk access.
+  kioskPinHash  String?   @map("kiosk_pin_hash")
+  kioskPinEnc   String?   @map("kiosk_pin_enc")
+  kioskPinSetAt DateTime? @map("kiosk_pin_set_at")
+  // PIN request raised by the employee. Cleared when HR issues one.
+  kioskPinRequestedAt DateTime? @map("kiosk_pin_requested_at")
   avatarUrl     String?   @map("avatar_url")
   lastLogin     DateTime? @map("last_login")
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -424,6 +431,12 @@ model TimeClock {
   // Arreter : si pausedAt non null on ferme d'abord la pause
   pausedAt    DateTime? @map("paused_at")
   totalBreakMin Int     @default(0) @map("total_break_min")
+  // ── Two break kinds (QC norms): "meal" (unpaid, deducted = totalBreakMin)
+  // vs "paid" short break (tracked but NOT deducted from paid time).
+  // pausedKind tells which kind the RUNNING pause is; paidBreakMin cumulates
+  // the paid ones.
+  pausedKind  String?  @map("paused_kind")
+  paidBreakMin Int     @default(0) @map("paid_break_min")
   // ── Code de tache (obligatoire au clock-in, choisi parmi les codes du poste) ─
   jobCodeId   Int?     @map("job_code_id")
   // ── Flag : saisie manuelle (rattrapage) vs clock-in/out reel ──
@@ -431,6 +444,15 @@ model TimeClock {
   // n'est pas tracke. La regle "pause manquante CNESST" ne s'applique pas
   // aux jours uniquement composes de saisies manuelles.
   isManual    Boolean  @default(false) @map("is_manual")
+  // ── Geolocation captured at punch (optional, feature-flagged via settings).
+  // Best-effort: null when the browser denies/times out, unless geofencing
+  // is enabled (then required and validated server-side).
+  clockInLat  Float?   @map("clock_in_lat")
+  clockInLng  Float?   @map("clock_in_lng")
+  clockOutLat Float?   @map("clock_out_lat")
+  clockOutLng Float?   @map("clock_out_lng")
+  // ── Punch source: "web" (default) | "kiosk"
+  source      String   @default("web")
   approvedBy  Int?     @map("approved_by")
   approvedAt  DateTime? @map("approved_at")
   submittedAt DateTime? @map("submitted_at") // soumission par l'employé (revue à valider)

@@ -19,7 +19,7 @@ import {
 import type { Entry } from "../_types";
 import { ApprovedBadge } from "./ApprovedBadge";
 import { PanelEntryRow } from "./EntryRows";
-import { dayKey, fmtDuration } from "./_utils";
+import { dayKey, fmtDuration, capFirst } from "./_utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EmployeeWeekPanelRemote — fetch leger + EmployeeWeekPanel
@@ -201,7 +201,7 @@ export function EmployeeWeekPanel({
       const d = e.durationMin ?? 0;
       total += d;
       if (e.approvedAt) { approvedCount++; }
-      else if (e.clockOut) { toApproveCount++; }
+      else if (e.clockOut && e.submittedAt) { toApproveCount++; }
     }
     return { total, toApproveCount, approvedCount };
   }, [entries]);
@@ -219,7 +219,7 @@ export function EmployeeWeekPanel({
         const sorted = [...ents].sort((a, b) => new Date(a.clockIn).getTime() - new Date(b.clockIn).getTime());
         const dayTotal = sorted.reduce((s, e) => s + (e.durationMin ?? 0), 0);
         const allApproved = sorted.every((e) => e.approvedAt);
-        const anyPending = sorted.some((e) => !e.approvedAt && e.clockOut);
+        const anyPending = sorted.some((e) => e.submittedAt && !e.approvedAt && e.clockOut);
         return { date, entries: sorted, dayTotal, allApproved, anyPending };
       })
       .sort((a, b) => b.date.localeCompare(a.date));
@@ -236,7 +236,8 @@ export function EmployeeWeekPanel({
 
   // Toutes les ids pending de la semaine (utilise pour bouton footer alternatif)
   const allPendingIds = useMemo(
-    () => entries.filter((e) => !e.approvedAt && e.clockOut).map((e) => e.id),
+    // Workflow rule: only SUBMITTED entries are approvable.
+    () => entries.filter((e) => e.submittedAt && !e.approvedAt && e.clockOut).map((e) => e.id),
     [entries],
   );
 
@@ -292,9 +293,9 @@ export function EmployeeWeekPanel({
         {groupedDays.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Aucune entree sur la periode.</p>
         ) : groupedDays.map((day) => {
-          const dateLabel = new Date(day.date + "T12:00:00").toLocaleDateString("fr-CA", {
+          const dateLabel = capFirst(new Date(day.date + "T12:00:00").toLocaleDateString("fr-CA", {
             weekday: "long", day: "numeric", month: "long",
-          });
+          }));
           const isFocus = focusDate === day.date;
           return (
             <div
@@ -304,7 +305,7 @@ export function EmployeeWeekPanel({
               {/* Header du jour */}
               <div className="flex items-center justify-between gap-2 p-2.5 bg-muted/40 border-b">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-sm font-semibold capitalize">{dateLabel}</span>
+                  <span className="text-sm font-semibold">{dateLabel}</span>
                   {day.allApproved && day.entries.length > 0 && <ApprovedBadge strong />}
                   {day.anyPending && (
                     <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 bg-amber-50">

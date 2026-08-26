@@ -12,6 +12,10 @@ export type Entry = {
   notes: string | null;
   pausedAt: string | null;
   totalBreakMin: number;
+  /** Paid short-break minutes (tracked, NOT deducted). Optional: absent on stale payloads. */
+  paidBreakMin?: number;
+  /** Kind of the RUNNING pause: "meal" | "paid" | null. */
+  pausedKind?: string | null;
   jobCodeId: number | null;
   isManual: boolean;
   approvedBy: number | null;
@@ -22,6 +26,13 @@ export type Entry = {
   approver?: { fullName: string | null; email: string } | null;
   jobCode?: { id: number; code: string; label: string } | null;
   history?: HistoryEvent[];
+  /** GPS punch capture (optional feature, settings hr_pointage). */
+  clockInLat?: number | null;
+  clockInLng?: number | null;
+  clockOutLat?: number | null;
+  clockOutLng?: number | null;
+  /** "web" (default) | "kiosk" */
+  source?: string;
 };
 
 export type HistoryEvent = {

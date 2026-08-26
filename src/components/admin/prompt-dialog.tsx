@@ -21,6 +21,8 @@ type PromptOpts = CommonOpts & {
   defaultValue?: string;
   multiline?: boolean;
   required?: boolean;
+  /** Masked input (password confirmation). */
+  password?: boolean;
 };
 type ConfirmOpts = CommonOpts & {
   kind: "confirm";
@@ -118,6 +120,8 @@ export function PromptDialogHost() {
                   />
                 ) : (
                   <Input
+                    type={promptState.password ? "password" : "text"}
+                    autoComplete={promptState.password ? "current-password" : undefined}
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                     placeholder={promptState.placeholder}

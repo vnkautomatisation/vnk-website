@@ -4,14 +4,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
-  AlertCircle, AlertTriangle, History, ChevronLeft, ChevronRight,
-  Calendar as CalendarIcon, Clock as ClockIcon, Minus, Plus,
+  AlertCircle, AlertTriangle, History, ChevronLeft, ChevronRight, ChevronDown,
+  Calendar as CalendarIcon, Clock as ClockIcon, Minus, Plus, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
+import { FormSection } from "@/components/admin/form-section";
 import { manualTimeEntryAction } from "@/app/actions/hr-timeclock";
 import type { ManualEntry } from "../_types";
 import { formatShiftDuration } from "../_types";
@@ -33,10 +34,26 @@ function defaultManualEntry(presetDate?: string | null): ManualEntry {
   const now = new Date();
   // Date par défaut : presetDate si fourni, sinon AUJOURD'HUI (plus pertinent que hier)
   const target = presetDate ? new Date(presetDate + "T12:00:00") : now;
+  const isToday = sameDay(target, now);
+
+  // Defaults must be VALID on open (no premature error): for today, clamp the
+  // end time to "now" (floored to 5 min) when 17:00 is still in the future,
+  // and pull the start back if needed.
+  let startTime = "09:00";
+  let endTime = "17:00";
+  if (isToday) {
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    if (nowMin < 17 * 60) {
+      const endMin = Math.max(5, Math.floor(nowMin / 5) * 5);
+      endTime = `${pad(Math.floor(endMin / 60))}:${pad(endMin % 60)}`;
+      const startMin = Math.max(0, Math.min(9 * 60, endMin - 60));
+      startTime = `${pad(Math.floor(startMin / 60))}:${pad(startMin % 60)}`;
+    }
+  }
   return {
     date: toISO(target),
-    startTime: "09:00",
-    endTime: "17:00",
+    startTime,
+    endTime,
     category: "work",
     notes: "",
   };
@@ -54,9 +71,15 @@ export function ManualEntryDialog({
 }) {
   const [entry, setEntry] = useState<ManualEntry>(() => defaultManualEntry(presetDate));
   const [pending, setPending] = useState(false);
+  // Progressive disclosure: calendar collapsed by default (the day is almost
+  // always today or yesterday), so the dialog fits without scrolling.
+  const [calOpen, setCalOpen] = useState(false);
 
   useEffect(() => {
-    if (open) setEntry(defaultManualEntry(presetDate));
+    if (open) {
+      setEntry(defaultManualEntry(presetDate));
+      setCalOpen(false);
+    }
   }, [open, presetDate]);
 
   const ciDate = useMemo(() => {
@@ -105,6 +128,19 @@ export function ManualEntryDialog({
     setEntry((e) => ({ ...e, startTime: start, endTime: end }));
   };
 
+  // Raccourcis date + erreurs au niveau du champ (le rouge = erreur seulement)
+  const todayISO = toISO(new Date());
+  const yesterdayISO = useMemo(() => {
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    return toISO(y);
+  }, []);
+  const startInvalid = !!(ciDate && !isNaN(ciDate.getTime()) && ciDate > new Date());
+  const endInvalid = !!(
+    ciDate && coDate && !isNaN(ciDate.getTime()) && !isNaN(coDate.getTime())
+    && (coDate <= ciDate || coDate > new Date())
+  );
+
   const submit = async () => {
     if (!validation.ok || !ciDate || !coDate) return;
     setPending(true);
@@ -142,24 +178,56 @@ export function ManualEntryDialog({
           </DialogHeader>
         </div>
         <div className="px-4 sm:px-5 py-4 space-y-4 overflow-y-auto flex-1">
-          {/* ─── 1. Date ── mini calendrier inline ─────────────────── */}
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider font-bold text-[#0F2D52] flex items-center gap-1.5">
-              <CalendarIcon className="h-3.5 w-3.5" />1. Quel jour ?
-            </Label>
-            <InlineCalendar
-              value={entry.date}
-              onChange={(v) => setEntry((s) => ({ ...s, date: v }))}
-              max={toISO(new Date())}
-            />
-          </div>
+          {/* ─── 1. Date ── raccourcis + calendrier replié par défaut ── */}
+          <FormSection icon={CalendarIcon} title="1. Date">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Button
+                size="sm"
+                variant={entry.date === todayISO ? "default" : "outline"}
+                className={`h-7 text-xs ${entry.date === todayISO ? "bg-[#0F2D52] hover:bg-[#1a3a66] text-white" : ""}`}
+                onClick={() => { setEntry((s) => ({ ...s, date: todayISO })); setCalOpen(false); }}
+              >
+                Aujourd&apos;hui
+              </Button>
+              <Button
+                size="sm"
+                variant={entry.date === yesterdayISO ? "default" : "outline"}
+                className={`h-7 text-xs ${entry.date === yesterdayISO ? "bg-[#0F2D52] hover:bg-[#1a3a66] text-white" : ""}`}
+                onClick={() => { setEntry((s) => ({ ...s, date: yesterdayISO })); setCalOpen(false); }}
+              >
+                Hier
+              </Button>
+              <Button
+                size="sm"
+                variant={entry.date !== todayISO && entry.date !== yesterdayISO ? "default" : "outline"}
+                className={`h-7 text-xs ml-auto ${entry.date !== todayISO && entry.date !== yesterdayISO ? "bg-[#0F2D52] hover:bg-[#1a3a66] text-white" : ""}`}
+                onClick={() => setCalOpen((v) => !v)}
+                aria-expanded={calOpen}
+              >
+                <CalendarIcon className="h-3 w-3 mr-1.5" />
+                <span className="tabular-nums">
+                  {parseISO(entry.date).toLocaleDateString("fr-CA", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}
+                </span>
+                <ChevronDown className={`h-3 w-3 ml-1.5 transition-transform ${calOpen ? "rotate-180" : ""}`} />
+              </Button>
+            </div>
+            {calOpen && (
+              <InlineCalendar
+                value={entry.date}
+                onChange={(v) => { setEntry((s) => ({ ...s, date: v })); setCalOpen(false); }}
+                max={todayISO}
+              />
+            )}
+          </FormSection>
 
-          {/* ─── 2. Heures ── presets + steppers ──────────────────── */}
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider font-bold text-[#0F2D52] flex items-center gap-1.5">
-              <ClockIcon className="h-3.5 w-3.5" />2. De quelle heure à quelle heure ?
-            </Label>
-
+          {/* ─── 2. Heures ── presets + steppers + durée en direct ──── */}
+          <FormSection
+            icon={ClockIcon}
+            title="2. Heures"
+            action={duration ? (
+              <span className="font-mono text-sm font-bold text-[#0F2D52] tabular-nums">{duration}</span>
+            ) : undefined}
+          >
             {/* Presets rapides */}
             <div className="flex flex-wrap gap-1.5">
               {[
@@ -184,32 +252,33 @@ export function ManualEntryDialog({
               })}
             </div>
 
-            {/* Time pickers steppers */}
+            {/* Time pickers steppers — rouge réservé aux erreurs */}
             <div className="grid grid-cols-2 gap-3 pt-1">
               <TimeStepper
                 label="Début"
                 value={entry.startTime}
                 onChange={(v) => setEntry((s) => ({ ...s, startTime: v }))}
                 accent="emerald"
+                invalid={startInvalid}
               />
               <TimeStepper
                 label="Fin"
                 value={entry.endTime}
                 onChange={(v) => setEntry((s) => ({ ...s, endTime: v }))}
-                accent="red"
+                accent="navy"
+                invalid={endInvalid}
               />
             </div>
-          </div>
+          </FormSection>
 
           {/* ─── 3. Notes ─────────────────────────────────────────── */}
-          <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-bold text-[#0F2D52]">3. Notes (optionnel)</Label>
+          <FormSection icon={FileText} title="3. Notes (optionnel)">
             <Input
               value={entry.notes}
               onChange={(e) => setEntry((s) => ({ ...s, notes: e.target.value }))}
               placeholder="Détail de la tâche…"
             />
-          </div>
+          </FormSection>
 
           {/* ─── Validation + chevauchement ───────────────────────── */}
           {!validation.ok && (
@@ -249,7 +318,7 @@ export function ManualEntryDialog({
             disabled={pending || !validation.ok || !!overlap?.overlap}
             className="bg-[#0F2D52] hover:bg-[#15406d]"
           >
-            {pending ? "..." : "Ajouter"}
+            {pending ? "Ajout en cours…" : "Ajouter"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -266,7 +335,7 @@ const MONTHS_FR_SHORT = [
   "Janv", "Févr", "Mars", "Avril", "Mai", "Juin",
   "Juil", "Août", "Sept", "Oct", "Nov", "Déc",
 ];
-const DAYS_FR_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
+const DAYS_FR_SHORT = ["D", "L", "M", "M", "J", "V", "S"]; // dimanche-first (convention projet)
 
 type InlineMode = "days" | "months" | "years";
 
@@ -290,7 +359,7 @@ function InlineCalendar({
 
   const firstOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
   const startWeekday = firstOfMonth.getDay(); // 0=dim
-  const leadingBlanks = startWeekday === 0 ? 6 : startWeekday - 1;
+  const leadingBlanks = startWeekday; // dimanche-first : 0 blanc si le mois commence un dimanche
   const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
 
   const cells: Array<{ d: Date | null }> = [];
@@ -310,37 +379,10 @@ function InlineCalendar({
     return new Date(y, m, 1) > new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
   };
 
-  const setToday = () => {
-    const t = toISO(today);
-    if (maxDate && today > maxDate) return;
-    onChange(t);
-  };
-
-  const setYesterday = () => {
-    const y = new Date(today);
-    y.setDate(y.getDate() - 1);
-    onChange(toISO(y));
-  };
-
   return (
     <div className="rounded-md border bg-card overflow-hidden">
-      {/* Raccourcis rapides */}
-      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b bg-muted/30">
-        <ActionTooltip label="Sélectionner aujourd'hui" side="bottom">
-          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={setToday}>
-            Aujourd&apos;hui
-          </Button>
-        </ActionTooltip>
-        <ActionTooltip label="Sélectionner hier" side="bottom">
-          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={setYesterday}>
-            Hier
-          </Button>
-        </ActionTooltip>
-        <span className="ml-auto text-[11px] font-semibold text-[#0F2D52] tabular-nums">
-          {selectedDate.toLocaleDateString("fr-CA", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
-        </span>
-      </div>
-
+      {/* Les raccourcis Aujourd'hui/Hier + la date sélectionnée vivent dans la
+          section parente — ici uniquement la navigation et la grille. */}
       {/* Navigation : chevrons adaptés au mode + titre cliquable */}
       <div className="flex items-center justify-between px-2 py-1.5 border-b">
         <ActionTooltip label={mode === "days" ? "Mois précédent" : mode === "months" ? "Année précédente" : "Décennie précédente"} side="bottom">
@@ -492,16 +534,22 @@ function InlineCalendar({
 
 // ─── Time stepper : grande heure + boutons +/- ────────────────────────────
 function TimeStepper({
-  label, value, onChange, accent,
+  label, value, onChange, accent, invalid = false,
 }: {
   label: string;
   value: string; // "HH:MM"
   onChange: (v: string) => void;
-  accent: "emerald" | "red";
+  accent: "emerald" | "navy";
+  /** Red is reserved for real errors (end <= start, future). */
+  invalid?: boolean;
 }) {
   const [h, m] = value.split(":").map(Number);
-  const accentCls = accent === "emerald" ? "text-emerald-700" : "text-red-700";
-  const borderCls = accent === "emerald" ? "border-emerald-200" : "border-red-200";
+  const accentCls = invalid
+    ? "text-red-700"
+    : accent === "emerald" ? "text-emerald-700" : "text-[#0F2D52]";
+  const borderCls = invalid
+    ? "border-red-300"
+    : accent === "emerald" ? "border-emerald-200" : "border-[#0F2D52]/25";
 
   const adjust = (deltaMin: number) => {
     let total = h * 60 + m + deltaMin;
@@ -554,7 +602,7 @@ function TimeStepper({
               const v = parseInt(e.target.value, 10);
               if (!isNaN(v)) setHour(v);
             }}
-            className={`w-12 text-center font-mono text-2xl font-bold tabular-nums ${accentCls} bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/30 rounded`}
+            className={`w-12 text-center font-mono text-2xl font-bold tabular-nums ${accentCls} bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/30 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
           />
           <button type="button" onClick={() => setHour(h - 1)} className="h-5 w-7 rounded hover:bg-muted flex items-center justify-center">
             <ChevronLeft className="h-3 w-3 -rotate-90" />
@@ -576,7 +624,7 @@ function TimeStepper({
               const v = parseInt(e.target.value, 10);
               if (!isNaN(v)) setMinute(v);
             }}
-            className={`w-12 text-center font-mono text-2xl font-bold tabular-nums ${accentCls} bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/30 rounded`}
+            className={`w-12 text-center font-mono text-2xl font-bold tabular-nums ${accentCls} bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/30 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
           />
           <button type="button" onClick={() => setMinute(Math.max(0, m - 5))} className="h-5 w-7 rounded hover:bg-muted flex items-center justify-center">
             <ChevronLeft className="h-3 w-3 -rotate-90" />

@@ -94,7 +94,7 @@ export function TimesheetFilters({
           <Input
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
-            placeholder="Rechercher employé..."
+            placeholder="Rechercher nom, courriel, poste…"
             className="h-9 text-sm pl-7"
           />
           {searchValue && (

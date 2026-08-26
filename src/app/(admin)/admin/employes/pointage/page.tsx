@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { startOfWeek, endOfWeek } from "@/lib/week";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { TimeclockView } from "./timeclock-view";
@@ -10,14 +11,6 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Employés — Pointage" };
 
-function startOfWeekMonday(d: Date): Date {
-  const n = new Date(d);
-  n.setHours(0, 0, 0, 0);
-  const day = n.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  n.setDate(n.getDate() + diff);
-  return n;
-}
 
 // ─────────────────────────────────────────────────────────────
 // Scope hierarchique extrait dans src/lib/services/timesheet-scope.ts
@@ -65,10 +58,14 @@ export default async function PointagePage({
   // Utilise le service partage (meme logique reutilisee par l'export CSV).
   const scope = await getSharedTimesheetScope(adminId);
 
-  // Periode : defaut = semaine en cours (lundi -> aujourd'hui)
+  // Periode : defaut = semaine en cours (dimanche -> aujourd'hui)
   const now = new Date();
-  const defaultFrom = startOfWeekMonday(now);
-  const from = sp.from ? new Date(sp.from) : defaultFrom;
+  const defaultFrom = startOfWeek(now);
+  // "YYYY-MM-DD" seul serait parse en UTC (decale d'un jour en local) :
+  // on force minuit LOCAL pour que startOfWeek retombe sur le bon dimanche.
+  const from = sp.from
+    ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(sp.from) ? sp.from + "T00:00:00" : sp.from)
+    : defaultFrom;
   const to = sp.to ? new Date(sp.to + "T23:59:59") : now;
   const periodFrom = !isNaN(from.getTime()) ? from : defaultFrom;
   const periodTo = !isNaN(to.getTime()) ? to : now;
@@ -113,6 +110,7 @@ export default async function PointagePage({
         overview={null}
         byEmployee={{ items: [], total: 0 }}
         toApprove={{ items: [], total: 0 }}
+        approveQueue={{ rows: [], awaitingSubmission: [], upToDate: [], pastPendingCount: 0, pastPendingWeeks: 0, pastPendingLatestWeek: null }}
         employeesWithForgottenDays={[]}
       />
     );
@@ -155,9 +153,13 @@ export default async function PointagePage({
   if (teamFilter != null) adminFilterWhere.teamId = teamFilter;
   if (departmentFilter) adminFilterWhere.department = departmentFilter;
   if (q) {
+    // Recherche large : nom, courriel, titre libre ET nom du poste — taper
+    // "soudeur" doit sortir les soudeurs, pas seulement les noms.
     adminFilterWhere.OR = [
       { fullName: { contains: q, mode: "insensitive" } },
       { email: { contains: q, mode: "insensitive" } },
+      { title: { contains: q, mode: "insensitive" } },
+      { position: { name: { contains: q, mode: "insensitive" } } },
     ];
   }
 
@@ -283,13 +285,18 @@ export default async function PointagePage({
 
   const byAdmin = new Map<
     number,
-    Array<{ clockIn: Date; clockOut: Date | null; durationMin: number | null; category: string }>
+    Array<{ clockIn: Date; clockOut: Date | null; durationMin: number | null; category: string; totalBreakMin?: number; paidBreakMin?: number }>
   >();
   for (const e of allEntries) {
     if (!byAdmin.has(e.adminId)) byAdmin.set(e.adminId, []);
-    byAdmin
-      .get(e.adminId)!
-      .push({ clockIn: e.clockIn, clockOut: e.clockOut, durationMin: e.durationMin, category: e.category });
+    byAdmin.get(e.adminId)!.push({
+      clockIn: e.clockIn,
+      clockOut: e.clockOut,
+      durationMin: e.durationMin,
+      category: e.category,
+      totalBreakMin: e.totalBreakMin,
+      paidBreakMin: ((e as unknown as { paidBreakMin?: number }).paidBreakMin) ?? 0,
+    });
   }
   let compTotal = 0;
   let compOk = 0;
@@ -344,7 +351,7 @@ export default async function PointagePage({
     teamName: string | null;
     forgottenDays: string[]; // YYYY-MM-DD
   };
-  const weekStart = startOfWeekMonday(now);
+  const weekStart = startOfWeek(now);
   const weekEndExclusive = new Date(weekStart); weekEndExclusive.setDate(weekEndExclusive.getDate() + 7);
   // Liste des jours ouvres passes (lundi a hier ; aujourd'hui exclu)
   const workDaysBeforeToday: string[] = [];
@@ -621,6 +628,113 @@ export default async function PointagePage({
   // tronque -> on alerte l'UI.
   const reachedEntryCap = allEntries.length >= 5000 || filteredEntries.length >= 5000;
 
+  // ── Approval QUEUE (v2 "file de décisions") ──────────────────────
+  // One line per employee AWAITING A DECISION (submitted, unapproved) on the
+  // selected period. Unpaginated on purpose: the queue only contains people
+  // requiring action, which stays small even with 100+ employees.
+  const SUBMITTABLE = new Set(["work", "meeting", "training"]);
+  type QueueRow = {
+    adminId: number;
+    name: string;
+    email: string;
+    teamName: string | null;
+    pendingIds: number[];
+    pendingMin: number;
+    days: number;
+    weekTotalMin: number; // all closed work minutes (for the overtime badge)
+  };
+  const queueMap = new Map<number, QueueRow & { daySet: Set<string> }>();
+  const draftMap = new Map<number, { adminId: number; name: string; email: string; draftCount: number }>();
+  const weekTotals = new Map<number, number>();
+  for (const e of filteredEntries) {
+    if (!e.clockOut || !e.admin) continue;
+    const dur = e.durationMin ?? 0;
+    if (SUBMITTABLE.has(e.category)) {
+      weekTotals.set(e.adminId, (weekTotals.get(e.adminId) ?? 0) + dur);
+    }
+    if (e.submittedAt && !e.approvedAt) {
+      let row = queueMap.get(e.adminId);
+      if (!row) {
+        row = {
+          adminId: e.adminId,
+          name: e.admin.fullName || e.admin.email,
+          email: e.admin.email,
+          teamName: e.admin.team?.name ?? null,
+          pendingIds: [],
+          pendingMin: 0,
+          days: 0,
+          weekTotalMin: 0,
+          daySet: new Set<string>(),
+        };
+        queueMap.set(e.adminId, row);
+      }
+      row.pendingIds.push(e.id);
+      if (SUBMITTABLE.has(e.category)) row.pendingMin += dur;
+      const d = new Date(e.clockIn);
+      row.daySet.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
+    } else if (!e.submittedAt && !e.approvedAt && SUBMITTABLE.has(e.category)) {
+      // Draft awaiting employee submission
+      let dr = draftMap.get(e.adminId);
+      if (!dr) {
+        dr = { adminId: e.adminId, name: e.admin.fullName || e.admin.email, email: e.admin.email, draftCount: 0 };
+        draftMap.set(e.adminId, dr);
+      }
+      dr.draftCount++;
+    }
+  }
+  const approveQueueRows: QueueRow[] = Array.from(queueMap.values())
+    .map(({ daySet, ...row }) => ({ ...row, days: daySet.size, weekTotalMin: weekTotals.get(row.adminId) ?? 0 }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  // "Awaiting submission": drafts, excluding people already in the queue
+  // (mixed states stay in the queue — their drafts follow later).
+  const awaitingSubmission = Array.from(draftMap.values())
+    .filter((d) => !queueMap.has(d.adminId))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  // "Up to date": have entries in the period, nothing pending, nothing draft.
+  const seenAdmins = new Map<number, { name: string; email: string }>();
+  for (const e of filteredEntries) {
+    if (e.admin && !seenAdmins.has(e.adminId)) {
+      seenAdmins.set(e.adminId, { name: e.admin.fullName || e.admin.email, email: e.admin.email });
+    }
+  }
+  const upToDate = Array.from(seenAdmins.entries())
+    .filter(([id]) => !queueMap.has(id) && !draftMap.has(id))
+    .map(([id, v]) => ({ adminId: id, ...v }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  // Past weeks with submitted-unapproved hours BEFORE the selected period —
+  // the classic "forgotten week" failure. Cheap count + distinct week count.
+  const pastPendingEntries = await prisma.timeClock.findMany({
+    where: {
+      ...timeClockScopeWhere,
+      clockIn: { lt: periodFrom },
+      submittedAt: { not: null },
+      approvedAt: null,
+      payStubId: null,
+    },
+    select: { clockIn: true },
+    take: 500,
+  });
+  const pastWeekSet = new Set<string>();
+  let pastLatestWs: Date | null = null;
+  for (const e of pastPendingEntries) {
+    const ws = startOfWeek(e.clockIn);
+    pastWeekSet.add(ws.toISOString().slice(0, 10));
+    if (!pastLatestWs || ws > pastLatestWs) pastLatestWs = ws;
+  }
+  // Local YYYY-MM-DD (toISOString would shift the day across timezones)
+  const pastPendingLatestWeek = pastLatestWs
+    ? `${pastLatestWs.getFullYear()}-${String(pastLatestWs.getMonth() + 1).padStart(2, "0")}-${String(pastLatestWs.getDate()).padStart(2, "0")}`
+    : null;
+  const approveQueue = {
+    rows: approveQueueRows,
+    awaitingSubmission,
+    upToDate,
+    pastPendingCount: pastPendingEntries.length,
+    pastPendingWeeks: pastWeekSet.size,
+    pastPendingLatestWeek,
+  };
+
   return (
     <TimeclockView
       scope={{
@@ -650,6 +764,7 @@ export default async function PointagePage({
         forgottenThisWeekCount,
       }}
       employeesWithForgottenDays={employeesWithForgottenDays}
+      approveQueue={approveQueue}
       tab={tab}
       page={page}
       pageSize={pageSize}

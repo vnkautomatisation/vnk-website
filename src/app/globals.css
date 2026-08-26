@@ -137,12 +137,35 @@ html {
   html, body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
   }
-  html::-webkit-scrollbar,
-  body::-webkit-scrollbar {
-    display: none;
+
+  /* ── Scrollbar fine VNK GLOBALE ─────────────────────────────
+     Une seule apparence partout : page principale, dialogs, selects,
+     tableaux, panneaux. Pouce navy discret, piste transparente.
+     (Remplace l'ancien masquage total de la scrollbar de page.) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(15, 45, 82, 0.25) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(15, 45, 82, 0.25);
+    border-radius: 8px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(15, 45, 82, 0.4);
+  }
+
+  /* WCAG 2.2 (2.4.11) : un champ focalisé au clavier ne doit jamais rester
+     caché sous un footer sticky de dialog — marge de scroll automatique. */
+  .overflow-y-auto {
+    scroll-padding-block: 1rem 5.5rem;
   }
 
   /* Focus visible propre (accessibilité) */

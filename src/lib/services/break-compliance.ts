@@ -17,6 +17,10 @@ export type EntryForCompliance = {
   clockOut: Date | null;
   durationMin: number | null;
   category: string;
+  /** Cumulated Pause/Reprendre minutes (meal, unpaid). Current pause mechanism. */
+  totalBreakMin?: number;
+  /** Cumulated PAID short-break minutes — counts toward compliance too. */
+  paidBreakMin?: number;
 };
 
 const WORK_CATEGORIES = new Set(["work", "meeting", "training"]);
@@ -41,6 +45,11 @@ export function checkDayBreakCompliance(entries: EntryForCompliance[]): BreakCom
     const dur = e.durationMin ?? 0;
     if (WORK_CATEGORIES.has(e.category)) workMin += dur;
     else if (BREAK_CATEGORIES.has(e.category)) breakMin += dur;
+    // BOTH break mechanisms count: legacy "break" entries above, AND the
+    // Pause/Reprendre accumulators on work entries (meal + paid). Without
+    // this, employees using the pause button were wrongly flagged
+    // non-compliant.
+    breakMin += (e.totalBreakMin ?? 0) + (e.paidBreakMin ?? 0);
   }
   if (workMin >= 300 && breakMin < 30) {
     return {

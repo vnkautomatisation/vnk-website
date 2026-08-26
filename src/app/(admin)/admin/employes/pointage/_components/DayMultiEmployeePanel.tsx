@@ -18,7 +18,7 @@ import type { Entry } from "../_types";
 import { ApprovedBadge } from "./ApprovedBadge";
 import { PanelEntryRowWithHistory } from "./EntryRows";
 import { ManualEntryDialog } from "./ManualEntryDialog";
-import { fmtDuration } from "./_utils";
+import { fmtDuration, capFirst } from "./_utils";
 
 type AdminWithoutEntry = {
   id: number;
@@ -94,7 +94,7 @@ export function DayMultiEmployeePanel({
     let pending = 0, approved = 0, workMin = 0;
     for (const e of data.entries) {
       if (e.approvedAt) approved++;
-      else if (e.clockOut) pending++;
+      else if (e.clockOut && e.submittedAt) pending++;
       workMin += e.durationMin ?? 0;
     }
     return { totalEntries: data.entries.length, pending, approved, workMin };
@@ -102,7 +102,8 @@ export function DayMultiEmployeePanel({
 
   const allPendingIds = useMemo(() => {
     if (!data) return [];
-    return data.entries.filter((e) => !e.approvedAt && e.clockOut).map((e) => e.id);
+    // Workflow rule: only SUBMITTED entries are approvable.
+    return data.entries.filter((e) => e.submittedAt && !e.approvedAt && e.clockOut).map((e) => e.id);
   }, [data]);
 
   const handleApprove = useCallback(async (ids: number[]) => {
@@ -127,9 +128,9 @@ export function DayMultiEmployeePanel({
     reload();
   }, [onUnapprove, reload]);
 
-  const dayLabel = new Date(dayDate + "T12:00:00").toLocaleDateString("fr-CA", {
+  const dayLabel = capFirst(new Date(dayDate + "T12:00:00").toLocaleDateString("fr-CA", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
-  });
+  }));
 
   if (loading) {
     return (
@@ -168,8 +169,8 @@ export function DayMultiEmployeePanel({
             <div className="flex items-center gap-3">
               <Calendar className="h-5 w-5 shrink-0" />
               <div className="min-w-0">
-                <p className="text-base capitalize">Journée multi-employés</p>
-                <p className="text-xs text-white/70 font-normal capitalize">{dayLabel}</p>
+                <p className="text-base">Journée multi-employés</p>
+                <p className="text-xs text-white/70 font-normal">{dayLabel}</p>
               </div>
             </div>
           </SheetTitle>
@@ -208,7 +209,7 @@ export function DayMultiEmployeePanel({
           ) : (
             <div className="space-y-2">
               {groupedByAdmin.map((g) => {
-                const empPendingIds = g.entries.filter((e) => !e.approvedAt && e.clockOut).map((e) => e.id);
+                const empPendingIds = g.entries.filter((e) => e.submittedAt && !e.approvedAt && e.clockOut).map((e) => e.id);
                 const empTotal = g.entries.reduce((s, e) => s + (e.durationMin ?? 0), 0);
                 const allApproved = g.entries.length > 0 && g.entries.every((e) => e.approvedAt);
                 return (

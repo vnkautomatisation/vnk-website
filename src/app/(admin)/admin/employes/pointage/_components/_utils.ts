@@ -1,8 +1,6 @@
-// Helpers purs (pas de hooks, pas de JSX) extraits de timeclock-view.tsx
-// pour reutilisation par les composants extraits (_components/*).
-// Refactor #87 — extraction des panels & rows.
+// Pure helpers (no hooks, no JSX) shared by the extracted components.
 
-// Cle YYYY-MM-DD d'un timestamp ISO (utilise pour grouper par jour).
+// YYYY-MM-DD key of an ISO timestamp, used to group by day.
 export function dayKey(iso: string): string {
   const d = new Date(iso);
   const y = d.getFullYear();
@@ -11,22 +9,53 @@ export function dayKey(iso: string): string {
   return `${y}-${m}-${dd}`;
 }
 
-// Date a 00:00:00.000 locale (utilise par les presets de periode).
+// Local 00:00:00.000, used by the period presets.
 export function startOfDay(d: Date): Date {
   const n = new Date(d);
   n.setHours(0, 0, 0, 0);
   return n;
 }
 
-// Total agrege (en minutes) → "Xh MM" ; null/0 → "—".
+// Minutes -> "XhMM". Zero is explicit ("0h00"): a dash reads as missing data
+// in a KPI tile. "—" is reserved for null.
 export function fmtDuration(mins: number | null): string {
-  if (mins == null || mins <= 0) return "—";
+  if (mins == null) return "—";
+  if (mins <= 0) return "0h00";
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `${h}h${m.toString().padStart(2, "0")}`;
 }
 
-// Label CSS d'une categorie de pointage (badges).
+// Uppercase the FIRST letter only; CSS `capitalize` would also capitalize
+// the month, which is wrong in French.
+export function capFirst(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// 24h "HH:MM", the module's single time format (fr-CA gives "13 h 17").
+export function fmtTime(d: string | Date): string {
+  const t = typeof d === "string" ? new Date(d) : d;
+  return `${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
+}
+
+// Per-person avatar tint: stable hash of the name -> soft pastel palette.
+const AVATAR_PALETTE = [
+  "bg-sky-100 text-sky-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-violet-100 text-violet-700",
+  "bg-amber-100 text-amber-800",
+  "bg-rose-100 text-rose-700",
+  "bg-cyan-100 text-cyan-700",
+  "bg-indigo-100 text-indigo-700",
+  "bg-teal-100 text-teal-700",
+];
+export function avatarColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
+}
+
+// Badge label + colors per time entry category.
 export const CAT_LABEL: Record<string, { label: string; color: string }> = {
   work: { label: "Travail", color: "bg-emerald-100 text-emerald-700" },
   break: { label: "Pause", color: "bg-blue-100 text-blue-700" },

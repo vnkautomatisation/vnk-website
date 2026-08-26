@@ -10,7 +10,7 @@ import type { Entry } from "../_types";
 import { formatShiftDuration } from "../_types";
 import { ApprovedBadge } from "./ApprovedBadge";
 import { StatBox } from "./StatBox";
-import { CAT_LABEL, fmtDuration } from "./_utils";
+import { CAT_LABEL, fmtDuration, fmtTime, capFirst } from "./_utils";
 
 export function DayDetailPanel({
   adminName, date, workMin, breakMin, entries, onEdit,
@@ -22,9 +22,9 @@ export function DayDetailPanel({
   entries: Entry[];
   onEdit: (entry: Entry) => void;
 }) {
-  const dateLabel = new Date(date + "T12:00:00").toLocaleDateString("fr-CA", {
+  const dateLabel = capFirst(new Date(date + "T12:00:00").toLocaleDateString("fr-CA", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
-  });
+  }));
   return (
     <>
       <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-5">
@@ -34,7 +34,7 @@ export function DayDetailPanel({
               <Clock className="h-5 w-5" />
               <div>
                 <p className="text-base">Détails de la journée</p>
-                <p className="text-xs text-white/70 font-normal capitalize">{adminName} · {dateLabel}</p>
+                <p className="text-xs text-white/70 font-normal">{adminName} · {dateLabel}</p>
               </div>
             </div>
           </SheetTitle>
@@ -57,9 +57,9 @@ export function DayDetailPanel({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-mono tabular-nums">
-                        {new Date(e.clockIn).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
+                        {fmtTime(e.clockIn)}
                         {e.clockOut
-                          ? ` → ${new Date(e.clockOut).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}`
+                          ? ` → ${fmtTime(e.clockOut)}`
                           : " · en cours"}
                       </span>
                       <Badge className={`text-[9px] ${cat.color}`}>{cat.label}</Badge>

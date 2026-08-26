@@ -3,7 +3,7 @@
 // Chaque ligne est presentation pure : props + callbacks, aucune logique business.
 import {
   Clock, CheckCircle2, XCircle, Pencil, Trash2, Lock, Unlock, RotateCcw,
-  ChevronRight, AlertCircle, FileText, Send,
+  ChevronRight, AlertCircle, FileText, Send, MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import type { Entry } from "../_types";
 import { formatShiftDuration } from "../_types";
 import { ApprovedBadge } from "./ApprovedBadge";
 import { HistoryPopover } from "./HistoryPopover";
-import { CAT_LABEL, fmtDuration } from "./_utils";
+import { CAT_LABEL, fmtDuration, fmtTime, capFirst } from "./_utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PanelEntryRow — ligne d'entry dans l'EmployeeWeekPanel (revue admin).
@@ -30,15 +30,21 @@ export function PanelEntryRow({
   const cat = CAT_LABEL[entry.category] ?? { label: entry.category, color: "bg-gray-100 text-gray-700" };
   const start = new Date(entry.clockIn);
   const isApproved = !!entry.approvedAt;
-  const isPending = !isApproved && !!entry.clockOut;
+  const isSubmitted = !!entry.submittedAt;
+  // Workflow rule: only SUBMITTED entries are reviewable.
+  const isPending = !isApproved && !!entry.clockOut && isSubmitted;
+  const isDraft = !isApproved && !!entry.clockOut && !isSubmitted;
   const isOpen = !entry.clockOut;
   const isPaid = !!entry.payStubId;
-  // TODO: utiliser TimeClockHistory (event="rejected") plutôt que parser les notes.
-  // Le préfixe [REJET ...] est un fallback legacy depuis l'époque où on stockait
-  // le statut de rejet dans le texte libre. À supprimer une fois l'historique
-  // structuré 100% en place côté UI.
-  const isRejected = (entry.notes ?? "").startsWith("[REJET");
-  const rejectReason = isRejected ? (entry.notes ?? "").split("\n")[0].replace(/^\[REJET[^\]]+\]\s*/, "") : "";
+  // Rejected: structured history first (current flow), legacy [REJET notes
+  // prefix as fallback for old data. A rejected entry goes back to draft
+  // (submittedAt reset) until the employee resubmits.
+  const rejectEvent = (entry.history ?? []).find((h) => h.event === "rejected");
+  const isRejected =
+    !isApproved && !isSubmitted
+    && (rejectEvent != null || (entry.notes ?? "").startsWith("[REJET"));
+  const rejectReason = rejectEvent?.reason
+    ?? (isRejected ? (entry.notes ?? "").split("\n")[0].replace(/^\[REJET[^\]]+\]\s*/, "") : "");
 
   return (
     <div className="p-2.5 hover:bg-muted/30">
@@ -46,9 +52,9 @@ export function PanelEntryRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-xs font-mono tabular-nums">
-              {start.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
+              {fmtTime(start)}
               {entry.clockOut
-                ? ` → ${new Date(entry.clockOut).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}`
+                ? ` → ${fmtTime(entry.clockOut)}`
                 : " · en cours"}
             </span>
             <Badge className={`text-[9px] ${cat.color}`}>{cat.label}</Badge>
@@ -60,9 +66,14 @@ export function PanelEntryRow({
               </ActionTooltip>
             )}
             {isApproved && <ApprovedBadge />}
-            {isPending && !isRejected && (
+            {isPending && (
               <Badge variant="outline" className="text-[9px] text-amber-700 border-amber-300 bg-amber-50">
                 En attente
+              </Badge>
+            )}
+            {isDraft && !isRejected && (
+              <Badge variant="outline" className="text-[9px] text-slate-600 border-slate-300 bg-slate-50">
+                Brouillon (non soumis)
               </Badge>
             )}
             {isRejected && !isApproved && (
@@ -108,8 +119,11 @@ export function PanelEntryRow({
             <p className="text-[9px] text-muted-foreground tabular-nums">
               {entry.clockOut && <span>brut {formatShiftDuration(entry.clockIn, entry.clockOut)}</span>}
               {entry.totalBreakMin > 0 && (
-                <span className="text-amber-700"> · pause {fmtDuration(entry.totalBreakMin)}</span>
-              )}
+              <span className="text-amber-700"> · pause {fmtDuration(entry.totalBreakMin)}</span>
+            )}
+            {(entry.paidBreakMin ?? 0) > 0 && (
+              <span className="text-sky-700"> · pause payée {fmtDuration(entry.paidBreakMin ?? 0)}</span>
+            )}
             </p>
           )}
         </div>
@@ -145,17 +159,9 @@ export function PanelEntryRow({
             </>
           )}
           {isRejected && !isApproved && (
-            <ActionTooltip label="Approuver quand meme">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={pending}
-                onClick={onApprove}
-                className="h-7 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-              >
-                <CheckCircle2 className="h-3 w-3 mr-1" />Approuver quand meme
-              </Button>
-            </ActionTooltip>
+            <p className="text-[10px] text-muted-foreground italic">
+              En attente de re-soumission par l&apos;employé
+            </p>
           )}
           {isApproved && (
             <ActionTooltip label="Annuler l'approbation">
@@ -196,22 +202,67 @@ export function CompactEntryRow({
 }) {
   const cat = CAT_LABEL[entry.category] ?? { label: entry.category, color: "bg-gray-100 text-gray-700" };
   const start = new Date(entry.clockIn);
+  const isMerged = (entry.notes ?? "").startsWith("[FUSION");
+  // How many punches were assembled, so the range never reads as one punch.
+  const mergedCount = isMerged
+    ? Number(/\[FUSION de (\d+)/.exec(entry.notes ?? "")?.[1] ?? 0)
+    : 0;
+  // Show the gross span only when it adds up (gross - breaks = worked).
+  // Legacy merges bridged unrecorded gaps, so their bracket means nothing.
+  const grossMin = entry.clockOut
+    ? Math.round((new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / 60000)
+    : null;
+  const grossIsCoherent =
+    grossMin != null
+    && entry.durationMin != null
+    && Math.abs(grossMin - (entry.totalBreakMin ?? 0) - entry.durationMin) <= 1;
   return (
     <div className="flex items-center gap-3 px-3 py-2 hover:bg-muted/30">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-mono tabular-nums">
-            {start.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
+            {fmtTime(start)}
             {entry.clockOut
-              ? ` → ${new Date(entry.clockOut).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}`
+              ? ` → ${fmtTime(entry.clockOut)}`
               : " · en cours"}
           </span>
           <Badge className={`text-[10px] ${cat.color}`}>{cat.label}</Badge>
+          {isMerged && (
+            <ActionTooltip
+              label={grossIsCoherent
+                ? "Pointages fusionnés : la plage va du premier début à la dernière fin, et le temps non travaillé entre eux est compté en pause."
+                : "Fusion ancienne : le temps entre les pointages n'a pas été comptabilisé, ces heures de début et de fin ne sont pas fiables."}
+            >
+              <Badge variant="outline" className="text-[10px] text-violet-700 border-violet-300 bg-violet-50 cursor-help">
+                {mergedCount > 0 ? `Fusion de ${mergedCount}` : "Fusion"}
+              </Badge>
+            </ActionTooltip>
+          )}
           {entry.jobCode && (
             <ActionTooltip label={entry.jobCode.label}>
               <Badge variant="outline" className="font-mono text-[10px] cursor-help">
                 {entry.jobCode.code}
               </Badge>
+            </ActionTooltip>
+          )}
+          {entry.source === "kiosk" && (
+            <Badge variant="outline" className="text-[10px] text-slate-600 border-slate-300 bg-slate-50">
+              Kiosque
+            </Badge>
+          )}
+          {typeof entry.clockInLat === "number" && typeof entry.clockInLng === "number" && (
+            <ActionTooltip
+              label={`Position au punch : ${entry.clockInLat.toFixed(5)}, ${entry.clockInLng.toFixed(5)} — ouvrir dans Google Maps`}
+            >
+              <a
+                href={`https://www.google.com/maps?q=${entry.clockInLat},${entry.clockInLng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center text-slate-400 hover:text-[#0F2D52]"
+                aria-label="Position GPS au punch"
+              >
+                <MapPin className="h-3.5 w-3.5" />
+              </a>
             </ActionTooltip>
           )}
           {entry.approvedAt && <ApprovedBadge />}
@@ -220,9 +271,12 @@ export function CompactEntryRow({
               <Clock className="h-2.5 w-2.5 mr-1" />En attente d&apos;approbation
             </Badge>
           )}
-          {/* TODO: utiliser TimeClockHistory (event="rejected") plutôt que parser les notes. */}
-          {(entry.notes ?? "").startsWith("[REJET") && !entry.submittedAt && !entry.approvedAt && (
-            <ActionTooltip label={entry.notes ?? ""}>
+          {/* Rejet : historique structuré d'abord, préfixe [REJET legacy en fallback. */}
+          {!entry.submittedAt && !entry.approvedAt
+            && ((entry.history ?? []).some((h) => h.event === "rejected") || (entry.notes ?? "").startsWith("[REJET")) && (
+            <ActionTooltip
+              label={(entry.history ?? []).find((h) => h.event === "rejected")?.reason ?? entry.notes ?? "Pointage rejeté"}
+            >
               <Badge variant="outline" className="text-[10px] text-red-700 border-red-300 bg-red-50 cursor-help">
                 <XCircle className="h-2.5 w-2.5 mr-1" />Rejeté
               </Badge>
@@ -248,14 +302,17 @@ export function CompactEntryRow({
             ? fmtDuration(entry.durationMin)
             : formatShiftDuration(entry.clockIn, entry.clockOut)}
         </p>
-        {/* Detail brut + pause si applicable, pour transparence */}
+        {/* Gross span + breaks, for transparency. */}
         {(entry.totalBreakMin > 0 || (entry.durationMin != null && entry.clockOut)) && (
           <p className="text-[10px] text-muted-foreground tabular-nums">
-            {entry.clockOut && (
+            {entry.clockOut && grossIsCoherent && (
               <span>brut {formatShiftDuration(entry.clockIn, entry.clockOut)}</span>
             )}
             {entry.totalBreakMin > 0 && (
               <span className="text-amber-700"> · pause {fmtDuration(entry.totalBreakMin)}</span>
+            )}
+            {(entry.paidBreakMin ?? 0) > 0 && (
+              <span className="text-sky-700"> · pause payée {fmtDuration(entry.paidBreakMin ?? 0)}</span>
             )}
           </p>
         )}
@@ -365,8 +422,8 @@ export function EntryRow({
         <p className="text-xs text-muted-foreground mt-0.5">
           {date.toLocaleDateString("fr-CA", { weekday: "short", day: "numeric", month: "short" })}
           {" · "}
-          {date.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
-          {entry.clockOut ? ` → ${new Date(entry.clockOut).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}` : " · en cours"}
+          {fmtTime(date)}
+          {entry.clockOut ? ` → ${fmtTime(entry.clockOut)}` : " · en cours"}
         </p>
         {entry.notes && <p className="text-[11px] text-muted-foreground italic mt-0.5 truncate">{entry.notes}</p>}
         {entry.approvedAt && entry.approver && entry.approvedBy !== entry.adminId && (
@@ -388,6 +445,9 @@ export function EntryRow({
             )}
             {entry.totalBreakMin > 0 && (
               <span className="text-amber-700"> · pause {fmtDuration(entry.totalBreakMin)}</span>
+            )}
+            {(entry.paidBreakMin ?? 0) > 0 && (
+              <span className="text-sky-700"> · pause payée {fmtDuration(entry.paidBreakMin ?? 0)}</span>
             )}
           </p>
         )}
@@ -416,7 +476,7 @@ export function EntryRow({
               </Button>
             </ActionTooltip>
           )}
-          {isReviewer && !entry.approvedAt && entry.clockOut && (
+          {isReviewer && entry.submittedAt && !entry.approvedAt && entry.clockOut && (
             <>
               <ActionTooltip label="Approuver">
                 <Button size="icon" variant="ghost" className="h-6 w-6 text-emerald-600" onClick={onApprove} aria-label="Approuver">
@@ -462,9 +522,9 @@ export function DayAggregateRow({
   onReject: () => void;
 }) {
   void totalMin; // conserve dans la signature pour compatibilite (non utilise visuellement)
-  const dateLabel = new Date(date + "T12:00:00").toLocaleDateString("fr-CA", {
+  const dateLabel = capFirst(new Date(date + "T12:00:00").toLocaleDateString("fr-CA", {
     weekday: "short", day: "numeric", month: "short",
-  });
+  }));
   const initials = adminName.slice(0, 2).toUpperCase();
   // Travail "pur" = work uniquement (sans réunion ni formation)
   const pureWorkMin = Math.max(0, workMin - meetingMin - trainingMin);
@@ -534,7 +594,7 @@ export function DayAggregateRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium">{adminName}</span>
-          <span className="text-xs text-muted-foreground capitalize">{dateLabel}</span>
+          <span className="text-xs text-muted-foreground">{dateLabel}</span>
           {holidayName && (
             <Badge className="text-[10px] bg-cyan-100 text-cyan-800 border-cyan-300">
               Ferie - {holidayName}
@@ -624,9 +684,9 @@ export function PanelEntryRowWithHistory({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-xs font-mono tabular-nums">
-              {start.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
+              {fmtTime(start)}
               {entry.clockOut
-                ? ` → ${new Date(entry.clockOut).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}`
+                ? ` → ${fmtTime(entry.clockOut)}`
                 : " · en cours"}
             </span>
             <Badge className={`text-[9px] ${cat.color}`}>{cat.label}</Badge>

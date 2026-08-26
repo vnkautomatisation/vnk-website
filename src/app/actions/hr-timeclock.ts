@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
+import { startOfWeek } from "@/lib/week";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 
@@ -196,7 +197,9 @@ async function assertAccountActive(adminId: number): Promise<{ success: false; e
 // ── Clock-in ────────────────────────────────────────────────
 // REGLE : jobCodeId est OBLIGATOIRE si l'employe a au moins 1 code actif pour
 // son poste. Sinon (poste sans codes configures) on autorise pointer sans code.
-export async function clockInAction(input: { jobCodeId?: number; category?: string; notes?: string }): Promise<Result<{ id: number }>> {
+// Optional lat/lng: GPS capture (settings hr_pointage). When geofencing is
+// enabled, web punches outside the configured radius are rejected.
+export async function clockInAction(input: { jobCodeId?: number; category?: string; notes?: string; lat?: number; lng?: number }): Promise<Result<{ id: number }>> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
   const adminId = session.user.adminId!;
@@ -235,13 +238,27 @@ export async function clockInAction(input: { jobCodeId?: number; category?: stri
   }
 
   const cat = ["work", "break", "meeting", "training"].includes(input.category ?? "") ? input.category! : "work";
+
+  // Feature settings: rounding + geolocation + geofencing.
+  const { getTimeclockConfig, roundToStep, sanitizeCoords, geofenceError } =
+    await import("@/lib/services/timeclock-config");
+  const cfg = await getTimeclockConfig();
+  const coords = sanitizeCoords(input.lat, input.lng);
+  const fenceErr = geofenceError(cfg, coords, "web");
+  if (fenceErr) return { success: false, error: fenceErr };
+
   const tc = await prisma.timeClock.create({
     data: {
       adminId,
-      clockIn: new Date(),
+      clockIn: roundToStep(new Date(), cfg.roundingMin),
       category: cat,
       notes: input.notes?.slice(0, 500) ?? null,
       jobCodeId,
+      // Cast: columns may be missing from a stale generated client.
+      ...({
+        clockInLat: coords?.lat ?? null,
+        clockInLng: coords?.lng ?? null,
+      } as object),
     },
     select: { id: true },
   });
@@ -253,7 +270,7 @@ export async function clockInAction(input: { jobCodeId?: number; category?: stri
 // ── Clock-out ───────────────────────────────────────────────
 // Si une pause est en cours au moment du clockOut, on la ferme automatiquement
 // (ajoute la duree de la pause au total avant de calculer la duree travaillee).
-export async function clockOutAction(): Promise<Result<{ durationMin: number }>> {
+export async function clockOutAction(input?: { lat?: number; lng?: number }): Promise<Result<{ durationMin: number }>> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
   const adminId = session.user.adminId!;
@@ -268,7 +285,15 @@ export async function clockOutAction(): Promise<Result<{ durationMin: number }>>
   });
   if (!open) return { success: false, error: "Aucun pointage ouvert" };
 
-  const now = new Date();
+  // Feature settings: rounding + geolocation capture at clock-out.
+  const { getTimeclockConfig, roundToStep, sanitizeCoords } =
+    await import("@/lib/services/timeclock-config");
+  const cfg = await getTimeclockConfig();
+  const coords = sanitizeCoords(input?.lat, input?.lng);
+  // Rounded, but never before the (already rounded) clock-in.
+  const rawNow = new Date();
+  const rounded = roundToStep(rawNow, cfg.roundingMin);
+  const now = rounded.getTime() > open.clockIn.getTime() ? rounded : rawNow;
   // ── Verification PayPeriod : refus si paid (toujours) ou locked (sauf privileges) ──
   // Verifie a la fois la date d'ouverture du shift ET le moment present (fin).
   const isPrivileged = (await isFounderAdmin(adminId)) || (await isSuperAdmin(adminId));
@@ -277,10 +302,16 @@ export async function clockOutAction(): Promise<Result<{ durationMin: number }>>
   const ppNowErr = await checkPayPeriodForDate(now, isPrivileged);
   if (ppNowErr) return { success: false, error: ppNowErr };
 
-  // Ferme la pause en cours si necessaire
+  // Ferme la pause en cours si necessaire (repas = deduite, payee = tracee).
   let totalBreakMin = open.totalBreakMin;
+  let paidBreakMin = ((open as unknown as { paidBreakMin?: number }).paidBreakMin) ?? 0;
   if (open.pausedAt) {
-    totalBreakMin += Math.floor((now.getTime() - open.pausedAt.getTime()) / 60000);
+    const added = Math.floor((now.getTime() - open.pausedAt.getTime()) / 60000);
+    if (((open as unknown as { pausedKind?: string | null }).pausedKind) === "paid") {
+      paidBreakMin += added;
+    } else {
+      totalBreakMin += added;
+    }
   }
   const elapsedMin = Math.floor((now.getTime() - open.clockIn.getTime()) / 60000);
   const durationMin = Math.max(0, elapsedMin - totalBreakMin);
@@ -292,16 +323,82 @@ export async function clockOutAction(): Promise<Result<{ durationMin: number }>>
       durationMin,
       pausedAt: null,
       totalBreakMin,
+      // Cast: columns may be missing from a stale generated client.
+      ...({
+        paidBreakMin,
+        pausedKind: null,
+        clockOutLat: coords?.lat ?? null,
+        clockOutLng: coords?.lng ?? null,
+      } as object),
     },
   });
   await logAudit({ adminId, action: "update", entityType: "time_clock", entityId: open.id, changes: { closed: true, durationMin, totalBreakMin } });
+
+  // Real-time overtime alert: notify employee + direct manager the first
+  // time the weekly worked total crosses the 40h threshold (QC default).
+  try {
+    if (["work", "meeting", "training"].includes(open.category)) {
+      const OVERTIME_THRESHOLD_MIN = 40 * 60;
+      const ws = startOfWeek(now);
+      const weekEndExcl = new Date(ws);
+      weekEndExcl.setDate(weekEndExcl.getDate() + 7);
+      const agg = await prisma.timeClock.aggregate({
+        where: {
+          adminId,
+          clockIn: { gte: ws, lt: weekEndExcl },
+          clockOut: { not: null },
+          category: { in: ["work", "meeting", "training"] },
+        },
+        _sum: { durationMin: true },
+      });
+      const totalAfter = agg._sum.durationMin ?? 0;
+      const totalBefore = totalAfter - durationMin;
+      if (totalBefore < OVERTIME_THRESHOLD_MIN && totalAfter >= OVERTIME_THRESHOLD_MIN) {
+        const me2 = await prisma.admin.findUnique({
+          where: { id: adminId },
+          select: { fullName: true, email: true, managerId: true },
+        });
+        const hours = Math.floor(totalAfter / 60);
+        const mins = totalAfter % 60;
+        await prisma.notification.create({
+          data: {
+            recipientType: "admin",
+            recipientId: adminId,
+            type: "warning",
+            title: "Seuil de 40 h atteint cette semaine",
+            body: `Vous avez cumulé ${hours} h ${String(mins).padStart(2, "0")} cette semaine — les heures suivantes comptent en temps supplémentaire.`,
+            link: "/admin/mon-espace/pointage",
+            icon: "clock",
+          },
+        }).catch(() => null);
+        if (me2?.managerId) {
+          await prisma.notification.create({
+            data: {
+              recipientType: "admin",
+              recipientId: me2.managerId,
+              type: "warning",
+              title: "Temps supplémentaire dans votre équipe",
+              body: `${me2.fullName ?? me2.email} a dépassé 40 h cette semaine (${hours} h ${String(mins).padStart(2, "0")}).`,
+              link: "/admin/employes/pointage",
+              icon: "clock",
+            },
+          }).catch(() => null);
+        }
+      }
+    }
+  } catch {
+    /* best-effort: never block the clock-out */
+  }
+
   revalidateTimeclock();
   return { success: true, data: { durationMin } };
 }
 
 // ── Pause ──────────────────────────────────────────────────
-// L'employe met son pointage en pause. Le compteur s'arrete.
-export async function pauseClockAction(): Promise<Result> {
+// Two kinds (QC norms):
+//   - "meal" (default): UNPAID — deducted from worked time (totalBreakMin)
+//   - "paid": short coffee break — tracked but NOT deducted (paidBreakMin)
+export async function pauseClockAction(input?: { kind?: "meal" | "paid" }): Promise<Result> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
   const adminId = session.user.adminId!;
@@ -322,11 +419,15 @@ export async function pauseClockAction(): Promise<Result> {
   const ppErrP = await checkPayPeriodForDate(open.clockIn, isPrivilegedP);
   if (ppErrP) return { success: false, error: ppErrP };
 
+  const kind = input?.kind === "paid" ? "paid" : "meal";
   await prisma.timeClock.update({
     where: { id: open.id },
-    data: { pausedAt: new Date() },
+    data: {
+      pausedAt: new Date(),
+      ...({ pausedKind: kind } as object),
+    },
   });
-  await logAudit({ adminId, action: "update", entityType: "time_clock", entityId: open.id, changes: { paused: true } });
+  await logAudit({ adminId, action: "update", entityType: "time_clock", entityId: open.id, changes: { paused: true, kind } });
   revalidateTimeclock();
   return { success: true };
 }
@@ -356,14 +457,23 @@ export async function resumeClockAction(): Promise<Result<{ breakAddedMin: numbe
 
   const now = new Date();
   const breakAddedMin = Math.max(0, Math.floor((now.getTime() - open.pausedAt.getTime()) / 60000));
+  const runningKind =
+    ((open as unknown as { pausedKind?: string | null }).pausedKind) === "paid" ? "paid" : "meal";
   await prisma.timeClock.update({
     where: { id: open.id },
     data: {
       pausedAt: null,
-      totalBreakMin: open.totalBreakMin + breakAddedMin,
+      // Meal break: deducted. Paid break: tracked separately, not deducted.
+      ...(runningKind === "paid"
+        ? ({
+            paidBreakMin:
+              (((open as unknown as { paidBreakMin?: number }).paidBreakMin) ?? 0) + breakAddedMin,
+          } as object)
+        : { totalBreakMin: open.totalBreakMin + breakAddedMin }),
+      ...({ pausedKind: null } as object),
     },
   });
-  await logAudit({ adminId, action: "update", entityType: "time_clock", entityId: open.id, changes: { resumed: true, breakAddedMin } });
+  await logAudit({ adminId, action: "update", entityType: "time_clock", entityId: open.id, changes: { resumed: true, breakAddedMin, kind: runningKind } });
   revalidateTimeclock();
   return { success: true, data: { breakAddedMin } };
 }
@@ -555,6 +665,11 @@ export async function deleteTimeClockAction(input: { id: number }): Promise<Resu
   if (tc.adminId !== adminId) return { success: false, error: "Vous ne pouvez supprimer que vos propres entrées" };
   if (tc.approvedAt) return { success: false, error: "Approuvée — non modifiable" };
   if (tc.payStubId) return { success: false, error: "Déjà sur un bulletin de paie" };
+  // Workflow rule: submitted entries are locked — unlock request required
+  // (founder excepted).
+  if (tc.submittedAt && !(await isFounderAdmin(adminId))) {
+    return { success: false, error: "Entrée soumise — demandez un déblocage avant de supprimer" };
+  }
 
   await prisma.timeClock.delete({ where: { id: input.id } });
   await logAudit({ adminId, action: "delete", entityType: "time_clock", entityId: input.id });
@@ -579,7 +694,9 @@ async function createSnapshot(actorId: number, reason: string, payload: unknown)
 // ── Fusion des pointages "work" d'une même journée ──────────
 // Combine toutes les entrées non-approuvées/non-payées de la journée en une seule
 // (clockIn = plus tôt, clockOut = plus tard, durationMin = somme).
-export async function mergeDayTimeClockAction(input: { date: string }): Promise<Result<{ id: number; snapshotId: number }>> {
+export async function mergeDayTimeClockAction(
+  input: { date: string },
+): Promise<Result<{ id: number; snapshotId: number; groups: number; punches: number }>> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
   const adminId = session.user.adminId!;
@@ -596,20 +713,40 @@ export async function mergeDayTimeClockAction(input: { date: string }): Promise<
       clockOut: { not: null },
       approvedAt: null,
       payStubId: null,
+      // Server-side mirror of the UI rule: submitted entries are locked and
+      // cannot be silently un-submitted by a merge.
+      submittedAt: null,
       category: "work",
     },
     orderBy: { clockIn: "asc" },
   });
   if (entries.length < 2) return { success: false, error: "Rien à fusionner (besoin de 2+ pointages éligibles)" };
 
-  const earliestIn = entries.reduce((min, e) => (e.clockIn < min ? e.clockIn : min), entries[0].clockIn);
-  const latestOut = entries.reduce((max, e) => (e.clockOut! > max ? e.clockOut! : max), entries[0].clockOut!);
-  const totalMin = entries.reduce((s, e) => s + (e.durationMin ?? 0), 0);
-  const ids = entries.map((e) => e.id);
+  // A merged entry spans first start -> last end, so any gap inside it is time
+  // that was not worked. Only the mis-punch case (out and back in within
+  // minutes) may be bridged. Instead of refusing the whole day when one gap is
+  // too wide, split the punches into runs and merge each run separately.
+  const MAX_GAP_MIN = 15;
+  const runs: (typeof entries)[] = [];
+  let run: typeof entries = [entries[0]];
+  for (let i = 1; i < entries.length; i++) {
+    const gap = Math.round((entries[i].clockIn.getTime() - entries[i - 1].clockOut!.getTime()) / 60000);
+    if (gap <= MAX_GAP_MIN) run.push(entries[i]);
+    else { runs.push(run); run = [entries[i]]; }
+  }
+  runs.push(run);
+  const mergeable = runs.filter((r) => r.length >= 2);
+  if (mergeable.length === 0) {
+    return {
+      success: false,
+      error: `Aucun pointage à fusionner : ils sont tous séparés de plus de ${MAX_GAP_MIN} minutes. Les fusionner créerait des heures non travaillées.`,
+    };
+  }
 
-  // Snapshot avant action destructive
+  const allIds = mergeable.flatMap((r) => r.map((e) => e.id));
+  // Snapshot before a destructive action (undo restores every punch).
   const snapshotId = await createSnapshot(adminId, "merge_day", {
-    entries: entries.map((e) => ({
+    entries: mergeable.flat().map((e) => ({
       adminId: e.adminId,
       clockIn: e.clockIn.toISOString(),
       clockOut: e.clockOut?.toISOString() ?? null,
@@ -623,24 +760,47 @@ export async function mergeDayTimeClockAction(input: { date: string }): Promise<
     })),
   });
 
-  const created = await prisma.$transaction(async (tx) => {
-    await tx.timeClock.deleteMany({ where: { id: { in: ids } } });
-    return tx.timeClock.create({
-      data: {
-        adminId,
-        clockIn: earliestIn,
-        clockOut: latestOut,
-        durationMin: totalMin,
-        category: "work",
-        notes: `[FUSION de ${entries.length} pointages]`,
-      },
-      select: { id: true },
-    });
+  const createdIds = await prisma.$transaction(async (tx) => {
+    await tx.timeClock.deleteMany({ where: { id: { in: allIds } } });
+    const out: number[] = [];
+    for (const group of mergeable) {
+      const totalMin = group.reduce((s, e) => s + (e.durationMin ?? 0), 0);
+      // Gaps inside the bracket are recorded as break time, so
+      // gross - breaks = worked and the bracket stays truthful.
+      const gapMin = group.slice(1).reduce((s, e, i) => {
+        return s + Math.max(0, Math.round((e.clockIn.getTime() - group[i].clockOut!.getTime()) / 60000));
+      }, 0);
+      const jobCodeIds = Array.from(new Set(group.map((e) => e.jobCodeId).filter((x): x is number => x != null)));
+      const created = await tx.timeClock.create({
+        data: {
+          adminId,
+          clockIn: group[0].clockIn,
+          clockOut: group[group.length - 1].clockOut!,
+          durationMin: totalMin,
+          category: "work",
+          notes: `[FUSION de ${group.length} pointages]${gapMin > 0 ? ` — ${gapMin} min entre les pointages comptées en pause` : ""}`,
+          totalBreakMin: group.reduce((s, e) => s + (e.totalBreakMin ?? 0), 0) + gapMin,
+          jobCodeId: jobCodeIds.length === 1 ? jobCodeIds[0] : null,
+          ...({
+            paidBreakMin: group.reduce(
+              (s, e) => s + (((e as unknown as { paidBreakMin?: number }).paidBreakMin) ?? 0),
+              0,
+            ),
+          } as object),
+        },
+        select: { id: true },
+      });
+      out.push(created.id);
+    }
+    return out;
   });
 
-  await logAudit({ adminId, action: "update", entityType: "time_clock_bulk", changes: { merged: ids, into: created.id, snapshotId } });
+  await logAudit({ adminId, action: "update", entityType: "time_clock_bulk", changes: { merged: allIds, into: createdIds, snapshotId } });
   revalidateTimeclock();
-  return { success: true, data: { id: created.id, snapshotId } };
+  return {
+    success: true,
+    data: { id: createdIds[0], snapshotId, groups: createdIds.length, punches: allIds.length },
+  };
 }
 
 // ── Suppression des pointages courts (< maxMin minutes) d'une journée ──
@@ -707,10 +867,15 @@ export async function approveTimeClockAction(input: { ids: number[] }): Promise<
     return { success: false, error: ERR_NO_AUTHORITY };
   }
 
+  // Workflow rule: only SUBMITTED entries can be approved (drafts stay with
+  // the employee until they submit the week).
   const r = await prisma.timeClock.updateMany({
-    where: { id: { in: input.ids }, approvedAt: null, payStubId: null },
+    where: { id: { in: input.ids }, approvedAt: null, payStubId: null, submittedAt: { not: null } },
     data: { approvedBy: actorId, approvedAt: new Date() },
   });
+  if (r.count === 0) {
+    return { success: false, error: "Aucune entrée soumise à approuver — l'employé doit d'abord soumettre sa semaine" };
+  }
 
   // Notifier chaque employé dont le pointage vient d'être approuvé (batch)
   const approved = await prisma.timeClock.findMany({
@@ -757,24 +922,25 @@ export async function approveWeekTimeClockAction(input: { adminId: number; weekS
     return { success: false, error: ERR_NO_AUTHORITY };
   }
 
-  // Calcule la semaine courante (lundi -> dimanche) ou utilise weekStart explicite
-  const ref = input.weekStart ? new Date(input.weekStart) : new Date();
+  // Current week (Sunday -> Saturday, project convention) or explicit weekStart.
+  // Date-only strings are parsed as LOCAL midnight (UTC parse would shift a day).
+  const ref = input.weekStart
+    ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(input.weekStart) ? input.weekStart + "T00:00:00" : input.weekStart)
+    : new Date();
   if (isNaN(ref.getTime())) return { success: false, error: "Date invalide" };
-  const day = ref.getDay(); // 0 dim .. 6 sam
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  const monday = new Date(ref);
-  monday.setHours(0, 0, 0, 0);
-  monday.setDate(monday.getDate() + diffToMonday);
-  const sunday = new Date(monday);
-  sunday.setDate(sunday.getDate() + 7);
+  const weekStartD = startOfWeek(ref);
+  const weekEndExcl = new Date(weekStartD);
+  weekEndExcl.setDate(weekEndExcl.getDate() + 7);
 
   const targets = await prisma.timeClock.findMany({
     where: {
       adminId: input.adminId,
-      clockIn: { gte: monday, lt: sunday },
+      clockIn: { gte: weekStartD, lt: weekEndExcl },
       clockOut: { not: null },
       approvedAt: null,
       payStubId: null,
+      // Workflow rule: approval only on submitted entries.
+      submittedAt: { not: null },
     },
     select: { id: true },
   });
@@ -783,7 +949,7 @@ export async function approveWeekTimeClockAction(input: { adminId: number; weekS
     const totalThisWeek = await prisma.timeClock.count({
       where: {
         adminId: input.adminId,
-        clockIn: { gte: monday, lt: sunday },
+        clockIn: { gte: weekStartD, lt: weekEndExcl },
         clockOut: { not: null },
       },
     });
@@ -880,6 +1046,9 @@ export async function rejectTimeClockAction(input: { id: number; reason: string 
   const tc = await prisma.timeClock.findUnique({ where: { id: input.id } });
   if (!tc) return { success: false, error: "Introuvable" };
   if (tc.payStubId) return { success: false, error: "Déjà sur un bulletin — débloquer le bulletin d'abord" };
+  if (!tc.submittedAt && !tc.approvedAt) {
+    return { success: false, error: "Entrée non soumise — rien à rejeter (brouillon de l'employé)" };
+  }
   if (!(await canReviewTargets(actorId, [tc.adminId]))) {
     return { success: false, error: "Vous ne pouvez pas rejeter vos propres heures" };
   }
@@ -971,6 +1140,10 @@ export async function rejectManyTimeClockAction(
   const paid = targets.filter((t) => t.payStubId != null);
   if (paid.length > 0) {
     return { success: false, error: "Une ou plusieurs entrées sont déjà sur un bulletin de paie — non rejetables" };
+  }
+  // Workflow rule: drafts (never submitted) cannot be rejected.
+  if (targets.every((t) => !t.submittedAt && !t.approvedAt)) {
+    return { success: false, error: "Aucune entrée soumise dans la sélection — rien à rejeter" };
   }
 
   const targetAdminIds = Array.from(new Set(targets.map((t) => t.adminId)));
@@ -1082,6 +1255,13 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
     };
   }
 
+  // Workflow rule (server-side mirror of the UI padlock): once SUBMITTED, the
+  // owner can no longer edit directly — they must go through an unlock
+  // request. Admin override and founder bypass.
+  if (tc.submittedAt && isOwner && !isAdminOverride && !isFounder) {
+    return { success: false, error: "Entrée soumise — demandez un déblocage pour la modifier" };
+  }
+
   // Construire le nouvel etat
   const newCi = parsed.data.clockIn ? new Date(parsed.data.clockIn) : tc.clockIn;
   const newCo = parsed.data.clockOut === undefined
@@ -1155,6 +1335,16 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
       // Si admin OU founder modifie une entrée approuvée, on retire l'approbation
       // (passage en "En attente" → re-validation requise)
       ...(willUnapprove ? { approvedAt: null, approvedBy: null } : {}),
+      // Editing the TIMES redefines the entry as a net duration: the old
+      // accumulated breaks no longer describe it — reset them so the row
+      // stays coherent (durée = fin − début − pauses).
+      ...(parsed.data.clockIn !== undefined || parsed.data.clockOut !== undefined
+        ? {
+            totalBreakMin: 0,
+            pausedAt: null,
+            ...({ paidBreakMin: 0, pausedKind: null } as object),
+          }
+        : {}),
     },
   });
 
@@ -1205,15 +1395,6 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
 // crees automatiquement par le workflow conges et n'ont pas besoin d'etre soumis.
 const submitWeekSchema = z.object({ weekStart: z.string().optional() });
 
-function startOfWeekMondayDate(d: Date): Date {
-  const n = new Date(d);
-  n.setHours(0, 0, 0, 0);
-  const day = n.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  n.setDate(n.getDate() + diff);
-  return n;
-}
-
 export async function submitWeekTimeClocksAction(
   input: z.infer<typeof submitWeekSchema>,
 ): Promise<Result<{ submitted: number; workMin: number; breakMin: number; leaveMin: number }>> {
@@ -1225,7 +1406,7 @@ export async function submitWeekTimeClocksAction(
 
   const ref = parsed.data.weekStart ? new Date(parsed.data.weekStart) : new Date();
   if (isNaN(ref.getTime())) return { success: false, error: "Date invalide" };
-  const weekStart = startOfWeekMondayDate(ref);
+  const weekStart = startOfWeek(ref);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 7);
 
@@ -1349,19 +1530,30 @@ export async function requestEditTimeClockAction(
     select: { id: true },
   });
 
-  const supers = await prisma.admin.findMany({
-    where: { customRole: { name: "super_admin" }, isActive: true },
-    select: { id: true },
+  // Org-chart routing: notify the DIRECT MANAGER first (same rule as the
+  // weekly submission); fallback to super_admins only when no manager is set.
+  const me = await prisma.admin.findUnique({
+    where: { id: adminId },
+    select: { fullName: true, email: true, managerId: true },
   });
-  const me = await prisma.admin.findUnique({ where: { id: adminId }, select: { fullName: true, email: true } });
   const meName = me?.fullName || me?.email || `Admin#${adminId}`;
   const firstDate = entries[0].clockIn.toLocaleDateString("fr-CA");
+  const recipientIds: number[] = [];
+  if (me?.managerId) {
+    recipientIds.push(me.managerId);
+  } else {
+    const supers = await prisma.admin.findMany({
+      where: { customRole: { name: "super_admin" }, isActive: true },
+      select: { id: true },
+    });
+    recipientIds.push(...supers.map((s) => s.id));
+  }
   await Promise.all(
-    supers.map((s) =>
+    recipientIds.map((rid) =>
       prisma.notification.create({
         data: {
           recipientType: "admin",
-          recipientId: s.id,
+          recipientId: rid,
           type: "info",
           title: "Demande de modification de pointage",
           body: `${meName} demande à modifier sa semaine du ${firstDate} · Raison : ${parsed.data.reason.slice(0, 120)}`,
@@ -1529,12 +1721,18 @@ export async function forceClockOutAction(input: { adminId: number; when?: strin
   const ppErr = await checkPayPeriodForDate(closeAt, isPrivileged);
   if (ppErr) return { success: false, error: ppErr };
 
-  // Calcule la duree nette : (closeAt - clockIn) - totalBreakMin (en fermant
-  // la pause en cours si pausedAt != null).
+  // Calcule la duree nette : (closeAt - clockIn) - pauses repas (en fermant
+  // la pause en cours selon son type).
   const elapsedMin = Math.floor((closeAt.getTime() - open.clockIn.getTime()) / 60000);
   let totalBreakMin = open.totalBreakMin;
+  let paidBreakMin = ((open as unknown as { paidBreakMin?: number }).paidBreakMin) ?? 0;
   if (open.pausedAt) {
-    totalBreakMin += Math.floor((closeAt.getTime() - open.pausedAt.getTime()) / 60000);
+    const added = Math.floor((closeAt.getTime() - open.pausedAt.getTime()) / 60000);
+    if (((open as unknown as { pausedKind?: string | null }).pausedKind) === "paid") {
+      paidBreakMin += added;
+    } else {
+      totalBreakMin += added;
+    }
   }
   const durationMin = Math.max(0, elapsedMin - totalBreakMin);
 
@@ -1546,6 +1744,7 @@ export async function forceClockOutAction(input: { adminId: number; when?: strin
       durationMin,
       pausedAt: null,
       totalBreakMin,
+      ...({ paidBreakMin, pausedKind: null } as object),
     },
   });
 
@@ -1779,4 +1978,301 @@ export async function notifyForgottenDaysAction(
   });
 
   return { success: true, data: { notified: true } };
+}
+
+// ── Remind an employee to SUBMIT their week (approval queue v2) ────
+// Sends a notification asking the employee to submit their draft hours.
+// Scope-checked like every review action.
+export async function remindSubmitWeekAction(input: { adminId: number }): Promise<Result> {
+  const actorId = await requirePayrollWrite();
+  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!(await assertCanReviewAdmin(actorId, input.adminId))) {
+    return { success: false, error: ERR_NO_AUTHORITY };
+  }
+  await prisma.notification.create({
+    data: {
+      recipientType: "admin",
+      recipientId: input.adminId,
+      type: "warning",
+      title: "Heures à soumettre",
+      body: "Vos heures de la semaine sont encore en brouillon — cliquez « Soumettre la semaine » pour les envoyer en validation.",
+      link: "/admin/mon-espace/pointage",
+      icon: "clock",
+    },
+  }).catch(() => null);
+  await logAudit({ adminId: actorId, action: "update", entityType: "time_clock", changes: { remind_submit: input.adminId } });
+  return { success: true };
+}
+
+// ── Time clock feature settings (HR) ────────────────────────
+// The 7 "hr_pointage" settings had no UI at all (DB-only edits). Written
+// through a dedicated action so the HR/payroll domain governs them instead
+// of the global settings.write permission.
+export async function updateTimeclockSettingsAction(input: {
+  roundingMin: number;
+  geolocEnabled: boolean;
+  geofenceEnabled: boolean;
+  geofenceLat: number | null;
+  geofenceLng: number | null;
+  geofenceRadiusM: number;
+  kioskEnabled: boolean;
+}): Promise<Result> {
+  const actorId = await requirePayrollWrite();
+  if (!actorId) return { success: false, error: "Non autorisé" };
+
+  if (![0, 5, 10, 15].includes(input.roundingMin)) {
+    return { success: false, error: "Arrondi invalide" };
+  }
+  if (input.geofenceEnabled) {
+    if (input.geofenceLat === null || input.geofenceLng === null) {
+      return { success: false, error: "Coordonnées requises pour activer le géorepérage" };
+    }
+    if (Math.abs(input.geofenceLat) > 90 || Math.abs(input.geofenceLng) > 180) {
+      return { success: false, error: "Coordonnées hors limites" };
+    }
+  }
+  const radius = Math.min(50000, Math.max(10, Math.round(input.geofenceRadiusM)));
+
+  const entries: Array<{ key: string; value: string; label: string }> = [
+    { key: "rounding_min", value: String(input.roundingMin), label: "Arrondi des punchs (minutes)" },
+    { key: "geoloc_enabled", value: String(input.geolocEnabled), label: "Capture GPS au punch" },
+    { key: "geofence_enabled", value: String(input.geofenceEnabled), label: "Géorepérage actif" },
+    { key: "geofence_lat", value: input.geofenceLat === null ? "" : String(input.geofenceLat), label: "Latitude du lieu de travail" },
+    { key: "geofence_lng", value: input.geofenceLng === null ? "" : String(input.geofenceLng), label: "Longitude du lieu de travail" },
+    { key: "geofence_radius_m", value: String(radius), label: "Rayon autorisé (mètres)" },
+    { key: "kiosk_enabled", value: String(input.kioskEnabled), label: "Mode kiosque (borne partagée)" },
+  ];
+
+  for (const e of entries) {
+    await prisma.setting.upsert({
+      where: { category_key: { category: "hr_pointage", key: e.key } },
+      update: { value: e.value, updatedBy: actorId },
+      create: { category: "hr_pointage", key: e.key, value: e.value, label: e.label, type: "string", updatedBy: actorId },
+    });
+  }
+  // getSetting() caches for 60s; without this the UI keeps stale values.
+  const { invalidateSettingsCache } = await import("@/lib/settings");
+  invalidateSettingsCache();
+
+  await logAudit({
+    adminId: actorId,
+    action: "update",
+    entityType: "settings",
+    changes: Object.fromEntries(entries.map((e) => [e.key, e.value])),
+  });
+  revalidatePath("/admin/employes/pointage");
+  return { success: true };
+}
+
+// ── Kiosk PIN ───────────────────────────────────────────────
+// 4 digits (time-clock standard, and what the kiosk pad shows). Stored twice:
+//   - bcrypt hash  → identifies the employee at the kiosk
+//   - AES ciphertext → lets the OWNER re-display it after confirming their
+//     account password (same reversible scheme already used for SIN / bank
+//     details). HR can only RESET a PIN, never read one.
+const KIOSK_PIN_DIGITS = 4;
+
+async function generateUniqueKioskPin(excludeAdminId: number): Promise<string | null> {
+  const bcrypt = (await import("bcryptjs")).default;
+  const { randomInt } = await import("crypto");
+  // A collision would punch the wrong person: compare against every hash.
+  const others = await prisma.$queryRaw<Array<{ kiosk_pin_hash: string }>>`
+    SELECT kiosk_pin_hash FROM admins
+    WHERE kiosk_pin_hash IS NOT NULL AND id <> ${excludeAdminId}
+  `;
+  const min = 10 ** (KIOSK_PIN_DIGITS - 1);
+  const max = 10 ** KIOSK_PIN_DIGITS;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const candidate = String(randomInt(min, max));
+    let taken = false;
+    for (const o of others) {
+      if (await bcrypt.compare(candidate, o.kiosk_pin_hash)) { taken = true; break; }
+    }
+    if (!taken) return candidate;
+  }
+  return null;
+}
+
+const ERR_NO_ENCRYPTION =
+  "Chiffrement indisponible (CREDENTIALS_ENCRYPTION_KEY absente) : le NIP ne pourrait jamais être réaffiché à l'employé. Corrigez la configuration avant d'en attribuer un.";
+
+/** Stores the PIN (hash + encrypted copy). False when encryption is
+  *  unavailable: refuse rather than issue a PIN nobody can read back. */
+async function storeKioskPin(adminId: number, pin: string): Promise<boolean> {
+  let enc: string;
+  try {
+    // crypto.ts (CREDENTIALS_ENCRYPTION_KEY) is the key configured here.
+    const { encryptSecret } = await import("@/lib/security/crypto");
+    enc = encryptSecret(pin);
+  } catch {
+    return false;
+  }
+  const bcrypt = (await import("bcryptjs")).default;
+  const hash = await bcrypt.hash(pin, 10);
+  await prisma.$executeRaw`
+    UPDATE admins
+    SET kiosk_pin_hash = ${hash}, kiosk_pin_enc = ${enc}, kiosk_pin_set_at = NOW()
+    WHERE id = ${adminId}
+  `;
+  return true;
+}
+
+// Re-display the owner's own PIN. Requires the account password — the reveal
+// is written to the audit trail.
+export async function revealMyKioskPinAction(input: { password: string }): Promise<Result<{ pin: string }>> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    return { success: false, error: "Non autorisé" };
+  }
+  const adminId = session.user.adminId!;
+
+  const me = await prisma.admin.findUnique({
+    where: { id: adminId },
+    select: { passwordHash: true },
+  });
+  if (!me?.passwordHash) return { success: false, error: "Compte sans mot de passe — impossible de vérifier" };
+  const bcrypt = (await import("bcryptjs")).default;
+  if (!(await bcrypt.compare(input.password ?? "", me.passwordHash))) {
+    return { success: false, error: "Mot de passe incorrect" };
+  }
+
+  const rows = await prisma.$queryRaw<Array<{ kiosk_pin_enc: string | null; has_hash: boolean }>>`
+    SELECT kiosk_pin_enc, (kiosk_pin_hash IS NOT NULL) AS has_hash
+    FROM admins WHERE id = ${adminId}
+  `;
+  const enc = rows[0]?.kiosk_pin_enc;
+  if (!enc) {
+    // Tell "no PIN" apart from "PIN stored without its encrypted copy".
+    return {
+      success: false,
+      error: rows[0]?.has_hash
+        ? "Ce NIP ne peut pas être réaffiché (créé sans chiffrement). Demandez aux RH de le remplacer."
+        : "Aucun NIP — demandez-en un aux ressources humaines.",
+    };
+  }
+  let pin: string | null = null;
+  try {
+    const { decryptSecret } = await import("@/lib/security/crypto");
+    pin = decryptSecret(enc);
+  } catch {
+    pin = null;
+  }
+  if (!pin) {
+    return { success: false, error: "NIP illisible — demandez aux RH de le remplacer." };
+  }
+  await logAudit({
+    adminId, action: "view", entityType: "admin", entityId: adminId,
+    changes: { kiosk_pin: "revealed_by_owner" },
+  });
+  return { success: true, data: { pin } };
+}
+
+// HR issues the PIN: generate one FOR an employee and show it once so it can
+// be handed over. HR never reads an existing PIN — only replaces it.
+export async function resetKioskPinForAction(input: { adminId: number }): Promise<Result<{ pin: string; name: string }>> {
+  const actorId = await requirePayrollWrite();
+  if (!actorId) return { success: false, error: "Non autorisé" };
+
+  const target = await prisma.admin.findUnique({
+    where: { id: input.adminId },
+    select: { id: true, isActive: true, fullName: true, email: true },
+  });
+  if (!target || !target.isActive) return { success: false, error: "Employé introuvable ou inactif" };
+
+  const pin = await generateUniqueKioskPin(input.adminId);
+  if (!pin) return { success: false, error: "Impossible de générer un NIP unique — réessayez" };
+  if (!(await storeKioskPin(input.adminId, pin))) {
+    return { success: false, error: ERR_NO_ENCRYPTION };
+  }
+  // Closes any pending request and notifies the employee. The PIN stays out
+  // of the notification: he reveals it himself with his password.
+  await prisma.$executeRaw`
+    UPDATE admins SET kiosk_pin_requested_at = NULL WHERE id = ${input.adminId}
+  `;
+  await prisma.notification.create({
+    data: {
+      recipientType: "admin",
+      recipientId: input.adminId,
+      type: "info",
+      title: "Votre NIP de borne est prêt",
+      body: "Un NIP à 4 chiffres vous a été attribué pour poinçonner sur la tablette partagée. Affichez-le depuis Mon espace › Mon pointage avec votre mot de passe.",
+      link: "/admin/mon-espace/pointage",
+      icon: "clock",
+    },
+  }).catch(() => null);
+  await logAudit({
+    adminId: actorId, action: "update", entityType: "admin", entityId: input.adminId,
+    changes: { kiosk_pin: "issued_by_hr" },
+  });
+  return { success: true, data: { pin, name: target.fullName || target.email } };
+}
+
+// Employee PIN request. Acts as a ticket: stays in the HR list until issued.
+export async function requestKioskPinAction(): Promise<Result> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    return { success: false, error: "Non autorisé" };
+  }
+  const adminId = session.user.adminId!;
+
+  const { getTimeclockConfig } = await import("@/lib/services/timeclock-config");
+  const cfg = await getTimeclockConfig();
+  if (!cfg.kioskEnabled) return { success: false, error: "Le mode kiosque est désactivé" };
+
+  const rows = await prisma.$queryRaw<Array<{ requested_at: Date | null }>>`
+    SELECT kiosk_pin_requested_at AS requested_at FROM admins WHERE id = ${adminId}
+  `;
+  const last = rows[0]?.requested_at;
+  if (last && Date.now() - new Date(last).getTime() < 12 * 3600 * 1000) {
+    return { success: false, error: "Votre demande est déjà en attente — les RH vont y répondre." };
+  }
+
+  await prisma.$executeRaw`
+    UPDATE admins SET kiosk_pin_requested_at = NOW() WHERE id = ${adminId}
+  `;
+
+  const me = await prisma.admin.findUnique({
+    where: { id: adminId },
+    select: { fullName: true, email: true, managerId: true },
+  });
+  const name = me?.fullName || me?.email || `Admin#${adminId}`;
+  const recipients: number[] = [];
+  if (me?.managerId) recipients.push(me.managerId);
+  const supers = await prisma.admin.findMany({
+    where: { customRole: { name: "super_admin" }, isActive: true },
+    select: { id: true },
+  });
+  for (const s of supers) if (!recipients.includes(s.id)) recipients.push(s.id);
+  if (recipients.length > 0) {
+    await prisma.notification.createMany({
+      data: recipients.map((rid) => ({
+        recipientType: "admin",
+        recipientId: rid,
+        type: "warning",
+        title: "Demande de NIP de borne",
+        body: `${name} demande un NIP pour poinçonner sur la borne.`,
+        link: "/admin/employes/pointage/parametres",
+        icon: "clock",
+      })),
+    }).catch(() => null);
+  }
+  await logAudit({
+    adminId, action: "update", entityType: "admin", entityId: adminId,
+    changes: { kiosk_pin: "requested" },
+  });
+  return { success: true };
+}
+
+export async function clearKioskPinForAction(input: { adminId: number }): Promise<Result> {
+  const actorId = await requirePayrollWrite();
+  if (!actorId) return { success: false, error: "Non autorisé" };
+  await prisma.$executeRaw`
+    UPDATE admins SET kiosk_pin_hash = NULL, kiosk_pin_enc = NULL, kiosk_pin_set_at = NULL
+    WHERE id = ${input.adminId}
+  `;
+  await logAudit({
+    adminId: actorId, action: "update", entityType: "admin", entityId: input.adminId,
+    changes: { kiosk_pin: "cleared_by_hr" },
+  });
+  return { success: true };
 }
