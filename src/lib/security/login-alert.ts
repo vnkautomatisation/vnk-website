@@ -1,11 +1,8 @@
-// ─────────────────────────────────────────────────────────
-// Email d'alerte "Nouvelle connexion détectée"
-// Envoyé à l'admin quand un fingerprint inconnu se connecte.
-// Inclut un lien "Ce n'était pas moi" pour révoquer + alerter.
-// ─────────────────────────────────────────────────────────
+// New-login alert email, sent when an unknown fingerprint signs in.
+// Carries a one-click link to revoke the session and raise the alarm.
 import "server-only";
 import { sendEmail } from "@/lib/services/email";
-import { buildNotMeToken } from "@/app/api/auth/not-me/[token]/route";
+import { buildNotMeToken } from "@/lib/security/not-me-token";
 
 export type LoginAlertInput = {
   adminId: number;

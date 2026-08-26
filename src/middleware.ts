@@ -12,29 +12,30 @@ export default function middleware(request: NextRequest) {
     request.cookies.get("authjs.session-token") ||
     request.cookies.get("__Secure-authjs.session-token");
 
-  // ── /admin/* : AUTH DESACTIVEE TEMPORAIREMENT ──
-  // Le check de session a ete retire — n'importe qui accede a /admin.
-  // A reactiver quand l'auth aura ete reconstruite (cf. src/lib/auth.ts).
+  // ── /admin/* : no locale prefix, sign-in required ──
+  // The bypass mirrors lib/auth.ts: development only, and only when asked for
+  // explicitly. A production build always enforces the check.
   if (pathname.startsWith("/admin")) {
-    // Si quelqu'un essaie d'aller sur /admin/login, on l'envoie directement
-    // sur le tableau de bord — le login n'a plus de raison d'etre.
-    if (pathname === "/admin/login" || pathname.startsWith("/admin/login/")) {
+    const devBypass =
+      process.env.NODE_ENV !== "production" && process.env.AUTH_DEV_BYPASS === "1";
+    if (!devBypass && !pathname.startsWith("/admin/login") && !sessionCookie) {
       const url = request.nextUrl.clone();
-      url.pathname = "/admin";
-      url.search = "";
+      url.pathname = "/admin/login";
+      url.searchParams.set("redirect", pathname);
       return NextResponse.redirect(url);
     }
+    // request.ts reads this header to detect the admin context.
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-pathname", pathname);
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // ── /portail/login : pas de prefixe locale, pas d'auth ──
+  // ── /portail/login: no locale prefix, no auth ──
   if (pathname === "/portail/login" || pathname.startsWith("/portail/login?")) {
     return NextResponse.next();
   }
 
-  // ── /portail/* : auth check PUIS passer au intl middleware ──
+  // ── /portail/*: auth check, then the intl middleware ──
   if (pathname.startsWith("/portail") || pathname.match(/^\/(fr|en)\/portail/)) {
     if (!sessionCookie) {
       const url = request.nextUrl.clone();
@@ -42,11 +43,11 @@ export default function middleware(request: NextRequest) {
       url.searchParams.set("redirect", pathname);
       return NextResponse.redirect(url);
     }
-    // Passe au intl middleware pour resoudre la locale
+    // Hand over to the intl middleware to resolve the locale.
     return intlMiddleware(request);
   }
 
-  // ── Site public : next-intl middleware ──
+  // ── Public site ──
   return intlMiddleware(request);
 }
 

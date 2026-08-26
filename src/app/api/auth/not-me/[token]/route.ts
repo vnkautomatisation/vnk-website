@@ -1,39 +1,10 @@
 // GET /api/auth/not-me/[token]
-// Lien depuis l'email "Nouvelle connexion détectée" — permet à l'admin
-// de révoquer une session suspecte d'un simple click depuis sa boîte mail.
-// Le token est un HMAC SHA-256 signé avec AUTH_SECRET = sessionId + adminId.
+// The "Ce n'etait pas moi" link in the new-login email: one click from the
+// mailbox revokes the suspicious session.
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logSecurityEvent } from "@/lib/security/security-events";
-import crypto from "crypto";
-
-function verifyNotMeToken(token: string): { sessionId: string; adminId: number } | null {
-  try {
-    const [payload, sig] = token.split(".");
-    if (!payload || !sig) return null;
-    const expected = crypto
-      .createHmac("sha256", process.env.AUTH_SECRET ?? "fallback")
-      .update(payload)
-      .digest("base64url");
-    if (expected !== sig) return null;
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf-8"));
-    if (typeof data.sessionId !== "string" || typeof data.adminId !== "number") return null;
-    // Expiration : 7 jours
-    if (typeof data.iat !== "number" || Date.now() - data.iat > 7 * 24 * 60 * 60 * 1000) return null;
-    return { sessionId: data.sessionId, adminId: data.adminId };
-  } catch {
-    return null;
-  }
-}
-
-export function buildNotMeToken(sessionId: string, adminId: number): string {
-  const payload = Buffer.from(JSON.stringify({ sessionId, adminId, iat: Date.now() })).toString("base64url");
-  const sig = crypto
-    .createHmac("sha256", process.env.AUTH_SECRET ?? "fallback")
-    .update(payload)
-    .digest("base64url");
-  return `${payload}.${sig}`;
-}
+import { verifyNotMeToken } from "@/lib/security/not-me-token";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -43,17 +14,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
   }
 
   try {
-    // Vérifier que la session existe et appartient bien à cet admin
+    // The session must exist and belong to that admin.
     const session = await prisma.adminSession.findUnique({
       where: { id: verified.sessionId },
     });
 
     if (session && session.adminId === verified.adminId) {
-      // Révoque la session
+      // Revoke it.
       await prisma.adminSession.delete({ where: { id: verified.sessionId } });
     }
 
-    // Log security event critical (même si la session n'existe plus)
+    // Critical security event, logged even when the session is already gone.
     await logSecurityEvent({
       adminId: verified.adminId,
       type: "suspicious_login",
@@ -69,7 +40,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
       },
     });
 
-    // Bumper le timestamp d'invalidation globale pour révoquer tous les JWT existants
+    // Bump the global invalidation stamp so every existing JWT dies too.
     await prisma.admin.update({
       where: { id: verified.adminId },
       data: { sessionsInvalidatedAt: new Date() },
