@@ -453,6 +453,11 @@ model TimeClock {
   clockOutLng Float?   @map("clock_out_lng")
   // ── Punch source: "web" (default) | "kiosk"
   source      String   @default("web")
+  // ── Provenance. Structural, not a prefix in `notes`: the employee owns
+  // that field. mergedFrom = punches replaced, mergedGapMin = gap counted as break.
+  mergedFrom   Int? @map("merged_from")
+  mergedGapMin Int? @map("merged_gap_min")
+  restoredFromSnapshotId Int? @map("restored_from_snapshot_id")
   approvedBy  Int?     @map("approved_by")
   approvedAt  DateTime? @map("approved_at")
   submittedAt DateTime? @map("submitted_at") // soumission par l'employé (revue à valider)
@@ -553,6 +558,10 @@ model PayStub {
   hoursOvertime   Decimal  @default(0) @map("hours_overtime") @db.Decimal(6, 2)
   hoursVacation   Decimal  @default(0) @map("hours_vacation") @db.Decimal(6, 2)
   hoursSick       Decimal  @default(0) @map("hours_sick") @db.Decimal(6, 2)
+  /** Worked on a paid public holiday: paid at double time. */
+  hoursHoliday    Decimal  @default(0) @map("hours_holiday") @db.Decimal(6, 2)
+  /** Paid holiday NOT worked: LNT indemnity, 1/20 of the 4 preceding weeks. */
+  holidayIndemnity Decimal @default(0) @map("holiday_indemnity") @db.Decimal(10, 2)
   rate            Decimal  @default(0) @map("rate") @db.Decimal(8, 2)
   grossPay        Decimal  @default(0) @map("gross_pay") @db.Decimal(10, 2)
   // Déductions à la source Québec (provisoires — calcul réel via service externe en prod)

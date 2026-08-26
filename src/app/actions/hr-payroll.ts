@@ -1,12 +1,18 @@
 "use server";
-// Actions paie : périodes de paie + génération des bulletins.
-// Calcul DAS Québec : valeurs provisoires (à raffiner avec service WebRAS / outils CRA réels en prod).
+// Pay periods and pay stub generation.
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
-import { calculateOvertimeForEntries } from "@/lib/services/overtime";
+import { getTimeclockConfig } from "@/lib/services/timeclock-config";
+import { getHolidaysInRange } from "@/lib/services/holidays";
+import {
+  splitPayrollMinutes, paidHours, grossPay, localDayKey,
+  regularMinutesByWeek, holidayIndemnity, overtimeMinutes, storedDayToLocal,
+} from "@/lib/services/payroll-hours";
+import { calculateDeductions, periodsPerYear } from "@/lib/services/payroll-deductions";
+import { startOfWeek } from "@/lib/week";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -21,7 +27,7 @@ async function requirePayrollWrite(): Promise<number | null> {
   return (isSuper || (perms.payroll ?? []).includes("write")) ? adminId : null;
 }
 
-// ── Création période de paie ───────────────────────────────
+// ── Create a pay period ────────────────────────────────────
 const periodSchema = z.object({
   startDate: z.string(),
   endDate: z.string(),
@@ -48,16 +54,12 @@ export async function createPayPeriodAction(input: z.infer<typeof periodSchema>)
   return { success: true, data: { id: p.id } };
 }
 
-// ── Génération des bulletins (un par employé avec heures) ──
-//
-// Approche : pour chaque admin qui a des TimeClock approuvés dans la période
-// et sans payStubId, on agrège heures × taux. Le taux vient de son contrat actif.
-// Calculs DAS Québec — taux 2025 indicatifs (à valider chaque année) :
-//   RRQ : 6.4% sur revenu entre 3 500$ et 73 200$
-//   AE : 1.66% (taux salarié 2025)
-//   RQAP : 0.494%
-//   Fédéral + Provincial : approx 15% combiné si bracket inférieur
-export async function generatePayStubsAction(input: { periodId: number }): Promise<Result<{ stubsCreated: number }>> {
+// One stub per employee with approved, unbilled hours in the period.
+// Rate comes from their active contract; hours are split by
+// payroll-hours.ts and deductions computed by payroll-deductions.ts.
+export async function generatePayStubsAction(
+  input: { periodId: number },
+): Promise<Result<{ stubsCreated: number; provisionalRates: boolean }>> {
   const actorId = await requirePayrollWrite();
   if (!actorId) return { success: false, error: "Non autorisé" };
 
@@ -65,28 +67,104 @@ export async function generatePayStubsAction(input: { periodId: number }): Promi
   if (!period) return { success: false, error: "Période introuvable" };
   if (period.status !== "open") return { success: false, error: "Période non ouverte" };
 
-  // Trouver tous les pointages approuvés dans la période non encore facturés
+  // The period bounds are @db.Date columns: their calendar days, read locally,
+  // so punches are matched against the days the payroll actually covers.
+  const periodStart = storedDayToLocal(period.startDate);
+  const periodEnd = storedDayToLocal(period.endDate);
+  const periodEndExcl = new Date(periodEnd);
+  periodEndExcl.setDate(periodEndExcl.getDate() + 1);
+  const payYear = storedDayToLocal(period.payDate).getFullYear();
+
+  // Approved punches in the period that are not yet on a stub.
   const clocks = await prisma.timeClock.findMany({
     where: {
-      clockIn: { gte: period.startDate, lte: new Date(period.endDate.getTime() + 24 * 60 * 60 * 1000) },
+      clockIn: { gte: periodStart, lt: periodEndExcl },
       clockOut: { not: null },
       approvedAt: { not: null },
       payStubId: null,
     },
     select: { id: true, adminId: true, clockIn: true, durationMin: true, category: true },
   });
-  if (clocks.length === 0) return { success: false, error: "Aucun pointage approuvé à facturer" };
+  // Threshold comes from the time clock settings, not a constant.
+  const { overtimeWeeklyMin: overtimeThreshold } = await getTimeclockConfig();
+  // Hours worked on a paid public holiday are paid at double time.
+  const holidays = await getHolidaysInRange(periodStart, periodEnd);
+  const hasPaidHoliday = [...holidays.values()].some((h) => h.isPaid);
+  // A shutdown week with a holiday in it still owes the indemnity, so an empty
+  // period is only truly empty when no holiday falls in it either.
+  if (clocks.length === 0 && !hasPaidHoliday) {
+    return { success: false, error: "Aucun pointage approuvé à facturer" };
+  }
+  const isPaidHoliday = (d: Date) => holidays.get(localDayKey(d))?.isPaid === true;
+  const weekKeyOf = (d: Date) => localDayKey(startOfWeek(d));
 
-  // Grouper par employé
+  // Group by employee.
   const byAdmin = new Map<number, typeof clocks>();
   for (const c of clocks) {
     if (!byAdmin.has(c.adminId)) byAdmin.set(c.adminId, []);
     byAdmin.get(c.adminId)!.push(c);
   }
 
+  // Paid holidays falling in the period. A holiday NOT worked is owed an
+  // indemnity based on the 4 complete weeks preceding the holiday's week,
+  // so those weeks are loaded once, only when there is a holiday to pay.
+  const paidHolidayDates = [...holidays.entries()]
+    .filter(([, h]) => h.isPaid)
+    .map(([day]) => {
+      const [y, m, d] = day.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    });
+  const lookbackByAdmin = new Map<number, typeof clocks>();
+  if (paidHolidayDates.length > 0) {
+    // An employee with no punch in the period is still owed the indemnity, so
+    // they need a stub too. Without this they were simply skipped.
+    const contracted = await prisma.employeeContract.findMany({
+      where: { status: { in: ["active", "signed_employer"] } },
+      select: { adminId: true },
+      distinct: ["adminId"],
+    });
+    for (const c of contracted) {
+      if (!byAdmin.has(c.adminId)) byAdmin.set(c.adminId, []);
+    }
+
+    const earliest = paidHolidayDates.reduce((a, b) => (b < a ? b : a));
+    const lookbackFrom = new Date(startOfWeek(earliest));
+    lookbackFrom.setDate(lookbackFrom.getDate() - 28);
+    const priorClocks = await prisma.timeClock.findMany({
+      where: {
+        adminId: { in: [...byAdmin.keys()] },
+        clockIn: { gte: lookbackFrom, lt: startOfWeek(earliest) },
+        clockOut: { not: null },
+      },
+      select: { id: true, adminId: true, clockIn: true, durationMin: true, category: true },
+    });
+    for (const c of priorClocks) {
+      if (!lookbackByAdmin.has(c.adminId)) lookbackByAdmin.set(c.adminId, []);
+      lookbackByAdmin.get(c.adminId)!.push(c);
+    }
+  }
+
+  // Statutory contributions are capped per calendar year: what the employee was
+  // already paid this year decides how much room is left under each maximum.
+  const yearStart = new Date(Date.UTC(payYear, 0, 1));
+  const ytdStubs = await prisma.payStub.findMany({
+    where: {
+      adminId: { in: [...byAdmin.keys()] },
+      periodId: { not: period.id },
+      period: { payDate: { gte: yearStart, lt: period.payDate } },
+    },
+    select: { adminId: true, grossPay: true },
+  });
+  const ytdGrossByAdmin = new Map<number, number>();
+  for (const st of ytdStubs) {
+    ytdGrossByAdmin.set(st.adminId, (ytdGrossByAdmin.get(st.adminId) ?? 0) + Number(st.grossPay));
+  }
+  const periods = periodsPerYear(periodStart, periodEnd);
+  let usedProvisionalRates = false;
+
   let stubsCreated = 0;
   for (const [adminId, entries] of byAdmin) {
-    // Récupérer taux du contrat actif
+    // Rate comes from the active contract.
     const contract = await prisma.employeeContract.findFirst({
       where: { adminId, status: { in: ["active", "signed_employer"] } },
       orderBy: { startDate: "desc" },
@@ -97,64 +175,84 @@ export async function generatePayStubsAction(input: { periodId: number }): Promi
         : 0;
     if (hourlyRate <= 0) continue;
 
-    let mWork = 0, mVacation = 0, mSick = 0;
-    for (const e of entries) {
-      const min = e.durationMin ?? 0;
-      if (e.category === "vacation") mVacation += min;
-      else if (e.category === "sick") mSick += min;
-      else mWork += min;
+    const split = splitPayrollMinutes(entries, isPaidHoliday);
+    const hours = paidHours(
+      split,
+      overtimeMinutes(split.overtimeBase, weekKeyOf, overtimeThreshold, isPaidHoliday),
+    );
+
+    // Indemnity for every paid holiday the employee did NOT work.
+    const workedDays = new Set(entries.filter((e) => (e.durationMin ?? 0) > 0).map((e) => localDayKey(e.clockIn)));
+    const prior = lookbackByAdmin.get(adminId) ?? [];
+    let indemnity = 0;
+    for (const day of paidHolidayDates) {
+      if (workedDays.has(localDayKey(day))) continue;
+      const weekOfHoliday = startOfWeek(day);
+      const from = new Date(weekOfHoliday);
+      from.setDate(from.getDate() - 28);
+      const base = regularMinutesByWeek(
+        prior.filter((e) => e.clockIn >= from && e.clockIn < weekOfHoliday),
+        (d) => localDayKey(startOfWeek(d)),
+        overtimeThreshold,
+      );
+      indemnity += holidayIndemnity(base, hourlyRate);
     }
-    // ── Heures supp : calculees semaine par semaine via le service centralise.
-    // Une seule source de verite (vs duplication inline du seuil 40h/semaine).
-    const weeklyOvertime = calculateOvertimeForEntries(entries);
-    const mOvertime = weeklyOvertime.reduce((s, w) => s + w.overtimeMin, 0);
-    const mRegular = Math.max(0, mWork - mOvertime);
-    const hRegular = mRegular / 60;
-    const hOvertime = mOvertime / 60;
-    const hVacation = mVacation / 60;
-    const hSick = mSick / 60;
-    const overtimeRate = hourlyRate * 1.5;
+    indemnity = Math.round(indemnity * 100) / 100;
 
-    const grossPay = (hRegular * hourlyRate) + (hOvertime * overtimeRate) + ((hVacation + hSick) * hourlyRate);
+    const gross = Math.round((grossPay(hours, hourlyRate) + indemnity) * 100) / 100;
 
-    // DAS provisoires (lin. simplifié — à remplacer par calc CRA en prod)
-    const deductionRrq = Math.max(0, (grossPay - (3500 / 26)) * 0.064);
-    const deductionAe = grossPay * 0.0166;
-    const deductionRqap = grossPay * 0.00494;
-    const deductionFederal = grossPay * 0.10; // approx tax bracket 1
-    const deductionProvincial = grossPay * 0.05;
-    const netPay = grossPay - deductionRrq - deductionAe - deductionRqap - deductionFederal - deductionProvincial;
+    // Nothing owed: no empty stub.
+    if (gross <= 0) continue;
+
+    const das = calculateDeductions({
+      gross,
+      ytdGross: ytdGrossByAdmin.get(adminId) ?? 0,
+      periodsPerYear: periods,
+      year: payYear,
+    });
+    if (das.provisionalRates) usedProvisionalRates = true;
+    const netPay = Math.round((gross - das.total) * 100) / 100;
 
     const stub = await prisma.payStub.upsert({
       where: { periodId_adminId: { periodId: period.id, adminId } },
       create: {
         periodId: period.id,
         adminId,
-        hoursRegular: hRegular,
-        hoursOvertime: hOvertime,
-        hoursVacation: hVacation,
-        hoursSick: hSick,
+        hoursRegular: hours.regular,
+        hoursOvertime: hours.overtime,
+        hoursVacation: hours.vacation,
+        hoursSick: hours.sick,
+        hoursHoliday: hours.holiday,
+        holidayIndemnity: indemnity,
         rate: hourlyRate,
-        grossPay,
-        deductionRrq, deductionAe, deductionRqap,
-        deductionFederal, deductionProvincial,
+        grossPay: gross,
+        deductionRrq: das.qpp,
+        deductionAe: das.ei,
+        deductionRqap: das.qpip,
+        deductionFederal: das.federal,
+        deductionProvincial: das.provincial,
         netPay,
       },
       update: {
-        hoursRegular: hRegular,
-        hoursOvertime: hOvertime,
-        hoursVacation: hVacation,
-        hoursSick: hSick,
+        hoursRegular: hours.regular,
+        hoursOvertime: hours.overtime,
+        hoursVacation: hours.vacation,
+        hoursSick: hours.sick,
+        hoursHoliday: hours.holiday,
+        holidayIndemnity: indemnity,
         rate: hourlyRate,
-        grossPay,
-        deductionRrq, deductionAe, deductionRqap,
-        deductionFederal, deductionProvincial,
+        grossPay: gross,
+        deductionRrq: das.qpp,
+        deductionAe: das.ei,
+        deductionRqap: das.qpip,
+        deductionFederal: das.federal,
+        deductionProvincial: das.provincial,
         netPay,
       },
       select: { id: true },
     });
 
-    // Lier les TimeClock au bulletin
+    // Attach the punches to the stub.
     await prisma.timeClock.updateMany({
       where: { id: { in: entries.map((e) => e.id) } },
       data: { payStubId: stub.id },
@@ -162,9 +260,11 @@ export async function generatePayStubsAction(input: { periodId: number }): Promi
     stubsCreated++;
   }
 
+  if (stubsCreated === 0) return { success: false, error: "Aucun montant à verser sur cette période" };
+
   await logAudit({ adminId: actorId, action: "create", entityType: "pay_stubs_bulk", entityId: period.id, changes: { stubsCreated } });
   revalidatePath("/admin/employes/paie");
-  return { success: true, data: { stubsCreated } };
+  return { success: true, data: { stubsCreated, provisionalRates: usedProvisionalRates } };
 }
 
 export async function lockPayPeriodAction(input: { id: number }): Promise<Result> {
@@ -191,7 +291,7 @@ export async function markPayPeriodPaidAction(input: { id: number }): Promise<Re
     data: { releasedAt: new Date() },
   });
 
-  // Notifier chaque employé que son bulletin de paie est disponible
+  // Tell every employee their stub is available.
   const stubs = await prisma.payStub.findMany({
     where: { periodId: input.id },
     select: { adminId: true, netPay: true },

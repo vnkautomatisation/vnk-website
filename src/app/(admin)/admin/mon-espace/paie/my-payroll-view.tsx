@@ -1,6 +1,6 @@
 "use client";
 // =============================================================
-// MyPayrollView - vue employe Mon espace > Ma paie (refonte VNK)
+// MyPayrollView - the employee's own pay stubs.
 //
 // Conventions :
 //  - Header navy gradient + KPI cards
@@ -31,6 +31,8 @@ type Stub = {
   hoursOvertime: number;
   hoursVacation: number;
   hoursSick: number;
+  hoursHoliday: number;
+  holidayIndemnity: number;
   rate: number;
   grossPay: number;
   deductionFederal: number;
@@ -77,6 +79,15 @@ function formatDate(iso: string | null | undefined): string {
   return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
 }
 
+// A @db.Date column serializes at UTC midnight, so reading it locally shows the
+// day before anywhere west of Greenwich. Pay period bounds are date-only.
+function formatDateOnly(iso: string | null | undefined): string {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+}
+
 function isThisYear(iso: string | null | undefined): boolean {
   if (!iso) return false;
   const d = new Date(iso);
@@ -107,7 +118,7 @@ export function MyPayrollView({
     return () => io.disconnect();
   }, []);
 
-  // Portal target KPIs dans module-nav mobile
+  // KPI portal target inside the mobile module nav.
   const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
   useEffect(() => {
     setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
@@ -117,7 +128,7 @@ export function MyPayrollView({
     setPdfPreview({
       url: `/api/admin/pay-stubs/${s.id}/pdf`,
       title: `Bulletin de paie #${s.id}`,
-      description: `${formatDate(s.period.startDate)} - ${formatDate(s.period.endDate)}`,
+      description: `${formatDateOnly(s.period.startDate)} - ${formatDateOnly(s.period.endDate)}`,
       filename: `bulletin-paie-${s.id}.pdf`,
     });
   }, []);
@@ -181,7 +192,7 @@ export function MyPayrollView({
           icon={Receipt}
           accent="info"
           hint={kpis.last
-            ? `Dernier : ${formatDate(kpis.last.period.startDate)}`
+            ? `Dernier : ${formatDateOnly(kpis.last.period.startDate)}`
             : "Aucun bulletin pour le moment"}
           onClick={() => setTab("stubs")}
         />
@@ -335,7 +346,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-wider opacity-80">Periode</p>
             <h3 className="font-bold text-sm truncate">
-              {formatDate(stub.period.startDate)} - {formatDate(stub.period.endDate)}
+              {formatDateOnly(stub.period.startDate)} - {formatDateOnly(stub.period.endDate)}
             </h3>
           </div>
         </div>
@@ -370,6 +381,22 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
               Heures supplementaires
             </p>
             <p className="font-mono">{Number(stub.hoursOvertime).toFixed(2)} h x 1.5</p>
+          </div>
+        )}
+        {Number(stub.hoursHoliday) > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              Jour ferie travaille
+            </p>
+            <p className="font-mono">{Number(stub.hoursHoliday).toFixed(2)} h x 2</p>
+          </div>
+        )}
+        {Number(stub.holidayIndemnity) > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              Indemnite ferie
+            </p>
+            <p className="font-mono">{formatMoney(stub.holidayIndemnity)}</p>
           </div>
         )}
         {Number(stub.hoursVacation) > 0 && (

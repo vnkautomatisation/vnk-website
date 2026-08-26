@@ -54,6 +54,8 @@ type Stub = {
   hoursOvertime: number;
   hoursVacation: number;
   hoursSick: number;
+  hoursHoliday: number;
+  holidayIndemnity: number;
   rate: number;
   grossPay: number;
   deductionFederal: number;
@@ -87,6 +89,15 @@ function formatDate(iso: string | null | undefined): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
   return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// A @db.Date column serializes at UTC midnight, so reading it locally shows the
+// day before anywhere west of Greenwich. Pay period bounds are date-only.
+function formatDateOnly(iso: string | null | undefined): string {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 function isThisMonth(iso: string | null | undefined): boolean {
@@ -134,7 +145,7 @@ export function PayrollView({
     return () => io.disconnect();
   }, []);
 
-  // Portal target KPIs dans module-nav mobile
+  // KPI portal target inside the mobile module nav.
   const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
   useEffect(() => {
     setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
@@ -142,7 +153,7 @@ export function PayrollView({
 
   const openStubPdf = useCallback((s: Stub) => {
     const employeeName = s.admin?.fullName || s.admin?.email || "Employe";
-    const periodLabel = `${formatDate(s.period.startDate)} - ${formatDate(s.period.endDate)}`;
+    const periodLabel = `${formatDateOnly(s.period.startDate)} - ${formatDateOnly(s.period.endDate)}`;
     setPdfPreview({
       url: `/api/admin/pay-stubs/${s.id}/pdf`,
       title: `Bulletin de paie #${s.id}`,
@@ -165,7 +176,7 @@ export function PayrollView({
     return { currentPeriod, stubsThisMonth, stubsPending, totalYtd };
   }, [periods, allStubs]);
 
-  // --- KPIs employe (mode mes bulletins) ----------------------
+  // --- Employee KPIs (my stubs mode) --------------------------
   const myKpis = useMemo(() => {
     const released = myStubs.filter((s) => s.releasedAt);
     const ytd = released
@@ -240,7 +251,7 @@ export function PayrollView({
             icon={Calendar}
             accent={kpis.currentPeriod?.status === "paid" ? "success" : kpis.currentPeriod ? "info" : "navy"}
             hint={kpis.currentPeriod
-              ? `${formatDate(kpis.currentPeriod.startDate)} - ${formatDate(kpis.currentPeriod.endDate)}`
+              ? `${formatDateOnly(kpis.currentPeriod.startDate)} - ${formatDateOnly(kpis.currentPeriod.endDate)}`
               : "Creez une nouvelle periode"}
             onClick={() => setTab("periods")}
           />
@@ -276,7 +287,7 @@ export function PayrollView({
             icon={Receipt}
             accent="info"
             hint={myKpis.last
-              ? `Dernier : ${formatDate(myKpis.last.period.startDate)}`
+              ? `Dernier : ${formatDateOnly(myKpis.last.period.startDate)}`
               : "Aucun bulletin pour le moment"}
           />
           <DocumentStatsCard
@@ -487,7 +498,7 @@ function OverviewTab({
           <div className="rounded-md border bg-muted/20 p-3 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-foreground">
-                {formatDate(kpis.currentPeriod.startDate)} - {formatDate(kpis.currentPeriod.endDate)}
+                {formatDateOnly(kpis.currentPeriod.startDate)} - {formatDateOnly(kpis.currentPeriod.endDate)}
               </span>
               <Badge className={`text-[10px] border ${STATUS_META[kpis.currentPeriod.status]?.color ?? "bg-gray-100 text-gray-700"}`}>
                 {STATUS_META[kpis.currentPeriod.status]?.label ?? kpis.currentPeriod.status}
@@ -495,7 +506,7 @@ function OverviewTab({
             </div>
             <div className="flex items-baseline justify-between text-xs">
               <span className="text-muted-foreground">Date de paie</span>
-              <span className="font-medium">{formatDate(kpis.currentPeriod.payDate)}</span>
+              <span className="font-medium">{formatDateOnly(kpis.currentPeriod.payDate)}</span>
             </div>
             <div className="flex items-baseline justify-between text-xs">
               <span className="text-muted-foreground">Bulletins generes</span>
@@ -515,7 +526,7 @@ function OverviewTab({
         </Button>
       </Card>
 
-      {/* Historique periodes */}
+      {/* Past periods */}
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold flex items-center gap-2">
@@ -531,7 +542,7 @@ function OverviewTab({
             {recentPeriods.map((p) => (
               <div key={p.id} className="flex items-center justify-between text-xs gap-2 border-b last:border-0 pb-1.5 last:pb-0">
                 <span className="truncate flex-1">
-                  {formatDate(p.startDate)} - {formatDate(p.endDate)}
+                  {formatDateOnly(p.startDate)} - {formatDateOnly(p.endDate)}
                 </span>
                 <Badge variant="outline" className={`text-[10px] ${STATUS_META[p.status]?.color ?? "bg-gray-100"}`}>
                   {STATUS_META[p.status]?.label ?? p.status}
@@ -624,10 +635,10 @@ function PeriodCard({ period, onChanged }: { period: Period; onChanged: () => vo
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold text-sm truncate">
-              {formatDate(period.startDate)} - {formatDate(period.endDate)}
+              {formatDateOnly(period.startDate)} - {formatDateOnly(period.endDate)}
             </h3>
             <p className="text-xs text-muted-foreground">
-              Date de paie : {formatDate(period.payDate)} - {period._count.stubs} bulletin{period._count.stubs > 1 ? "s" : ""}
+              Date de paie : {formatDateOnly(period.payDate)} - {period._count.stubs} bulletin{period._count.stubs > 1 ? "s" : ""}
             </p>
           </div>
         </div>
@@ -642,7 +653,16 @@ function PeriodCard({ period, onChanged }: { period: Period; onChanged: () => vo
                   setBusy("gen");
                   const r = await generatePayStubsAction({ periodId: period.id });
                   setBusy(null);
-                  if (r.success) { toast.success(`${r.data.stubsCreated} bulletin(s) genere(s)`); onChanged(); }
+                  if (r.success) {
+                    toast.success(`${r.data.stubsCreated} bulletin(s) genere(s)`);
+                    if (r.data.provisionalRates) {
+                      toast.warning(
+                        "Taux fiscaux provisoires pour cette annee : validez les bulletins avec les tables officielles ARC / Revenu Quebec avant le versement.",
+                        { duration: 12000 },
+                      );
+                    }
+                    onChanged();
+                  }
                   else toast.error(r.error || "");
                 }}
               >
@@ -749,7 +769,7 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
               <SelectItem value="all">Toutes les periodes</SelectItem>
               {periods.map((p) => (
                 <SelectItem key={p.id} value={String(p.id)}>
-                  {formatDate(p.startDate)} - {formatDate(p.endDate)}
+                  {formatDateOnly(p.startDate)} - {formatDateOnly(p.endDate)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -779,7 +799,7 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{s.admin?.fullName || s.admin?.email}</p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {formatDate(s.period.startDate)} - {formatDate(s.period.endDate)}
+                  {formatDateOnly(s.period.startDate)} - {formatDateOnly(s.period.endDate)}
                 </p>
               </div>
               <div className="text-right shrink-0">
@@ -838,7 +858,7 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
 }
 
 // =============================================================
-// TAB : MY STUBS (employe)
+// TAB: MY STUBS (employee)
 // =============================================================
 function MyStubsTab({ stubs, onOpenPdf }: { stubs: Stub[]; onOpenPdf: (s: Stub) => void }) {
   if (stubs.length === 0) {
@@ -879,7 +899,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-wider opacity-80">Periode</p>
             <h3 className="font-bold text-sm truncate">
-              {formatDate(stub.period.startDate)} - {formatDate(stub.period.endDate)}
+              {formatDateOnly(stub.period.startDate)} - {formatDateOnly(stub.period.endDate)}
             </h3>
           </div>
         </div>
@@ -914,6 +934,22 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
               Heures supplementaires
             </p>
             <p className="font-mono">{Number(stub.hoursOvertime).toFixed(2)} h x 1.5</p>
+          </div>
+        )}
+        {Number(stub.hoursHoliday) > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              Jour ferie travaille
+            </p>
+            <p className="font-mono">{Number(stub.hoursHoliday).toFixed(2)} h x 2</p>
+          </div>
+        )}
+        {Number(stub.holidayIndemnity) > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              Indemnite ferie
+            </p>
+            <p className="font-mono">{formatMoney(stub.holidayIndemnity)}</p>
           </div>
         )}
         {Number(stub.hoursVacation) > 0 && (

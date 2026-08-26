@@ -1,5 +1,5 @@
 // GET /api/admin/pay-stubs/[id]/pdf
-// Genere et retourne le PDF d'un bulletin de paie.
+// Renders one pay stub as a PDF.
 // Auth: admin proprietaire du bulletin OU permission payroll en ecriture.
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
@@ -51,7 +51,7 @@ export async function GET(
     return NextResponse.json({ error: "Acces refuse" }, { status: 403 });
   }
 
-  // L'employe ne voit que les bulletins publies
+  // An employee only sees released stubs.
   if (isOwner && !isPayrollAdmin && !stub.releasedAt) {
     return NextResponse.json({ error: "Bulletin non publie" }, { status: 403 });
   }
@@ -63,6 +63,8 @@ export async function GET(
       hoursOvertime: Number(stub.hoursOvertime),
       hoursVacation: Number(stub.hoursVacation),
       hoursSick: Number(stub.hoursSick),
+      hoursHoliday: Number(stub.hoursHoliday),
+      holidayIndemnity: Number(stub.holidayIndemnity),
       rate: Number(stub.rate),
       grossPay: Number(stub.grossPay),
       deductionFederal: Number(stub.deductionFederal),

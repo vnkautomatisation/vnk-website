@@ -1,12 +1,12 @@
-// PDF generators RH : bulletin de paie, contrat employe, lettre d'emploi.
-// Suit le pattern de pdf-export.ts (PDFKit + PassThrough capture, header VNK navy).
+// HR PDF generators: pay stub, employment contract, employment letter.
+// Same pattern as pdf-export.ts (PDFKit + PassThrough capture, navy header).
 import "server-only";
 import { PassThrough } from "stream";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PDFDocument = require("pdfkit");
 
 // ─────────────────────────────────────────────────────────
-// Couleurs et constantes (alignees avec pdf-export.ts)
+// Colors and constants, aligned with pdf-export.ts
 // ─────────────────────────────────────────────────────────
 const C = {
   brand: "#1B4F8A",
@@ -42,7 +42,7 @@ const HEADER_H = 72;
 const FOOTER_RESERVED = 36;
 
 // ─────────────────────────────────────────────────────────
-// Utilitaires (cles de pdf-export.ts simplifies)
+// Helpers, simplified from pdf-export.ts
 // ─────────────────────────────────────────────────────────
 type CapturedDoc = InstanceType<typeof PDFDocument>;
 
@@ -182,12 +182,12 @@ function finalizeFooter(doc: CapturedDoc, override?: string) {
   }
 }
 
-// Formatte un montant CAD avec 2 decimales
+// CAD amount, two decimals.
 function money(n: number): string {
   return `${n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} $`;
 }
 
-// Bloc info en 2 colonnes (label / valeur)
+// Two-column info block: label / value.
 function drawInfoBlock(
   doc: CapturedDoc,
   title: string,
@@ -226,7 +226,7 @@ function drawInfoBlock(
   doc.y = y + h + 10;
 }
 
-// Tableau simple a 3 colonnes (label, qte/details, montant)
+// Three-column table: label, detail, amount.
 function drawAmountTable(
   doc: CapturedDoc,
   title: string,
@@ -300,6 +300,19 @@ function formatDate(d: Date | null | undefined, lang: "fr" | "en" = "fr"): strin
   return new Date(d).toLocaleDateString(locale, { day: "2-digit", month: "long", year: "numeric" });
 }
 
+/** Date-only columns (@db.Date) carry their calendar day in UTC. */
+function formatDayOnly(d: Date | null | undefined, lang: "fr" | "en" = "fr"): string {
+  if (!d) return "—";
+  const locale = lang === "en" ? "en-CA" : "fr-CA";
+  return new Date(d).toLocaleDateString(locale, { day: "2-digit", month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+function formatDayOnlyShort(d: Date | null | undefined, lang: "fr" | "en" = "fr"): string {
+  if (!d) return "—";
+  const locale = lang === "en" ? "en-CA" : "fr-CA";
+  return new Date(d).toLocaleDateString(locale, { timeZone: "UTC" });
+}
+
 function formatDateShort(d: Date | null | undefined, lang: "fr" | "en" = "fr"): string {
   if (!d) return "—";
   const locale = lang === "en" ? "en-CA" : "fr-CA";
@@ -307,11 +320,13 @@ function formatDateShort(d: Date | null | undefined, lang: "fr" | "en" = "fr"): 
 }
 
 // ═══════════════════════════════════════════════════════════
-// 1. BULLETIN DE PAIE
+// 1. PAY STUB
 // ═══════════════════════════════════════════════════════════
 export type PayStubData = {
   id: number;
   hoursRegular: number; hoursOvertime: number; hoursVacation: number; hoursSick: number;
+  hoursHoliday: number;
+  holidayIndemnity: number;
   rate: number; grossPay: number;
   deductionFederal: number; deductionProvincial: number; deductionRrq: number;
   deductionAe: number; deductionRqap: number; deductionOther: number;
@@ -331,10 +346,10 @@ export async function generatePayStubPdf(params: {
     drawHeader(
       doc,
       "Bulletin de paie",
-      `Periode ${formatDateShort(period.startDate)} → ${formatDateShort(period.endDate)}`,
+      `Periode ${formatDayOnlyShort(period.startDate)} → ${formatDayOnlyShort(period.endDate)}`,
     );
 
-    // Employe + Periode (cote a cote via 2 blocs)
+    // Employee and period, side by side.
     drawInfoBlock(doc, "Employe", [
       ["Nom", sanitize(admin.fullName) || sanitize(admin.email)],
       ["Courriel", sanitize(admin.email)],
@@ -345,17 +360,19 @@ export async function generatePayStubPdf(params: {
       ? `Publie (${formatDateShort(stub.releasedAt)})`
       : "Brouillon";
     drawInfoBlock(doc, "Periode de paie", [
-      ["Debut", formatDate(period.startDate)],
-      ["Fin", formatDate(period.endDate)],
-      ["Date de paie", formatDate(period.payDate)],
+      ["Debut", formatDayOnly(period.startDate)],
+      ["Fin", formatDayOnly(period.endDate)],
+      ["Date de paie", formatDayOnly(period.payDate)],
       ["Statut bulletin", statusLabel],
     ], { accent: C.navy });
 
-    // Heures
+    // Hours
     const rate = Number(stub.rate);
     const heuresRows: Array<{ label: string; detail?: string; amount: number }> = [];
     const hReg = Number(stub.hoursRegular);
-    if (hReg > 0 || (Number(stub.hoursOvertime) === 0 && Number(stub.hoursVacation) === 0 && Number(stub.hoursSick) === 0)) {
+    const otherRows = Number(stub.hoursOvertime) + Number(stub.hoursHoliday)
+      + Number(stub.holidayIndemnity) + Number(stub.hoursVacation) + Number(stub.hoursSick);
+    if (hReg > 0 || otherRows === 0) {
       heuresRows.push({
         label: "Heures regulieres",
         detail: `${hReg.toFixed(2)} h × ${money(rate)}`,
@@ -368,6 +385,22 @@ export async function generatePayStubPdf(params: {
         label: "Heures supplementaires",
         detail: `${hOt.toFixed(2)} h × ${money(rate * 1.5)}`,
         amount: hOt * rate * 1.5,
+      });
+    }
+    const hHol = Number(stub.hoursHoliday);
+    if (hHol > 0) {
+      heuresRows.push({
+        label: "Jour ferie travaille",
+        detail: `${hHol.toFixed(2)} h × ${money(rate * 2)}`,
+        amount: hHol * rate * 2,
+      });
+    }
+    const indemnity = Number(stub.holidayIndemnity);
+    if (indemnity > 0) {
+      heuresRows.push({
+        label: "Indemnite de jour ferie",
+        detail: "1/20 des 4 semaines precedentes",
+        amount: indemnity,
       });
     }
     const hVac = Number(stub.hoursVacation);
@@ -406,7 +439,7 @@ export async function generatePayStubPdf(params: {
       amount: totalDed,
     });
 
-    // Net a payer - encadre navy
+    // Net pay, in a navy frame.
     ensureSpace(doc, 60);
     const x = 50;
     const w = doc.page.width - 100;
@@ -444,10 +477,10 @@ export type ContractData = {
 };
 export type Person = { fullName: string | null; email: string };
 
-// Labels en ASCII (PDF avec font Helvetica sans accent)
-// Couvre les nouvelles valeurs QC + les anciennes (legacy).
+// ASCII labels: the PDF font carries no accents.
+// Covers the current QC values and the legacy ones.
 const CONTRACT_TYPE_LABELS: Record<string, string> = {
-  // Nouvelles valeurs QC
+  // Current QC values
   permanent_full_time: "Permanent temps plein",
   permanent_part_time: "Permanent temps partiel",
   temporary: "Temporaire (duree determinee)",
@@ -456,7 +489,7 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
   student: "Etudiant (temps partiel)",
   internship: "Stage remunere",
   freelance: "Pigiste / Travailleur autonome",
-  // Anciennes valeurs (rétro-compat)
+  // Legacy values
   cdi: "Permanent temps plein",
   cdd: "Temporaire (duree determinee)",
   contractuel: "Pigiste / Travailleur autonome",
@@ -488,14 +521,14 @@ export async function generateContractPdf(params: {
       ["Courriel", sanitize(admin.email)],
     ]);
 
-    // Conditions
+    // Terms
     const conditions: Array<[string, string]> = [
       ["Titre du contrat", sanitize(contract.title)],
       ["Type", CONTRACT_TYPE_LABELS[contract.contractType] ?? contract.contractType.toUpperCase()],
-      ["Date de debut", formatDate(contract.startDate)],
+      ["Date de debut", formatDayOnly(contract.startDate)],
     ];
-    if (contract.endDate) conditions.push(["Date de fin", formatDate(contract.endDate)]);
-    if (contract.probationEndDate) conditions.push(["Fin probation", formatDate(contract.probationEndDate)]);
+    if (contract.endDate) conditions.push(["Date de fin", formatDayOnly(contract.endDate)]);
+    if (contract.probationEndDate) conditions.push(["Fin probation", formatDayOnly(contract.probationEndDate)]);
     if (contract.salaryAnnual != null) {
       conditions.push(["Salaire annuel", `${money(Number(contract.salaryAnnual))} CAD`]);
     }
@@ -510,7 +543,7 @@ export async function generateContractPdf(params: {
     }
     drawInfoBlock(doc, "Conditions", conditions, { accent: C.green });
 
-    // Corps du contrat
+    // Body of the contract
     sectionTitle(doc, "Termes et conditions");
     const x = 50;
     const w = doc.page.width - 100;
@@ -543,7 +576,7 @@ export async function generateContractPdf(params: {
     ensureSpace(doc, sigH + 12);
     const sy = doc.y;
 
-    // Bloc employe
+    // Employee block
     doc.roundedRect(x, sy, sigW, sigH, 4).fillAndStroke(C.grayLight, C.border);
     doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5)
       .text("EMPLOYE", x + 12, sy + 8, { lineBreak: false, characterSpacing: 0.6 });
@@ -559,7 +592,7 @@ export async function generateContractPdf(params: {
         .text("Signature en attente", x + 12, sy + 40, { width: sigW - 24, lineBreak: false });
     }
 
-    // Bloc employeur
+    // Employer block
     const ex = x + sigW + 12;
     doc.roundedRect(ex, sy, sigW, sigH, 4).fillAndStroke(C.grayLight, C.border);
     doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5)
@@ -577,7 +610,7 @@ export async function generateContractPdf(params: {
     }
     doc.y = sy + sigH + 12;
 
-    // Note confidentialite
+    // Confidentiality note
     doc.fillColor(C.gray).font("Helvetica-Oblique").fontSize(7.5)
       .text(
         "Document confidentiel - reserve aux parties signataires. " +
@@ -588,7 +621,7 @@ export async function generateContractPdf(params: {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 3. LETTRE D'EMPLOI
+// 3. EMPLOYMENT LETTER
 // ═══════════════════════════════════════════════════════════
 export type LetterPurpose = "mortgage" | "visa" | "landlord" | "other"
   | "bank" | "rental" | "embassy" | "hypothec";
@@ -602,7 +635,7 @@ export type LetterParams = {
   signedBy: { fullName: string | null; email: string };
 };
 
-// Mappe les purposes etendus (schema Prisma) vers les categories logiques
+// Maps the extended purposes of the Prisma schema onto the logical categories.
 function normalizePurpose(p: LetterPurpose): "mortgage" | "visa" | "landlord" | "other" {
   switch (p) {
     case "hypothec":
@@ -626,7 +659,7 @@ function buildLetterBody(params: LetterParams): { title: string; paragraphs: str
   const purpose = normalizePurpose(params.purpose);
   const empName = sanitize(admin.fullName) || sanitize(admin.email);
   const position = sanitize(admin.position);
-  const startDateStr = admin.startDate ? formatDate(admin.startDate, language) : null;
+  const startDateStr = admin.startDate ? formatDayOnly(admin.startDate, language) : null;
 
   const salary = contract?.salaryAnnual ? Number(contract.salaryAnnual) : null;
   const rate = contract?.hourlyRate ? Number(contract.hourlyRate) : null;
@@ -734,9 +767,9 @@ function buildLetterBody(params: LetterParams): { title: string; paragraphs: str
 }
 
 // ═══════════════════════════════════════════════════════════
-// 4. RESUMES FISCAUX ANNUELS (T4 federal / Releve 1 Quebec)
-//    Non officiels — pour usage interne. Les vrais documents
-//    doivent etre delivres via les outils gouvernementaux.
+// 4. ANNUAL TAX SUMMARIES (federal T4 / Quebec Releve 1)
+//    Internal use only. The real slips must be issued through the
+//    government tools.
 // ═══════════════════════════════════════════════════════════
 export type TaxTotals = {
   grossPay: number;
@@ -755,7 +788,7 @@ export type TaxAdminInfo = {
   sin?: string | null;
 };
 
-// Bloc 2 colonnes "case officielle + valeur" — visuel formulaire fiscal
+// Two-column block, box number plus value, in the shape of a tax form.
 function drawTaxBoxes(
   doc: CapturedDoc,
   rows: Array<{ code: string; label: string; amount: number; muted?: boolean }>,
@@ -773,21 +806,21 @@ function drawTaxBoxes(
       if (!r) continue;
       const bx = x + c * (colW + 12);
 
-      // cadre
+      // frame
       doc.roundedRect(bx, y, colW, rowH, 4)
         .fillAndStroke(C.grayLight, C.border);
-      // code de case (badge navy)
+      // box number, navy badge
       doc.rect(bx, y, 38, rowH).fill(C.navy);
       doc.fillColor(C.white).font("Helvetica-Bold").fontSize(11)
         .text(r.code, bx, y + rowH / 2 - 6, {
           width: 38, align: "center", lineBreak: false,
         });
-      // libelle
+      // label
       doc.fillColor(C.gray).font("Helvetica").fontSize(7.5)
         .text(sanitize(r.label).toUpperCase(), bx + 46, y + 6, {
           width: colW - 54, lineBreak: false, ellipsis: true, characterSpacing: 0.4,
         });
-      // montant
+      // amount
       doc.fillColor(r.muted ? C.gray : C.text)
         .font("Helvetica-Bold").fontSize(13)
         .text(money(r.amount), bx + 46, y + 19, {
@@ -831,7 +864,7 @@ export async function generateT4SummaryPdf(params: {
   stubCount: number;
 }): Promise<Buffer> {
   const { admin, year, totals, stubCount } = params;
-  // Gains assurables AE = grossPay (plafond 2026 ~ 65 700 $ — ignore ici, valeur indicative)
+  // EI insurable earnings = grossPay; the yearly maximum is ignored here.
   const insurableEarnings = totals.grossPay;
   const pensionableEarnings = totals.grossPay;
 
@@ -964,7 +997,7 @@ export async function generateEmploymentLetterPdf(params: LetterParams): Promise
     const x = 50;
     const w = doc.page.width - 100;
 
-    // Date a droite
+    // Date, right aligned
     doc.fillColor(C.gray).font("Helvetica").fontSize(9.5)
       .text(todayStr, x, doc.y, { width: w, align: "right", lineBreak: false });
     doc.moveDown(1.2);
@@ -974,7 +1007,7 @@ export async function generateEmploymentLetterPdf(params: LetterParams): Promise
       .text(body.salutation, x, doc.y, { width: w });
     doc.moveDown(0.8);
 
-    // Corps
+    // Body
     doc.font("Helvetica").fontSize(10.5);
     for (const p of body.paragraphs) {
       const h = doc.heightOfString(p, { width: w });
@@ -992,9 +1025,9 @@ export async function generateEmploymentLetterPdf(params: LetterParams): Promise
 }
 
 // ═══════════════════════════════════════════════════════════
-// 5. DOSSIER EMPLOYE COMPLET
-//    PDF interne consolidant identite, contrats, evaluations,
-//    notes, conges, equipement, permis/formations, CNESST.
+// 5. FULL EMPLOYEE FILE
+//    Internal PDF gathering identity, contracts, reviews, notes, leaves,
+//    equipment, licences and training, CNESST.
 // ═══════════════════════════════════════════════════════════
 
 export type DossierAdmin = {
@@ -1138,7 +1171,7 @@ function ensureColumnTable(
     doc.y += 12;
     return;
   }
-  // Normalise widths a la largeur totale
+  // Normalize the widths to the total width.
   const totalW = widths.reduce((s, n) => s + n, 0);
   const ratios = widths.map((n) => n / totalW);
   const colX = ratios.reduce<number[]>((acc, r) => {
@@ -1177,7 +1210,7 @@ function ensureColumnTable(
 
 export type DossierMonthlyHours = {
   ym: string; // YYYY-MM
-  workMin: number;     // travail effectif (work + meeting + training)
+  workMin: number;     // time actually worked (work + meeting + training)
   meetingMin: number;
   trainingMin: number;
 };
@@ -1193,7 +1226,7 @@ export type DossierData = {
   trainings: DossierTraining[];
   cnesst: DossierCnesst[];
   payAgg: { count: number; grossPay: number; netPay: number };
-  // Optionnel : heures travaillees agregees par mois (12 derniers mois)
+  // Optional: hours worked per month, over the last 12 months.
   monthlyHours?: DossierMonthlyHours[];
 };
 
@@ -1209,7 +1242,7 @@ function seniorityFr(start: Date | null): string {
 }
 
 // ═══════════════════════════════════════════════════════════
-// RELEVE PERSONNEL DE POINTAGES (auto-export employe)
+// PERSONAL TIMESHEET (employee self-export)
 // ═══════════════════════════════════════════════════════════
 export type PersonalTimesheetEntry = {
   clockIn: Date;
@@ -1236,16 +1269,16 @@ function fmtDurFromMin(mins: number | null): string {
   return `${h}h${m.toString().padStart(2, "0")}`;
 }
 
-// Agrégat (employé, jour) : travail = work+meeting+training, absence = vacation/sick/parental/etc.
+// One (employee, day): work = work+meeting+training, absence = vacation/sick/parental/etc.
 type DayBucket = {
   date: string; // YYYY-MM-DD
   workMin: number;
   meetingMin: number;
   trainingMin: number;
   breakMin: number;
-  absenceMin: number; // congés payés (vacation, sick, parental, bereavement, unpaid, other)
-  absenceType: string | null; // type principal du congé (pour libellé)
-  totalEffMin: number; // total rémunéré (work + meeting + training + absence)
+  absenceMin: number; // paid leave (vacation, sick, parental, bereavement, unpaid, other)
+  absenceType: string | null; // main leave type, for the label
+  totalEffMin: number; // total paid (work + meeting + training + absence)
   isApproved: boolean;
   isSubmitted: boolean;
 };
@@ -1293,12 +1326,12 @@ function aggregateByDay(entries: PersonalTimesheetEntry[]): DayBucket[] {
     else if (e.category === "training") { b.trainingMin += dur; b.totalEffMin += dur; }
     else if (e.category === "break") { b.breakMin += dur; }
     else if (e.category && ABSENCE_TYPE_LABELS[e.category]) {
-      // vacation, sick, parental, bereavement, unpaid, other → comptés comme absence rémunérée
+      // vacation, sick, parental, bereavement, unpaid, other -> paid absence
       b.absenceMin += dur;
       b.totalEffMin += dur;
       if (!b.absenceType) b.absenceType = e.category;
     }
-    // approval state : tous approuvés ?
+    // Approval state: everything approved?
     if (!e.approvedAt) b.isApproved = false;
   }
   return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
@@ -1357,7 +1390,7 @@ export async function generatePersonalTimesheetPdf(params: {
     });
     doc.y = y + 60;
 
-    // Resume quotidien — 1 ligne par jour, pas de detail technique
+    // Daily summary: one line per day, no technical detail.
     sectionTitle(doc, "Resume quotidien");
     const xT = 50;
     const wT = doc.page.width - 100;
@@ -1367,7 +1400,7 @@ export async function generatePersonalTimesheetPdf(params: {
         .text("Aucune journee travaillee sur la periode.", xT, doc.y, { width: wT });
       doc.y += 12;
     } else {
-      // Colonnes simplifiees : TRAVAIL fusionne work+meeting+training (vu "travail effectif")
+      // Simplified columns: WORK merges work+meeting+training.
       const headers = ["DATE", "TRAVAIL", "ABSENCE", "TOTAL", "STATUT"];
       const ratios = [1.6, 1.2, 1.4, 1.2, 1.2];
       const totalR = ratios.reduce((s, n) => s + n, 0);
@@ -1379,9 +1412,9 @@ export async function generatePersonalTimesheetPdf(params: {
 
       ensureSpace(doc, rowH + 4);
       doc.fillColor(C.gray).font("Helvetica-Bold").fontSize(7.5);
-      const headerY = doc.y; // y FIXE pour toutes les cellules header
+      const headerY = doc.y; // fixed y for every header cell
       headers.forEach((h, i) => {
-        // STATUT (dernier col, i=4) aligné à gauche, DATE (i=0) aussi
+        // STATUS (last column) and DATE (first) are left aligned.
         const align: "left" | "right" = i === 0 || i === 4 ? "left" : "right";
         doc.text(h, colX[i] + 4, headerY, {
           width: (ratios[i] / totalR) * wT - 8, lineBreak: false, characterSpacing: 0.5, align,
@@ -1398,7 +1431,7 @@ export async function generatePersonalTimesheetPdf(params: {
         const d = new Date(b.date + "T12:00:00");
         const dateLabel = d.toLocaleDateString("fr-CA", { weekday: "short", day: "2-digit", month: "short" });
         const status = b.isApproved ? "Approuve" : "Soumis";
-        // TRAVAIL = work + meeting + training fusionnes
+        // WORK = work + meeting + training merged
         const travailMin = b.workMin + b.meetingMin + b.trainingMin;
         // Absence : duree + libelle court du type (ex: "8h00 Vacances")
         const absenceCell = b.absenceMin > 0
@@ -1425,7 +1458,7 @@ export async function generatePersonalTimesheetPdf(params: {
       ensureSpace(doc, rowH + 6);
       const ry = doc.y + 2;
       doc.strokeColor(C.border).lineWidth(0.6).moveTo(xT, ry).lineTo(xT + wT, ry).stroke();
-      const totalY = ry + 5; // y FIXE pour toutes les cellules (sinon PDFKit avance curseur)
+      const totalY = ry + 5; // fixed y: PDFKit would otherwise advance the cursor
       const totalTravailMin = totalWorkMin + totalMeetingMin + totalTrainingMin;
       const totals = [
         "TOTAL",
@@ -1869,7 +1902,7 @@ export async function generateLeaveAnnualReportPdf(data: LeaveAnnualReportData):
   return capture((doc) => {
     drawHeader(doc, "Releve annuel de conges", `${empName} - ${startStr} -> ${endStr}`);
 
-    // Bloc info employe + periode
+    // Employee and period block
     drawInfoBlock(doc, "Employe", [
       ["Nom", empName],
       ["Courriel", sanitize(data.admin.email)],
@@ -1906,7 +1939,7 @@ export async function generateLeaveAnnualReportPdf(data: LeaveAnnualReportData):
       doc.y = ry + 60;
     }
 
-    // Tableau des demandes
+    // Requests table
     sectionTitle(doc, "Detail des demandes");
     const x = 50;
     const w = doc.page.width - 100;
