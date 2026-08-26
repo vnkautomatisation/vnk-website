@@ -175,7 +175,11 @@ export async function reviewAppealAction(
     return { success: false, error: "Aucun appel en attente sur cette preference." };
   }
   if (pref.adminId === actorId) {
-    return { success: false, error: "Vous ne pouvez pas reviser votre propre appel." };
+    // Founder is the only exception (no superior in the org chart).
+    const { isFounder } = await import("@/lib/services/org-guard");
+    if (!(await isFounder(actorId))) {
+      return { success: false, error: "Vous ne pouvez pas reviser votre propre appel." };
+    }
   }
 
   const notesClean = parsed.data.notes?.slice(0, 500) ?? null;

@@ -835,6 +835,15 @@ export async function employerSignLegalDocAction(
     return { success: false, error: "Ce document ne prévoit pas de signature employeur" };
   }
 
+  // Org-chart rule: cannot counter-sign your OWN document (founder excepted).
+  {
+    const { selfApprovalError } = await import("@/lib/services/org-guard");
+    const selfErr = await selfApprovalError(adminId, sig.adminId);
+    if (selfErr) {
+      return { success: false, error: "Vous ne pouvez pas contresigner votre propre document — seul votre supérieur peut le faire" };
+    }
+  }
+
   await prisma.legalDocumentSignature.update({
     where: { id: sig.id },
     data: {

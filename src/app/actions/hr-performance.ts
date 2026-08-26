@@ -35,6 +35,11 @@ export async function createPerformanceReviewAction(input: z.infer<typeof review
   const parsed = reviewCreateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
+  // Org-chart rule: the reviewer can never be the reviewed employee.
+  if (parsed.data.adminId === parsed.data.reviewerId) {
+    return { success: false, error: "L'évaluateur ne peut pas être l'employé évalué" };
+  }
+
   const r = await prisma.performanceReview.create({
     data: {
       adminId: parsed.data.adminId,
@@ -74,9 +79,15 @@ export async function updatePerformanceReviewAction(input: z.infer<typeof review
   const isEmployee = review.adminId === me.id;
   if (!me.isHr && !isReviewer && !isEmployee) return { success: false, error: "Non autorisé" };
 
+  // Org-chart rule: even an HR admin cannot grade/submit their OWN review —
+  // only their superior can. Founder is the sole exception (no superior).
+  const { isFounder } = await import("@/lib/services/org-guard");
+  const founderException = isEmployee ? await isFounder(me.id) : false;
+  const canManage = (me.isHr || isReviewer) && (!isEmployee || founderException);
+
   const data: Record<string, unknown> = {};
-  // Manager fields (HR ou reviewer)
-  if (me.isHr || isReviewer) {
+  // Manager fields (HR ou reviewer, jamais sur sa propre évaluation)
+  if (canManage) {
     if (parsed.data.rating !== undefined) data.rating = parsed.data.rating;
     if (parsed.data.strengths !== undefined) data.strengths = parsed.data.strengths;
     if (parsed.data.improvements !== undefined) data.improvements = parsed.data.improvements;
@@ -89,7 +100,7 @@ export async function updatePerformanceReviewAction(input: z.infer<typeof review
   }
   // Status transitions
   if (parsed.data.status) {
-    if (parsed.data.status === "submitted" && (me.isHr || isReviewer)) {
+    if (parsed.data.status === "submitted" && canManage) {
       data.status = "submitted";
       data.submittedAt = new Date();
     } else if (parsed.data.status === "acknowledged" && isEmployee) {
@@ -104,7 +115,7 @@ export async function updatePerformanceReviewAction(input: z.infer<typeof review
           link: `/admin/employes/evaluations`,
         },
       }).catch(() => null);
-    } else if (parsed.data.status === "closed" && me.isHr) {
+    } else if (parsed.data.status === "closed" && me.isHr && (!isEmployee || founderException)) {
       data.status = "closed";
     }
   }

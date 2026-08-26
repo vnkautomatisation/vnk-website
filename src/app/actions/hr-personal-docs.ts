@@ -228,6 +228,7 @@ export async function verifyPersonalDocAction(
     select: { adminId: true, isPrivate: true, title: true },
   });
   if (!doc) return { success: false, error: "Document introuvable" };
+  // Org-chart rule (self-verification handled below after actor resolution).
 
   // Seul un admin RH peut vérifier (l'employé ne peut pas s'auto-vérifier)
   const session = await auth();
@@ -245,6 +246,14 @@ export async function verifyPersonalDocAction(
     || (perms.users ?? []).includes("write")
     || (perms.hr ?? []).includes("write");
   if (!isHr) return { success: false, error: "Permission RH requise" };
+
+  // Org-chart rule: an HR admin cannot verify their OWN document — only
+  // their superior can (founder excepted).
+  {
+    const { selfApprovalError } = await import("@/lib/services/org-guard");
+    const selfErr = await selfApprovalError(actorId, doc.adminId);
+    if (selfErr) return { success: false, error: selfErr };
+  }
 
   // Doc privé : ne peut être vérifié (l'admin RH ne le voit pas)
   if (doc.isPrivate && !isSuper) {

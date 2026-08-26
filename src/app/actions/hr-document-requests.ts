@@ -309,6 +309,13 @@ export async function approveUploadRequestAction(
   if (!req.fileUrl) {
     return { success: false, error: "Fichier manquant" };
   }
+  // Org-chart rule: an HR admin cannot approve an upload that targets
+  // THEMSELVES — only their superior can (founder excepted).
+  {
+    const { selfApprovalError } = await import("@/lib/services/org-guard");
+    const selfErr = await selfApprovalError(guard.actorId, req.targetAdminId);
+    if (selfErr) return { success: false, error: selfErr };
+  }
 
   // Création optionnelle du EmployeePersonalDocument officiel (par défaut oui).
   const alsoCreate = parsed.data.alsoCreatePersonalDoc ?? true;
@@ -400,6 +407,12 @@ export async function rejectUploadRequestAction(
   if (!req) return { success: false, error: "Demande introuvable" };
   if (req.status !== "uploaded") {
     return { success: false, error: "Le fichier n'a pas encore été téléversé" };
+  }
+  // Org-chart rule: cannot review an upload that targets yourself.
+  {
+    const { selfApprovalError } = await import("@/lib/services/org-guard");
+    const selfErr = await selfApprovalError(guard.actorId, req.targetAdminId);
+    if (selfErr) return { success: false, error: selfErr };
   }
 
   // On repasse la demande en "pending" pour que l'employé puisse re-téléverser,
