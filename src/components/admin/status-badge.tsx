@@ -1,61 +1,57 @@
-// Badge de statut universel avec mapping i18n + couleurs VNK
+// Universal status badge: colour here, wording in the `status` namespace.
+"use client";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 
 type StatusVariant = "default" | "secondary" | "destructive" | "success" | "warning" | "info";
 
-const STATUS_MAP: Record<string, { label: string; variant: StatusVariant }> = {
-  // Mandate
-  pending: { label: "En attente", variant: "warning" },
-  active: { label: "Actif", variant: "info" },
-  in_progress: { label: "En cours", variant: "info" },
-  paused: { label: "En pause", variant: "secondary" },
-  completed: { label: "Complété", variant: "success" },
-  confirmed: { label: "Confirmé", variant: "success" },
-  no_show: { label: "Absent", variant: "destructive" },
-  cancelled: { label: "Annulé", variant: "destructive" },
-  // Quote
-  accepted: { label: "Accepté", variant: "success" },
-  declined: { label: "Refusé", variant: "destructive" },
-  expired: { label: "Expiré", variant: "secondary" },
-  // Contract
-  draft: { label: "Brouillon", variant: "secondary" },
-  sent: { label: "Envoyé", variant: "info" },
-  signed: { label: "Signé", variant: "success" },
-  admin_signed: { label: "Admin signé", variant: "info" },
-  client_signed: { label: "Client signé", variant: "info" },
-  // Invoice
-  unpaid: { label: "Non payée", variant: "warning" },
-  paid: { label: "Payée", variant: "success" },
-  overdue: { label: "En retard", variant: "destructive" },
-  refunded: { label: "Remboursée", variant: "secondary" },
-  // Dispute
-  open: { label: "Ouvert", variant: "warning" },
-  resolved: { label: "Résolu", variant: "success" },
-  escalated: { label: "Escaladé", variant: "destructive" },
-  // Priority
-  low: { label: "Faible", variant: "secondary" },
-  medium: { label: "Moyenne", variant: "warning" },
-  high: { label: "Élevée", variant: "warning" },
-  critical: { label: "Critique", variant: "destructive" },
-  // Refund
-  processed: { label: "Traité", variant: "success" },
-  failed: { label: "Échoué", variant: "destructive" },
-  // Payment Stripe (status interne moteur Stripe)
-  succeeded: { label: "Complété", variant: "success" },
-  complete: { label: "Complété", variant: "success" },
-  requires_action: { label: "Action requise", variant: "warning" },
-  requires_payment_method: { label: "Méthode requise", variant: "warning" },
-  requires_confirmation: { label: "À confirmer", variant: "warning" },
-  processing: { label: "En traitement", variant: "info" },
-  canceled: { label: "Annulé", variant: "secondary" },
-  // Request
-  new: { label: "Nouvelle", variant: "info" },
-  converted: { label: "Convertie", variant: "success" },
-  closed: { label: "Fermée", variant: "secondary" },
+const STATUS_VARIANT: Record<string, StatusVariant> = {
+  pending: "warning",
+  active: "info",
+  in_progress: "info",
+  paused: "secondary",
+  completed: "success",
+  confirmed: "success",
+  no_show: "destructive",
+  cancelled: "destructive",
+  accepted: "success",
+  declined: "destructive",
+  expired: "secondary",
+  draft: "secondary",
+  sent: "info",
+  signed: "success",
+  admin_signed: "info",
+  client_signed: "info",
+  unpaid: "warning",
+  paid: "success",
+  overdue: "destructive",
+  refunded: "secondary",
+  open: "warning",
+  resolved: "success",
+  escalated: "destructive",
+  low: "secondary",
+  medium: "warning",
+  high: "warning",
+  critical: "destructive",
+  processed: "success",
+  failed: "destructive",
+  succeeded: "success",
+  complete: "success",
+  requires_action: "warning",
+  requires_payment_method: "warning",
+  requires_confirmation: "warning",
+  processing: "info",
+  canceled: "secondary",
+  new: "info",
+  converted: "success",
+  closed: "secondary",
 };
 
 export function StatusBadge({ status }: { status: string | null | undefined }) {
+  const t = useTranslations("status");
   if (!status) return <span className="text-muted-foreground">—</span>;
-  const config = STATUS_MAP[status] ?? { label: status, variant: "default" as const };
-  return <Badge variant={config.variant}>{config.label}</Badge>;
+  const variant = STATUS_VARIANT[status] ?? "default";
+  // An unknown status is shown raw rather than as a missing-key error.
+  const label = STATUS_VARIANT[status] ? t(status) : status;
+  return <Badge variant={variant}>{label}</Badge>;
 }

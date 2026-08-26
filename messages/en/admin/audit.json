@@ -1,0 +1,79 @@
+{
+  "action": {
+    "create": "Created",
+    "update": "Updated",
+    "delete": "Deleted",
+    "approve": "Approved",
+    "reject": "Rejected"
+  },
+  "type": {
+    "vacation": "Vacation",
+    "sick": "Sick leave",
+    "parental": "Parental leave",
+    "unpaid": "Unpaid leave",
+    "bereavement": "Bereavement",
+    "other": "Other leave"
+  },
+  "status": {
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "cancelled": "Cancelled"
+  },
+  "decision": {
+    "approved": "Approved",
+    "rejected": "Rejected"
+  },
+  "half": {
+    "AM": "Morning",
+    "PM": "Afternoon"
+  },
+  "field": {
+    "decision": "Decision",
+    "notes": "Review note",
+    "reason": "Reason",
+    "type": "Leave type",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "status": "Status",
+    "halfDay": "Half day",
+    "daysCount": "Number of days",
+    "diff": "Changes",
+    "adminEdit": "Administrative change",
+    "adminCancelled": "Administrative cancellation",
+    "adminDelete": "Administrative deletion",
+    "snapshot": "State before deletion",
+    "mandatoryClosure": "Mandatory closure",
+    "duplicatedFrom": "Duplicated from request",
+    "newId": "New request created",
+    "attachmentUrl": "Supporting document",
+    "attachmentName": "Attached file name",
+    "delegateApprovalTo": "Approval delegation",
+    "blocked": "Submissions blocked",
+    "unblocked": "Submissions unblocked",
+    "blockedUntil": "Blocked until",
+    "blockedReason": "Reason for the block",
+    "policyId": "Leave policy",
+    "policyName": "Leave policy",
+    "balanceDelta": "Balance adjustment",
+    "delta": "Adjustment",
+    "created": "Created",
+    "skipped": "Skipped",
+    "conflicts": "Conflicts",
+    "period": "Period",
+    "unapproved": "Approval withdrawn",
+    "convertedFrom": "Previous type",
+    "convertedTo": "New type"
+  },
+  "flag": {
+    "adminEdit": "Changed by an administrator",
+    "adminCancelled": "Administrative cancellation",
+    "adminDelete": "Permanently deleted by an administrator",
+    "mandatoryClosure": "Mandatory company closure",
+    "unapproved": "Approval withdrawn — back to pending"
+  },
+  "details": "Details:",
+  "complex": "(complex details)",
+  "yes": "Yes",
+  "no": "No"
+}

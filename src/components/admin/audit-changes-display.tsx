@@ -1,65 +1,30 @@
 "use client";
-// Affichage humain des changements d'un AuditLog (jamais de JSON brut côté utilisateur).
-// Sert dans les modaux Historique de demandes de congé, pointage, etc.
-// Le but : transformer { decision: "approved" } → "Décision : Approuvée"
+// An AuditLog rendered for a human: { decision: "approved" } -> "Decision: Approved".
+// Users never see raw JSON.
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 
 // ─── Mappings FR ─────────────────────────────────────────────────
-const ACTION_LABELS: Record<string, { label: string; tone: string }> = {
-  create: { label: "Création", tone: "bg-cyan-50 text-cyan-800 border-cyan-200" },
-  update: { label: "Modification", tone: "bg-amber-50 text-amber-800 border-amber-200" },
-  delete: { label: "Suppression", tone: "bg-red-50 text-red-800 border-red-200" },
-  approve: { label: "Approbation", tone: "bg-emerald-50 text-emerald-800 border-emerald-200" },
-  reject: { label: "Refus", tone: "bg-red-50 text-red-800 border-red-200" },
+const ACTION_TONE: Record<string, string> = {
+  create: "bg-cyan-50 text-cyan-800 border-cyan-200",
+  update: "bg-amber-50 text-amber-800 border-amber-200",
+  delete: "bg-red-50 text-red-800 border-red-200",
+  approve: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  reject: "bg-red-50 text-red-800 border-red-200",
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  vacation: "Vacances", sick: "Maladie", parental: "Parental",
-  unpaid: "Sans solde", bereavement: "Décès", other: "Autre congé",
-};
-const STATUS_LABELS: Record<string, string> = {
-  pending: "En attente", approved: "Approuvée", rejected: "Refusée", cancelled: "Annulée",
-};
-const DECISION_LABELS: Record<string, string> = { approved: "Approuvée", rejected: "Refusée" };
-const HALF_LABELS: Record<string, string> = { AM: "Avant-midi", PM: "Après-midi" };
+// Keys that carry a translated label; anything else is humanised as-is.
+const KNOWN_FIELDS = new Set([
+  "decision", "notes", "reason", "type", "startDate", "endDate", "status", "halfDay", "daysCount", "diff", "adminEdit", "adminCancelled", "adminDelete", "snapshot", "mandatoryClosure", "duplicatedFrom", "newId", "attachmentUrl", "attachmentName", "delegateApprovalTo", "blocked", "unblocked", "blockedUntil", "blockedReason", "policyId", "policyName", "balanceDelta", "delta", "created", "skipped", "conflicts", "period", "unapproved", "convertedFrom", "convertedTo",
+]);
 
-// Labels des clés (changes) → libellé FR
-const FIELD_LABELS: Record<string, string> = {
-  decision: "Décision",
-  notes: "Note de revue",
-  reason: "Raison",
-  type: "Type de congé",
-  startDate: "Date de début",
-  endDate: "Date de fin",
-  status: "Statut",
-  halfDay: "Demi-journée",
-  daysCount: "Nombre de jours",
-  diff: "Modifications",
-  adminEdit: "Modification administrative",
-  adminCancelled: "Annulation administrative",
-  adminDelete: "Suppression administrative",
-  snapshot: "État avant suppression",
-  mandatoryClosure: "Fermeture obligatoire",
-  duplicatedFrom: "Dupliquée depuis la demande",
-  newId: "Nouvelle demande créée",
-  attachmentUrl: "Justificatif",
-  attachmentName: "Nom du fichier joint",
-  delegateApprovalTo: "Délégation d'approbation",
-  blocked: "Soumissions bloquées",
-  unblocked: "Soumissions débloquées",
-  blockedUntil: "Bloqué jusqu'au",
-  blockedReason: "Raison du blocage",
-  policyId: "Politique de congés",
-  policyName: "Politique de congés",
-  balanceDelta: "Ajustement de solde",
-  delta: "Ajustement",
-  created: "Créé(s)",
-  skipped: "Ignoré(s)",
-  conflicts: "Conflit(s)",
-  period: "Période",
-  unapproved: "Approbation retirée",
-  convertedFrom: "Type d'origine",
-  convertedTo: "Nouveau type",
+const VALUE_NAMESPACE: Record<string, string> = {
+  decision: "decision",
+  status: "status",
+  type: "type",
+  convertedFrom: "type",
+  convertedTo: "type",
+  halfDay: "half",
 };
 
 // ─── Helpers de formatage ────────────────────────────────────────
@@ -71,16 +36,19 @@ function formatDate(v: string): string {
   return new Date(v).toLocaleDateString("fr-CA");
 }
 
-function formatValue(key: string, value: unknown): string {
+type T = ReturnType<typeof useTranslations>;
+
+function formatValue(key: string, value: unknown, t: T): string {
   if (value === null || value === undefined) return "—";
-  if (typeof value === "boolean") return value ? "Oui" : "Non";
+  if (typeof value === "boolean") return t(value ? "yes" : "no");
   if (typeof value === "number") return value.toString();
   if (typeof value === "string") {
-    // Décisions / statuts / types / demi-journée
-    if (key === "decision") return DECISION_LABELS[value] ?? value;
-    if (key === "status" || key.endsWith("Status")) return STATUS_LABELS[value] ?? value;
-    if (key === "type" || key === "convertedFrom" || key === "convertedTo") return TYPE_LABELS[value] ?? value;
-    if (key === "halfDay") return HALF_LABELS[value] ?? value;
+    // Decisions, statuses, leave types, half days.
+    const ns = VALUE_NAMESPACE[key] ?? (key.endsWith("Status") ? "status" : null);
+    if (ns) {
+      const full = `${ns}.${value}`;
+      return t.has(full) ? t(full) : value;
+    }
     if (isISODate(value)) return formatDate(value);
     return value;
   }
@@ -88,10 +56,10 @@ function formatValue(key: string, value: unknown): string {
   if (typeof value === "object") {
     try {
       return Object.entries(value as Record<string, unknown>)
-        .map(([k, v]) => `${FIELD_LABELS[k] ?? k} : ${formatValue(k, v)}`)
+        .map(([k, v]) => `${KNOWN_FIELDS.has(k) ? t(`field.${k}`) : k} : ${formatValue(k, v, t)}`)
         .join(" · ");
     } catch {
-      return "(détails complexes)";
+      return t("complex");
     }
   }
   return String(value);
@@ -99,10 +67,11 @@ function formatValue(key: string, value: unknown): string {
 
 // ─── Composant principal ─────────────────────────────────────────
 export function AuditActionBadge({ action }: { action: string }) {
-  const meta = ACTION_LABELS[action] ?? { label: action, tone: "bg-slate-50 text-slate-800 border-slate-200" };
+  const t = useTranslations("admin.audit");
+  const tone = ACTION_TONE[action] ?? "bg-slate-50 text-slate-800 border-slate-200";
   return (
-    <Badge variant="outline" className={`text-[10px] uppercase ${meta.tone}`}>
-      {meta.label}
+    <Badge variant="outline" className={`text-[10px] uppercase ${tone}`}>
+      {ACTION_TONE[action] ? t(`action.${action}`) : action}
     </Badge>
   );
 }
@@ -112,17 +81,12 @@ export function AuditChangesDisplay({
 }: {
   changes: Record<string, unknown> | null | undefined;
 }) {
+  const t = useTranslations("admin.audit");
   if (!changes || Object.keys(changes).length === 0) return null;
 
-  // Détecte les flags booléens pertinents pour montrer un sous-titre clair
-  const knownFlags: Array<{ key: string; label: string }> = [
-    { key: "adminEdit", label: "Modification par un administrateur" },
-    { key: "adminCancelled", label: "Annulation administrative" },
-    { key: "adminDelete", label: "Suppression définitive par un administrateur" },
-    { key: "mandatoryClosure", label: "Fermeture obligatoire de l'entreprise" },
-    { key: "unapproved", label: "Approbation retirée — repassée en attente" },
-  ];
-  const triggeredFlags = knownFlags.filter((f) => changes[f.key] === true);
+  // Boolean flags worth a subtitle of their own.
+  const FLAG_KEYS = ["adminEdit", "adminCancelled", "adminDelete", "mandatoryClosure", "unapproved"];
+  const triggeredFlags = FLAG_KEYS.filter((k) => changes[k] === true);
 
   // Construit les lignes affichables : ignore les flags déjà rendus + clés techniques
   const skipKeys = new Set(["adminEdit", "adminCancelled", "adminDelete", "mandatoryClosure", "unapproved"]);
@@ -133,15 +97,15 @@ export function AuditChangesDisplay({
 
   return (
     <div className="mt-2 space-y-1.5">
-      {triggeredFlags.map((f) => (
-        <p key={f.key} className="text-[11px] font-medium text-[#0F2D52] flex items-center gap-1">
+      {triggeredFlags.map((k) => (
+        <p key={k} className="text-[11px] font-medium text-[#0F2D52] flex items-center gap-1">
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#0F2D52]" />
-          {f.label}
+          {t(`flag.${k}`)}
         </p>
       ))}
       {diffEntry && typeof diffEntry[1] === "string" && diffEntry[1].length > 0 && (
         <div className="rounded bg-muted/40 p-2 text-[11px]">
-          <span className="font-semibold text-muted-foreground">Détails : </span>
+          <span className="font-semibold text-muted-foreground">{t("details")} </span>
           <span className="text-foreground">{String(diffEntry[1])}</span>
         </div>
       )}
@@ -149,8 +113,8 @@ export function AuditChangesDisplay({
         {entries
           .filter(([k]) => k !== "diff")
           .map(([k, v]) => {
-            const label = FIELD_LABELS[k] ?? humanizeKey(k);
-            const formatted = formatValue(k, v);
+            const label = KNOWN_FIELDS.has(k) ? t(`field.${k}`) : humanizeKey(k);
+            const formatted = formatValue(k, v, t);
             if (!formatted || formatted === "—") return null;
             return (
               <div key={k} className="contents">

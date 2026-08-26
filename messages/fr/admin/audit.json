@@ -1,0 +1,79 @@
+{
+  "action": {
+    "create": "Création",
+    "update": "Modification",
+    "delete": "Suppression",
+    "approve": "Approbation",
+    "reject": "Refus"
+  },
+  "type": {
+    "vacation": "Vacances",
+    "sick": "Maladie",
+    "parental": "Parental",
+    "unpaid": "Sans solde",
+    "bereavement": "Décès",
+    "other": "Autre congé"
+  },
+  "status": {
+    "pending": "En attente",
+    "approved": "Approuvée",
+    "rejected": "Refusée",
+    "cancelled": "Annulée"
+  },
+  "decision": {
+    "approved": "Approuvée",
+    "rejected": "Refusée"
+  },
+  "half": {
+    "AM": "Avant-midi",
+    "PM": "Après-midi"
+  },
+  "field": {
+    "decision": "Décision",
+    "notes": "Note de revue",
+    "reason": "Raison",
+    "type": "Type de congé",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "status": "Statut",
+    "halfDay": "Demi-journée",
+    "daysCount": "Nombre de jours",
+    "diff": "Modifications",
+    "adminEdit": "Modification administrative",
+    "adminCancelled": "Annulation administrative",
+    "adminDelete": "Suppression administrative",
+    "snapshot": "État avant suppression",
+    "mandatoryClosure": "Fermeture obligatoire",
+    "duplicatedFrom": "Dupliquée depuis la demande",
+    "newId": "Nouvelle demande créée",
+    "attachmentUrl": "Justificatif",
+    "attachmentName": "Nom du fichier joint",
+    "delegateApprovalTo": "Délégation d'approbation",
+    "blocked": "Soumissions bloquées",
+    "unblocked": "Soumissions débloquées",
+    "blockedUntil": "Bloqué jusqu'au",
+    "blockedReason": "Raison du blocage",
+    "policyId": "Politique de congés",
+    "policyName": "Politique de congés",
+    "balanceDelta": "Ajustement de solde",
+    "delta": "Ajustement",
+    "created": "Créé(s)",
+    "skipped": "Ignoré(s)",
+    "conflicts": "Conflit(s)",
+    "period": "Période",
+    "unapproved": "Approbation retirée",
+    "convertedFrom": "Type d'origine",
+    "convertedTo": "Nouveau type"
+  },
+  "flag": {
+    "adminEdit": "Modification par un administrateur",
+    "adminCancelled": "Annulation administrative",
+    "adminDelete": "Suppression définitive par un administrateur",
+    "mandatoryClosure": "Fermeture obligatoire de l'entreprise",
+    "unapproved": "Approbation retirée — repassée en attente"
+  },
+  "details": "Détails :",
+  "complex": "(détails complexes)",
+  "yes": "Oui",
+  "no": "Non"
+}
