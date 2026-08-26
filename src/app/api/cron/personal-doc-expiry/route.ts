@@ -13,6 +13,7 @@
 // ─────────────────────────────────────────────────────────
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +109,7 @@ export async function POST(req: Request) {
   }
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const results = {
@@ -199,7 +200,7 @@ export async function GET(req: Request) {
   }
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const counts: Record<string, { docs: number }> = {};

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -36,7 +37,7 @@ const announcementSchema = z.object({
 
 export async function upsertAnnouncementAction(input: z.infer<typeof announcementSchema>): Promise<Result<{ id: number }>> {
   const authorId = await requireHrWrite();
-  if (!authorId) return { success: false, error: "Non autorisé" };
+  if (!authorId) return unauthorized();
   const parsed = announcementSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -87,7 +88,7 @@ async function notifyAnnouncementAudience(announcementId: number, ann: { title: 
 
 export async function publishAnnouncementAction(input: { id: number }): Promise<Result> {
   const authorId = await requireHrWrite();
-  if (!authorId) return { success: false, error: "Non autorisé" };
+  if (!authorId) return unauthorized();
   const ann = await prisma.announcement.update({
     where: { id: input.id },
     data: { publishedAt: new Date() },
@@ -101,7 +102,7 @@ export async function publishAnnouncementAction(input: { id: number }): Promise<
 
 export async function deleteAnnouncementAction(input: { id: number }): Promise<Result> {
   const authorId = await requireHrWrite();
-  if (!authorId) return { success: false, error: "Non autorisé" };
+  if (!authorId) return unauthorized();
   await prisma.announcement.delete({ where: { id: input.id } });
   await logAudit({ adminId: authorId, action: "delete", entityType: "announcement", entityId: input.id });
   revalidatePath("/admin/employes/annonces");
@@ -110,7 +111,7 @@ export async function deleteAnnouncementAction(input: { id: number }): Promise<R
 
 export async function markAnnouncementReadAction(input: { id: number }): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   await prisma.announcementRead.upsert({
     where: { announcementId_adminId: { announcementId: input.id, adminId } },
@@ -135,7 +136,7 @@ const policySchema = z.object({
 
 export async function upsertHrPolicyAction(input: z.infer<typeof policySchema>): Promise<Result<{ id: number }>> {
   const publishedBy = await requireHrWrite();
-  if (!publishedBy) return { success: false, error: "Non autorisé" };
+  if (!publishedBy) return unauthorized();
   const parsed = policySchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -162,7 +163,7 @@ export async function upsertHrPolicyAction(input: z.infer<typeof policySchema>):
 // Duplique une politique RH : copie avec suffix " (copie)" + isStarter = false
 export async function duplicateHrPolicyAction(input: { id: number }): Promise<Result<{ id: number; title: string }>> {
   const publishedBy = await requireHrWrite();
-  if (!publishedBy) return { success: false, error: "Non autorisé" };
+  if (!publishedBy) return unauthorized();
 
   const src = await prisma.hrPolicy.findUnique({ where: { id: input.id } });
   if (!src) return { success: false, error: "Politique introuvable" };
@@ -201,7 +202,7 @@ export async function duplicateHrPolicyAction(input: { id: number }): Promise<Re
 // Archive / desarchive une politique RH (toggle isActive)
 export async function toggleHrPolicyActiveAction(input: { id: number; isActive: boolean }): Promise<Result> {
   const publishedBy = await requireHrWrite();
-  if (!publishedBy) return { success: false, error: "Non autorisé" };
+  if (!publishedBy) return unauthorized();
   await prisma.hrPolicy.update({
     where: { id: input.id },
     data: { isActive: input.isActive },

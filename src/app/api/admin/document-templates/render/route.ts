@@ -12,6 +12,7 @@ import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,7 @@ function renderTemplate(
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   let payload: {

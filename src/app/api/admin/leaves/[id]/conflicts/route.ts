@@ -7,13 +7,14 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { assertCanReviewLeave, getLeavesScope } from "@/lib/services/timesheet-scope";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   const actorId = session.user.adminId!;
   const { id } = await params;
@@ -32,7 +33,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const isOwner = leave.adminId === actorId;
   if (!isOwner) {
     const ok = await assertCanReviewLeave(actorId, leave.adminId);
-    if (!ok) return NextResponse.json({ error: "Acces refuse" }, { status: 403 });
+    if (!ok) return forbiddenJson();
   }
 
   // Scope : on prend la liste des collegues visibles par le PROPRIETAIRE de la demande

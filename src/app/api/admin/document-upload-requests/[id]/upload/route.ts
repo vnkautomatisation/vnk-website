@@ -21,6 +21,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -77,7 +78,7 @@ export async function POST(
     stage = "auth";
     const session = await auth();
     if (!session?.user || session.user.role !== "admin") {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+      return unauthorizedJson();
     }
     const actorId = session.user.adminId!;
 
@@ -106,7 +107,7 @@ export async function POST(
       return NextResponse.json({ error: "Demande introuvable" }, { status: 404 });
     }
     if (docReq.targetAdminId !== actorId) {
-      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+      return forbiddenJson();
     }
     if (docReq.status !== "pending") {
       return NextResponse.json(

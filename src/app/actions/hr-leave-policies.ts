@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -36,7 +37,7 @@ const policySchema = z.object({
 
 export async function createLeavePolicyAction(input: z.infer<typeof policySchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireAdminWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = policySchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -55,7 +56,7 @@ export async function createLeavePolicyAction(input: z.infer<typeof policySchema
 
 export async function updateLeavePolicyAction(input: { id: number } & Partial<z.infer<typeof policySchema>>): Promise<Result> {
   const adminId = await requireAdminWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const { id, ...rest } = input;
   if (rest.isDefault) {
     await prisma.leavePolicy.updateMany({ where: { isDefault: true, id: { not: id } }, data: { isDefault: false } });
@@ -68,7 +69,7 @@ export async function updateLeavePolicyAction(input: { id: number } & Partial<z.
 
 export async function deleteLeavePolicyAction(input: { id: number }): Promise<Result> {
   const adminId = await requireAdminWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   // Detache d'abord les admins lies
   await prisma.admin.updateMany({ where: { leavePolicyId: input.id }, data: { leavePolicyId: null } });
   await prisma.leavePolicy.delete({ where: { id: input.id } });
@@ -79,7 +80,7 @@ export async function deleteLeavePolicyAction(input: { id: number }): Promise<Re
 
 export async function assignPolicyToAdminAction(input: { adminId: number; policyId: number | null }): Promise<Result> {
   const actorId = await requireAdminWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   await prisma.admin.update({
     where: { id: input.adminId },
     data: { leavePolicyId: input.policyId },

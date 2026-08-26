@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { logSecurityEvent } from "@/lib/security/security-events";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -41,7 +42,7 @@ const createSchema = z.object({
 
 export async function createRoleAction(input: z.infer<typeof createSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireRolesWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -79,7 +80,7 @@ const updateSchema = z.object({
 
 export async function updateRoleAction(input: z.infer<typeof updateSchema>): Promise<Result> {
   const adminId = await requireRolesWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -116,7 +117,7 @@ export async function updateRoleAction(input: z.infer<typeof updateSchema>): Pro
 const deleteSchema = z.object({ id: z.number().int() });
 export async function deleteRoleAction(input: z.infer<typeof deleteSchema>): Promise<Result> {
   const adminId = await requireRolesWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = deleteSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: "Données invalides" };
 
@@ -147,7 +148,7 @@ const duplicateSchema = z.object({
 
 export async function duplicateRoleAction(input: z.infer<typeof duplicateSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireRolesWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = duplicateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -188,7 +189,7 @@ const reorderSchema = z.object({
 
 export async function reorderRolesAction(input: z.infer<typeof reorderSchema>): Promise<Result> {
   const adminId = await requireRolesWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = reorderSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: "Données invalides" };
 

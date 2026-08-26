@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> =
   | ({ success: true } & (T extends void ? object : { data: T }))
@@ -122,7 +123,7 @@ export async function createUploadRequestAction(
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
   const guard = await requireRequesterAccess(parsed.data.targetAdminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
 
   const target = await prisma.admin.findUnique({
     where: { id: parsed.data.targetAdminId },
@@ -196,7 +197,7 @@ export async function cancelUploadRequestAction(id: number): Promise<Result> {
   if (!req) return { success: false, error: "Demande introuvable" };
 
   const guard = await requireRequesterAccess(req.targetAdminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
 
   if (req.status === "approved" || req.status === "cancelled") {
     return { success: false, error: "Demande déjà clôturée" };
@@ -248,7 +249,7 @@ export async function remindUploadRequestAction(id: number): Promise<Result<{ no
   }
 
   const guard = await requireRequesterAccess(req.targetAdminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
 
   await prisma.documentUploadRequest.update({
     where: { id },
@@ -299,7 +300,7 @@ export async function approveUploadRequestAction(
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
   const guard = await requireHrWrite();
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
 
   const req = await prisma.documentUploadRequest.findUnique({ where: { id } });
   if (!req) return { success: false, error: "Demande introuvable" };
@@ -398,7 +399,7 @@ export async function rejectUploadRequestAction(
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
   const guard = await requireHrWrite();
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
 
   const req = await prisma.documentUploadRequest.findUnique({
     where: { id },
@@ -487,7 +488,7 @@ export async function submitUploadResponseAction(
     }
 
     const guard = await requireSelf(parsed.data.requestId);
-    if (!guard) return { success: false, error: "Non autorisé" };
+    if (!guard) return unauthorized();
 
     if (guard.request.status !== "pending") {
       return { success: false, error: "La demande n'accepte plus de téléversement" };

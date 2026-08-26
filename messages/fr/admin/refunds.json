@@ -1,0 +1,9 @@
+{
+  "page_title": "Remboursements",
+  "page_subtitle": "Remboursements Stripe initiés depuis la fiche client",
+  "status": {
+    "pending": "En attente",
+    "processed": "Traité",
+    "failed": "Échoué"
+  }
+}

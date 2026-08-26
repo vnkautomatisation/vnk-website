@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -50,7 +51,7 @@ const startSchema = z.object({
 
 export async function startOffboardingAction(input: z.infer<typeof startSchema>): Promise<Result<{ id: number }>> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   const parsed = startSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -106,7 +107,7 @@ export async function startOffboardingAction(input: z.infer<typeof startSchema>)
 
 export async function toggleOffboardingItemAction(input: { adminId: number; itemKey: string; done: boolean }): Promise<Result> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
 
   const checklist = await prisma.offboardingChecklist.findUnique({ where: { adminId: input.adminId } });
   if (!checklist) return { success: false, error: "Checklist introuvable" };
@@ -145,7 +146,7 @@ export async function toggleOffboardingItemAction(input: { adminId: number; item
 
 export async function saveExitInterviewAction(input: { adminId: number; notes: string }): Promise<Result> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   await prisma.offboardingChecklist.update({
     where: { adminId: input.adminId },
     data: {
@@ -160,7 +161,7 @@ export async function saveExitInterviewAction(input: { adminId: number; notes: s
 
 export async function markRecordOfEmploymentSentAction(input: { adminId: number }): Promise<Result> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   await prisma.offboardingChecklist.update({
     where: { adminId: input.adminId },
     data: { recordOfEmploymentSentAt: new Date() },
@@ -173,7 +174,7 @@ export async function markRecordOfEmploymentSentAction(input: { adminId: number 
 // Clôture définitive : marque l'offboarding complete + désactive le compte admin + invalide ses sessions.
 export async function completeOffboardingAction(input: { id: number }): Promise<Result> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
 
   try {
     const offboarding = await prisma.offboardingChecklist.findUnique({

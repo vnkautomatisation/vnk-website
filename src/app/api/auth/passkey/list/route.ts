@@ -3,13 +3,14 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logSecurityEvent } from "@/lib/security/security-events";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const passkeys = await prisma.adminPasskey.findMany({
     where: { adminId: session.user.adminId! },
@@ -30,7 +31,7 @@ export async function GET() {
 export async function DELETE(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const adminId = session.user.adminId!;
   const url = new URL(req.url);

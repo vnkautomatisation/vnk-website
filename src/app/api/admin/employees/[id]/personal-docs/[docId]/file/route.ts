@@ -15,6 +15,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const actorId = session.user.adminId!;
 
@@ -51,7 +52,7 @@ export async function GET(
     prisma.employeePersonalDocument.findUnique({ where: { id: docId } }),
   ]);
 
-  if (!me) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!me) return unauthorizedJson();
   if (!doc) return NextResponse.json({ error: "Document introuvable" }, { status: 404 });
   if (doc.adminId !== targetId) {
     return NextResponse.json({ error: "Document hors scope" }, { status: 404 });
@@ -71,7 +72,7 @@ export async function GET(
   const isSelf = actorId === targetId;
 
   if (!isSelf && !isHr) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    return forbiddenJson();
   }
   if (doc.isPrivate && !isSelf && !isSuper) {
     return NextResponse.json({ error: "Document privé" }, { status: 403 });

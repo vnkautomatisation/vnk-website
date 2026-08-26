@@ -21,6 +21,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { getClientIpFromHeaders } from "@/lib/security/rate-limit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> =
   | ({ success: true } & (T extends void ? object : { data: T }))
@@ -126,7 +127,7 @@ export async function createHandbookAction(
   input: z.infer<typeof createHandbookSchema>,
 ): Promise<Result<{ id: number; key: string }>> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
 
   const parsed = createHandbookSchema.safeParse(input);
   if (!parsed.success) {
@@ -208,7 +209,7 @@ export async function updateHandbookAction(
   input: z.infer<typeof updateHandbookSchema>,
 ): Promise<Result> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
 
   const parsed = updateHandbookSchema.safeParse(input);
   if (!parsed.success) {
@@ -282,7 +283,7 @@ export async function duplicateHandbookAction(input: {
   id: number;
 }): Promise<Result<{ id: number; key: string }>> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
 
   const original = await prisma.documentHandbook.findUnique({
     where: { id: input.id },
@@ -339,7 +340,7 @@ export async function duplicateHandbookAction(input: {
 // ─── archiveHandbookAction ──────────────────────────────────
 export async function archiveHandbookAction(input: { id: number }): Promise<Result> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
 
   const existing = await prisma.documentHandbook.findUnique({
     where: { id: input.id },
@@ -388,7 +389,7 @@ export async function signHandbookAction(
 
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return { success: false, error: "Non autorise" };
+    return unauthorized();
   }
   const adminId = session.user.adminId!;
 

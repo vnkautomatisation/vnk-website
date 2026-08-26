@@ -10,6 +10,7 @@
 //   curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<APP>.up.railway.app/api/cron/signature-reminders
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -163,11 +164,11 @@ async function run(): Promise<NextResponse> {
 }
 
 export async function GET(req: Request) {
-  if (!authorize(req)) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!authorize(req)) return unauthorizedJson();
   return run();
 }
 
 export async function POST(req: Request) {
-  if (!authorize(req)) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!authorize(req)) return unauthorizedJson();
   return run();
 }

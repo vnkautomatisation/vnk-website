@@ -1,0 +1,36 @@
+{
+  "hero": {
+    "kicker": "Services d'automatisation industrielle",
+    "title": "Solutions PLC, SCADA & HMI pour l'industrie",
+    "subtitle": "Support technique à distance, audits, documentation et modernisation de systèmes automatisés pour les entreprises industrielles au Québec.",
+    "cta_primary": "Réserver une consultation",
+    "cta_secondary": "Voir les services"
+  },
+  "stats": {
+    "services_count": "Services spécialisés",
+    "brands_count": "Marques d'automates",
+    "market": "Marché industriel",
+    "response_time": "Temps de réponse maximum",
+    "documented": "Intervention documentée"
+  },
+  "services_section": {
+    "kicker": "Nos services",
+    "title": "Nos services",
+    "subtitle": "Solutions techniques adaptées à vos besoins industriels",
+    "view_all": "Voir tous les services et tarifs",
+    "learn_more": "En savoir plus"
+  },
+  "why_vnk": {
+    "kicker": "Pourquoi VNK ?",
+    "title": "Pourquoi VNK ?",
+    "description": "VNK Automatisation Inc. est une entreprise de services industriels spécialisée exclusivement en automatisation — PLC, SCADA, HMI. Pas de généraliste, pas de compromis sur la qualité technique."
+  },
+  "testimonials": {
+    "title": "Ce que disent nos clients"
+  },
+  "cta": {
+    "title": "Prêt à moderniser votre automatisation ?",
+    "subtitle": "Contactez-nous pour une consultation gratuite",
+    "button": "Nous contacter"
+  }
+}

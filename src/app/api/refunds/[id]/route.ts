@@ -8,6 +8,7 @@ import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { calculateTaxes } from "@/lib/utils";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const updateSchema = z.object({
   reason: z.string().min(1).optional(),
@@ -22,10 +23,10 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("refunds", "read")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
   const { id } = await params;
   const refund = await prisma.refund.findUnique({
@@ -47,10 +48,10 @@ export async function PATCH(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("refunds", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
   const { id } = await params;
   const refundId = Number(id);
@@ -100,10 +101,10 @@ export async function DELETE(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("refunds", "delete")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
   const { id } = await params;
   const refundId = Number(id);

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { getTimeclockConfig } from "@/lib/services/timeclock-config";
 import { getHolidaysInRange } from "@/lib/services/holidays";
+import { unauthorized, forbidden } from "@/lib/refusals";
 import {
   splitPayrollMinutes, paidHours, grossPay, localDayKey,
   regularMinutesByWeek, holidayIndemnity, overtimeMinutes, storedDayToLocal,
@@ -36,7 +37,7 @@ const periodSchema = z.object({
 
 export async function createPayPeriodAction(input: z.infer<typeof periodSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requirePayrollWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = periodSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -61,7 +62,7 @@ export async function generatePayStubsAction(
   input: { periodId: number },
 ): Promise<Result<{ stubsCreated: number; provisionalRates: boolean }>> {
   const actorId = await requirePayrollWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
 
   const period = await prisma.payPeriod.findUnique({ where: { id: input.periodId } });
   if (!period) return { success: false, error: "Période introuvable" };
@@ -269,7 +270,7 @@ export async function generatePayStubsAction(
 
 export async function lockPayPeriodAction(input: { id: number }): Promise<Result> {
   const adminId = await requirePayrollWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   await prisma.payPeriod.update({
     where: { id: input.id },
     data: { status: "locked", lockedAt: new Date() },
@@ -281,7 +282,7 @@ export async function lockPayPeriodAction(input: { id: number }): Promise<Result
 
 export async function markPayPeriodPaidAction(input: { id: number }): Promise<Result> {
   const adminId = await requirePayrollWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   await prisma.payPeriod.update({
     where: { id: input.id },
     data: { status: "paid", paidAt: new Date() },

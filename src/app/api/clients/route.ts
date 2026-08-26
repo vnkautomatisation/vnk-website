@@ -11,6 +11,7 @@ import { logAudit } from "@/lib/audit";
 import { revalidateAdminViews } from "@/lib/revalidate";
 import { notifyClientCreated } from "@/lib/integrations/slack";
 import { triggerZap } from "@/lib/integrations/zapier";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const createClientSchema = z.object({
   fullName: z.string().min(1).max(255),
@@ -41,10 +42,10 @@ function generatePassword(): string {
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("clients", "read")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const { searchParams } = new URL(req.url);
@@ -74,10 +75,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("clients", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const body = await req.json();

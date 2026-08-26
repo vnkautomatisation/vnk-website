@@ -1,0 +1,21 @@
+{
+  "page_title": "Devis",
+  "page_subtitle": "TPS et TVQ calculés automatiquement",
+  "new": "Nouveau devis",
+  "search_placeholder": "Rechercher un devis…",
+  "status": {
+    "pending": "En attente",
+    "accepted": "Accepté",
+    "declined": "Refusé",
+    "expired": "Expiré"
+  },
+  "columns": {
+    "number": "Numéro",
+    "client": "Client",
+    "title": "Titre",
+    "ht": "HT",
+    "ttc": "TTC",
+    "status": "Statut",
+    "expiry": "Expiration"
+  }
+}

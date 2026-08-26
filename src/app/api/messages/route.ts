@@ -9,6 +9,7 @@ import { createWorkflowEvent } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
 import { sendEmail } from "@/lib/services/email";
 import { renderChatEmail } from "@/lib/services/email-message-template";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB ?? 10);
 const MAX_DATAURL_BYTES = Math.floor(MAX_UPLOAD_MB * 1024 * 1024 * 1.4);
@@ -42,7 +43,7 @@ const createSchema = z.object({
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const { searchParams } = new URL(req.url);
@@ -74,7 +75,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const body = await req.json();
@@ -88,7 +89,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Notes internes réservées admin" }, { status: 403 });
   }
   if (await adminApiForbidden("messages", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   // Validation taille pieces jointes

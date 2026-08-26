@@ -12,6 +12,7 @@ import { calculateWorkingDays } from "@/lib/services/leave-days";
 import { getHolidaysInRange } from "@/lib/services/holidays";
 import { assertCanReviewLeave } from "@/lib/services/timesheet-scope";
 import { getLeaveBalance, syncBalanceForRequest } from "@/lib/services/leave-balance";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -161,7 +162,7 @@ async function detectTeamConflict(
 
 export async function createLeaveRequestAction(input: z.infer<typeof requestSchema>): Promise<Result<{ id: number; warning?: string }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = requestSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -258,7 +259,7 @@ export async function createLeaveRequestAction(input: z.infer<typeof requestSche
 // Helper : si auteur modifie sa demande pending
 export async function updateLeaveRequestAction(input: z.infer<typeof updateSchema>): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -406,7 +407,7 @@ async function deleteAutoTimeClocksForLeave(leaveId: number, adminId: number): P
 
 export async function reviewLeaveRequestAction(input: { id: number; decision: "approved" | "rejected"; notes?: string }): Promise<Result> {
   const reviewerId = await requireLeavesReview();
-  if (!reviewerId) return { success: false, error: "Non autorisé" };
+  if (!reviewerId) return unauthorized();
 
   const r = await prisma.leaveRequest.findUnique({ where: { id: input.id } });
   if (!r) return { success: false, error: "Demande introuvable" };
@@ -485,7 +486,7 @@ export async function bulkReviewLeavesAction(
   input: { ids: number[]; decision: "approved" | "rejected"; notes?: string },
 ): Promise<Result<{ processed: number; skipped: number; errors: Array<{ id: number; reason: string }> }>> {
   const reviewerId = await requireLeavesReview();
-  if (!reviewerId) return { success: false, error: "Non autorisé" };
+  if (!reviewerId) return unauthorized();
   if (!Array.isArray(input.ids) || input.ids.length === 0) {
     return { success: false, error: "Aucune demande selectionnee" };
   }
@@ -699,7 +700,7 @@ export async function cancelLeaveRequestAction(
   input: { id: number; reason?: string },
 ): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = cancelLeaveSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -866,7 +867,7 @@ export async function createLeaveForEmployeeAction(
   input: z.infer<typeof createForEmployeeSchema>,
 ): Promise<Result<{ id: number; status: "pending" | "approved"; warning?: string }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = createForEmployeeSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -1151,7 +1152,7 @@ export async function adminUpdateLeaveRequestAction(
   input: z.infer<typeof adminUpdateSchema>,
 ): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = adminUpdateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -1297,7 +1298,7 @@ export async function adminCancelApprovedLeaveAction(
   input: { id: number; reason: string },
 ): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   if (!input.reason || input.reason.trim().length < 3) {
     return { success: false, error: "Une raison est requise pour annuler un congé approuvé." };
@@ -1388,7 +1389,7 @@ export async function adminDeleteLeaveAction(
   input: { id: number },
 ): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
 
   const r = await prisma.leaveRequest.findUnique({ where: { id: input.id } });
@@ -1468,7 +1469,7 @@ export async function adminDeleteLeaveAction(
 // ─── Delegation d'approbation ─────────────────────────────────
 export async function delegateLeaveApprovalAction(input: { delegateId: number | null }): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
 
   if (input.delegateId !== null) {
@@ -1517,7 +1518,7 @@ export async function unapproveLeaveAction(
   input: { id: number; reason: string },
 ): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   if (!input.reason || input.reason.trim().length < 3) {
     return { success: false, error: "Une raison est requise." };
@@ -1595,7 +1596,7 @@ export async function convertLeaveTypeAction(
   input: { id: number; newType: string; reason: string },
 ): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   if (!TYPES.includes(input.newType as (typeof TYPES)[number])) {
     return { success: false, error: "Type invalide" };
@@ -1685,7 +1686,7 @@ export async function duplicateLeaveAction(
   input: { id: number; newStartDate: string; newEndDate: string },
 ): Promise<Result<{ newId: number }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
 
   const r = await prisma.leaveRequest.findUnique({ where: { id: input.id } });
@@ -1758,7 +1759,7 @@ export async function uploadLeaveAttachmentAction(
   input: { id: number; attachmentUrl: string; attachmentName: string },
 ): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   if (!input.attachmentUrl || !input.attachmentName) {
     return { success: false, error: "URL et nom de fichier requis." };
@@ -1828,7 +1829,7 @@ export async function adjustLeaveBalanceAction(
   input: { employeeId: number; deltaDays: number; reason: string },
 ): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   if (!input.reason || input.reason.trim().length < 3) {
     return { success: false, error: "Une raison est requise." };
@@ -1919,7 +1920,7 @@ export async function assignLeavePolicyAction(
   input: { employeeId: number; policyId: number | null },
 ): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
 
   const canAct = await assertCanReviewLeave(actorId, input.employeeId);
@@ -1967,7 +1968,7 @@ export async function blockEmployeeLeaveAction(
   input: { employeeId: number; until: string; reason: string },
 ): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   if (!input.reason || input.reason.trim().length < 3) {
     return { success: false, error: "Une raison est requise." };
@@ -2022,7 +2023,7 @@ export async function unblockEmployeeLeaveAction(
   input: { employeeId: number },
 ): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
 
   const canAct = await assertCanReviewLeave(actorId, input.employeeId);
@@ -2086,7 +2087,7 @@ export async function notifyEmployeeDirectAction(
   input: { employeeId: number; subject: string; body: string; link?: string },
 ): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
 
   const parsed = notifyEmployeeSchema.safeParse(input);

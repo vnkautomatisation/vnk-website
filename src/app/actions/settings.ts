@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { invalidateSettingsCache } from "@/lib/settings";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 const updateSchema = z.object({
   category: z.string().min(1),
@@ -27,7 +28,7 @@ export async function updateSettingsAction(
   // 1) Auth
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return { success: false, error: "Non autorisé" };
+    return unauthorized();
   }
   {
     // Enforcement matrice : settings.write requis.
@@ -110,7 +111,7 @@ export async function resetCategoryAction(
 ): Promise<UpdateSettingsResult> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return { success: false, error: "Non autorisé" };
+    return unauthorized();
   }
   {
     // Enforcement matrice : settings.write requis.
@@ -140,7 +141,7 @@ export async function testConnectionAction(
 ): Promise<UpdateSettingsResult> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return { success: false, error: "Non autorisé" };
+    return unauthorized();
   }
   {
     // Enforcement matrice : settings.write requis.

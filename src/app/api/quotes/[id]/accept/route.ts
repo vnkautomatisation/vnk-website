@@ -10,6 +10,7 @@ import { logSignatureEvent } from "@/lib/request-context";
 import { notifyQuoteAccepted } from "@/lib/integrations/slack";
 import { triggerZap } from "@/lib/integrations/zapier";
 import crypto from "crypto";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const bodySchema = z.object({
   signatureData: z.string().optional(), // base64 canvas
@@ -21,7 +22,7 @@ export async function POST(
 ) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const { id } = await params;
@@ -34,7 +35,7 @@ export async function POST(
 
   // Vérifier que le client est bien propriétaire du devis
   if (session.user.role === "client" && quote.clientId !== session.user.clientId) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return unauthorizedJson(403);
   }
 
   if (quote.status !== "pending") {

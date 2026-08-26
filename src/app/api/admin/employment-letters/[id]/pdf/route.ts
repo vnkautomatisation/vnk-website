@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateEmploymentLetterPdf, type LetterPurpose } from "@/lib/services/pdf-hr";
 import { logAudit } from "@/lib/audit";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   const adminId = session.user.adminId!;
 
@@ -54,7 +55,7 @@ export async function GET(
   const isOwner = letter.adminId === adminId;
 
   if (!isOwner && !isHr) {
-    return NextResponse.json({ error: "Acces refuse" }, { status: 403 });
+    return forbiddenJson();
   }
 
   // Recupere le contrat actif pour les infos salariales (si includeSalary)

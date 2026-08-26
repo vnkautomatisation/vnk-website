@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createPaymentIntent } from "@/lib/services/stripe";
 import { logOrderEvent } from "@/lib/request-context";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const schema = z.object({
   invoiceId: z.number().int().positive(),
@@ -13,7 +14,7 @@ const schema = z.object({
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const body = await req.json();
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
   }
 
   if (session.user.role === "client" && invoice.clientId !== session.user.clientId) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 403 });
+    return unauthorizedJson(403);
   }
 
   if (invoice.status === "paid") {

@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const EDIT_WINDOW_MS = 5 * 60 * 1000;
 
@@ -21,7 +22,7 @@ function canMutate(msg: { sender: string; createdAt: Date; deletedAt: Date | nul
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session?.user) return unauthorizedJson();
 
   const { id } = await params;
   const msgId = Number(id);
@@ -29,7 +30,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!msg) return NextResponse.json({ error: "Message introuvable" }, { status: 404 });
 
   if (session.user.role === "client" && msg.clientId !== session.user.clientId) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return unauthorizedJson(403);
   }
   if (!canMutate(msg, session.user.role as "admin" | "client", session.user.clientId)) {
     return NextResponse.json({ error: "Modification refusée (auteur ou délai dépassé)" }, { status: 403 });
@@ -38,7 +39,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "Délai de modification dépassé (5 min)" }, { status: 409 });
   }
   if (await adminApiForbidden("messages", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const body = await req.json();
@@ -59,7 +60,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session?.user) return unauthorizedJson();
 
   const { id } = await params;
   const msgId = Number(id);
@@ -67,7 +68,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!msg) return NextResponse.json({ error: "Message introuvable" }, { status: 404 });
 
   if (session.user.role === "client" && msg.clientId !== session.user.clientId) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return unauthorizedJson(403);
   }
   if (!canMutate(msg, session.user.role as "admin" | "client", session.user.clientId)) {
     return NextResponse.json({ error: "Suppression refusée (auteur ou délai dépassé)" }, { status: 403 });

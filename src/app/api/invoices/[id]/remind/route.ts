@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { createWorkflowEvent } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function POST(
   _req: Request,
@@ -14,10 +15,10 @@ export async function POST(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("invoices", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const { id } = await params;

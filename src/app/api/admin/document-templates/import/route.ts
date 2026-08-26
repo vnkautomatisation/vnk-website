@@ -17,6 +17,7 @@ import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 import {
   importFromBuffer,
   importFromText,
@@ -60,7 +61,7 @@ function resolveFormat(file: File): ImportSourceFormat | null {
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const contentType = req.headers.get("content-type") ?? "";

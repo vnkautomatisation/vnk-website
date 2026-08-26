@@ -2,11 +2,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getMicrosoftStatus, isMicrosoftAppConfigured, getMicrosoftRedirectUri } from "@/lib/integrations/microsoft";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   try {
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
 export async function DELETE() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const { disconnectMicrosoft } = await import("@/lib/integrations/microsoft");
   await disconnectMicrosoft();

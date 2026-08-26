@@ -20,6 +20,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildContextFromEmployee } from "@/lib/document-templates";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 import {
   applyPlaceholderValues,
   detectPlaceholdersWithInfo,
@@ -35,7 +36,7 @@ export async function POST(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   const adminId = session.user.adminId!;
 

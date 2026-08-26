@@ -13,6 +13,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLeavesScope } from "@/lib/services/timesheet-scope";
 import { getHolidaysInRange } from "@/lib/services/holidays";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ function parseISO(s: string | null): Date | null {
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   const adminId = session.user.adminId!;
   const url = new URL(req.url);

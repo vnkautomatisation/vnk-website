@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result = { success: true } | { success: false; error: string };
 
@@ -17,7 +18,7 @@ const profileSchema = z.object({
 
 export async function updateOnboardingProfileAction(input: z.infer<typeof profileSchema>): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = profileSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -38,7 +39,7 @@ export async function updateOnboardingProfileAction(input: z.infer<typeof profil
 export async function completeOnboardingAction(): Promise<Result> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return { success: false, error: "Non autorisé" };
+    return unauthorized();
   }
   const adminId = session.user.adminId!;
 

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { logSecurityEvent } from "@/lib/security/security-events";
 import { getRequestGeo } from "@/lib/security/geo";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type ActionResult<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -32,7 +33,7 @@ const profileSchema = z.object({
 
 export async function updateProfileAction(input: z.infer<typeof profileSchema>): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
   const parsed = profileSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -74,7 +75,7 @@ const presenceSchema = z.object({
 });
 export async function updatePresenceAction(input: z.infer<typeof presenceSchema>): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
   const parsed = presenceSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -108,7 +109,7 @@ const preferencesSchema = z.object({
 
 export async function updatePreferencesAction(input: z.infer<typeof preferencesSchema>): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
   const parsed = preferencesSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -147,7 +148,7 @@ const notifPrefsSchema = z.object({
 
 export async function updateNotificationPrefsAction(input: z.infer<typeof notifPrefsSchema>): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
   const parsed = notifPrefsSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -174,7 +175,7 @@ export async function updateNotificationPrefsAction(input: z.infer<typeof notifP
 // ═════════════════════════════════════════════════════════════
 export async function revokeSessionAction(sessionId: string): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
 
   try {
     const target = await prisma.adminSession.findUnique({ where: { id: sessionId } });
@@ -199,7 +200,7 @@ export async function revokeSessionAction(sessionId: string): Promise<ActionResu
 //    qui sera valide car iat est plus récent.
 export async function revokeAllOtherSessionsAction(currentSessionId?: string): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
 
   try {
     const result = await prisma.adminSession.deleteMany({
@@ -229,7 +230,7 @@ export async function revokeAllOtherSessionsAction(currentSessionId?: string): P
 // Renommer une session ("Macbook bureau", "iPhone perso")
 export async function renameSessionAction(sessionId: string, label: string): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
   if (label.length > 60) return { success: false, error: "Label trop long" };
 
   try {
@@ -251,7 +252,7 @@ const TRUSTED_DEVICE_DAYS = 30;
 
 export async function trustSessionDeviceAction(sessionId: string): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   try {
     const target = await prisma.adminSession.findUnique({ where: { id: sessionId } });
@@ -287,7 +288,7 @@ export async function trustSessionDeviceAction(sessionId: string): Promise<Actio
 // ── Signaler une session comme suspecte (déclenche alerte critique) ──
 export async function reportSuspiciousSessionAction(sessionId: string): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   try {
     const target = await prisma.adminSession.findUnique({ where: { id: sessionId } });
@@ -330,7 +331,7 @@ export async function reportSuspiciousSessionAction(sessionId: string): Promise<
 // ═════════════════════════════════════════════════════════════
 export async function removeTrustedDeviceAction(deviceId: number): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
   try {
     const target = await prisma.adminTrustedDevice.findUnique({ where: { id: deviceId } });
     if (!target || target.adminId !== adminId) return { success: false, error: "Appareil introuvable" };
@@ -354,7 +355,7 @@ const apiTokenSchema = z.object({
 
 export async function createApiTokenAction(input: z.infer<typeof apiTokenSchema>): Promise<ActionResult<{ token: string; prefix: string }>> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
   const parsed = apiTokenSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -402,7 +403,7 @@ export async function createApiTokenAction(input: z.infer<typeof apiTokenSchema>
 
 export async function revokeApiTokenAction(tokenId: number): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
   try {
     const target = await prisma.adminApiToken.findUnique({ where: { id: tokenId } });
     if (!target || target.adminId !== adminId) return { success: false, error: "Token introuvable" };
@@ -420,7 +421,7 @@ export async function revokeApiTokenAction(tokenId: number): Promise<ActionResul
 // ═════════════════════════════════════════════════════════════
 export async function regenerateBackupCodesAction(): Promise<ActionResult<{ codes: string[] }>> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
   try {
     const { regenerateBackupCodes } = await import("@/lib/security/backup-codes");
     const codes = await regenerateBackupCodes(adminId);
@@ -437,7 +438,7 @@ export async function regenerateBackupCodesAction(): Promise<ActionResult<{ code
 // ═════════════════════════════════════════════════════════════
 export async function requestDataExportAction(): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
   try {
     await prisma.admin.update({
       where: { id: adminId },
@@ -458,7 +459,7 @@ export async function requestDataExportAction(): Promise<ActionResult> {
 
 export async function requestAccountDeletionAction(confirmEmail: string): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
   try {
     const admin = await prisma.admin.findUnique({ where: { id: adminId }, select: { email: true } });
     if (!admin || admin.email.toLowerCase() !== confirmEmail.toLowerCase()) {
@@ -481,7 +482,7 @@ export async function requestAccountDeletionAction(confirmEmail: string): Promis
 // ═════════════════════════════════════════════════════════════
 export async function updateOnboardingStepAction(stepKey: string, done: boolean): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorise" };
+  if (!adminId) return unauthorized();
   try {
     const current = await prisma.admin.findUnique({ where: { id: adminId }, select: { onboardingSteps: true } });
     const steps = { ...((current?.onboardingSteps as Record<string, boolean>) || {}), [stepKey]: done };

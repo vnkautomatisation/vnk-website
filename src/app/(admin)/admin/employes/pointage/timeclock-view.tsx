@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { startOfWeek, endOfWeek } from "@/lib/week";
 import { overtimeMinutes } from "@/lib/services/payroll-hours";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -54,7 +55,7 @@ import { EmployeeWeekPanelRemote } from "./_components/EmployeeWeekPanel";
 import { DayMultiEmployeePanel } from "./_components/DayMultiEmployeePanel";
 import { DayDetailPanel } from "./_components/DayDetailPanel";
 import { CompactEntryRow, DayAggregateRow } from "./_components/EntryRows";
-import { dayKey, startOfDay, fmtDuration, capFirst, fmtTime, avatarColor, CAT_LABEL } from "./_components/_utils";
+import { dayKey, startOfDay, fmtDuration, capFirst, fmtTime, avatarColor, CAT_LABEL, catLabel } from "./_components/_utils";
 import { entryTiming, minutesBetween, workedMin, MERGE_MAX_GAP_MIN } from "@/lib/time-entry";
 
 type EditRequest = {
@@ -410,6 +411,7 @@ function TimeclockEmployeeView({
   kioskPinSetAt?: string | null;
   kioskPinRequestedAt?: string | null;
 }) {
+  const t = useTranslations("admin.timeclock");
   const router = useRouter();
   const [manualOpen, setManualOpen] = useState(false);
   const [manualPresetDate, setManualPresetDate] = useState<string | null>(null);
@@ -597,7 +599,7 @@ function TimeclockEmployeeView({
   const handleClockIn = async (category: string = "work") => {
     const coords = await getPunchCoords();
     const r = await clockInAction({ category, ...coords });
-    if (r.success) { toast.success(`Pointage démarré · ${CAT_LABEL[category]?.label ?? category}`); router.refresh(); }
+    if (r.success) { toast.success(`Pointage démarré · ${catLabel(t, category)}`); router.refresh(); }
     else toast.error(r.error || "Erreur");
   };
   const handleClockOut = async () => {
@@ -1036,8 +1038,8 @@ function TimeclockEmployeeView({
                         </Badge>
                       )}
                       {day.categories.map((c) => {
-                        const cat = CAT_LABEL[c] ?? { label: c, color: "bg-gray-100 text-gray-700" };
-                        return <Badge key={c} className={`text-[10px] ${cat.color}`}>{cat.label}</Badge>;
+                        const cat = CAT_LABEL[c] ?? { key: "", color: "bg-gray-100 text-gray-700" };
+                        return <Badge key={c} className={`text-[10px] ${cat.color}`}>{catLabel(t, c)}</Badge>;
                       })}
                       {day.hasOpen && (
                         <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-700 bg-blue-50">En cours</Badge>

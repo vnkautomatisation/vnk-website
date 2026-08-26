@@ -1,0 +1,9 @@
+{
+  "not_found": "Page introuvable",
+  "server_error": "Erreur serveur",
+  "unauthorized": "Non autorisé",
+  "forbidden": "Accès refusé",
+  "validation": "Données invalides",
+  "network": "Erreur réseau",
+  "generic": "Une erreur inattendue est survenue"
+}

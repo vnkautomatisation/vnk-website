@@ -7,6 +7,7 @@ import { adminApiForbiddenAll } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import crypto from "crypto";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
@@ -14,10 +15,10 @@ const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "image/gif", "ima
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbiddenAll([["settings", "write"], ["blog", "write"], ["pages", "write"], ["website", "write"]])) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
   const adminId = session.user.adminId!;
 

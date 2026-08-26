@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { auth } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 import { uploadAvatar } from "@/lib/storage/object-storage"; // réutilise l'abstraction storage existante
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10 Mo
@@ -33,7 +34,7 @@ function magicByteCheck(buf: Buffer, mime: string): boolean {
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const adminId = session.user.adminId!;
 

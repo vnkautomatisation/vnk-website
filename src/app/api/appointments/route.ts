@@ -12,6 +12,7 @@ import { createOutlookEvent, getMicrosoftStatus } from "@/lib/integrations/micro
 import { createGoogleEvent, getGoogleStatus } from "@/lib/integrations/google";
 import { notifyAppointmentBooked } from "@/lib/integrations/slack";
 import { triggerZap } from "@/lib/integrations/zapier";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const schema = z.object({
   slotId: z.number().optional(),
@@ -31,7 +32,7 @@ const schema = z.object({
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const { searchParams } = new URL(req.url);
@@ -59,10 +60,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("appointments", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const body = await req.json();

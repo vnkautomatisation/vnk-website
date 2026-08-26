@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -38,7 +39,7 @@ const createSchema = z.object({
 
 export async function createJobCodeAction(input: z.infer<typeof createSchema>): Promise<Result<{ id: number }>> {
   const actorId = await requireUsersWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -76,7 +77,7 @@ const updateSchema = z.object({
 
 export async function updateJobCodeAction(input: z.infer<typeof updateSchema>): Promise<Result> {
   const actorId = await requireUsersWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -107,7 +108,7 @@ export async function updateJobCodeAction(input: z.infer<typeof updateSchema>): 
 // ─── Delete ────────────────────────────────────────────────
 export async function deleteJobCodeAction(input: { id: number }): Promise<Result> {
   const actorId = await requireUsersWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
 
   const existing = await prisma.jobCode.findUnique({
     where: { id: input.id },
@@ -127,7 +128,7 @@ export async function deleteJobCodeAction(input: { id: number }): Promise<Result
 // ─── Toggle isActive (raccourci) ─────────────────────────────
 export async function toggleJobCodeActiveAction(input: { id: number }): Promise<Result<{ isActive: boolean }>> {
   const actorId = await requireUsersWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   const existing = await prisma.jobCode.findUnique({ where: { id: input.id } });
   if (!existing) return { success: false, error: "Introuvable" };
   const next = !existing.isActive;

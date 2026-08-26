@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbiddenAll } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 type CheckStatus = "ok" | "warn" | "error" | "skip";
 type Check = {
@@ -44,10 +45,10 @@ async function timeOp<T>(fn: () => Promise<T>): Promise<{ value: T; ms: number }
 export async function GET() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbiddenAll([["settings", "write"]])) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const checks: Check[] = [];

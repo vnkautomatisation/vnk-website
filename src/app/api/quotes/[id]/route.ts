@@ -10,6 +10,7 @@ import { logAudit } from "@/lib/audit";
 import { calculateTaxes } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -31,7 +32,7 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   const { id } = await params;
   const quote = await prisma.quote.findUnique({
@@ -42,7 +43,7 @@ export async function GET(
     return NextResponse.json({ error: "Devis introuvable" }, { status: 404 });
   }
   if (session.user.role === "client" && quote.clientId !== session.user.clientId) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 403 });
+    return unauthorizedJson(403);
   }
   return NextResponse.json({ quote });
 }
@@ -53,10 +54,10 @@ export async function PATCH(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("quotes", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
   const { id } = await params;
   const quoteId = Number(id);
@@ -109,10 +110,10 @@ export async function DELETE(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("quotes", "delete")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
   const { id } = await params;
   const quoteId = Number(id);

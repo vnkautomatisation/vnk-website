@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { revalidateAdminViews } from "@/lib/revalidate";
 import { createWorkflowEvent } from "@/lib/workflow";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -27,7 +28,7 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   const { id } = await params;
   const contract = await prisma.contract.findUnique({
@@ -38,7 +39,7 @@ export async function GET(
     return NextResponse.json({ error: "Contrat introuvable" }, { status: 404 });
   }
   if (session.user.role === "client" && contract.clientId !== session.user.clientId) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 403 });
+    return unauthorizedJson(403);
   }
   return NextResponse.json({ contract });
 }
@@ -49,10 +50,10 @@ export async function PATCH(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("contracts", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
   const { id } = await params;
   const contractId = Number(id);
@@ -107,10 +108,10 @@ export async function DELETE(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("contracts", "delete")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
   const { id } = await params;
   const contractId = Number(id);

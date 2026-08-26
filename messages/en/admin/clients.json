@@ -1,0 +1,45 @@
+{
+  "page_title": "Clients",
+  "page_subtitle": "Manage your clients and their information",
+  "new_client": "New client",
+  "search_placeholder": "Name, company, email, city…",
+  "filter_all": "All",
+  "filter_active": "Active",
+  "filter_inactive": "Inactive",
+  "filter_archived": "Archived",
+  "health_all": "Health: All",
+  "sector_all": "Sector: All",
+  "sort_name_asc": "Name A → Z",
+  "sort_name_desc": "Name Z → A",
+  "sort_recent": "Most recent",
+  "sort_login": "Last login",
+  "sort_revenue": "Total revenue",
+  "health": {
+    "good": "Good",
+    "warning": "Warning",
+    "critical": "Critical"
+  },
+  "columns": {
+    "client": "Client",
+    "company": "Company",
+    "sector": "Sector",
+    "city": "City",
+    "status": "Status",
+    "health": "Health",
+    "mandates": "Mandates",
+    "total_revenue": "Total revenue",
+    "last_login": "Last login"
+  },
+  "kpi": {
+    "active": "Active clients",
+    "inactive": "Inactive",
+    "total_revenue": "Total revenue",
+    "critical_alerts": "Critical alerts"
+  },
+  "view_cards": "Card view",
+  "view_table": "Table view",
+  "never_connected": "Never connected",
+  "archive": "Archive",
+  "unarchive": "Unarchive",
+  "delete_permanent": "Delete permanently"
+}

@@ -8,13 +8,14 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generatePersonalTimesheetPdf } from "@/lib/services/pdf-hr";
 import { logAudit } from "@/lib/audit";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   const adminId = session.user.adminId!;
 

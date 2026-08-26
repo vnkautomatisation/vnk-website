@@ -1,0 +1,24 @@
+{
+  "page_title": "Services",
+  "hero_title": "Solutions techniques pour votre industrie",
+  "support_plc": {
+    "title": "Support PLC à distance",
+    "description": "Diagnostic et résolution rapide de pannes sur vos automates — sans attendre un déplacement.",
+    "price": "120-150 CAD/h"
+  },
+  "audit": {
+    "title": "Audit technique",
+    "description": "Évaluation complète de votre système — risques, performance et plan d'action concret.",
+    "price": "1 500-4 000 CAD"
+  },
+  "documentation": {
+    "title": "Documentation industrielle",
+    "description": "Procédures opérateur, maintenance et dépannage — rédigées pour votre équipe.",
+    "price": "800-5 000 CAD"
+  },
+  "refactoring": {
+    "title": "Refactorisation PLC",
+    "description": "Modernisation de code legacy — fiabilité améliorée, dette technique éliminée.",
+    "price": "3 000-50 000 CAD"
+  }
+}

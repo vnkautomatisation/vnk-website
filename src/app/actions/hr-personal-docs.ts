@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { logSecurityEvent, type SecurityEventType } from "@/lib/security/security-events";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -103,7 +104,7 @@ export async function upsertPersonalDocAction(
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
   const guard = await requireSelfOrHr(parsed.data.adminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
 
   // Restriction : seul l'employé peut créer/modifier les docs marqués privés.
   // Un admin RH ne peut PAS toucher un doc privé existant.
@@ -188,7 +189,7 @@ export async function deletePersonalDocAction(input: { id: number }): Promise<Re
   if (!doc) return { success: false, error: "Document introuvable" };
 
   const guard = await requireSelfOrHr(doc.adminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
 
   // Doc privé : seul l'employé peut supprimer
   if (doc.isPrivate && !guard.isSelf) {
@@ -232,13 +233,13 @@ export async function verifyPersonalDocAction(
 
   // Seul un admin RH peut vérifier (l'employé ne peut pas s'auto-vérifier)
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const me = await prisma.admin.findUnique({
     where: { id: actorId },
     include: { customRole: true },
   });
-  if (!me) return { success: false, error: "Non autorisé" };
+  if (!me) return unauthorized();
   const perms = (me.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
   const isSuper = me.customRole?.name === "super_admin";
   const isHr =
@@ -336,7 +337,7 @@ export async function listExpiringDocsAction(input?: { daysAhead?: number }): Pr
   >
 > {
   const guard = await requireHrRead();
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
 
   const daysAhead = Math.max(1, Math.min(365, input?.daysAhead ?? 60));
   const now = new Date();

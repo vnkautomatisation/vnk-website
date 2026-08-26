@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { revalidateAdminViews } from "@/lib/revalidate";
 import { headers } from "next/headers";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 // Construit un Content-Disposition compatible HTTP/1.1 (Latin-1 only) avec fallback RFC 5987 UTF-8
 function safeContentDisposition(filename: string, mode: "inline" | "attachment" = "inline"): string {
@@ -25,7 +26,7 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const { id } = await params;
@@ -44,7 +45,7 @@ export async function GET(
 
   // Client can only access their own documents
   if (session.user.role === "client" && doc.clientId !== session.user.clientId) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 403 });
+    return unauthorizedJson(403);
   }
 
   if (!doc.fileUrl) {
@@ -114,10 +115,10 @@ export async function PATCH(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("documents", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
   const { id } = await params;
   const docId = Number(id);
@@ -154,10 +155,10 @@ export async function DELETE(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("documents", "delete")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
   const { id } = await params;
   const docId = Number(id);

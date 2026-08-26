@@ -1,0 +1,97 @@
+{
+  "sidebar": {
+    "dashboard": "Tableau de bord",
+    "profile": "Profil",
+    "mandates": "Mandats",
+    "my_requests": "Demandes",
+    "quotes": "Devis",
+    "invoices": "Factures",
+    "contracts": "Contrats",
+    "documents": "Documents",
+    "booking": "Reserver un appel",
+    "appointments": "Rendez-vous",
+    "notifications": "Notifications",
+    "contact_us": "Nous contacter",
+    "logout": "Déconnexion",
+    "more": "Plus",
+    "new": "Nouvelle demande"
+  },
+  "dashboard": {
+    "greeting": "Bonjour, {name}",
+    "active_mandates": "Mandats actifs",
+    "pending_quotes": "Devis en attente",
+    "pending_invoices": "Factures à payer",
+    "unread_documents": "Documents non lus",
+    "recent_activity": "Activité récente"
+  },
+  "mandates": {
+    "page_title": "Mes mandats",
+    "page_subtitle": "Suivi de vos projets en cours",
+    "empty": "Aucun mandat actif",
+    "empty_subtitle": "Vos projets apparaîtront ici",
+    "new_project": "Démarrer un projet",
+    "view_details": "Voir les détails",
+    "progress": "Progression"
+  },
+  "quotes": {
+    "page_title": "Mes devis",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "sign_to_accept": "Signer pour accepter"
+  },
+  "invoices": {
+    "page_title": "Mes factures",
+    "pay_now": "Payer maintenant",
+    "view_pdf": "Voir le PDF",
+    "download_pdf": "Télécharger le PDF"
+  },
+  "contracts": {
+    "page_title": "Mes contrats",
+    "sign": "Signer",
+    "view": "Voir",
+    "download": "Télécharger"
+  },
+  "documents": {
+    "page_title": "Mes documents",
+    "page_subtitle": "Rapports, livrables et documentation déposés par VNK",
+    "empty": "Aucun document disponible pour l'instant.",
+    "empty_subtitle": "Les rapports et livrables apparaîtront ici une fois votre mandat démarré.",
+    "all_categories": "Toutes catégories",
+    "all_read_status": "Tous",
+    "unread": "Non lus",
+    "read": "Lus",
+    "mark_read": "Marquer comme lu"
+  },
+  "booking": {
+    "page_title": "Réserver un appel",
+    "page_subtitle": "Choisissez un créneau disponible",
+    "select_date": "Sélectionnez une date",
+    "select_time": "Sélectionnez une heure",
+    "meeting_type": "Type de réunion",
+    "video": "Vidéo",
+    "phone": "Téléphone",
+    "onsite": "Sur place",
+    "confirm": "Confirmer le rendez-vous"
+  },
+  "appointments": {
+    "page_title": "Mes rendez-vous",
+    "upcoming": "À venir",
+    "confirmed": "Confirmés",
+    "cancelled": "Annulés",
+    "past": "Passés",
+    "reschedule": "Reprogrammer",
+    "cancel_appt": "Annuler le rendez-vous",
+    "join_meeting": "Rejoindre la réunion"
+  },
+  "my_requests": {
+    "page_title": "Mes demandes",
+    "page_subtitle": "Suivi de vos demandes de projet",
+    "new_request": "Nouvelle demande",
+    "status": {
+      "new": "Nouvelle",
+      "in_progress": "En traitement",
+      "converted": "Convertie",
+      "closed": "Fermée"
+    }
+  }
+}

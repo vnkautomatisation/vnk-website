@@ -1,0 +1,10 @@
+{
+  "page_title": "Contrats",
+  "page_subtitle": "Gérer les contrats clients et leur signature",
+  "new": "Nouveau contrat",
+  "client_signature": "Signature client",
+  "admin_signature": "Signature admin",
+  "sign_now": "Signer maintenant",
+  "signed": "Signé",
+  "pending_signature": "En attente"
+}

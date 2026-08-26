@@ -1,6 +1,7 @@
 "use client";
 // DayDetailPanel - audit drill-down of a single day's sub-entries.
 import { Clock, Pencil } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -9,7 +10,7 @@ import type { Entry } from "../_types";
 import { ApprovedBadge } from "./ApprovedBadge";
 import { mergeInfo, MergedBadge } from "./EntryRows";
 import { StatBox } from "./StatBox";
-import { CAT_LABEL, fmtDuration, fmtTime, capFirst, displayNotes } from "./_utils";
+import { CAT_LABEL, catLabel, fmtDuration, fmtTime, capFirst, displayNotes } from "./_utils";
 
 export function DayDetailPanel({
   adminName, date, workMin, breakMin, entries, onEdit,
@@ -21,6 +22,7 @@ export function DayDetailPanel({
   entries: Entry[];
   onEdit: (entry: Entry) => void;
 }) {
+  const t = useTranslations("admin.timeclock");
   const dateLabel = capFirst(new Date(date + "T12:00:00").toLocaleDateString("fr-CA", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   }));
@@ -50,7 +52,7 @@ export function DayDetailPanel({
           </p>
           <div className="space-y-1 max-h-[500px] overflow-y-auto">
             {entries.map((e) => {
-              const cat = CAT_LABEL[e.category] ?? { label: e.category, color: "bg-gray-100 text-gray-700" };
+              const cat = CAT_LABEL[e.category] ?? { key: "", color: "bg-gray-100 text-gray-700" };
               const { isMerged, count: mergedCount, gapMin, grossIsCoherent } = mergeInfo(e);
               return (
                 <div key={e.id} className="flex items-start gap-2 p-2 text-xs rounded border">
@@ -62,7 +64,7 @@ export function DayDetailPanel({
                           ? ` → ${fmtTime(e.clockOut)}`
                           : " · en cours"}
                       </span>
-                      <Badge className={`text-[9px] ${cat.color}`}>{cat.label}</Badge>
+                      <Badge className={`text-[9px] ${cat.color}`}>{catLabel(t, e.category)}</Badge>
                       {isMerged && <MergedBadge count={mergedCount} gapMin={gapMin} coherent={grossIsCoherent} small />}
                       {e.jobCode && (
                         <ActionTooltip label={e.jobCode.label}>

@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -65,7 +66,7 @@ export async function createSignatureRequestAction(
   input: z.infer<typeof createSchema>,
 ): Promise<Result<{ createdCount: number; skipped: number }>> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -258,7 +259,7 @@ export async function createSignatureRequestAction(
 // ─── cancelSignatureRequestAction ───────────────────────────────
 export async function cancelSignatureRequestAction(input: { id: number }): Promise<Result> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
 
   const req = await prisma.documentSignatureRequest.findUnique({
     where: { id: input.id },
@@ -291,7 +292,7 @@ export async function remindSignatureRequestAction(input: { id: number }): Promi
   Result<{ notified: number }>
 > {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
 
   const req = await prisma.documentSignatureRequest.findUnique({
     where: { id: input.id },

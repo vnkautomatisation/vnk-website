@@ -8,6 +8,7 @@
 //        https://<APP>.up.railway.app/api/cron/vacation-window-transitions
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ function authorize(req: Request): boolean {
 
 export async function POST(req: Request) {
   if (!authorize(req)) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   const now = new Date();
   let opened = 0;

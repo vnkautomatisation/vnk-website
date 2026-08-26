@@ -1,0 +1,16 @@
+{
+  "page_title": "Litiges Stripe",
+  "page_subtitle": "Contestations bancaires initiées par vos clients via leur banque",
+  "priority": {
+    "low": "Faible",
+    "medium": "Moyenne",
+    "high": "Élevée",
+    "critical": "Critique"
+  },
+  "status": {
+    "open": "Ouvert",
+    "in_progress": "En cours",
+    "resolved": "Résolu",
+    "escalated": "Escaladé"
+  }
+}

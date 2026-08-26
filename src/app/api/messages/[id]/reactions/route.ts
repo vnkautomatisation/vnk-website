@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const schema = z.object({
   emoji: z.string().min(1).max(8),
@@ -12,7 +13,7 @@ type ReactionsMap = Record<string, string[]>;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session?.user) return unauthorizedJson();
 
   const { id } = await params;
   const msgId = Number(id);
@@ -20,7 +21,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!msg) return NextResponse.json({ error: "Message introuvable" }, { status: 404 });
 
   if (session.user.role === "client" && msg.clientId !== session.user.clientId) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return unauthorizedJson(403);
   }
   if (msg.deletedAt) return NextResponse.json({ error: "Message supprimé" }, { status: 410 });
 

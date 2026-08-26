@@ -1,0 +1,24 @@
+{
+  "page_title": "Services",
+  "hero_title": "Technical solutions for your industry",
+  "support_plc": {
+    "title": "Remote PLC support",
+    "description": "Fast diagnosis and resolution of automation failures — without waiting for an on-site visit.",
+    "price": "120-150 CAD/h"
+  },
+  "audit": {
+    "title": "Technical audit",
+    "description": "Complete evaluation of your system — risks, performance and concrete action plan.",
+    "price": "1,500-4,000 CAD"
+  },
+  "documentation": {
+    "title": "Industrial documentation",
+    "description": "Operator, maintenance and troubleshooting procedures — written for your team.",
+    "price": "800-5,000 CAD"
+  },
+  "refactoring": {
+    "title": "PLC refactoring",
+    "description": "Modernization of legacy code — improved reliability, eliminated technical debt.",
+    "price": "3,000-50,000 CAD"
+  }
+}

@@ -10,11 +10,12 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/services/email";
 import { generateEmailChallenge } from "@/lib/security/crypto";
 import { logSecurityEvent } from "@/lib/security/security-events";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ provider: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const adminId = session.user.adminId!;
   const { provider } = await params;

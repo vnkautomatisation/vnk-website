@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const schema = z.object({
   chatPinned: z.boolean().optional(),
@@ -16,10 +17,10 @@ const schema = z.object({
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("clients", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
   const { id } = await params;
   const body = await req.json();

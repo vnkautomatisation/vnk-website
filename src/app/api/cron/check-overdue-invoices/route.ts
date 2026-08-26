@@ -6,13 +6,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notifyInvoiceOverdue } from "@/lib/integrations/slack";
 import { triggerZap } from "@/lib/integrations/zapier";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function GET(req: NextRequest) {
   // Sécurité : vérifier le secret CRON
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const now = new Date();

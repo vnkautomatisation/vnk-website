@@ -6,13 +6,14 @@ import { prisma } from "@/lib/prisma";
 import { revalidateAdminViews } from "@/lib/revalidate";
 import { captureRequestContext } from "@/lib/request-context";
 import { logAudit } from "@/lib/audit";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const schema = z.object({ isRead: z.boolean().optional() });
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const { id } = await params;
@@ -24,7 +25,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!doc) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
 
   if (session.user.role === "client" && doc.clientId !== session.user.clientId) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return unauthorizedJson(403);
   }
 
   let next: boolean;

@@ -8,6 +8,7 @@ import { logSecurityEvent } from "@/lib/security/security-events";
 import { getProvider } from "@/lib/integrations/providers";
 import { invalidateIntegrationCache } from "@/lib/integrations/credentials";
 import { encryptCredentials, decryptCredentials } from "@/lib/security/crypto";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -31,7 +32,7 @@ const upsertSchema = z.object({
 
 export async function upsertIntegrationAction(input: z.infer<typeof upsertSchema>): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   const parsed = upsertSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -124,7 +125,7 @@ export async function upsertIntegrationAction(input: z.infer<typeof upsertSchema
 // ── Activer/désactiver ────────────────────────────────
 export async function toggleIntegrationAction(provider: string, enabled: boolean): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   try {
     await prisma.integration.update({
       where: { provider },
@@ -152,7 +153,7 @@ export async function toggleIntegrationAction(provider: string, enabled: boolean
 // ── Supprimer (déconnecter) ──────────────────────────
 export async function deleteIntegrationAction(provider: string): Promise<ActionResult> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   try {
     await prisma.integration.delete({ where: { provider } }).catch(() => null);
     await logAudit({

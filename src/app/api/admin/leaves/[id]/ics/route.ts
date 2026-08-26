@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ const TYPE_LABEL: Record<string, string> = {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const adminId = session.user.adminId!;
   const { id } = await params;
@@ -47,7 +48,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const me = await prisma.admin.findUnique({ where: { id: adminId }, include: { customRole: true } });
     const perms = (me?.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
     const isReviewer = me?.customRole?.name === "super_admin" || (perms.leaves ?? []).includes("write") || (perms.users ?? []).includes("write");
-    if (!isReviewer) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    if (!isReviewer) return forbiddenJson();
   }
 
   if (leave.status !== "approved") {

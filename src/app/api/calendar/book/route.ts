@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createWorkflowEvent } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const bookSchema = z.object({
   slotId: z.number().int().positive(),
@@ -18,7 +19,7 @@ const bookSchema = z.object({
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "client") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const body = await req.json();

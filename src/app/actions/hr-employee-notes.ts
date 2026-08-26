@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> =
   | ({ success: true } & (T extends void ? object : { data: T }))
@@ -58,7 +59,7 @@ export async function createEmployeeNoteAction(
   input: z.infer<typeof createSchema>,
 ): Promise<Result<{ id: number }>> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorise" };
+  if (!actorId) return unauthorized();
 
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -135,7 +136,7 @@ export async function updateEmployeeNoteAction(
   input: z.infer<typeof updateSchema>,
 ): Promise<Result> {
   const actor = await getActorContext();
-  if (!actor) return { success: false, error: "Non autorise" };
+  if (!actor) return unauthorized();
 
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -182,7 +183,7 @@ export async function updateEmployeeNoteAction(
 
 export async function deleteEmployeeNoteAction(input: { id: number }): Promise<Result> {
   const actor = await getActorContext();
-  if (!actor) return { success: false, error: "Non autorise" };
+  if (!actor) return unauthorized();
   if (!actor.isSuper) return { success: false, error: "Suppression reservee au super_admin" };
 
   const existing = await prisma.employeeNote.findUnique({
@@ -209,7 +210,7 @@ export async function deleteEmployeeNoteAction(input: { id: number }): Promise<R
 export async function acknowledgeEmployeeNoteAction(input: { id: number }): Promise<Result> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return { success: false, error: "Non autorise" };
+    return unauthorized();
   }
   const adminId = session.user.adminId!;
 

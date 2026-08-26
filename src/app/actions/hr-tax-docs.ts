@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { generateT4SummaryPdf, generateReleve1Pdf } from "@/lib/services/pdf-hr";
 import { uploadBuffer } from "@/lib/storage/object-storage";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -34,7 +35,7 @@ const issueDocSchema = z.object({
 
 export async function issueTaxDocumentAction(input: z.infer<typeof issueDocSchema>): Promise<Result<{ id: number }>> {
   const issuedBy = await requireHrWrite();
-  if (!issuedBy) return { success: false, error: "Non autorisé" };
+  if (!issuedBy) return unauthorized();
   const parsed = issueDocSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -83,7 +84,7 @@ export async function generateAnnualTaxDocAction(
   input: z.infer<typeof annualSchema>,
 ): Promise<Result<{ id: number; fileUrl: string }>> {
   const issuedBy = await requireHrWrite();
-  if (!issuedBy) return { success: false, error: "Non autorisé" };
+  if (!issuedBy) return unauthorized();
   const parsed = annualSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -193,7 +194,7 @@ export async function generateAnnualTaxDocsBulkAction(
   input: z.infer<typeof bulkSchema>,
 ): Promise<Result<{ generated: number; skipped: number; errors: string[] }>> {
   const issuedBy = await requireHrWrite();
-  if (!issuedBy) return { success: false, error: "Non autorisé" };
+  if (!issuedBy) return unauthorized();
   const parsed = bulkSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
   const { year, type } = parsed.data;
@@ -234,7 +235,7 @@ const requestLetterSchema = z.object({
 
 export async function requestEmploymentLetterAction(input: z.infer<typeof requestLetterSchema>): Promise<Result<{ id: number }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = requestLetterSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -276,7 +277,7 @@ export async function requestEmploymentLetterAction(input: z.infer<typeof reques
 
 export async function issueEmploymentLetterAction(input: { id: number; letterUrl: string }): Promise<Result> {
   const issuedBy = await requireHrWrite();
-  if (!issuedBy) return { success: false, error: "Non autorisé" };
+  if (!issuedBy) return unauthorized();
 
   const r = await prisma.employmentLetterRequest.findUnique({ where: { id: input.id } });
   if (!r) return { success: false, error: "Demande introuvable" };
@@ -305,7 +306,7 @@ export async function issueEmploymentLetterAction(input: { id: number; letterUrl
 
 export async function rejectEmploymentLetterAction(input: { id: number; reason: string }): Promise<Result> {
   const issuedBy = await requireHrWrite();
-  if (!issuedBy) return { success: false, error: "Non autorisé" };
+  if (!issuedBy) return unauthorized();
   const r = await prisma.employmentLetterRequest.findUnique({ where: { id: input.id } });
   if (!r) return { success: false, error: "Introuvable" };
 

@@ -1,0 +1,10 @@
+{
+  "page_title": "Contracts",
+  "page_subtitle": "Manage client contracts and their signatures",
+  "new": "New contract",
+  "client_signature": "Client signature",
+  "admin_signature": "Admin signature",
+  "sign_now": "Sign now",
+  "signed": "Signed",
+  "pending_signature": "Pending"
+}

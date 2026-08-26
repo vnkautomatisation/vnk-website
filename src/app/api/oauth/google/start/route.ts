@@ -4,11 +4,12 @@ import { auth } from "@/lib/auth";
 import { buildAuthorizeUrl } from "@/lib/integrations/google";
 import crypto from "crypto";
 import { cookies } from "next/headers";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   try {

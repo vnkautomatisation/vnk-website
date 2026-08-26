@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { generateExpensesPdf } from "@/lib/services/pdf-export";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const EXPENSE_CATEGORIES: Record<string, string> = {
   logiciels_licences: "Logiciels / Licences",
@@ -22,10 +23,10 @@ const EXPENSE_CATEGORIES: Record<string, string> = {
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("expenses", "read")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const { searchParams } = new URL(req.url);

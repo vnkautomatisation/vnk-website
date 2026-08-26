@@ -8,6 +8,7 @@ import { startOfWeek } from "@/lib/week";
 import { workedMin, minutesBetween, closeRunningBreak, MERGE_MAX_GAP_MIN } from "@/lib/time-entry";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -200,7 +201,7 @@ async function assertAccountActive(adminId: number): Promise<{ success: false; e
 // enabled, web punches outside the configured radius are rejected.
 export async function clockInAction(input: { jobCodeId?: number; category?: string; notes?: string; lat?: number; lng?: number }): Promise<Result<{ id: number }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
 
   // Refused when the account is deactivated.
@@ -268,7 +269,7 @@ export async function clockInAction(input: { jobCodeId?: number; category?: stri
 // the totals before the worked duration is computed.
 export async function clockOutAction(input?: { lat?: number; lng?: number }): Promise<Result<{ durationMin: number }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
 
   // Refused when the account is deactivated.
@@ -381,7 +382,7 @@ export async function clockOutAction(input?: { lat?: number; lng?: number }): Pr
 //   - "paid": short coffee break — tracked but NOT deducted (paidBreakMin)
 export async function pauseClockAction(input?: { kind?: "meal" | "paid" }): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
 
   // Refused when the account is deactivated.
@@ -417,7 +418,7 @@ export async function pauseClockAction(input?: { kind?: "meal" | "paid" }): Prom
 // Back from a break: its minutes are added to the running total.
 export async function resumeClockAction(): Promise<Result<{ breakAddedMin: number }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
 
   // Refused when the account is deactivated.
@@ -486,7 +487,7 @@ const MAX_HOURS_PER_ENTRY = 16;
 
 export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>): Promise<Result<{ id: number; submittedForApproval: boolean }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = manualSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -615,7 +616,7 @@ function fmtHoursShort(min: number): string {
 // ── Employee deletion, only while unapproved and unpaid ──
 export async function deleteTimeClockAction(input: { id: number }): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
 
   const tc = await prisma.timeClock.findUnique({ where: { id: input.id } });
@@ -656,7 +657,7 @@ export async function mergeDayTimeClockAction(
   input: { date: string },
 ): Promise<Result<{ id: number; snapshotId: number; groups: number; punches: number }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
 
   // Local [day 00:00, next day 00:00).
@@ -770,7 +771,7 @@ export async function mergeDayTimeClockAction(
 // ── Delete a day's short punches, under maxMin minutes ──
 export async function deleteShortTimeClockAction(input: { date: string; maxMin: number }): Promise<Result<{ deleted: number; snapshotId: number }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
 
   const day = new Date(input.date + "T00:00:00");
@@ -1003,7 +1004,7 @@ export async function unapproveTimeClockAction(input: { ids: number[]; reason?: 
 // ── Rejection: back to the employee ───────────────────────
 export async function rejectTimeClockAction(input: { id: number; reason: string }): Promise<Result<{ snapshotId: number }>> {
   const actorId = await requirePayrollWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   const tc = await prisma.timeClock.findUnique({ where: { id: input.id } });
   if (!tc) return { success: false, error: "Introuvable" };
   if (tc.payStubId) return { success: false, error: "Déjà sur un bulletin — débloquer le bulletin d'abord" };
@@ -1078,7 +1079,7 @@ export async function rejectManyTimeClockAction(
   input: { ids: number[]; reason: string },
 ): Promise<Result<{ rejected: number; skipped: number; snapshotId: number }>> {
   const actorId = await requirePayrollWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   if (!Array.isArray(input.ids) || input.ids.length === 0) {
     return { success: false, error: "Aucune entrée selectionnee" };
   }
@@ -1183,7 +1184,7 @@ const updateSchema = z.object({
 
 export async function updateTimeClockAction(input: z.infer<typeof updateSchema>): Promise<Result<{ id: number }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -1194,7 +1195,7 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
   const isOwner = tc.adminId === actorId;
   const payrollId = await requirePayrollWrite();
   const isAdminOverride = !isOwner && payrollId != null;
-  if (!isOwner && !isAdminOverride) return { success: false, error: "Non autorisé" };
+  if (!isOwner && !isAdminOverride) return unauthorized();
 
   if (tc.payStubId) return { success: false, error: "Déjà sur un bulletin de paie — non modifiable" };
 
@@ -1354,7 +1355,7 @@ export async function submitWeekTimeClocksAction(
   input: z.infer<typeof submitWeekSchema>,
 ): Promise<Result<{ submitted: number; workMin: number; breakMin: number; leaveMin: number }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = submitWeekSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -1457,7 +1458,7 @@ export async function requestEditTimeClockAction(
   input: z.infer<typeof requestEditSchema>,
 ): Promise<Result<{ id: number }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = requestEditSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -1651,7 +1652,7 @@ export async function denyEditRequestAction(input: z.infer<typeof denySchema>): 
 // first. Refused on a "paid" period, and on "locked" without privileges.
 export async function forceClockOutAction(input: { adminId: number; when?: string }): Promise<Result<{ id: number }>> {
   const actorId = await requirePayrollWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   if (!(await canReviewTargets(actorId, [input.adminId]))) {
     return { success: false, error: "Vous ne pouvez pas forcer la fermeture de votre propre pointage" };
   }
@@ -1738,7 +1739,7 @@ type SnapshotEntry = {
 
 export async function undoTimeClockSnapshotAction(input: { snapshotId: number }): Promise<Result<{ restored: number }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
 
   const snap = await prisma.timeClockSnapshot.findUnique({ where: { id: input.snapshotId } });
@@ -1748,7 +1749,7 @@ export async function undoTimeClockSnapshotAction(input: { snapshotId: number })
 
   const isOriginal = snap.actorId === actorId;
   const isSuper = await isSuperAdmin(actorId);
-  if (!isOriginal && !isSuper) return { success: false, error: "Non autorisé" };
+  if (!isOriginal && !isSuper) return unauthorized();
 
   const payload = snap.payload as { entries?: SnapshotEntry[] } | null;
   const entries = payload?.entries ?? [];
@@ -1926,7 +1927,7 @@ export async function notifyForgottenDaysAction(
 // Scope-checked like every review action.
 export async function remindSubmitWeekAction(input: { adminId: number }): Promise<Result> {
   const actorId = await requirePayrollWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   if (!(await assertCanReviewAdmin(actorId, input.adminId))) {
     return { success: false, error: ERR_NO_AUTHORITY };
   }
@@ -1960,7 +1961,7 @@ export async function updateTimeclockSettingsAction(input: {
   overtimeWeeklyMin: number;
 }): Promise<Result> {
   const actorId = await requirePayrollWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
 
   if (![0, 5, 10, 15].includes(input.roundingMin)) {
     return { success: false, error: "Arrondi invalide" };
@@ -2070,7 +2071,7 @@ async function storeKioskPin(adminId: number, pin: string): Promise<boolean> {
 export async function revealMyKioskPinAction(input: { password: string }): Promise<Result<{ pin: string }>> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return { success: false, error: "Non autorisé" };
+    return unauthorized();
   }
   const adminId = session.user.adminId!;
 
@@ -2119,7 +2120,7 @@ export async function revealMyKioskPinAction(input: { password: string }): Promi
 // be handed over. HR never reads an existing PIN — only replaces it.
 export async function resetKioskPinForAction(input: { adminId: number }): Promise<Result<{ pin: string; name: string }>> {
   const actorId = await requirePayrollWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
 
   const target = await prisma.admin.findUnique({
     where: { id: input.adminId },
@@ -2159,7 +2160,7 @@ export async function resetKioskPinForAction(input: { adminId: number }): Promis
 export async function requestKioskPinAction(): Promise<Result> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return { success: false, error: "Non autorisé" };
+    return unauthorized();
   }
   const adminId = session.user.adminId!;
 
@@ -2213,7 +2214,7 @@ export async function requestKioskPinAction(): Promise<Result> {
 
 export async function clearKioskPinForAction(input: { adminId: number }): Promise<Result> {
   const actorId = await requirePayrollWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   await prisma.$executeRaw`
     UPDATE admins SET kiosk_pin_hash = NULL, kiosk_pin_enc = NULL, kiosk_pin_set_at = NULL
     WHERE id = ${input.adminId}

@@ -19,6 +19,7 @@ import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { generateInvoicePdf, generateQuotePdf, generateContractPdf } from "@/lib/services/pdf";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 import {
   generateConversationPdf,
   generateAppointmentsPdf,
@@ -67,10 +68,10 @@ function dataUrlToBuffer(dataUrl: string): { buf: Buffer; mime: string } | null 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("clients", "read")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const { id } = await params;

@@ -7,11 +7,12 @@ import { auth } from "@/lib/auth";
 import { getIntegrationCredentials } from "@/lib/integrations/credentials";
 import { encryptCredentials } from "@/lib/security/crypto";
 import { prisma } from "@/lib/prisma";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const creds = await getIntegrationCredentials("calendly");
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
 export async function DELETE() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const creds = await getIntegrationCredentials("calendly");

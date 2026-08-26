@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { renderTemplateHtmlToPdf } from "@/lib/services/pdf-html-renderer";
 import { buildContextFromEmployee } from "@/lib/document-templates/employee-context";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   const me = (session.user as { adminId?: number }).adminId ?? 0;
   const { id: idStr } = await params;
@@ -42,7 +43,7 @@ export async function GET(
     return NextResponse.json({ error: "Brouillon introuvable" }, { status: 404 });
   }
   if (draft.authorId !== me) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 403 });
+    return unauthorizedJson(403);
   }
 
   // Build context base + injection des fill_X dans le context pour que le

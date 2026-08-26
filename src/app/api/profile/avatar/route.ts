@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { logSecurityEvent } from "@/lib/security/security-events";
 import { validateImageBuffer } from "@/lib/security/image-magic";
 import { uploadAvatar, deleteRemoteAvatar } from "@/lib/storage/object-storage";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 Mo brut
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -14,7 +15,7 @@ const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const adminId = session.user.adminId!;
 
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const adminId = session.user.adminId!;
 

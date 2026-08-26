@@ -7,6 +7,7 @@ import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const actorId = session.user.adminId!;
 
@@ -30,7 +31,7 @@ export async function GET(
     where: { id: actorId },
     include: { customRole: true },
   });
-  if (!me) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!me) return unauthorizedJson();
 
   const perms = (me.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
   const isSuper = me.customRole?.name === "super_admin";
@@ -42,7 +43,7 @@ export async function GET(
     || (perms.hr ?? []).includes("write");
   const isSelf = actorId === targetId;
   if (!isSelf && !isHr) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const daysParam = Number(req.nextUrl.searchParams.get("days") ?? "60");

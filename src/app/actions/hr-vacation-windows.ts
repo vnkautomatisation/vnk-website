@@ -16,6 +16,7 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { logSecurityEvent } from "@/lib/security/security-events";
 import { calculateWorkingDays } from "@/lib/services/leave-days";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -181,7 +182,7 @@ const submitPreferencesSchema = z.object({
 
 export async function submitPreferencesAction(input: z.infer<typeof submitPreferencesSchema>): Promise<Result<{ count: number }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorise" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = submitPreferencesSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };

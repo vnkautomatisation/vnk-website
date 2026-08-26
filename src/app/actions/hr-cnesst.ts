@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { logSecurityEvent } from "@/lib/security/security-events";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -28,7 +29,7 @@ const incidentSchema = z.object({
 
 export async function upsertCnesstIncidentAction(input: z.infer<typeof incidentSchema>): Promise<Result<{ id: number }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: "Non autorisé (SST/RH requis)" };
   const actorId = session.user.adminId!;
 
@@ -97,7 +98,7 @@ export async function upsertCnesstIncidentAction(input: z.infer<typeof incidentS
 
 export async function deleteCnesstIncidentAction(input: { id: number }): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: "Non autorisé (SST/RH requis)" };
   const me = await prisma.admin.findUnique({ where: { id: session.user.adminId! }, include: { customRole: true } });
   if (me?.customRole?.name !== "super_admin") {
@@ -111,7 +112,7 @@ export async function deleteCnesstIncidentAction(input: { id: number }): Promise
 
 export async function markCnesstReportedAction(input: { id: number; date?: string }): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: "Non autorisé (SST/RH requis)" };
   const actorId = session.user.adminId!;
   try {
@@ -137,7 +138,7 @@ export async function markCnesstReportedAction(input: { id: number; date?: strin
 
 export async function markCnesstReturnedAction(input: { id: number; date: string }): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: "Non autorisé (SST/RH requis)" };
   const actorId = session.user.adminId!;
   try {

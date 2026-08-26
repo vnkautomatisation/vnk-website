@@ -1,0 +1,20 @@
+{
+  "greeting_morning": "Good morning",
+  "greeting_afternoon": "Good afternoon",
+  "greeting_evening": "Good evening",
+  "active_clients": "Active clients",
+  "active_mandates": "Active mandates",
+  "receivable": "Receivable",
+  "overdue": "{count} overdue",
+  "month_revenue": "Monthly revenue",
+  "revenue_6_months": "Revenue — last 6 months",
+  "paid_invoices": "Paid invoices",
+  "site_traffic": "Site traffic",
+  "portal_presence": "Portal presence",
+  "online": "Online",
+  "offline": "Offline",
+  "anonymous_visitor": "Anonymous visitor",
+  "public_site": "Public site",
+  "recent_activity": "Recent activity",
+  "events_count": "{count} events"
+}

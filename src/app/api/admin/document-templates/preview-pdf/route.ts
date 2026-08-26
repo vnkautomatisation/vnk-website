@@ -17,6 +17,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 import {
   buildContextFromEmployee,
   formatDateFr,
@@ -234,7 +235,7 @@ function dbTypeToDocType(t: TemplateTypeDb): TemplateDocumentType {
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   let payload: PostPayload;
@@ -373,7 +374,7 @@ async function renderMinimalErrorPdf(title: string, errorMsg: string): Promise<B
 export async function GET(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const { searchParams } = new URL(req.url);

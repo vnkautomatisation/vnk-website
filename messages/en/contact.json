@@ -1,0 +1,24 @@
+{
+  "page_title": "Contact",
+  "hero_title": "Contact us",
+  "hero_subtitle": "Book a free consultation",
+  "form": {
+    "name": "Full name",
+    "company": "Company",
+    "email": "Email",
+    "phone": "Phone",
+    "service": "Requested service",
+    "plc_brand": "PLC brand",
+    "message": "Message",
+    "submit": "Send request",
+    "sending": "Sending…",
+    "success": "Message sent! We'll respond shortly.",
+    "error": "Error sending. Please try again."
+  },
+  "info": {
+    "email_label": "Email",
+    "phone_label": "Phone",
+    "location_label": "Service area",
+    "response_time_label": "Response time"
+  }
+}

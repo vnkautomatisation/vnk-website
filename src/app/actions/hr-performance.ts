@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -31,7 +32,7 @@ const reviewCreateSchema = z.object({
 
 export async function createPerformanceReviewAction(input: z.infer<typeof reviewCreateSchema>): Promise<Result<{ id: number }>> {
   const me = await getMe();
-  if (!me || !me.isHr) return { success: false, error: "Non autorisé" };
+  if (!me || !me.isHr) return unauthorized();
   const parsed = reviewCreateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -68,7 +69,7 @@ const reviewUpdateSchema = z.object({
 
 export async function updatePerformanceReviewAction(input: z.infer<typeof reviewUpdateSchema>): Promise<Result> {
   const me = await getMe();
-  if (!me) return { success: false, error: "Non autorisé" };
+  if (!me) return unauthorized();
   const parsed = reviewUpdateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -77,7 +78,7 @@ export async function updatePerformanceReviewAction(input: z.infer<typeof review
 
   const isReviewer = review.reviewerId === me.id;
   const isEmployee = review.adminId === me.id;
-  if (!me.isHr && !isReviewer && !isEmployee) return { success: false, error: "Non autorisé" };
+  if (!me.isHr && !isReviewer && !isEmployee) return unauthorized();
 
   // Org-chart rule: even an HR admin cannot grade/submit their OWN review —
   // only their superior can. Founder is the sole exception (no superior).
@@ -150,13 +151,13 @@ const oneOnOneSchema = z.object({
 
 export async function upsertOneOnOneAction(input: z.infer<typeof oneOnOneSchema>): Promise<Result<{ id: number }>> {
   const me = await getMe();
-  if (!me) return { success: false, error: "Non autorisé" };
+  if (!me) return unauthorized();
   const parsed = oneOnOneSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
   // Auth : manager OU employé du meeting
   const isParticipant = me.id === parsed.data.managerId || me.id === parsed.data.adminId;
-  if (!me.isHr && !isParticipant) return { success: false, error: "Non autorisé" };
+  if (!me.isHr && !isParticipant) return unauthorized();
 
   const data = {
     adminId: parsed.data.adminId,
@@ -227,7 +228,7 @@ const bonusSchema = z.object({
 
 export async function addBonusAction(input: z.infer<typeof bonusSchema>): Promise<Result<{ id: number }>> {
   const me = await getMe();
-  if (!me || !me.isHr) return { success: false, error: "Non autorisé" };
+  if (!me || !me.isHr) return unauthorized();
   const parsed = bonusSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 

@@ -6,6 +6,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const actorId = session.user.adminId!;
 
@@ -46,7 +47,7 @@ export async function GET(
     }),
   ]);
 
-  if (!me) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!me) return unauthorizedJson();
   if (!docReq) {
     return NextResponse.json({ error: "Demande introuvable" }, { status: 404 });
   }
@@ -66,7 +67,7 @@ export async function GET(
   const isManager = docReq.targetAdmin.managerId === actorId;
 
   if (!isSelf && !isHr && !isManager) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    return forbiddenJson();
   }
 
   await logAudit({

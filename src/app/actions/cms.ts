@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -47,7 +48,7 @@ const postSchema = z.object({
 
 export async function createPostAction(input: z.infer<typeof postSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = postSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -82,7 +83,7 @@ export async function createPostAction(input: z.infer<typeof postSchema>): Promi
 
 export async function updatePostAction(input: z.infer<typeof postSchema> & { id: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const { id, slug: inSlug, ...rest } = input;
   const parsed = postSchema.safeParse(rest);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -115,7 +116,7 @@ export async function updatePostAction(input: z.infer<typeof postSchema> & { id:
 
 export async function deletePostAction(input: { id: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   await prisma.blogPost.delete({ where: { id: input.id } });
   await logAudit({ adminId, action: "delete", entityType: "blog_post", entityId: input.id });
   revalidatePath("/admin/settings/content");
@@ -136,7 +137,7 @@ const faqSchema = z.object({
 
 export async function createFaqAction(input: z.infer<typeof faqSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = faqSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -154,7 +155,7 @@ export async function createFaqAction(input: z.infer<typeof faqSchema>): Promise
 
 export async function updateFaqAction(input: z.infer<typeof faqSchema> & { id: number; sortOrder?: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const { id, sortOrder, ...rest } = input;
   await prisma.faqItem.update({
     where: { id },
@@ -168,7 +169,7 @@ export async function updateFaqAction(input: z.infer<typeof faqSchema> & { id: n
 
 export async function deleteFaqAction(input: { id: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   await prisma.faqItem.delete({ where: { id: input.id } });
   await logAudit({ adminId, action: "delete", entityType: "faq_item", entityId: input.id });
   revalidatePath("/admin/settings/content");
@@ -192,7 +193,7 @@ const testimonialSchema = z.object({
 
 export async function createTestimonialAction(input: z.infer<typeof testimonialSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = testimonialSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -213,7 +214,7 @@ export async function createTestimonialAction(input: z.infer<typeof testimonialS
 
 export async function updateTestimonialAction(input: z.infer<typeof testimonialSchema> & { id: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const { id, ...rest } = input;
   await prisma.testimonial.update({
     where: { id },
@@ -231,7 +232,7 @@ export async function updateTestimonialAction(input: z.infer<typeof testimonialS
 
 export async function deleteTestimonialAction(input: { id: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   await prisma.testimonial.delete({ where: { id: input.id } });
   await logAudit({ adminId, action: "delete", entityType: "testimonial", entityId: input.id });
   revalidatePath("/admin/settings/content");

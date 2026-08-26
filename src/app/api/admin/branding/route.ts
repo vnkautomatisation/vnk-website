@@ -12,6 +12,7 @@ import { auth } from "@/lib/auth";
 import { adminApiForbiddenAll } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 Mo
 const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "image/svg+xml", "image/x-icon", "image/vnd.microsoft.icon"];
@@ -21,10 +22,10 @@ type Slot = (typeof ALLOWED_SLOTS)[number];
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbiddenAll([["settings", "write"], ["branding", "write"], ["website", "write"], ["client_portal", "write"]])) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
   const adminId = session.user.adminId!;
 
@@ -83,10 +84,10 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbiddenAll([["settings", "write"], ["branding", "write"], ["website", "write"], ["client_portal", "write"]])) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
   const adminId = session.user.adminId!;
 

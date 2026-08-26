@@ -61,7 +61,9 @@ export default getRequestConfig(async ({ requestLocale }) => {
 
   return {
     locale,
-    messages: (await import(`../../messages/${locale}.json`)).default,
+    // One file per namespace under messages/<locale>/: a single catalogue of
+    // several thousand keys is unreviewable, and the index puts it back together.
+    messages: (await import(`../../messages/${locale}`)).default,
     timeZone,
     now: new Date(),
   };

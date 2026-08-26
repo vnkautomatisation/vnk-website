@@ -9,13 +9,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const actorId = session.user.adminId!;
 
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
     where: { id: actorId },
     include: { customRole: true },
   });
-  if (!me) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!me) return unauthorizedJson();
 
   const perms = (me.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
   const isSuper = me.customRole?.name === "super_admin";

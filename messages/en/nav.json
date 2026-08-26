@@ -1,0 +1,15 @@
+{
+  "home": "Home",
+  "services": "Services",
+  "about": "About",
+  "contact": "Contact",
+  "portal": "Client portal",
+  "admin": "Admin",
+  "login": "Sign in",
+  "logout": "Sign out",
+  "signup": "Sign up",
+  "menu": "Menu",
+  "language": "Language",
+  "lang_fr": "Français",
+  "lang_en": "English"
+}

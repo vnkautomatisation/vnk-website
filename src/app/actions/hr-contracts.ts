@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { getClientIpFromHeaders } from "@/lib/security/rate-limit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 import {
   CONTRACT_TYPES,
   LEGACY_CONTRACT_TYPE_MAP,
@@ -55,7 +56,7 @@ const templateSchema = z.object({
 
 export async function createContractTemplateAction(input: z.infer<typeof templateSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = templateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -82,7 +83,7 @@ export async function createContractTemplateAction(input: z.infer<typeof templat
 
 export async function updateContractTemplateAction(input: z.infer<typeof templateSchema> & { id: number }): Promise<Result> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = templateSchema.extend({ id: z.number().int() }).safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -110,7 +111,7 @@ export async function updateContractTemplateAction(input: z.infer<typeof templat
 // Duplique un template de contrat : copie avec suffix " (copie)" + isStarter = false
 export async function duplicateContractTemplateAction(input: { id: number }): Promise<Result<{ id: number; name: string }>> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   const src = await prisma.contractTemplate.findUnique({ where: { id: input.id } });
   if (!src) return { success: false, error: "Modèle introuvable" };
@@ -145,7 +146,7 @@ export async function duplicateContractTemplateAction(input: { id: number }): Pr
 // Archive / desarchive un template de contrat (toggle isActive)
 export async function toggleContractTemplateActiveAction(input: { id: number; isActive: boolean }): Promise<Result> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   await prisma.contractTemplate.update({
     where: { id: input.id },
     data: { isActive: input.isActive },
@@ -158,7 +159,7 @@ export async function toggleContractTemplateActiveAction(input: { id: number; is
 
 export async function deleteContractTemplateAction(input: { id: number }): Promise<Result> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   // Soft : on désactive si déjà utilisé, sinon delete
   const used = await prisma.employeeContract.count({ where: { templateId: input.id } });
   if (used > 0) {
@@ -189,7 +190,7 @@ const contractSchema = z.object({
 
 export async function createContractAction(input: z.infer<typeof contractSchema>): Promise<Result<{ id: number }>> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   const parsed = contractSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -221,7 +222,7 @@ export async function createContractAction(input: z.infer<typeof contractSchema>
 
 export async function sendContractAction(input: { id: number }): Promise<Result> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   await prisma.employeeContract.update({
     where: { id: input.id },
     data: { status: "sent" },
@@ -252,7 +253,7 @@ export async function sendContractAction(input: { id: number }): Promise<Result>
 // Signature employé (le user lui-même signe son contrat)
 export async function signContractAsEmployeeAction(input: { id: number; signatureData: string }): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
 
   const contract = await prisma.employeeContract.findUnique({ where: { id: input.id } });
@@ -312,7 +313,7 @@ export async function signContractAsEmployeeAction(input: { id: number; signatur
 // Signature employeur (un super-admin / RH valide le contrat signé par l'employé)
 export async function signContractAsEmployerAction(input: { id: number; signatureData: string }): Promise<Result> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   if (!input.signatureData?.startsWith("data:image/")) return { success: false, error: "Signature invalide" };
 
   const contract = await prisma.employeeContract.findUnique({ where: { id: input.id } });
@@ -359,7 +360,7 @@ export async function signContractAsEmployerAction(input: { id: number; signatur
 
 export async function terminateContractAction(input: { id: number; reason: string }): Promise<Result> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   if (!input.reason?.trim()) return { success: false, error: "Motif obligatoire" };
 
   await prisma.employeeContract.update({

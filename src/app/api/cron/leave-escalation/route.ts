@@ -6,6 +6,7 @@
 //   curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://<APP>.up.railway.app/api/cron/leave-escalation
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ function authorize(req: Request): boolean {
 
 export async function POST(req: Request) {
   if (!authorize(req)) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   const cutoff = new Date(Date.now() - ESCALATION_HOURS * 60 * 60 * 1000);
 

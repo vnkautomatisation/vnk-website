@@ -6,13 +6,14 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { captureRequestContext } from "@/lib/request-context";
 import { logAudit } from "@/lib/audit";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const schema = z.object({ code: z.string().length(6) });
 
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const body = await req.json();
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
     }
     secret = client.twoFactorSecret;
   } else {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   // Verifier le code

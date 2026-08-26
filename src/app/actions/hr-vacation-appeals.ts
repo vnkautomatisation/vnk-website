@@ -14,6 +14,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { logSecurityEvent } from "@/lib/security/security-events";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -44,7 +45,7 @@ export async function submitAppealAction(
 ): Promise<Result<{ preferenceId: number }>> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return { success: false, error: "Non autorise" };
+    return unauthorized();
   }
   const actorId = session.user.adminId!;
   const parsed = submitAppealSchema.safeParse(input);
@@ -157,7 +158,7 @@ export async function reviewAppealAction(
   input: z.infer<typeof reviewAppealSchema>,
 ): Promise<Result<{ preferenceId: number; decision: "approved" | "rejected" }>> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorise" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = reviewAppealSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -316,7 +317,7 @@ export async function withdrawAppealAction(
   input: z.infer<typeof withdrawAppealSchema>,
 ): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorise" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = withdrawAppealSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };

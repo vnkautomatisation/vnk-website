@@ -2,11 +2,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { checkPasswordBreached, passwordStrength } from "@/lib/security/hibp";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   try {

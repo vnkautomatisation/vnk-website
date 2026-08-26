@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createWorkflowEvent } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function POST(
   _req: Request,
@@ -11,7 +12,7 @@ export async function POST(
 ) {
   const session = await auth();
   if (!session?.user?.clientId) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const { id } = await params;
@@ -30,7 +31,7 @@ export async function POST(
   }
 
   if (appointment.clientId !== session.user.clientId) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return unauthorizedJson(403);
   }
 
   if (appointment.status === "cancelled") {

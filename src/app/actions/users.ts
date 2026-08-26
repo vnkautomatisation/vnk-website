@@ -12,6 +12,7 @@ import { logAudit } from "@/lib/audit";
 import { logSecurityEvent } from "@/lib/security/security-events";
 import { sendEmail } from "@/lib/services/email";
 import { escapeHtml, escapeUrlForEmail } from "@/lib/security/escape-html";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -32,7 +33,7 @@ const INVITE_TTL_DAYS = 7;
 
 export async function inviteUserAction(input: z.infer<typeof inviteSchema>): Promise<Result<{ invitationId: number; expiresAt: string; inviteUrl: string; emailSent: boolean; emailError?: string }>> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = inviteSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -240,7 +241,7 @@ export async function bulkInviteUsersAction(
   input: z.infer<typeof bulkInviteSchema>
 ): Promise<Result<{ invited: number; skipped: Array<{ email: string; reason: string }> }>> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = bulkInviteSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -305,7 +306,7 @@ export async function bulkInviteUsersAction(
 // ── Révocation d'invitation ────────────────────────────────
 export async function revokeInvitationAction(input: { id: number }): Promise<Result> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   await prisma.adminInvitation.update({
     where: { id: input.id },
@@ -322,7 +323,7 @@ export async function revokeInvitationAction(input: { id: number }): Promise<Res
 // ═══════════════════════════════════════════════════════════
 export async function exportUserDataAction(input: { id: number }): Promise<Result<{ data: Record<string, unknown> }>> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   const [admin, sessions, auditLogs, securityEvents, backupCodes, trustedDevices, apiTokens] = await Promise.all([
     prisma.admin.findUnique({
@@ -387,7 +388,7 @@ export async function exportUserDataAction(input: { id: number }): Promise<Resul
 // pour préserver l'intégrité des logs et l'historique métier.
 export async function anonymizeUserAction(input: { id: number }): Promise<Result> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   if (input.id === adminId) return { success: false, error: "Vous ne pouvez pas vous anonymiser vous-même" };
 
   // Vérifier que c'est pas le dernier super_admin
@@ -457,7 +458,7 @@ export async function anonymizeUserAction(input: { id: number }): Promise<Result
 // ═══════════════════════════════════════════════════════════
 export async function sendPasswordResetEmailAction(input: { id: number }): Promise<Result<{ emailSent: boolean }>> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   const target = await prisma.admin.findUnique({
     where: { id: input.id },
@@ -495,7 +496,7 @@ export async function sendPasswordResetEmailAction(input: { id: number }): Promi
 // ═══════════════════════════════════════════════════════════
 export async function disable2FAAction(input: { id: number }): Promise<Result> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   if (input.id === adminId) return { success: false, error: "Utilisez vos paramètres personnels pour modifier votre propre 2FA" };
 
   // ── Garde : impossible de désactiver la 2FA du dernier super_admin actif ──
@@ -545,7 +546,7 @@ export async function disable2FAAction(input: { id: number }): Promise<Result> {
 
 export async function unlockUserAction(input: { id: number }): Promise<Result> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   await prisma.admin.update({
     where: { id: input.id },
@@ -562,7 +563,7 @@ export async function unlockUserAction(input: { id: number }): Promise<Result> {
 
 export async function lockUserAction(input: { id: number; hours: number }): Promise<Result> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   if (input.id === adminId) return { success: false, error: "Vous ne pouvez pas vous bloquer vous-même" };
 
   const lockedUntil = new Date(Date.now() + input.hours * 60 * 60 * 1000);
@@ -597,7 +598,7 @@ const bulkSchema = z.object({
 
 export async function bulkUpdateUsersAction(input: z.infer<typeof bulkSchema>): Promise<Result<{ updated: number; reassigned?: { timeEntries: number; notifications: number } }>> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = bulkSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -708,7 +709,7 @@ export async function bulkUpdateUsersAction(input: z.infer<typeof bulkSchema>): 
 // ── Renvoyer une invitation (régénère le token) ────────────
 export async function resendInvitationAction(input: { id: number }): Promise<Result<{ inviteUrl: string; emailSent: boolean; emailError?: string }>> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   const invite = await prisma.adminInvitation.findUnique({ where: { id: input.id } });
   if (!invite) return { success: false, error: "Invitation introuvable" };
@@ -795,7 +796,7 @@ const createSchema = z.object({
 
 export async function createUserAction(input: z.infer<typeof createSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -897,7 +898,7 @@ const updateSchema = z.object({
 
 export async function updateUserAction(input: z.infer<typeof updateSchema>): Promise<Result<{ reassigned?: { timeEntries: number; notifications: number } }>> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -1092,7 +1093,7 @@ const resetPwdSchema = z.object({
 });
 export async function resetUserPasswordAction(input: z.infer<typeof resetPwdSchema>): Promise<Result> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = resetPwdSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -1134,7 +1135,7 @@ const deleteSchema = z.object({
 });
 export async function deleteUserAction(input: z.infer<typeof deleteSchema>): Promise<Result<{ reassigned?: { timeEntries: number; notifications: number } }>> {
   const adminId = await requireUsersWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = deleteSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: "Données invalides" };
   if (parsed.data.id === adminId) return { success: false, error: "Vous ne pouvez pas supprimer votre propre compte" };

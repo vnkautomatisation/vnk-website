@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -34,7 +35,7 @@ const createSchema = z.object({
 
 export async function createServiceAction(input: z.infer<typeof createSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -71,7 +72,7 @@ const updateSchema = createSchema.partial().extend({
 
 export async function updateServiceAction(input: z.infer<typeof updateSchema>): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -92,7 +93,7 @@ export async function updateServiceAction(input: z.infer<typeof updateSchema>): 
 // ── SUPPRIMER ──
 export async function deleteServiceAction(input: { id: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   await prisma.serviceCatalog.delete({ where: { id: input.id } });
   await logAudit({ adminId, action: "delete", entityType: "service_catalog", entityId: input.id });
   revalidatePath("/admin/settings/catalogs");
@@ -114,7 +115,7 @@ const promoSchema = z.object({
 
 export async function createPromoAction(input: z.infer<typeof promoSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = promoSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -143,7 +144,7 @@ export async function createPromoAction(input: z.infer<typeof promoSchema>): Pro
 
 export async function updatePromoAction(input: z.infer<typeof promoSchema> & { id: number; isActive?: boolean }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   const { id, code, validFrom, validUntil, isActive, ...rest } = input;
   await prisma.discountCode.update({
@@ -164,7 +165,7 @@ export async function updatePromoAction(input: z.infer<typeof promoSchema> & { i
 
 export async function deletePromoAction(input: { id: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   await prisma.discountCode.delete({ where: { id: input.id } });
   await logAudit({ adminId, action: "delete", entityType: "discount_code", entityId: input.id });
   revalidatePath("/admin/settings/catalogs");

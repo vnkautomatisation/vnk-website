@@ -1,0 +1,21 @@
+{
+  "page_title": "Quotes",
+  "page_subtitle": "GST and QST calculated automatically",
+  "new": "New quote",
+  "search_placeholder": "Search a quote…",
+  "status": {
+    "pending": "Pending",
+    "accepted": "Accepted",
+    "declined": "Declined",
+    "expired": "Expired"
+  },
+  "columns": {
+    "number": "Number",
+    "client": "Client",
+    "title": "Title",
+    "ht": "Before tax",
+    "ttc": "With tax",
+    "status": "Status",
+    "expiry": "Expiry"
+  }
+}

@@ -13,6 +13,7 @@ import { deleteOutlookEvent, updateOutlookEvent } from "@/lib/integrations/micro
 import { deleteGoogleEvent, updateGoogleEvent } from "@/lib/integrations/google";
 import { triggerZap } from "@/lib/integrations/zapier";
 import { notifyAppointmentCancelled } from "@/lib/integrations/slack";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 // Helper: dispatch update event externe selon prefixe
 async function updateExternalMeeting(
@@ -68,7 +69,7 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const { id } = await params;
@@ -86,7 +87,7 @@ export async function GET(
     return NextResponse.json({ error: "Rendez-vous introuvable" }, { status: 404 });
   }
   if (session.user.role === "client" && appointment.clientId !== session.user.clientId) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return unauthorizedJson(403);
   }
 
   return NextResponse.json({ appointment });
@@ -98,10 +99,10 @@ export async function PATCH(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("appointments", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const { id } = await params;
@@ -217,10 +218,10 @@ export async function DELETE(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("appointments", "delete")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const { id } = await params;

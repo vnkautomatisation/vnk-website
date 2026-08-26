@@ -1,0 +1,6 @@
+{
+  "site": "Site",
+  "refresh": "Actualiser",
+  "notifications": "Notifications",
+  "overdue_invoices": "{count, plural, =0 {Aucune facture en retard} =1 {1 facture en retard} other {# factures en retard}}"
+}

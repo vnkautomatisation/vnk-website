@@ -13,6 +13,7 @@ import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { getSetting } from "@/lib/settings";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 import {
   buildContextFromEmployee,
   formatDateFr,
@@ -110,7 +111,7 @@ async function buildMinimalContext(): Promise<TemplateContext> {
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   let payload: PostPayload;

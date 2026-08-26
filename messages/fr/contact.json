@@ -1,0 +1,24 @@
+{
+  "page_title": "Contact",
+  "hero_title": "Contactez-nous",
+  "hero_subtitle": "Réservez une consultation gratuite",
+  "form": {
+    "name": "Nom complet",
+    "company": "Entreprise",
+    "email": "Courriel",
+    "phone": "Téléphone",
+    "service": "Service demandé",
+    "plc_brand": "Marque d'automate",
+    "message": "Message",
+    "submit": "Envoyer la demande",
+    "sending": "Envoi en cours…",
+    "success": "Message envoyé ! Nous vous répondrons rapidement.",
+    "error": "Erreur lors de l'envoi. Veuillez réessayer."
+  },
+  "info": {
+    "email_label": "Courriel",
+    "phone_label": "Téléphone",
+    "location_label": "Région desservie",
+    "response_time_label": "Temps de réponse"
+  }
+}

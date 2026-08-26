@@ -8,6 +8,7 @@ import { logAudit } from "@/lib/audit";
 import { revalidateAdminViews } from "@/lib/revalidate";
 import { logSignatureEvent } from "@/lib/request-context";
 import { createHash } from "crypto";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const schema = z.object({
   signatureData: z.string().min(10),
@@ -19,7 +20,7 @@ export async function POST(
 ) {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const { id } = await params;
@@ -41,7 +42,7 @@ export async function POST(
 
   // Vérifier que le client est propriétaire
   if (session.user.role === "client" && contract.clientId !== session.user.clientId) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return unauthorizedJson(403);
   }
 
   // Bloquer signature si statut non signable

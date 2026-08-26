@@ -14,6 +14,7 @@ import { logAudit } from "@/lib/audit";
 import { logSecurityEvent } from "@/lib/security/security-events";
 import { decryptCredentials, verifyEmailChallenge } from "@/lib/security/crypto";
 import { consumeBackupCode } from "@/lib/security/backup-codes";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const schema = z.object({
   method: z.enum(["totp", "email", "backup"]),
@@ -24,7 +25,7 @@ const schema = z.object({
 export async function POST(req: NextRequest, { params }: { params: Promise<{ provider: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const adminId = session.user.adminId!;
   const { provider } = await params;

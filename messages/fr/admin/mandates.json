@@ -1,0 +1,19 @@
+{
+  "page_title": "Mandats",
+  "page_subtitle": "Créer, suivre et mettre à jour la progression",
+  "new": "Nouveau mandat",
+  "status": {
+    "pending": "En attente",
+    "active": "Actif",
+    "in_progress": "En cours",
+    "paused": "En pause",
+    "completed": "Complété",
+    "cancelled": "Annulé"
+  },
+  "kpi": {
+    "in_progress": "En cours",
+    "completed": "Complétés",
+    "overdue": "En retard",
+    "avg_progress": "Progression moy."
+  }
+}

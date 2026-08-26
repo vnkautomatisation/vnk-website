@@ -1,0 +1,9 @@
+{
+  "page_title": "Refunds",
+  "page_subtitle": "Stripe refunds initiated from the client profile",
+  "status": {
+    "pending": "Pending",
+    "processed": "Processed",
+    "failed": "Failed"
+  }
+}

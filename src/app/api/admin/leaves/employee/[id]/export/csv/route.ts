@@ -9,6 +9,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { assertCanReviewLeave } from "@/lib/services/timesheet-scope";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ const STATUS_LABEL: Record<string, string> = {
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   const actorId = session.user.adminId!;
   const { id } = await params;
@@ -58,7 +59,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // Auth : soi-meme OU reviewer autorise
   if (employeeId !== actorId) {
     const ok = await assertCanReviewLeave(actorId, employeeId);
-    if (!ok) return NextResponse.json({ error: "Acces refuse" }, { status: 403 });
+    if (!ok) return forbiddenJson();
   }
 
   const employee = await prisma.admin.findUnique({

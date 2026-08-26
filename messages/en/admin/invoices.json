@@ -1,0 +1,16 @@
+{
+  "page_title": "Invoices",
+  "page_subtitle": "Create invoices and confirm payments",
+  "new": "New invoice",
+  "search_placeholder": "Search an invoice…",
+  "status": {
+    "draft": "Draft",
+    "unpaid": "Unpaid",
+    "paid": "Paid",
+    "overdue": "Overdue",
+    "cancelled": "Cancelled",
+    "refunded": "Refunded"
+  },
+  "mark_paid": "Mark as paid",
+  "send_reminder": "Send reminder"
+}

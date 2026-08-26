@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -59,7 +60,7 @@ const createSchema = z.object({
 
 export async function createCatalogItemAction(input: z.infer<typeof createSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireWrite(`${input.type}s`);
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -109,7 +110,7 @@ const updateSchema = z.object({
 
 export async function updateCatalogItemAction(input: z.infer<typeof updateSchema>): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -118,7 +119,7 @@ export async function updateCatalogItemAction(input: z.infer<typeof updateSchema
   if (!before) return { success: false, error: "Élément introuvable" };
 
   const authed = await requireWrite(`${before.type}s`);
-  if (!authed) return { success: false, error: "Non autorisé" };
+  if (!authed) return unauthorized();
 
   const { id, ...rest } = parsed.data;
   await prisma.catalogItem.update({
@@ -138,7 +139,7 @@ export async function updateCatalogItemAction(input: z.infer<typeof updateSchema
 const deleteSchema = z.object({ id: z.number().int() });
 export async function deleteCatalogItemAction(input: z.infer<typeof deleteSchema>): Promise<Result> {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = deleteSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: "Données invalides" };
@@ -148,7 +149,7 @@ export async function deleteCatalogItemAction(input: z.infer<typeof deleteSchema
   if (item.isSystem) return { success: false, error: "Les éléments système ne peuvent être supprimés (vous pouvez les désactiver)" };
 
   const authed = await requireWrite(`${item.type}s`);
-  if (!authed) return { success: false, error: "Non autorisé" };
+  if (!authed) return unauthorized();
 
   await prisma.catalogItem.delete({ where: { id: parsed.data.id } });
   await logAudit({ adminId, action: "delete", entityType: "catalog_item", entityId: parsed.data.id });
@@ -163,7 +164,7 @@ const reorderSchema = z.object({
 });
 export async function reorderCatalogItemsAction(input: z.infer<typeof reorderSchema>): Promise<Result> {
   const authed = await requireWrite(`${input.type}s`);
-  if (!authed) return { success: false, error: "Non autorisé" };
+  if (!authed) return unauthorized();
   const parsed = reorderSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: "Données invalides" };
 

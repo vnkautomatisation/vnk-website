@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { getClientIpFromHeaders } from "@/lib/security/rate-limit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -42,7 +43,7 @@ const docSchema = z.object({
 
 export async function upsertLegalDocAction(input: z.infer<typeof docSchema> & { id?: number }): Promise<Result<{ id: number }>> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = docSchema.extend({ id: z.number().int().optional() }).safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -189,7 +190,7 @@ export async function upsertLegalDocAction(input: z.infer<typeof docSchema> & { 
 // Duplique un template legal : copie avec suffix " (copie)" + isStarter = false
 export async function duplicateLegalDocTemplateAction(input: { id: number }): Promise<Result<{ id: number; title: string }>> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   const src = await prisma.legalDocumentTemplate.findUnique({ where: { id: input.id } });
   if (!src) return { success: false, error: "Modèle introuvable" };
@@ -230,7 +231,7 @@ export async function duplicateLegalDocTemplateAction(input: { id: number }): Pr
 // Archive / desarchive un template legal (toggle isActive)
 export async function toggleLegalDocActiveAction(input: { id: number; isActive: boolean }): Promise<Result> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   await prisma.legalDocumentTemplate.update({
     where: { id: input.id },
     data: { isActive: input.isActive },
@@ -243,7 +244,7 @@ export async function toggleLegalDocActiveAction(input: { id: number; isActive: 
 
 export async function deleteLegalDocAction(input: { id: number }): Promise<Result> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const used = await prisma.legalDocumentSignature.count({ where: { templateId: input.id } });
   if (used > 0) {
     await prisma.legalDocumentTemplate.update({ where: { id: input.id }, data: { isActive: false } });
@@ -278,7 +279,7 @@ export async function signLegalDocAction(
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
+  if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
 
   const tpl = await prisma.legalDocumentTemplate.findUnique({ where: { id: parsed.data.templateId } });
@@ -741,7 +742,7 @@ export async function regenerateSignedPdfAction(
   input: { signatureId: number },
 ): Promise<Result<{ finalPdfUrl: string }>> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   const res = await rebuildFinalPdf(input.signatureId);
   if (!res.ok) return { success: false, error: res.error };
@@ -767,7 +768,7 @@ export async function regenerateMyOwnSignedPdfAction(
 ): Promise<Result<{ finalPdfUrl: string }>> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return { success: false, error: "Non autorise" };
+    return unauthorized();
   }
   const adminId = session.user.adminId!;
 
@@ -805,7 +806,7 @@ export async function employerSignLegalDocAction(
   input: { signatureId: number; signatureDataUrl: string },
 ): Promise<Result<{ finalPdfUrl: string }>> {
   const adminId = await requireHrWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   if (
     typeof input.signatureDataUrl !== "string"

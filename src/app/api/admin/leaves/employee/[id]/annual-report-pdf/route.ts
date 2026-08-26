@@ -10,13 +10,14 @@ import { assertCanReviewLeave } from "@/lib/services/timesheet-scope";
 import { getLeaveBalance, getCurrentReferencePeriod } from "@/lib/services/leave-balance";
 import { generateLeaveAnnualReportPdf } from "@/lib/services/pdf-hr";
 import { logAudit } from "@/lib/audit";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const actorId = session.user.adminId!;
   const { id } = await params;
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   if (employeeId !== actorId) {
     const ok = await assertCanReviewLeave(actorId, employeeId);
-    if (!ok) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    if (!ok) return forbiddenJson();
   }
 
   const url = new URL(req.url);

@@ -5,6 +5,7 @@ import {
   ChevronRight, AlertCircle, FileText, Send, MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { confirmDialog } from "@/components/admin/prompt-dialog";
@@ -13,7 +14,7 @@ import { formatShiftDuration } from "../_types";
 import { ApprovedBadge } from "./ApprovedBadge";
 import { HistoryPopover } from "./HistoryPopover";
 import { entryTiming, type TimingInput } from "@/lib/time-entry";
-import { CAT_LABEL, fmtDuration, fmtTime, capFirst, displayNotes } from "./_utils";
+import { CAT_LABEL, catLabel, fmtDuration, fmtTime, capFirst, displayNotes } from "./_utils";
 
 // A merge is truthful only when gross - breaks = worked. Legacy merges
 // bridged unrecorded gaps.
@@ -45,7 +46,8 @@ export function PanelEntryRow({
   onReject: () => void;
   onUnapprove: () => void;
 }) {
-  const cat = CAT_LABEL[entry.category] ?? { label: entry.category, color: "bg-gray-100 text-gray-700" };
+  const t = useTranslations("admin.timeclock");
+  const cat = CAT_LABEL[entry.category] ?? { key: "", color: "bg-gray-100 text-gray-700" };
   const start = new Date(entry.clockIn);
   const { isMerged, count: mergedCount, gapMin: mergedGapMin, grossIsCoherent } = mergeInfo(entry);
   const isApproved = !!entry.approvedAt;
@@ -76,7 +78,7 @@ export function PanelEntryRow({
                 ? ` → ${fmtTime(entry.clockOut)}`
                 : " · en cours"}
             </span>
-            <Badge className={`text-[9px] ${cat.color}`}>{cat.label}</Badge>
+            <Badge className={`text-[9px] ${cat.color}`}>{catLabel(t, entry.category)}</Badge>
             {isMerged && <MergedBadge count={mergedCount} gapMin={mergedGapMin} coherent={grossIsCoherent} small />}
             {entry.jobCode && (
               <ActionTooltip label={entry.jobCode.label}>
@@ -217,7 +219,8 @@ export function CompactEntryRow({
   onDelete?: () => void;
   onRequestUnlock?: () => void;
 }) {
-  const cat = CAT_LABEL[entry.category] ?? { label: entry.category, color: "bg-gray-100 text-gray-700" };
+  const t = useTranslations("admin.timeclock");
+  const cat = CAT_LABEL[entry.category] ?? { key: "", color: "bg-gray-100 text-gray-700" };
   const start = new Date(entry.clockIn);
   const { isMerged, count: mergedCount, gapMin: mergedGapMin, grossIsCoherent } = mergeInfo(entry);
   return (
@@ -230,7 +233,7 @@ export function CompactEntryRow({
               ? ` → ${fmtTime(entry.clockOut)}`
               : " · en cours"}
           </span>
-          <Badge className={`text-[10px] ${cat.color}`}>{cat.label}</Badge>
+          <Badge className={`text-[10px] ${cat.color}`}>{catLabel(t, entry.category)}</Badge>
           {isMerged && <MergedBadge count={mergedCount} gapMin={mergedGapMin} coherent={grossIsCoherent} />}
           {entry.jobCode && (
             <ActionTooltip label={entry.jobCode.label}>
@@ -362,7 +365,8 @@ export function EntryRow({
   onEdit?: () => void;
   holidayName?: string;
 }) {
-  const cat = CAT_LABEL[entry.category] ?? { label: entry.category, color: "bg-gray-100 text-gray-700" };
+  const t = useTranslations("admin.timeclock");
+  const cat = CAT_LABEL[entry.category] ?? { key: "", color: "bg-gray-100 text-gray-700" };
   const date = new Date(entry.clockIn);
   const { isMerged, count: mergedCount, gapMin: mergedGapMin, grossIsCoherent } = mergeInfo(entry);
   return (
@@ -386,7 +390,7 @@ export function EntryRow({
               {entry.admin.fullName || entry.admin.email}
             </button>
           )}
-          <Badge className={`text-[10px] ${cat.color}`}>{cat.label}</Badge>
+          <Badge className={`text-[10px] ${cat.color}`}>{catLabel(t, entry.category)}</Badge>
           {isMerged && <MergedBadge count={mergedCount} gapMin={mergedGapMin} coherent={grossIsCoherent} />}
           {entry.jobCode && (
             <ActionTooltip label={entry.jobCode.label}>
@@ -659,7 +663,8 @@ export function PanelEntryRowWithHistory({
   onUnapprove: () => void;
   onEdit?: () => void;
 }) {
-  const cat = CAT_LABEL[entry.category] ?? { label: entry.category, color: "bg-gray-100 text-gray-700" };
+  const t = useTranslations("admin.timeclock");
+  const cat = CAT_LABEL[entry.category] ?? { key: "", color: "bg-gray-100 text-gray-700" };
   const start = new Date(entry.clockIn);
   const { isMerged, count: mergedCount, gapMin: mergedGapMin, grossIsCoherent } = mergeInfo(entry);
   const isApproved = !!entry.approvedAt;
@@ -681,7 +686,7 @@ export function PanelEntryRowWithHistory({
                 ? ` → ${fmtTime(entry.clockOut)}`
                 : " · en cours"}
             </span>
-            <Badge className={`text-[9px] ${cat.color}`}>{cat.label}</Badge>
+            <Badge className={`text-[9px] ${cat.color}`}>{catLabel(t, entry.category)}</Badge>
             {isMerged && <MergedBadge count={mergedCount} gapMin={mergedGapMin} coherent={grossIsCoherent} small />}
             {entry.jobCode && (
               <ActionTooltip label={entry.jobCode.label}>

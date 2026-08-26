@@ -8,13 +8,14 @@ import { isHrAdmin } from "@/lib/services/hr-access";
 import { getHrReportData } from "@/lib/services/hr-reports";
 import { generateHrReportPdf } from "@/lib/services/pdf-hr-reports";
 import { logAudit } from "@/lib/audit";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   // Rapports RH : reserves RH (super_admin / users.write / hr.write).
   if (!(await isHrAdmin(session.user.adminId!))) {

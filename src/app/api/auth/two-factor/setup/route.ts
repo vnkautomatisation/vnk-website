@@ -4,11 +4,12 @@ import { generateSecret, generateURI } from "otplib";
 import QRCode from "qrcode";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function POST() {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const role = session.user.role;
@@ -33,7 +34,7 @@ export async function POST() {
     email = client.email;
     alreadyEnabled = client.twoFactorEnabled;
   } else {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   if (alreadyEnabled) {

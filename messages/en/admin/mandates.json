@@ -1,0 +1,19 @@
+{
+  "page_title": "Mandates",
+  "page_subtitle": "Create, track and update progress",
+  "new": "New mandate",
+  "status": {
+    "pending": "Pending",
+    "active": "Active",
+    "in_progress": "In progress",
+    "paused": "Paused",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "kpi": {
+    "in_progress": "In progress",
+    "completed": "Completed",
+    "overdue": "Overdue",
+    "avg_progress": "Avg. progress"
+  }
+}

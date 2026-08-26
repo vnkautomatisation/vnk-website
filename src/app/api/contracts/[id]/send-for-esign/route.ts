@@ -9,14 +9,15 @@ import { prisma } from "@/lib/prisma";
 import { sendSignatureRequest, isDropboxSignAvailable } from "@/lib/integrations/dropbox-sign";
 import { logAudit } from "@/lib/audit";
 import { logSecurityEvent } from "@/lib/security/security-events";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("contracts", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   if (!(await isDropboxSignAvailable())) {

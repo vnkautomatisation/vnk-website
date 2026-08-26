@@ -8,6 +8,7 @@ import { captureRequestContext } from "@/lib/request-context";
 import { logAudit } from "@/lib/audit";
 import { checkPasswordBreached } from "@/lib/security/hibp";
 import { logSecurityEvent } from "@/lib/security/security-events";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const schema = z.object({
   currentPassword: z.string().min(1, "Mot de passe actuel requis"),
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+      return unauthorizedJson();
     }
 
     const body = await request.json();

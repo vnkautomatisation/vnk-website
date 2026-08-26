@@ -1,0 +1,16 @@
+{
+  "page_title": "Stripe disputes",
+  "page_subtitle": "Bank disputes initiated by clients via their bank",
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical"
+  },
+  "status": {
+    "open": "Open",
+    "in_progress": "In progress",
+    "resolved": "Resolved",
+    "escalated": "Escalated"
+  }
+}

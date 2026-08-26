@@ -1,0 +1,12 @@
+{
+  "page_title": "Transactions",
+  "page_subtitle": "Complete Stripe payment history",
+  "total_received": "Total received (Stripe)",
+  "total_refunded": "Total refunded",
+  "transactions_count": "Transactions",
+  "status": {
+    "completed": "Completed",
+    "pending": "Pending",
+    "failed": "Failed"
+  }
+}

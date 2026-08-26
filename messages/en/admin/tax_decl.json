@@ -1,0 +1,11 @@
+{
+  "page_title": "Tax declarations",
+  "page_subtitle": "Quarterly GST/QST and annual tax return",
+  "new": "New declaration",
+  "annual_summary": "Annual summary",
+  "gross_revenue": "Gross revenue (before tax)",
+  "tps_collected": "GST collected",
+  "tvq_collected": "QST collected",
+  "total_taxes": "Total taxes to remit",
+  "quarterly_summary": "Automatic quarterly summary"
+}

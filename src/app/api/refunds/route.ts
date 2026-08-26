@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { calculateTaxes, generateDocumentNumber } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const createSchema = z.object({
   clientId: z.number().int().positive(),
@@ -20,10 +21,10 @@ const createSchema = z.object({
 export async function GET() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("refunds", "read")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const refunds = await prisma.refund.findMany({
@@ -40,10 +41,10 @@ export async function GET() {
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("refunds", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const body = await req.json();

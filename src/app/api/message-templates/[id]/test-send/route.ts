@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/services/email";
 import { renderChatEmail } from "@/lib/services/email-message-template";
 import { expandTemplateVariables, markdownToHtml } from "@/lib/template-variables";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const schema = z.object({
   sampleClient: z.object({
@@ -20,10 +21,10 @@ const schema = z.object({
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin" || !session.user.email) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("message_templates", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const { id } = await params;

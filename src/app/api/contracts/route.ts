@@ -10,6 +10,7 @@ import { createWorkflowEvent } from "@/lib/workflow";
 import { generateDocumentNumber } from "@/lib/utils";
 import { getSetting } from "@/lib/settings";
 import { revalidateAdminViews } from "@/lib/revalidate";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const createSchema = z.object({
   clientId: z.number().int().positive(),
@@ -25,7 +26,7 @@ const createSchema = z.object({
 export async function GET() {
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const contracts = await prisma.contract.findMany({
@@ -43,10 +44,10 @@ export async function GET() {
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("contracts", "write")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const body = await req.json();

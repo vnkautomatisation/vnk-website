@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -34,7 +35,7 @@ const createSchema = z.object({
 
 export async function createTeamAction(input: z.infer<typeof createSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -68,7 +69,7 @@ const updateSchema = createSchema.extend({ id: z.number().int() });
 
 export async function updateTeamAction(input: z.infer<typeof updateSchema>): Promise<Result> {
   const adminId = await requireWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -114,7 +115,7 @@ export async function updateTeamAction(input: z.infer<typeof updateSchema>): Pro
 
 export async function deleteTeamAction(input: { id: number }): Promise<Result> {
   const adminId = await requireWrite();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   // Détacher les membres avant suppression
   await prisma.$transaction([
@@ -136,7 +137,7 @@ const assignSchema = z.object({
 
 export async function assignAdminToTeamAction(input: z.infer<typeof assignSchema>): Promise<Result> {
   const actorId = await requireWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   const parsed = assignSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 

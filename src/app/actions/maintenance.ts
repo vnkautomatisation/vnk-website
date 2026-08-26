@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -34,7 +35,7 @@ const maintenanceSchema = z.object({
 
 export async function createMaintenanceAction(input: z.infer<typeof maintenanceSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = maintenanceSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -59,7 +60,7 @@ export async function createMaintenanceAction(input: z.infer<typeof maintenanceS
 
 export async function updateMaintenanceAction(input: z.infer<typeof maintenanceSchema> & { id: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   const { id, ...rest } = input;
   await prisma.maintenanceWindow.update({
@@ -79,7 +80,7 @@ export async function updateMaintenanceAction(input: z.infer<typeof maintenanceS
 
 export async function deleteMaintenanceAction(input: { id: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   await prisma.maintenanceWindow.delete({ where: { id: input.id } });
   await logAudit({ adminId, action: "delete", entityType: "maintenance_window", entityId: input.id });
   revalidatePath("/admin/settings/maintenance");
@@ -100,7 +101,7 @@ const incidentSchema = z.object({
 
 export async function createIncidentAction(input: z.infer<typeof incidentSchema>): Promise<Result<{ id: number }>> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = incidentSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -123,7 +124,7 @@ export async function createIncidentAction(input: z.infer<typeof incidentSchema>
 
 export async function updateIncidentAction(input: z.infer<typeof incidentSchema> & { id: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const { id, resolvedAt, ...rest } = input;
   await prisma.incidentReport.update({
     where: { id },
@@ -139,7 +140,7 @@ export async function updateIncidentAction(input: z.infer<typeof incidentSchema>
 
 export async function deleteIncidentAction(input: { id: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   await prisma.incidentReport.delete({ where: { id: input.id } });
   await logAudit({ adminId, action: "delete", entityType: "incident_report", entityId: input.id });
   revalidatePath("/admin/settings/maintenance");
@@ -161,7 +162,7 @@ const bannerSchema = z.object({
 
 export async function updateAnnouncementBannerAction(input: z.infer<typeof bannerSchema>): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = bannerSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 

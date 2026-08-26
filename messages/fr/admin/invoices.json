@@ -1,0 +1,16 @@
+{
+  "page_title": "Factures",
+  "page_subtitle": "Créer des factures et confirmer les paiements",
+  "new": "Nouvelle facture",
+  "search_placeholder": "Rechercher une facture…",
+  "status": {
+    "draft": "Brouillon",
+    "unpaid": "Non payée",
+    "paid": "Payée",
+    "overdue": "En retard",
+    "cancelled": "Annulée",
+    "refunded": "Remboursée"
+  },
+  "mark_paid": "Marquer comme payée",
+  "send_reminder": "Envoyer un rappel"
+}

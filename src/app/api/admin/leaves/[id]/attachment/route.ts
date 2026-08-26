@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { assertCanReviewLeave } from "@/lib/services/timesheet-scope";
 import { uploadAvatar } from "@/lib/storage/object-storage";
 import { uploadLeaveAttachmentAction } from "@/app/actions/hr-leaves";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 Mo
 const ALLOWED_MIME = [
@@ -30,7 +31,7 @@ function magicBytes(buf: Buffer, mime: string): boolean {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const actorId = session.user.adminId!;
   const { id } = await params;
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (leave.adminId !== actorId) {
     const ok = await assertCanReviewLeave(actorId, leave.adminId);
-    if (!ok) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    if (!ok) return forbiddenJson();
   }
 
   try {

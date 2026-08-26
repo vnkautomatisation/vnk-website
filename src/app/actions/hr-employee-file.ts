@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { encryptString, decryptString, mask } from "@/lib/security/encryption";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -50,7 +51,7 @@ const emergencySchema = z.object({
 
 export async function upsertEmergencyContactAction(input: z.infer<typeof emergencySchema>): Promise<Result<{ id: number }>> {
   const guard = await requireSelfOrHr(input.adminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
   const parsed = emergencySchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -90,7 +91,7 @@ export async function upsertEmergencyContactAction(input: z.infer<typeof emergen
 
 export async function deleteEmergencyContactAction(input: { id: number; adminId: number }): Promise<Result> {
   const guard = await requireSelfOrHr(input.adminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
   await prisma.emergencyContact.delete({ where: { id: input.id } });
   await logAudit({ adminId: guard.actorId, action: "delete", entityType: "emergency_contact", entityId: input.id });
   revalidatePath("/admin/mon-espace/urgence");
@@ -110,7 +111,7 @@ const bankSchema = z.object({
 
 export async function upsertBankInfoAction(input: z.infer<typeof bankSchema>): Promise<Result> {
   const guard = await requireSelfOrHr(input.adminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
   const parsed = bankSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -152,7 +153,7 @@ export async function getBankInfoMaskedAction(input: { adminId: number }): Promi
   verifiedAt: string | null;
 } | null>> {
   const guard = await requireSelfOrHr(input.adminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
 
   const row = await prisma.bankInfo.findUnique({ where: { adminId: input.adminId } });
   if (!row) return { success: true, data: null };
@@ -194,7 +195,7 @@ const licenseSchema = z.object({
 
 export async function upsertLicenseAction(input: z.infer<typeof licenseSchema>): Promise<Result<{ id: number }>> {
   const guard = await requireSelfOrHr(input.adminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
   const parsed = licenseSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -222,7 +223,7 @@ export async function upsertLicenseAction(input: z.infer<typeof licenseSchema>):
 
 export async function deleteLicenseAction(input: { id: number; adminId: number }): Promise<Result> {
   const guard = await requireSelfOrHr(input.adminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
   await prisma.professionalLicense.delete({ where: { id: input.id } });
   await logAudit({ adminId: guard.actorId, action: "delete", entityType: "professional_license", entityId: input.id });
   revalidatePath("/admin/mon-espace/formations");
@@ -251,7 +252,7 @@ const equipmentSchema = z.object({
 export async function upsertEquipmentAction(input: z.infer<typeof equipmentSchema>): Promise<Result<{ id: number }>> {
   // Équipement : seuls les RH/admin peuvent gérer (pas self-service)
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   const parsed = equipmentSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -297,7 +298,7 @@ export async function upsertEquipmentAction(input: z.infer<typeof equipmentSchem
 
 export async function returnEquipmentAction(input: { id: number; condition: "good" | "damaged" | "lost" }): Promise<Result> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
 
   // Récupérer adminId + nom AVANT la mise à jour pour pouvoir notifier
   // l'employé que son équipement a été marqué retourné par RH.
@@ -337,7 +338,7 @@ export async function returnEquipmentAction(input: { id: number; condition: "goo
 
 export async function deleteEquipmentAction(input: { id: number }): Promise<Result> {
   const actorId = await requireHrWrite();
-  if (!actorId) return { success: false, error: "Non autorisé" };
+  if (!actorId) return unauthorized();
   await prisma.assignedEquipment.delete({ where: { id: input.id } });
   await logAudit({ adminId: actorId, action: "delete", entityType: "assigned_equipment", entityId: input.id });
   revalidatePath("/admin/employes/equipement");
@@ -364,7 +365,7 @@ const trainingSchema = z.object({
 
 export async function upsertTrainingAction(input: z.infer<typeof trainingSchema>): Promise<Result<{ id: number }>> {
   const guard = await requireSelfOrHr(input.adminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
   const parsed = trainingSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -393,7 +394,7 @@ export async function upsertTrainingAction(input: z.infer<typeof trainingSchema>
 
 export async function deleteTrainingAction(input: { id: number; adminId: number }): Promise<Result> {
   const guard = await requireSelfOrHr(input.adminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
   await prisma.trainingRecord.delete({ where: { id: input.id } });
   await logAudit({ adminId: guard.actorId, action: "delete", entityType: "training_record", entityId: input.id });
   revalidatePath("/admin/mon-espace/formations");
@@ -415,7 +416,7 @@ const familySchema = z.object({
 
 export async function upsertFamilyDependentAction(input: z.infer<typeof familySchema>): Promise<Result<{ id: number }>> {
   const guard = await requireSelfOrHr(input.adminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
   const parsed = familySchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -439,7 +440,7 @@ export async function upsertFamilyDependentAction(input: z.infer<typeof familySc
 
 export async function deleteFamilyDependentAction(input: { id: number; adminId: number }): Promise<Result> {
   const guard = await requireSelfOrHr(input.adminId);
-  if (!guard) return { success: false, error: "Non autorisé" };
+  if (!guard) return unauthorized();
   await prisma.familyDependent.delete({ where: { id: input.id } });
   await logAudit({ adminId: guard.actorId, action: "delete", entityType: "family_dependent", entityId: input.id });
   revalidatePath("/admin/mon-espace/famille");

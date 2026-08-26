@@ -1,0 +1,20 @@
+{
+  "greeting_morning": "Bonjour",
+  "greeting_afternoon": "Bon après-midi",
+  "greeting_evening": "Bonsoir",
+  "active_clients": "Clients actifs",
+  "active_mandates": "Mandats actifs",
+  "receivable": "À recevoir",
+  "overdue": "{count} en retard",
+  "month_revenue": "Revenu ce mois",
+  "revenue_6_months": "Revenus — 6 derniers mois",
+  "paid_invoices": "Factures payées",
+  "site_traffic": "Trafic site",
+  "portal_presence": "Présence portail",
+  "online": "En direct",
+  "offline": "Hors ligne",
+  "anonymous_visitor": "Visiteur anonyme",
+  "public_site": "Site public",
+  "recent_activity": "Activité récente",
+  "events_count": "{count} événements"
+}

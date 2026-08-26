@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -39,7 +40,7 @@ const createSchema = z.object({
 
 export async function createApiTokenAction(input: z.infer<typeof createSchema>): Promise<Result<{ token: string }>> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
@@ -70,7 +71,7 @@ export async function createApiTokenAction(input: z.infer<typeof createSchema>):
 
 export async function revokeApiTokenAction(input: { id: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   await prisma.adminApiToken.update({
     where: { id: input.id, adminId },
@@ -84,7 +85,7 @@ export async function revokeApiTokenAction(input: { id: number }): Promise<Resul
 
 export async function deleteApiTokenAction(input: { id: number }): Promise<Result> {
   const adminId = await requireAdmin();
-  if (!adminId) return { success: false, error: "Non autorisé" };
+  if (!adminId) return unauthorized();
 
   await prisma.adminApiToken.delete({ where: { id: input.id, adminId } });
 

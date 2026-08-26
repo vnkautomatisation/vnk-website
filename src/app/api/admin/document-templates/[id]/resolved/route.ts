@@ -19,6 +19,7 @@ import { prisma } from "@/lib/prisma";
 import { renderTemplate } from "@/lib/document-templates/render-engine";
 import { buildContextFromEmployee } from "@/lib/document-templates/employee-context";
 import { applyPlaceholderValues } from "@/lib/document-templates/placeholder-detector";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const selfId = session.user.adminId!;
 
@@ -57,7 +58,7 @@ export async function GET(
       const isSuper = admin?.customRole?.name === "super_admin";
       const canWrite = isSuper || (perms.users ?? []).includes("write");
       if (!canWrite) {
-        return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+        return unauthorizedJson(403);
       }
       employeeId = reqId;
     }

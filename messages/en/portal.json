@@ -1,0 +1,97 @@
+{
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "mandates": "Mandates",
+    "my_requests": "Requests",
+    "quotes": "Quotes",
+    "invoices": "Invoices",
+    "contracts": "Contracts",
+    "documents": "Documents",
+    "booking": "Book a call",
+    "appointments": "Appointments",
+    "notifications": "Notifications",
+    "contact_us": "Contact us",
+    "logout": "Sign out",
+    "more": "More",
+    "new": "New request"
+  },
+  "dashboard": {
+    "greeting": "Hi, {name}",
+    "active_mandates": "Active mandates",
+    "pending_quotes": "Pending quotes",
+    "pending_invoices": "Invoices to pay",
+    "unread_documents": "Unread documents",
+    "recent_activity": "Recent activity"
+  },
+  "mandates": {
+    "page_title": "My mandates",
+    "page_subtitle": "Track your ongoing projects",
+    "empty": "No active mandate",
+    "empty_subtitle": "Your projects will appear here",
+    "new_project": "Start a project",
+    "view_details": "View details",
+    "progress": "Progress"
+  },
+  "quotes": {
+    "page_title": "My quotes",
+    "accept": "Accept",
+    "decline": "Decline",
+    "sign_to_accept": "Sign to accept"
+  },
+  "invoices": {
+    "page_title": "My invoices",
+    "pay_now": "Pay now",
+    "view_pdf": "View PDF",
+    "download_pdf": "Download PDF"
+  },
+  "contracts": {
+    "page_title": "My contracts",
+    "sign": "Sign",
+    "view": "View",
+    "download": "Download"
+  },
+  "documents": {
+    "page_title": "My documents",
+    "page_subtitle": "Reports, deliverables and documentation deposited by VNK",
+    "empty": "No documents available yet.",
+    "empty_subtitle": "Reports and deliverables will appear here once your mandate starts.",
+    "all_categories": "All categories",
+    "all_read_status": "All",
+    "unread": "Unread",
+    "read": "Read",
+    "mark_read": "Mark as read"
+  },
+  "booking": {
+    "page_title": "Book a call",
+    "page_subtitle": "Choose an available slot",
+    "select_date": "Select a date",
+    "select_time": "Select a time",
+    "meeting_type": "Meeting type",
+    "video": "Video",
+    "phone": "Phone",
+    "onsite": "On site",
+    "confirm": "Confirm booking"
+  },
+  "appointments": {
+    "page_title": "My appointments",
+    "upcoming": "Upcoming",
+    "confirmed": "Confirmed",
+    "cancelled": "Cancelled",
+    "past": "Past",
+    "reschedule": "Reschedule",
+    "cancel_appt": "Cancel appointment",
+    "join_meeting": "Join meeting"
+  },
+  "my_requests": {
+    "page_title": "My requests",
+    "page_subtitle": "Track your project requests",
+    "new_request": "New request",
+    "status": {
+      "new": "New",
+      "in_progress": "In progress",
+      "converted": "Converted",
+      "closed": "Closed"
+    }
+  }
+}

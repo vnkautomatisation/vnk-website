@@ -10,6 +10,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { uploadAvatar } from "@/lib/storage/object-storage";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export async function POST(
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   const actorId = session.user.adminId!;
 
@@ -51,7 +52,7 @@ export async function POST(
     where: { id: actorId },
     include: { customRole: true },
   });
-  if (!me) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!me) return unauthorizedJson();
 
   const perms = (me.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
   const isSuper = me.customRole?.name === "super_admin";
@@ -61,7 +62,7 @@ export async function POST(
     || (perms.hr ?? []).includes("write");
   const isSelf = actorId === targetId;
   if (!isSelf && !isHr) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    return forbiddenJson();
   }
 
   try {

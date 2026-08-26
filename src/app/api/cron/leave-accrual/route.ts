@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { accrueWeek } from "@/lib/services/leave-balance";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ function lastSundayUTC(): Date {
 
 export async function POST(req: Request) {
   if (!authorize(req)) {
-    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+    return unauthorizedJson();
   }
 
   const weekStart = lastSundayUTC();

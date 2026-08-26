@@ -2,11 +2,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getGoogleStatus, disconnectGoogle, isGoogleAppConfigured, getGoogleRedirectUri } from "@/lib/integrations/google";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   try {
     const status = await getGoogleStatus();
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
 export async function DELETE() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   await disconnectGoogle();
   return NextResponse.json({ ok: true });

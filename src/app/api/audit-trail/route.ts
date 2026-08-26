@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export type Severity = "info" | "success" | "warning" | "error" | "critical";
 export type AnomalyFlag = "failed_login_burst" | "off_hours_admin" | "impossible_travel" | "bulk_export" | "new_geo";
@@ -156,10 +157,10 @@ function auditSeverity(action: string): { sev: Severity; result: "success" | "fa
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return unauthorizedJson();
   }
   if (await adminApiForbidden("audit_trail", "read")) {
-    return NextResponse.json({ error: "Permission refusée" }, { status: 403 });
+    return forbiddenJson();
   }
 
   const { searchParams } = new URL(req.url);
