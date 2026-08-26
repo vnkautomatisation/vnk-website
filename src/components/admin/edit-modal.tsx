@@ -1,5 +1,6 @@
 "use client";
 import { useTransition, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -37,6 +38,7 @@ export function EditModal({
   onSubmit: () => Promise<{ success: boolean; error?: string }>;
   className?: string;
 }) {
+  const tc = useTranslations("common");
   const [pending, startTransition] = useTransition();
 
   const handleSubmit = () => {
@@ -94,7 +96,7 @@ export function EditModal({
             onClick={() => onOpenChange(false)}
             disabled={pending}
           >
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={pending}>
             {pending ? "En cours..." : submitLabel}

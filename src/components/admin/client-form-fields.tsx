@@ -5,6 +5,7 @@
 // — FormSection (section de formulaire VNK navy)
 // — SectorPicker (dropdown de secteurs predefinis + custom)
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ export const SECTOR_OPTIONS = [
 ];
 
 export function TechPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const tc = useTranslations("common");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [customInput, setCustomInput] = useState("");
@@ -125,7 +127,7 @@ export function TechPicker({ value, onChange }: { value: string; onChange: (v: s
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-dashed text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-              Ajouter
+              {tc("add")}
             </button>
           </PopoverTrigger>
           <PopoverContent
@@ -186,7 +188,7 @@ export function TechPicker({ value, onChange }: { value: string; onChange: (v: s
                   className="h-8 text-xs flex-1"
                 />
                 <Button type="button" variant="outline" size="sm" onClick={addCustom} disabled={!customInput.trim()} className="h-8 px-2 text-xs">
-                  Ajouter
+                  {tc("add")}
                 </Button>
               </div>
               {customItems.length > 0 && (

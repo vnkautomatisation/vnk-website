@@ -9,6 +9,7 @@
 // <ActionTooltip>, navy #0F2D52, badges via <ToneBadge>.
 // ─────────────────────────────────────────────────────────
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { LucideIcon } from "lucide-react";
 import {
   Eye,
@@ -93,6 +94,7 @@ export function DocumentCard({
   primaryAction,
   className,
 }: DocumentCardProps) {
+  const tc = useTranslations("common");
   const tone = ICON_TONE[iconTone];
   const hasActions = Boolean(onPreview || onDownload || onSign || onEdit || onDelete);
 
@@ -161,14 +163,14 @@ export function DocumentCard({
                 </ActionTooltip>
               )}
               {onDownload && (
-                <ActionTooltip label="Télécharger">
+                <ActionTooltip label={tc("download")}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
                     onClick={onDownload}
-                    aria-label="Télécharger"
+                    aria-label={tc("download")}
                   >
                     <Download className="h-4 w-4" />
                   </Button>
@@ -189,28 +191,28 @@ export function DocumentCard({
                 </ActionTooltip>
               )}
               {onEdit && (
-                <ActionTooltip label="Modifier">
+                <ActionTooltip label={tc("edit")}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
                     onClick={onEdit}
-                    aria-label="Modifier"
+                    aria-label={tc("edit")}
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
                 </ActionTooltip>
               )}
               {onDelete && (
-                <ActionTooltip label="Supprimer">
+                <ActionTooltip label={tc("delete")}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 hover:text-destructive"
                     onClick={onDelete}
-                    aria-label="Supprimer"
+                    aria-label={tc("delete")}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

@@ -2,6 +2,7 @@
 // Settings rows (label + hint left, control right), grouped in sections,
 // with a save bar that only shows when something changed.
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -88,6 +89,7 @@ export function TimeclockSettingsView({
   employees: EmployeePin[];
   pinList: PinList;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -528,7 +530,7 @@ export function TimeclockSettingsView({
                     disabled={pinList.page <= 1}
                     onClick={() => pushPinParams({ pinPage: String(pinList.page - 1) })}
                   >
-                    <ChevronLeft className="h-3 w-3 mr-1" />Précédent
+                    <ChevronLeft className="h-3 w-3 mr-1" />{tc("previous")}
                   </Button>
                   <span className="text-[11px] text-muted-foreground tabular-nums px-1">
                     {pinList.page} / {pinTotalPages}
@@ -538,7 +540,7 @@ export function TimeclockSettingsView({
                     disabled={pinList.page >= pinTotalPages}
                     onClick={() => pushPinParams({ pinPage: String(pinList.page + 1) })}
                   >
-                    Suivant<ChevronRight className="h-3 w-3 ml-1" />
+                    {tc("next")}<ChevronRight className="h-3 w-3 ml-1" />
                   </Button>
                 </div>
               </div>
@@ -588,7 +590,7 @@ export function TimeclockSettingsView({
                 }
               }}
             >
-              <Copy className="h-3.5 w-3.5 mr-1.5" />Copier
+              <Copy className="h-3.5 w-3.5 mr-1.5" />{tc("copy")}
             </Button>
             <p className="text-[11px] text-muted-foreground">
               L&apos;employé pourra le réafficher lui-même depuis Mon espace, avec son mot de passe.
@@ -596,7 +598,7 @@ export function TimeclockSettingsView({
           </div>
           <DialogFooter className="px-5 py-3 border-t bg-muted/30">
             <Button onClick={() => setIssued(null)} className="bg-[#0F2D52] hover:bg-[#15406d]">
-              Fermer
+              {tc("close")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -615,7 +617,7 @@ export function TimeclockSettingsView({
             }}
             disabled={pending}
           >
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             size="sm"

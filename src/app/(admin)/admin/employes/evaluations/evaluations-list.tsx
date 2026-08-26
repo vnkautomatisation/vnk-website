@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -29,6 +30,7 @@ const STATUS: Record<string, { label: string; color: string }> = {
 const PAGE_SIZE = 15;
 
 export function EvaluationsList({ reviews }: { reviews: Review[] }) {
+  const tc = useTranslations("common");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [yearFilter, setYearFilter] = useState<string>("all");
@@ -78,7 +80,7 @@ export function EvaluationsList({ reviews }: { reviews: Review[] }) {
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Statut" /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={tc("status")} /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les statuts</SelectItem>
               {Object.entries(STATUS).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}

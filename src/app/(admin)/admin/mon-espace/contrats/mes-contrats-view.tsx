@@ -10,6 +10,7 @@
 //   - Modal SignDialog (header navy + pad + accuse reception)
 // =============================================================
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -597,6 +598,7 @@ function SignDialog({
   onClose: () => void;
   onSigned: () => void;
 }) {
+  const tc = useTranslations("common");
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [pending, setPending] = useState(false);
@@ -718,7 +720,7 @@ function SignDialog({
             Effacer
           </Button>
           <Button variant="outline" onClick={onClose} disabled={pending}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             onClick={submit}

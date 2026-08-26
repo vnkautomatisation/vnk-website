@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Power, Search } from "lucide-react";
@@ -35,6 +36,7 @@ export function JobCodesView({
   positions: Position[];
   jobCodes: JobCode[];
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [filterPositionId, setFilterPositionId] = useState<string>("all");
@@ -143,17 +145,17 @@ export function JobCodesView({
                   <div key={jc.id} className="flex items-center gap-3 px-4 py-2 hover:bg-muted/30">
                     <span className="font-mono text-xs px-2 py-0.5 rounded bg-muted">{jc.code}</span>
                     <span className="flex-1 text-sm">{jc.label}</span>
-                    {!jc.isActive && <Badge variant="outline" className="text-xs">Inactif</Badge>}
+                    {!jc.isActive && <Badge variant="outline" className="text-xs">{tc("inactive")}</Badge>}
                     {jc._count.timeClocks > 0 && (
                       <span className="text-xs text-muted-foreground">{jc._count.timeClocks} usage(s)</span>
                     )}
                     <Button variant="ghost" size="sm" onClick={() => handleToggle(jc.id)} title={jc.isActive ? "Désactiver" : "Activer"}>
                       <Power className={`h-4 w-4 ${jc.isActive ? "text-emerald-600" : "text-muted-foreground"}`} />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setEditing(jc)} title="Modifier">
+                    <Button variant="ghost" size="sm" onClick={() => setEditing(jc)} title={tc("edit")}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(jc.id, jc.code)} title="Supprimer" disabled={jc._count.timeClocks > 0}>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(jc.id, jc.code)} title={tc("delete")} disabled={jc._count.timeClocks > 0}>
                       <Trash2 className="h-4 w-4 text-red-600" />
                     </Button>
                   </div>
@@ -195,6 +197,7 @@ function JobCodeFormDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const [code, setCode] = useState(existing?.code ?? "");
   const [label, setLabel] = useState(existing?.label ?? "");
   const [positionId, setPositionId] = useState<string>(existing ? String(existing.position.id) : "");
@@ -278,7 +281,7 @@ function JobCodeFormDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending}>{pending ? "…" : (existing ? "Enregistrer" : "Créer")}</Button>
         </DialogFooter>
       </DialogContent>

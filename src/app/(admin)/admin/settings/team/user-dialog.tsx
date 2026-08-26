@@ -2,6 +2,7 @@
 // Dialog création / édition / réinit mot de passe d'un utilisateur admin.
 // Style VNK : header navy + sections claires.
 import { useState, useEffect, useTransition, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { User, Key, Calendar, Briefcase, Shield, RefreshCw, Upload, X, Camera, Mail, Send, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -47,6 +48,7 @@ export function UserDialog({
   /** Existing departments, to avoid "Production"/"production" duplicates. */
   knownDepartments?: string[];
 }) {
+  const tc = useTranslations("common");
   const mode: Mode = user ? "edit" : "create";
   const [tab, setTab] = useState<Tab>(initialTab);
   const [pending, startTransition] = useTransition();
@@ -374,7 +376,7 @@ export function UserDialog({
                   <code className="flex-1 text-[11px] font-mono bg-muted px-3 py-2 rounded-md border break-all">
                     {inviteResult.inviteUrl}
                   </code>
-                  <Button type="button" onClick={copyInviteLink} variant="outline" size="icon" title="Copier">
+                  <Button type="button" onClick={copyInviteLink} variant="outline" size="icon" title={tc("copy")}>
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
@@ -642,7 +644,7 @@ export function UserDialog({
                     {allAdmins.length > 0 && (
                       <Field label="Manager" hint="Supérieur hiérarchique direct">
                         <Select value={managerId} onValueChange={setManagerId}>
-                          <SelectTrigger><SelectValue placeholder="Aucun" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={tc("none")} /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">— Aucun —</SelectItem>
                             {allAdmins.filter((a) => a.id !== user?.id).map((a) => (
@@ -670,7 +672,7 @@ export function UserDialog({
               </FormSection>
 
               {mode === "edit" && (
-                <FormSection icon={Shield} title="Statut">
+                <FormSection icon={Shield} title={tc("status")}>
                   <div className="flex items-center justify-between rounded-lg border p-3">
                     <div>
                       <p className="text-sm font-medium">Compte actif</p>
@@ -837,7 +839,7 @@ export function UserDialog({
         {/* Footer */}
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2 shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
-            Annuler
+            {tc("cancel")}
           </Button>
           {tab === "password" ? (
             <Button

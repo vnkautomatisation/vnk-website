@@ -2,6 +2,7 @@
 // Dialog création/édition d'un OutgoingWebhook.
 // À la création : affiche le secret généré une fois (non récupérable après).
 import { useState, useEffect, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Webhook, Copy, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -34,6 +35,7 @@ export function WebhookDialog({
   webhook: OutgoingWebhookRow | null;
   onSaved: (secret?: string) => void;
 }) {
+  const tc = useTranslations("common");
   const mode = webhook ? "edit" : "create";
   const [pending, startTransition] = useTransition();
 
@@ -123,7 +125,7 @@ export function WebhookDialog({
             </DialogTitle>
             <p className="text-xs text-white/70">Webhook HTTP sortant signé HMAC-SHA256</p>
           </div>
-          <Switch checked={isEnabled} onCheckedChange={setIsEnabled} aria-label="Activé" />
+          <Switch checked={isEnabled} onCheckedChange={setIsEnabled} aria-label={tc("enabled")} />
         </div>
 
         {generatedSecret ? (
@@ -146,7 +148,7 @@ export function WebhookDialog({
                   {generatedSecret}
                 </code>
                 <Button onClick={copySecret} variant="outline">
-                  <Copy className="h-4 w-4 mr-1.5" />Copier
+                  <Copy className="h-4 w-4 mr-1.5" />{tc("copy")}
                 </Button>
               </div>
               <p className="text-[10px] text-muted-foreground mt-2">
@@ -209,7 +211,7 @@ export function WebhookDialog({
             </div>
 
             <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>Annuler</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
               <Button onClick={handleSave} disabled={pending || !name.trim() || !url.trim() || selectedEvents.size === 0} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
                 {pending ? "..." : mode === "create" ? "Créer" : "Enregistrer"}
               </Button>

@@ -8,6 +8,7 @@
 // MarkdownEditor + ActionTooltip + ConfirmDialog.
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -438,6 +439,7 @@ function PolicyPreviewDialog({
   onClose: () => void;
   onEdit: (p: Policy) => void;
 }) {
+  const tc = useTranslations("common");
   return (
     <Dialog open={!!policy} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl max-h-[92vh] p-0 overflow-hidden flex flex-col">
@@ -478,7 +480,7 @@ function PolicyPreviewDialog({
 
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0 gap-2">
           <Button variant="outline" onClick={onClose}>
-            Fermer
+            {tc("close")}
           </Button>
           {policy && (
             <TemplatePdfPreviewButton
@@ -502,7 +504,7 @@ function PolicyPreviewDialog({
               className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             >
               <Edit3 className="h-3.5 w-3.5 mr-1.5" />
-              Modifier
+              {tc("edit")}
             </Button>
           )}
         </DialogFooter>

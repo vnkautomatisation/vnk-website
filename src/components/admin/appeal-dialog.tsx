@@ -4,6 +4,7 @@
 //   (b) ReviewAppealDialog : un admin revoit un appel pending
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Megaphone,
@@ -46,6 +47,7 @@ export function SubmitAppealDialog({
   onClose: () => void;
   onSubmitted: () => void;
 }) {
+  const tc = useTranslations("common");
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -122,7 +124,7 @@ export function SubmitAppealDialog({
         </div>
         <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button variant="outline" onClick={onClose} disabled={pending}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             onClick={submit}
@@ -153,6 +155,7 @@ export function ReviewAppealDialog({
   onClose: () => void;
   onReviewed: () => void;
 }) {
+  const tc = useTranslations("common");
   const [notes, setNotes] = useState("");
   const [pending, setPending] = useState<"approved" | "rejected" | null>(null);
 
@@ -223,7 +226,7 @@ export function ReviewAppealDialog({
         </div>
         <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button variant="outline" onClick={onClose} disabled={pending !== null}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <div className="hidden sm:block flex-1" />
           <Button

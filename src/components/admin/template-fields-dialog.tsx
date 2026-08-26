@@ -13,6 +13,7 @@
 //     ligne entiere supprimee du PDF final (cf. applyPlaceholderValues)
 // ─────────────────────────────────────────────────────────
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   CalendarDays,
   CheckCircle2,
@@ -136,6 +137,7 @@ function TemplatePlaceholderFieldsDialog({
   onClose,
   onSubmit,
 }: TemplateFieldsDialogProps) {
+  const tc = useTranslations("common");
   void _templateId;
 
   const allPlaceholders = useMemo(
@@ -343,7 +345,7 @@ function TemplatePlaceholderFieldsDialog({
             disabled={pending}
           >
             <X className="h-3.5 w-3.5 mr-1.5" />
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             type="button"

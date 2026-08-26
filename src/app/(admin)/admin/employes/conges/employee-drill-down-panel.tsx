@@ -7,6 +7,7 @@
 //  4. Liste des demandes : ICS / PDF / Historique / Plus (convertir, dupliquer, justificatif, annuler/supprimer)
 //  5. Footer : créer une demande
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -125,6 +126,7 @@ export function EmployeeDrillDownPanel({
   onEditRequest: (req: LeaveRow, employee: Employee) => void;
   onCreateForEmployee: (employee: Employee) => void;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -350,7 +352,7 @@ export function EmployeeDrillDownPanel({
                 </span>
               )}
               {!employee.isActive && (
-                <Badge className="bg-red-500 text-white text-[10px]">Inactif</Badge>
+                <Badge className="bg-red-500 text-white text-[10px]">{tc("inactive")}</Badge>
               )}
             </div>
           )}
@@ -572,7 +574,7 @@ export function EmployeeDrillDownPanel({
                                 className="h-7 text-[11px] text-red-700 border-red-200 hover:bg-red-50"
                                 onClick={() => onCancelPending(r)}
                               >
-                                <Ban className="h-3 w-3 mr-1" />Annuler
+                                <Ban className="h-3 w-3 mr-1" />{tc("cancel")}
                               </Button>
                             </ActionTooltip>
                           </>
@@ -584,7 +586,7 @@ export function EmployeeDrillDownPanel({
                               className="h-7 text-[11px]"
                               onClick={() => employee && onEditRequest(r, employee)}
                             >
-                              <Pencil className="h-3 w-3 mr-1" />Modifier
+                              <Pencil className="h-3 w-3 mr-1" />{tc("edit")}
                             </Button>
                           </ActionTooltip>
                         )}
@@ -660,7 +662,7 @@ export function EmployeeDrillDownPanel({
                               <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onDelete(r); }} className="text-red-600 focus:text-red-700">
-                                  <Trash2 className="h-3.5 w-3.5 mr-2" />Supprimer
+                                  <Trash2 className="h-3.5 w-3.5 mr-2" />{tc("delete")}
                                 </DropdownMenuItem>
                               </>
                             )}
@@ -848,6 +850,7 @@ function PolicyDialog({
   policies: Policy[]; currentId: number | null;
   employeeId: number; onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const [val, setVal] = useState<string>(currentId !== null ? String(currentId) : "__null__");
   const [busy, setBusy] = useState(false);
   useEffect(() => { setVal(currentId !== null ? String(currentId) : "__null__"); }, [currentId, open]);
@@ -878,7 +881,7 @@ function PolicyDialog({
           </Select>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
-          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button variant="outline" onClick={onClose}>{tc("cancel")}</Button>
           <Button
             disabled={busy}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
@@ -902,6 +905,7 @@ function PolicyDialog({
 function AdjustBalanceDialog({
   open, onClose, employeeId, onSaved,
 }: { open: boolean; onClose: () => void; employeeId: number; onSaved: () => void; }) {
+  const tc = useTranslations("common");
   const [delta, setDelta] = useState<string>("");
   const [reason, setReason] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -937,7 +941,7 @@ function AdjustBalanceDialog({
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
-          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button variant="outline" onClick={onClose}>{tc("cancel")}</Button>
           <Button
             disabled={!valid || busy}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
@@ -960,6 +964,7 @@ function AdjustBalanceDialog({
 function BlockDialog({
   open, onClose, employeeId, onSaved,
 }: { open: boolean; onClose: () => void; employeeId: number; onSaved: () => void; }) {
+  const tc = useTranslations("common");
   const [until, setUntil] = useState<string>("");
   const [reason, setReason] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -994,7 +999,7 @@ function BlockDialog({
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
-          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button variant="outline" onClick={onClose}>{tc("cancel")}</Button>
           <Button
             disabled={!valid || busy}
             variant="destructive"
@@ -1017,6 +1022,7 @@ function BlockDialog({
 function NotifyDialog({
   open, onClose, employeeId, employeeName,
 }: { open: boolean; onClose: () => void; employeeId: number; employeeName: string; }) {
+  const tc = useTranslations("common");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [link, setLink] = useState("");
@@ -1056,7 +1062,7 @@ function NotifyDialog({
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
-          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button variant="outline" onClick={onClose}>{tc("cancel")}</Button>
           <Button
             disabled={!valid || busy}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
@@ -1090,6 +1096,7 @@ function AnnualReportDialog({
   requests: LeaveRow[];
   onPdfPreview: () => void;
 }) {
+  const tc = useTranslations("common");
   // Filtre sur l'année courante de référence (1er mai → 30 avril)
   const now = new Date();
   const refYear = now.getMonth() + 1 >= 5 ? now.getFullYear() : now.getFullYear() - 1;
@@ -1155,7 +1162,7 @@ function AnnualReportDialog({
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
-          <Button variant="outline" onClick={onClose}>Fermer</Button>
+          <Button variant="outline" onClick={onClose}>{tc("close")}</Button>
           <Button
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             onClick={onPdfPreview}
@@ -1174,6 +1181,7 @@ function ConflictsDialog({
   open: boolean; onClose: () => void;
   conflicts: Array<{ requestId: number; period: string; peers: Array<{ id: number; name: string; period: string; type: string }> }>;
 }) {
+  const tc = useTranslations("common");
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="p-0 overflow-hidden max-w-lg">
@@ -1205,7 +1213,7 @@ function ConflictsDialog({
           )}
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
-          <Button variant="outline" onClick={onClose}>Fermer</Button>
+          <Button variant="outline" onClick={onClose}>{tc("close")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1215,6 +1223,7 @@ function ConflictsDialog({
 function ConvertTypeDialog({
   req, onClose, onSaved,
 }: { req: LeaveRow | null; onClose: () => void; onSaved: () => void; }) {
+  const tc = useTranslations("common");
   const [newType, setNewType] = useState<string>("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1255,7 +1264,7 @@ function ConvertTypeDialog({
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
-          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button variant="outline" onClick={onClose}>{tc("cancel")}</Button>
           <Button
             disabled={!valid || busy}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
@@ -1278,6 +1287,7 @@ function ConvertTypeDialog({
 function DuplicateDialog({
   req, onClose, onSaved,
 }: { req: LeaveRow | null; onClose: () => void; onSaved: () => void; }) {
+  const tc = useTranslations("common");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1316,7 +1326,7 @@ function DuplicateDialog({
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
-          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button variant="outline" onClick={onClose}>{tc("cancel")}</Button>
           <Button
             disabled={!valid || busy}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
@@ -1347,6 +1357,7 @@ type AuditEntry = {
 function HistoryDialog({
   req, onClose,
 }: { req: LeaveRow | null; onClose: () => void; }) {
+  const tc = useTranslations("common");
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
@@ -1395,7 +1406,7 @@ function HistoryDialog({
           )}
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
-          <Button variant="outline" onClick={onClose}>Fermer</Button>
+          <Button variant="outline" onClick={onClose}>{tc("close")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

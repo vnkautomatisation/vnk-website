@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -101,6 +102,7 @@ export function LeavesView({
   /** Fenêtres de vacances pertinentes (open ou contenant mes préférences). Mon espace uniquement. */
   openWindows?: OpenWindow[];
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
   const [tab, setTab] = useState<"my" | "review" | "team">("my");
@@ -387,7 +389,7 @@ export function LeavesView({
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="all">{tc("all")}</SelectItem>
                 {Object.entries(TYPE_META).map(([k, v]) => (
                   <SelectItem key={k} value={k}>{v.label}</SelectItem>
                 ))}
@@ -590,6 +592,7 @@ function RequestCard({
   onPdfPreview?: () => void;
   onConflicts?: () => void;
 }) {
+  const tc = useTranslations("common");
   const t = TYPE_META[request.type] ?? TYPE_META.other;
   const s = STATUS_META[request.status] ?? { label: request.status, color: "bg-gray-100 text-gray-700" };
   const Icon = t.icon;
@@ -635,7 +638,7 @@ function RequestCard({
               {onEdit && (
                 <ActionTooltip label="Modifier la demande (calendrier)">
                   <Button size="sm" variant="outline" disabled={busy} className="h-7 text-xs" onClick={onEdit}>
-                    <Edit2 className="h-3 w-3 mr-1" />Modifier
+                    <Edit2 className="h-3 w-3 mr-1" />{tc("edit")}
                   </Button>
                 </ActionTooltip>
               )}
@@ -937,6 +940,7 @@ function AnnualSelfDialog({
   requests: Request[]; balance?: LeaveBalance; myAdminId: number;
   onPdfPreview: () => void;
 }) {
+  const tc = useTranslations("common");
   const now = new Date();
   const refYear = now.getMonth() + 1 >= 5 ? now.getFullYear() : now.getFullYear() - 1;
   const periodStart = new Date(refYear, 4, 1);
@@ -1010,7 +1014,7 @@ function AnnualSelfDialog({
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
-          <Button variant="outline" onClick={onClose}>Fermer</Button>
+          <Button variant="outline" onClick={onClose}>{tc("close")}</Button>
           <Button
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             onClick={onPdfPreview}
@@ -1026,6 +1030,7 @@ function AnnualSelfDialog({
 // ─── Dialog : déléguer mes approbations ──
 type DelegateAdmin = { id: number; fullName: string | null; email: string };
 function DelegateDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const tc = useTranslations("common");
   const [admins, setAdmins] = useState<DelegateAdmin[]>([]);
   const [selected, setSelected] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -1054,7 +1059,7 @@ function DelegateDialog({ open, onClose }: { open: boolean; onClose: () => void 
           <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Délégué</Label>
           {loading ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" />Chargement…
+              <Loader2 className="h-3 w-3 animate-spin" />{tc("loading")}
             </div>
           ) : (
             <Select value={selected} onValueChange={setSelected}>
@@ -1083,7 +1088,7 @@ function DelegateDialog({ open, onClose }: { open: boolean; onClose: () => void 
           >
             Retirer
           </Button>
-          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button variant="outline" onClick={onClose}>{tc("cancel")}</Button>
           <Button
             disabled={!selected || busy}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
@@ -1110,6 +1115,7 @@ type AuditEntry = {
   actor: { id: number; fullName: string | null; email: string } | null;
 };
 function SelfHistoryDialog({ req, onClose }: { req: Request | null; onClose: () => void }) {
+  const tc = useTranslations("common");
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
@@ -1155,7 +1161,7 @@ function SelfHistoryDialog({ req, onClose }: { req: Request | null; onClose: () 
           )}
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
-          <Button variant="outline" onClick={onClose}>Fermer</Button>
+          <Button variant="outline" onClick={onClose}>{tc("close")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1166,6 +1172,7 @@ function SelfHistoryDialog({ req, onClose }: { req: Request | null; onClose: () 
 function SelfDuplicateDialog({
   req, onClose, onDone,
 }: { req: Request | null; onClose: () => void; onDone: () => void }) {
+  const tc = useTranslations("common");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1203,7 +1210,7 @@ function SelfDuplicateDialog({
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
-          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button variant="outline" onClick={onClose}>{tc("cancel")}</Button>
           <Button
             disabled={!valid || busy}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -134,6 +135,7 @@ export function TaxView({
   declarations: TaxDeclaration[];
   kpis: Kpis;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [view, setView] = useViewMode("tax-declarations", "list");
   const [searchQuery, setSearchQuery] = useState("");
@@ -464,7 +466,7 @@ export function TaxView({
               </button>
             </ActionTooltip>
             <ActionTooltip label="Modifier (label, statut, notes)">
-              <button onClick={() => openEdit(r)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground" aria-label="Modifier">
+              <button onClick={() => openEdit(r)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground" aria-label={tc("edit")}>
                 <Pencil className="h-3.5 w-3.5" />
               </button>
             </ActionTooltip>
@@ -479,7 +481,7 @@ export function TaxView({
               </button>
             </ActionTooltip>
             <ActionTooltip label="Supprimer la déclaration">
-              <button onClick={() => setDeleteDecl(r)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-red-600" aria-label="Supprimer">
+              <button onClick={() => setDeleteDecl(r)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-red-600" aria-label={tc("delete")}>
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </ActionTooltip>
@@ -653,7 +655,7 @@ export function TaxView({
           </Select>
         </div>
         <div>
-          <Label className="text-[10px]">Statut</Label>
+          <Label className="text-[10px]">{tc("status")}</Label>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -752,7 +754,7 @@ export function TaxView({
         onOpenChange={(o) => { if (!o) setDeleteDecl(null); }}
         title="Supprimer cette déclaration ?"
         description={`La déclaration "${deleteDecl?.periodLabel}" sera supprimée définitivement.`}
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
 
@@ -877,6 +879,7 @@ function TaxFormDialog({
   quarterPresets: QuarterPreview[];
   onSubmit: () => Promise<{ success: boolean; error?: string }>;
 }) {
+  const tc = useTranslations("common");
   const [pending, startTransition] = useTransition();
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [previewing, setPreviewing] = useState(false);
@@ -1135,7 +1138,7 @@ function TaxFormDialog({
 
           {/* Section 3 (Edit) : Statut */}
           {!isCreate && (
-            <FormSection title="Statut" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
+            <FormSection title={tc("status")} icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">Statut actuel</Label>
                 <Select value={values.status} onValueChange={values.setStatus}>
@@ -1179,7 +1182,7 @@ function TaxFormDialog({
 
         {/* Footer */}
         <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button
             onClick={handleSubmitClick}
             disabled={pending || !canSubmit}

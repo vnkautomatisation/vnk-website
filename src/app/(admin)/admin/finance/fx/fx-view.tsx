@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Banknote,
@@ -94,6 +95,7 @@ function decimalsFor(currency: string): number {
 }
 
 export function FxView({ rates }: { rates: FxRate[] }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [convAmount, setConvAmount] = useState<string>("100");
@@ -316,7 +318,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
               disabled={refreshing}
             >
               <RefreshCw className={cn("h-3 w-3 mr-1", refreshing && "animate-spin")} />
-              Rafraîchir
+              {tc("refresh")}
             </Button>
           </div>
         </div>
@@ -358,7 +360,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
 
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1">
-            <Label className="text-[10px]">Montant</Label>
+            <Label className="text-[10px]">{tc("amount")}</Label>
             <Input
               type="number"
               value={convAmount}
@@ -469,7 +471,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
                 <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold">Description</th>
                 <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold text-right">Taux (vs CAD)</th>
                 <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold">Source</th>
-                <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold">Date</th>
+                <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold">{tc("date")}</th>
               </tr>
             </thead>
             <tbody>
@@ -537,7 +539,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
               <li>Les rapports financiers consolidés (Tableau de bord) convertissent toutes les devises en CAD au taux figé à la transaction.</li>
               <li>L&apos;écart de change entre la facture (taux d&apos;émission) et le paiement (taux du jour) génère un gain/perte qui doit être comptabilisé séparément.</li>
               <li>Les devises XOF/XAF (Afrique francophone) ont une parité fixe à l&apos;EUR (655,957) garantie par le Trésor français.</li>
-              <li>Le cache des taux a une durée de 24 h. Utiliser <strong>Rafraîchir</strong> pour forcer la mise à jour si nécessaire.</li>
+              <li>Le cache des taux a une durée de 24 h. Utiliser <strong>{tc("refresh")}</strong> pour forcer la mise à jour si nécessaire.</li>
             </ul>
           </div>
         )}

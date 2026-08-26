@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -40,6 +41,7 @@ export function InvoiceDetailPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
   const { confirm, ConfirmModal } = useConfirm();
@@ -143,7 +145,7 @@ export function InvoiceDetailPanel({
 
               <div className="rounded-lg border p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs uppercase tracking-wider text-muted-foreground">Statut</span>
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground">{tc("status")}</span>
                   <StatusBadge status={invoice.status} />
                 </div>
                 <div className="flex items-center justify-between gap-2">

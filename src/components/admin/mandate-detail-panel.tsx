@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -61,6 +62,7 @@ export function MandateDetailPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
   const { confirm, ConfirmModal } = useConfirm();
@@ -189,14 +191,14 @@ export function MandateDetailPanel({
           {/* Section Statut & progression */}
           <PanelSection icon={CheckCircle2} title="Statut & progression">
             <EditableField
-              label="Statut"
+              label={tc("status")}
               display={<StatusBadge status={mandate.status} />}
               renderEdit={(value, setValue) => (
                 <Select value={value} onValueChange={setValue}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">En attente</SelectItem>
-                    <SelectItem value="active">Actif</SelectItem>
+                    <SelectItem value="active">{tc("active")}</SelectItem>
                     <SelectItem value="in_progress">En cours</SelectItem>
                     <SelectItem value="completed">Complété</SelectItem>
                     <SelectItem value="paused">En pause</SelectItem>
@@ -398,6 +400,7 @@ function EditableField<T extends string>({
   onSave: (value: T) => Promise<boolean | void> | boolean | void;
   disabled?: boolean;
 }) {
+  const tc = useTranslations("common");
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState<T>(initialValue);
   useEffect(() => { if (!editing) setValue(initialValue); }, [initialValue, editing]);
@@ -417,12 +420,12 @@ function EditableField<T extends string>({
             <div className="flex-1 min-w-0">{renderEdit(value, setValue)}</div>
             <button type="button" onClick={handleSave} disabled={disabled}
               className="h-7 w-7 flex items-center justify-center rounded-md bg-[#0F2D52] hover:bg-[#1a3a66] text-white shrink-0 disabled:opacity-50"
-              aria-label="Enregistrer">
+              aria-label={tc("save")}>
               <Check className="h-3.5 w-3.5" />
             </button>
             <button type="button" onClick={handleCancel} disabled={disabled}
               className="h-7 w-7 flex items-center justify-center rounded-md border hover:bg-muted shrink-0 disabled:opacity-50"
-              aria-label="Annuler">
+              aria-label={tc("cancel")}>
               <X className="h-3.5 w-3.5" />
             </button>
           </>
@@ -431,7 +434,7 @@ function EditableField<T extends string>({
             <div className="text-right">{display}</div>
             <button type="button" onClick={() => setEditing(true)} disabled={disabled}
               className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0 disabled:opacity-50"
-              aria-label="Modifier">
+              aria-label={tc("edit")}>
               <Pencil className="h-3 w-3" />
             </button>
           </>
@@ -453,6 +456,7 @@ function EditableTextarea({
   rows?: number;
   ambered?: boolean;
 }) {
+  const tc = useTranslations("common");
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(initialValue);
   useEffect(() => { if (!editing) setValue(initialValue); }, [initialValue, editing]);
@@ -474,8 +478,8 @@ function EditableTextarea({
           className={ambered ? "bg-amber-50/30" : ""}
         />
         <div className="flex gap-2 justify-end">
-          <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={disabled}>Annuler</Button>
-          <Button size="sm" onClick={handleSave} disabled={disabled} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">Enregistrer</Button>
+          <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={disabled}>{tc("cancel")}</Button>
+          <Button size="sm" onClick={handleSave} disabled={disabled} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">{tc("save")}</Button>
         </div>
       </div>
     );
@@ -511,6 +515,7 @@ function EditableDateBox({
   onSave: (v: string) => Promise<boolean | void>;
   disabled?: boolean;
 }) {
+  const tc = useTranslations("common");
   const [editing, setEditing] = useState(false);
   const [v, setV] = useState(value ? value.slice(0, 10) : "");
   useEffect(() => { if (!editing) setV(value ? value.slice(0, 10) : ""); }, [value, editing]);
@@ -526,8 +531,8 @@ function EditableDateBox({
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
         <Input type="date" value={v} onChange={(e) => setV(e.target.value)} className="h-8 text-xs" />
         <div className="flex gap-1">
-          <Button size="sm" onClick={handleSave} disabled={disabled} className="h-7 flex-1 bg-[#0F2D52] hover:bg-[#1a3a66] text-white text-xs">Enregistrer</Button>
-          <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={disabled} className="h-7 px-2 text-xs">Annuler</Button>
+          <Button size="sm" onClick={handleSave} disabled={disabled} className="h-7 flex-1 bg-[#0F2D52] hover:bg-[#1a3a66] text-white text-xs">{tc("save")}</Button>
+          <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={disabled} className="h-7 px-2 text-xs">{tc("cancel")}</Button>
         </div>
       </div>
     );
@@ -562,6 +567,7 @@ function EditableNumberBox({
   prefix?: string;
   suffix?: string;
 }) {
+  const tc = useTranslations("common");
   const [editing, setEditing] = useState(false);
   const [v, setV] = useState(value != null ? String(value) : "");
   useEffect(() => { if (!editing) setV(value != null ? String(value) : ""); }, [value, editing]);
@@ -579,8 +585,8 @@ function EditableNumberBox({
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
         <Input type="number" min="0" step="0.5" value={v} onChange={(e) => setV(e.target.value)} className="h-8 text-xs" autoFocus />
         <div className="flex gap-1">
-          <Button size="sm" onClick={handleSave} disabled={disabled} className="h-7 flex-1 bg-[#0F2D52] hover:bg-[#1a3a66] text-white text-xs">Enregistrer</Button>
-          <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={disabled} className="h-7 px-2 text-xs">Annuler</Button>
+          <Button size="sm" onClick={handleSave} disabled={disabled} className="h-7 flex-1 bg-[#0F2D52] hover:bg-[#1a3a66] text-white text-xs">{tc("save")}</Button>
+          <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={disabled} className="h-7 px-2 text-xs">{tc("cancel")}</Button>
         </div>
       </div>
     );

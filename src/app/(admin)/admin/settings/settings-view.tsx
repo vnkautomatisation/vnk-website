@@ -617,6 +617,7 @@ function SettingField({
   onToggleVisible: () => void;
   onCopy: () => void;
 }) {
+  const tc = useTranslations("common");
   // Boolean → Switch
   if (setting.type === "boolean") {
     return (
@@ -679,7 +680,7 @@ function SettingField({
             {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
-        <Button type="button" variant="outline" size="icon" onClick={onCopy} aria-label="Copier">
+        <Button type="button" variant="outline" size="icon" onClick={onCopy} aria-label={tc("copy")}>
           <Copy className="h-4 w-4" />
         </Button>
       </div>
@@ -721,6 +722,7 @@ function CustomCategoryView({
   meta: CategoryMetaExtended;
   onBack: () => void;
 }) {
+  const tc = useTranslations("common");
   const t = useTranslations("settings");
   const Icon = meta.icon;
 
@@ -731,7 +733,7 @@ function CustomCategoryView({
         <button
           onClick={onBack}
           className="mt-1 text-muted-foreground hover:text-foreground"
-          aria-label="Retour"
+          aria-label={tc("back")}
         >
           <ChevronLeft className="h-5 w-5" />
         </button>

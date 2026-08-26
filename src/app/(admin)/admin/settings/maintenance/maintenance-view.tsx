@@ -1,6 +1,7 @@
 "use client";
 // Vue Maintenance — fenêtres planifiées, incidents, bandeau d'annonce.
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -64,6 +65,7 @@ export function MaintenanceView({
   incidents: IncidentRow[];
   banner: Record<string, string>;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("banner");
   const [pending, startTransition] = useTransition();
@@ -124,7 +126,7 @@ export function MaintenanceView({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour"><ChevronLeft className="h-5 w-5" /></Link>
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}><ChevronLeft className="h-5 w-5" /></Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-slate-600 shrink-0">
           <Wrench className="h-6 w-6" />
         </div>
@@ -293,9 +295,9 @@ export function MaintenanceView({
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setMaintenanceDialog({ open: true, window: w })}><Edit className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setMaintenanceDialog({ open: true, window: w })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "maintenance", id: w.id, label: w.title })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "maintenance", id: w.id, label: w.title })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -344,9 +346,9 @@ export function MaintenanceView({
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setIncidentDialog({ open: true, incident: i })}><Edit className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setIncidentDialog({ open: true, incident: i })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "incident", id: i.id, label: i.title })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "incident", id: i.id, label: i.title })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -375,7 +377,7 @@ export function MaintenanceView({
         onOpenChange={(open) => !open && setConfirmDelete(null)}
         title={`Supprimer ${confirmDelete?.label} ?`}
         description="Cette action est irréversible."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleConfirmDelete}
       />

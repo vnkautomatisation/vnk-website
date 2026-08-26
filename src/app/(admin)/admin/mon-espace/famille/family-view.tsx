@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Users, Plus, Edit, Trash2, Heart, Baby } from "lucide-react";
@@ -22,6 +23,7 @@ const TYPE_META: Record<string, { label: string; icon: typeof Heart }> = {
 };
 
 export function FamilyView({ adminId, dependents }: { adminId: number; dependents: Dep[] }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [dialog, setDialog] = useState<{ open: boolean; existing: Dep | null }>({ open: false, existing: null });
   const [confirmDel, setConfirmDel] = useState<Dep | null>(null);
@@ -38,7 +40,7 @@ export function FamilyView({ adminId, dependents }: { adminId: number; dependent
           </p>
         </div>
         <Button onClick={() => setDialog({ open: true, existing: null })}>
-          <Plus className="h-4 w-4 mr-1.5" />Ajouter
+          <Plus className="h-4 w-4 mr-1.5" />{tc("add")}
         </Button>
       </div>
 
@@ -66,10 +68,10 @@ export function FamilyView({ adminId, dependents }: { adminId: number; dependent
                     </div>
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, existing: d })} aria-label="Modifier">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, existing: d })} aria-label={tc("edit")}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDel(d)} aria-label="Supprimer">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDel(d)} aria-label={tc("delete")}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -93,7 +95,7 @@ export function FamilyView({ adminId, dependents }: { adminId: number; dependent
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.fullName} ?`}
         description="Ce dépendant sera retiré de votre dossier."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDel) return;
@@ -107,6 +109,7 @@ export function FamilyView({ adminId, dependents }: { adminId: number; dependent
 }
 
 function DepDialog({ open, existing, adminId, onClose, onSaved }: { open: boolean; existing: Dep | null; adminId: number; onClose: () => void; onSaved: () => void }) {
+  const tc = useTranslations("common");
   const [type, setType] = useState(existing?.type ?? "child");
   const [fullName, setFullName] = useState(existing?.fullName ?? "");
   const [birthdate, setBirthdate] = useState(existing?.birthdate?.split("T")[0] ?? "");
@@ -175,7 +178,7 @@ function DepDialog({ open, existing, adminId, onClose, onSaved }: { open: boolea
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending}>{pending ? "..." : "Enregistrer"}</Button>
         </DialogFooter>
       </DialogContent>

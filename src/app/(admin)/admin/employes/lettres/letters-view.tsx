@@ -7,6 +7,7 @@
 // PdfPreviewModal + ActionTooltip + ConfirmDialog.
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -684,6 +685,7 @@ function RequestDetailDialog({
   onReject: (r: Req) => void;
   onPreview: (r: Req) => void;
 }) {
+  const tc = useTranslations("common");
   if (!req) return null;
   const issued = req.status === "issued";
   const pending = req.status === "pending";
@@ -790,7 +792,7 @@ function RequestDetailDialog({
 
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap">
           <Button variant="outline" onClick={onClose}>
-            Fermer
+            {tc("close")}
           </Button>
           {(issued || pending) && (
             <Button
@@ -838,6 +840,7 @@ function IssueLetterDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const [letterUrl, setLetterUrl] = useState("");
   const [pending, setPending] = useState(false);
   const [confirmGenerate, setConfirmGenerate] = useState(false);
@@ -930,7 +933,7 @@ function IssueLetterDialog({
 
           <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0 gap-2">
             <Button variant="outline" onClick={onClose} disabled={pending}>
-              Annuler
+              {tc("cancel")}
             </Button>
             <Button
               onClick={() => submit()}

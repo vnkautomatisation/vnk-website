@@ -2,6 +2,7 @@
 // Assistant de configuration initiale — wizard 6 étapes.
 // Chaque étape pousse la valeur dans la table Setting via updateSettingsAction.
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -38,6 +39,7 @@ export function OnboardingWizard({
   initial: Record<string, string>;
   progress: Record<StepKey, boolean>;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [currentStep, setCurrentStep] = useState<StepKey>(() => {
@@ -166,7 +168,7 @@ export function OnboardingWizard({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour"><ChevronLeft className="h-5 w-5" /></Link>
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}><ChevronLeft className="h-5 w-5" /></Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-violet-500 to-fuchsia-500 shrink-0">
           <Sparkles className="h-6 w-6" />
         </div>
@@ -365,7 +367,7 @@ export function OnboardingWizard({
                 }}
                 disabled={STEPS.findIndex((s) => s.key === currentStep) === 0 || pending}
               >
-                <ChevronLeft className="h-4 w-4 mr-1.5" />Précédent
+                <ChevronLeft className="h-4 w-4 mr-1.5" />{tc("previous")}
               </Button>
               <div className="flex gap-2">
                 <Button variant="ghost" onClick={handleSkip} disabled={pending}>

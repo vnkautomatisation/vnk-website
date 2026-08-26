@@ -3,6 +3,7 @@
 // Palette restreinte : navy #0F2D52 + amber (alerte) + red (danger) + emerald (succes).
 // Plus de cards multi-couleurs, tableaux pour les listes, actions inline partout.
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -833,6 +834,7 @@ function OverviewTab({
   activeWindows: ActiveWindow[];
   onOpenAppeals: (w: ActiveWindow) => void;
 }) {
+  const tc = useTranslations("common");
   const absentTodayRatio = kpis.activeScopeCount > 0
     ? Math.round((kpis.absentToday / kpis.activeScopeCount) * 100)
     : 0;
@@ -998,7 +1000,7 @@ function OverviewTab({
           <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-muted/20 text-[10px] uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="px-4 py-2 text-left font-semibold">Date</th>
+                <th className="px-4 py-2 text-left font-semibold">{tc("date")}</th>
                 <th className="px-4 py-2 text-left font-semibold">Employe</th>
                 <th className="px-4 py-2 text-left font-semibold">Type</th>
                 <th className="px-4 py-2 text-right font-semibold">Duree</th>
@@ -1236,6 +1238,7 @@ function ReviewTab({
   pagination?: PendingPagination;
   onOpenDrill: (id: number) => void;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [filterType, setFilterType] = useState<string>("all");
@@ -1448,11 +1451,11 @@ function ReviewTab({
                     href={`/admin/employes/conges?page=${pagination.page + 1}`}
                     className="inline-flex items-center h-7 px-2 text-xs border rounded hover:bg-muted/30"
                   >
-                    Suivant<ChevronRight className="h-3.5 w-3.5 ml-1" />
+                    {tc("next")}<ChevronRight className="h-3.5 w-3.5 ml-1" />
                   </Link>
                 ) : (
                   <span className="inline-flex items-center h-7 px-2 text-xs border rounded text-muted-foreground opacity-50">
-                    Suivant<ChevronRight className="h-3.5 w-3.5 ml-1" />
+                    {tc("next")}<ChevronRight className="h-3.5 w-3.5 ml-1" />
                   </span>
                 )}
               </div>
@@ -1873,6 +1876,7 @@ function ByEmployeeTab({
   onOpenDrill: (id: number) => void;
   onCreateForEmp: (emp: EmployeeRow) => void;
 }) {
+  const tc = useTranslations("common");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "remaining" | "taken" | "pending">("name");
   const [teamFilter, setTeamFilter] = useState<string>("all");
@@ -1962,7 +1966,7 @@ function ByEmployeeTab({
               <th className="px-3 py-2 text-right font-semibold hidden md:table-cell">Planifies</th>
               <th className="px-3 py-2 text-center font-semibold">En attente</th>
               <th className="px-3 py-2 text-left font-semibold hidden lg:table-cell">Derniere demande</th>
-              <th className="px-3 py-2 text-right font-semibold">Actions</th>
+              <th className="px-3 py-2 text-right font-semibold">{tc("actions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -2352,6 +2356,7 @@ function MandatoryClosureDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const tc = useTranslations("common");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("Fermeture annuelle des Fetes");
@@ -2498,7 +2503,7 @@ function MandatoryClosureDialog({
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending || targetCount === 0} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
             <Building2 className="h-4 w-4 mr-1.5" />{pending ? "Creation..." : `Creer pour ${targetCount} employe${targetCount > 1 ? "s" : ""}`}
           </Button>
@@ -2535,6 +2540,7 @@ function WindowAppealsDialog({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const tc = useTranslations("common");
   const [filter, setFilter] = useState<"pending" | "all">("pending");
   const [appeals, setAppeals] = useState<AppealItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2646,7 +2652,7 @@ function WindowAppealsDialog({
           )}
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
-          <Button variant="outline" onClick={onClose}>Fermer</Button>
+          <Button variant="outline" onClick={onClose}>{tc("close")}</Button>
         </DialogFooter>
       </DialogContent>
       {reviewTarget && (
@@ -2672,6 +2678,7 @@ function WindowAppealsDialog({
 
 // ─── TÂCHE 17 (P2-8) : "Voir equipe" — heatmap glissante reutilisable ─────
 function TeamOverviewDialog({ onClose }: { onClose: () => void }) {
+  const tc = useTranslations("common");
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-5xl w-[95vw] p-0 overflow-hidden flex flex-col max-h-[92vh]">
@@ -2689,7 +2696,7 @@ function TeamOverviewDialog({ onClose }: { onClose: () => void }) {
           <TeamLeavesHeatmap />
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
-          <Button variant="outline" onClick={onClose}>Fermer</Button>
+          <Button variant="outline" onClick={onClose}>{tc("close")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

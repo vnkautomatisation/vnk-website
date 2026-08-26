@@ -14,6 +14,7 @@
 // Le cron /api/cron/vacation-window-transitions gere les passages auto
 // (draft->open a openingDate, open->closed apres closingDate).
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -917,6 +918,7 @@ function PreferencesTable({
   windowStatus?: string;
   onChanged?: () => void;
 }) {
+  const tc = useTranslations("common");
   // Groupe par employe
   const byAdmin = new Map<number, { admin: Preference["admin"]; prefs: Preference[] }>();
   for (const p of preferences) {
@@ -953,8 +955,8 @@ function PreferencesTable({
         <div>Rang</div>
         <div>Periode</div>
         <div className="text-right">Jours</div>
-        <div className="text-right">Statut</div>
-        {showActionsCol && <div className="text-right">Actions</div>}
+        <div className="text-right">{tc("status")}</div>
+        {showActionsCol && <div className="text-right">{tc("actions")}</div>}
       </div>
       {Array.from(byAdmin.values()).map(({ admin, prefs }) =>
         prefs.map((p) => (
@@ -983,7 +985,7 @@ function PreferencesTable({
                       href={`/admin/employes/conges?employeeId=${p.adminId}&highlight=${p.leaveRequestId}`}
                       className="inline-flex items-center h-6 px-1.5 text-[10px] border border-[#0F2D52]/30 text-[#0F2D52] rounded hover:bg-[#0F2D52]/5"
                     >
-                      <Eye className="h-3 w-3 mr-1" />Voir
+                      <Eye className="h-3 w-3 mr-1" />{tc("view")}
                     </a>
                   </ActionTooltip>
                 )}
@@ -1048,6 +1050,7 @@ function PreferencesTable({
 }
 
 function CreateWindowDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const tc = useTranslations("common");
   const [name, setName] = useState("Vacances ete 2026");
   const [opening, setOpening] = useState("");
   const [closing, setClosing] = useState("");
@@ -1152,7 +1155,7 @@ function CreateWindowDialog({ onClose, onSaved }: { onClose: () => void; onSaved
           </FormSection>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
             {pending ? "Creation..." : "Creer (brouillon)"}
           </Button>

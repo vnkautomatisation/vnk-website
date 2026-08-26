@@ -9,6 +9,7 @@
 //             Rejeter (motif obligatoire).
 // ─────────────────────────────────────────────────────────
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   CheckCircle2,
@@ -80,6 +81,7 @@ export function ReviewUploadRequestDialog({
   onReviewed: () => void;
   request: ReviewableRequest | null;
 }) {
+  const tc = useTranslations("common");
   const [mode, setMode] = useState<"approve" | "reject">("approve");
   const [notes, setNotes] = useState("");
   const [alsoCreate, setAlsoCreate] = useState(true);
@@ -175,7 +177,7 @@ export function ReviewUploadRequestDialog({
               )}
               {request.isRequired && (
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/20 text-red-100 border border-red-300/40 font-semibold">
-                  Obligatoire
+                  {tc("required")}
                 </span>
               )}
             </div>
@@ -216,7 +218,7 @@ export function ReviewUploadRequestDialog({
                       className="h-8 text-xs"
                     >
                       <Download className="h-3.5 w-3.5 mr-1" />
-                      Télécharger
+                      {tc("download")}
                     </Button>
                   </div>
                 </div>
@@ -343,7 +345,7 @@ export function ReviewUploadRequestDialog({
               onClick={handleClose}
               disabled={submitting}
             >
-              Annuler
+              {tc("cancel")}
             </Button>
             <Button
               type="button"

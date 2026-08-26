@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Activity, Search, Download, RefreshCw, LogIn, ShoppingCart, FileSignature,
@@ -168,6 +169,7 @@ export function AuditTrailView({
   admins?: AdminOption[];
   counts: Record<string, number>;
 }) {
+  const tc = useTranslations("common");
   const { open: openEntity } = useEntityPanels();
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, bySeverity: { critical: 0, error: 0, warning: 0, success: 0, info: 0 }, anomaliesCount: 0, failedCount: 0 });
@@ -350,7 +352,7 @@ export function AuditTrailView({
             <ActionTooltip label="Rafraîchir la timeline">
               <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20" onClick={load} disabled={loading}>
                 <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
-                <span className="ml-1.5">Rafraîchir</span>
+                <span className="ml-1.5">{tc("refresh")}</span>
               </Button>
             </ActionTooltip>
             <ActionTooltip label="Exporter en PDF avec hash d'intégrité SHA-256 (conformité Loi 25)">
@@ -521,7 +523,7 @@ export function AuditTrailView({
             {stats.anomaliesCount > 0 && <span className="text-amber-700">Anomalies <span className="font-semibold">{stats.anomaliesCount}</span></span>}
             <Button size="sm" variant="ghost" className="ml-auto h-7 px-2 text-xs" onClick={load} disabled={loading}>
               <RefreshCw className={cn("h-3 w-3 mr-1", loading && "animate-spin")} />
-              Rafraîchir
+              {tc("refresh")}
             </Button>
           </div>
         </div>
@@ -579,7 +581,7 @@ export function AuditTrailView({
             >
               <SelectTrigger className="h-9 w-[140px] text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="all">{tc("all")}</SelectItem>
                 <SelectItem value="success">Succès uniquement</SelectItem>
                 <SelectItem value="failed">Échecs uniquement</SelectItem>
               </SelectContent>
@@ -600,7 +602,7 @@ export function AuditTrailView({
       <Card className="overflow-hidden">
         <div className="divide-y">
           {loading ? (
-            <div className="p-12 text-center text-sm text-muted-foreground">Chargement…</div>
+            <div className="p-12 text-center text-sm text-muted-foreground">{tc("loading")}</div>
           ) : filtered.length === 0 ? (
             <div className="p-12 text-center">
               <Activity className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
@@ -776,7 +778,7 @@ export function AuditTrailView({
                     {detailEvent.email && !detailEvent.adminEmail && <DetailRow label="Courriel" value={detailEvent.email} />}
                     {detailEvent.ipAddress && <DetailRow label="Adresse IP" value={detailEvent.ipAddress} mono />}
                     {detailEvent.country && <DetailRow label="Pays" value={`${detailEvent.country}${detailEvent.city ? `, ${detailEvent.city}` : ""}`} />}
-                    {detailEvent.amount != null && <DetailRow label="Montant" value={`${detailEvent.amount.toFixed(2)} ${detailEvent.currency ?? "CAD"}`} />}
+                    {detailEvent.amount != null && <DetailRow label={tc("amount")} value={`${detailEvent.amount.toFixed(2)} ${detailEvent.currency ?? "CAD"}`} />}
                     {detailEvent.userAgent && (
                       <DetailRow label="User-Agent" value={<span className="font-mono text-[10px] break-all">{detailEvent.userAgent}</span>} />
                     )}
@@ -798,7 +800,7 @@ export function AuditTrailView({
                             }}
                             className="text-[10px] text-muted-foreground hover:text-foreground"
                           >
-                            Copier
+                            {tc("copy")}
                           </button>
                         </ActionTooltip>
                       </div>

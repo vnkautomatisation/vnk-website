@@ -1,5 +1,6 @@
 // HR · Vue d'ensemble des permis pros (toutes équipes) + alertes expiration
 import { prisma } from "@/lib/prisma";
+import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
@@ -74,6 +75,7 @@ type Row = {
 };
 
 function Section({ title, icon: Icon, iconColor, rows, variant }: { title: string; icon: LucideIcon; iconColor: string; rows: Row[]; variant: "red" | "amber" | "blue" | "emerald" }) {
+  const tc = useTranslations("common");
   void variant;
   return (
     <section>
@@ -94,7 +96,7 @@ function Section({ title, icon: Icon, iconColor, rows, variant }: { title: strin
                   </p>
                 </div>
                 <div className="text-right">
-                  {l.isMandatory && <Badge variant="outline" className="text-[9px] text-red-700 border-red-300 bg-red-50 mb-1">Obligatoire</Badge>}
+                  {l.isMandatory && <Badge variant="outline" className="text-[9px] text-red-700 border-red-300 bg-red-50 mb-1">{tc("required")}</Badge>}
                   <p className="text-xs">
                     {l.expiresAt ? (
                       <span>

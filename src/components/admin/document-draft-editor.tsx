@@ -20,6 +20,7 @@
 // distincte pour rester dans le contexte de documents-admin-view.
 // ─────────────────────────────────────────────────────────
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   CheckCircle2,
@@ -70,6 +71,7 @@ type DraftData = {
 };
 
 export function DocumentDraftEditor({ open, draftId, onClose, onSent }: DocumentDraftEditorProps) {
+  const tc = useTranslations("common");
   const [draft, setDraft] = useState<DraftData | null>(null);
   const [loading, setLoading] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
@@ -313,7 +315,7 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
                     <DatePopover
                       value={scheduledFor ?? ""}
                       onChange={(d) => { setScheduledFor(d || null); scheduleAutosave(); }}
-                      placeholder="Optionnel"
+                      placeholder={tc("optional")}
                     />
                   </div>
                 </section>
@@ -343,7 +345,7 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
           {/* Footer */}
           <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-card shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
             <Button variant="outline" size="sm" onClick={handleClose} disabled={saving}>
-              Fermer
+              {tc("close")}
             </Button>
             <Button variant="outline" size="sm" onClick={() => persistDraft()} disabled={saving}>
               {saving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
@@ -389,6 +391,7 @@ function SendDraftDialog({
   onClose: () => void;
   onConfirm: (dueDate: string | null, reason: string | null) => Promise<void>;
 }) {
+  const tc = useTranslations("common");
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -449,7 +452,7 @@ function SendDraftDialog({
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
           <Button variant="outline" size="sm" onClick={onClose} disabled={submitting}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             size="sm"

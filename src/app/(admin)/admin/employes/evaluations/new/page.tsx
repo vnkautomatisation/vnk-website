@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Award } from "lucide-react";
@@ -11,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createPerformanceReviewAction } from "@/app/actions/hr-performance";
 
 export default function NewEvaluationPage() {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [employees, setEmployees] = useState<Array<{ id: number; fullName: string | null; email: string }>>([]);
   const [adminId, setAdminId] = useState("");
@@ -69,7 +71,7 @@ export default function NewEvaluationPage() {
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={() => router.back()} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={() => router.back()} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending}>{pending ? "..." : "Créer"}</Button>
         </div>
       </Card>

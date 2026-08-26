@@ -13,6 +13,7 @@
 //   { success: true, document: { id, fileUrl, ... } } | { error: string }
 // ─────────────────────────────────────────────────────────
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Upload,
@@ -77,6 +78,7 @@ export function DocumentUploader({
   /** Appelé après upload réussi — typiquement router.refresh(). */
   onUploaded: () => void;
 }) {
+  const tc = useTranslations("common");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -416,7 +418,7 @@ export function DocumentUploader({
             onClick={handleClose}
             disabled={uploading}
           >
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             type="button"
@@ -432,7 +434,7 @@ export function DocumentUploader({
             ) : (
               <>
                 <Upload className="h-3.5 w-3.5 mr-1.5" />
-                Téléverser
+                {tc("upload")}
               </>
             )}
           </Button>

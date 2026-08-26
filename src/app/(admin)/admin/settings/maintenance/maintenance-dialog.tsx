@@ -1,6 +1,7 @@
 "use client";
 // Dialog création/édition d'une fenêtre de maintenance.
 import { useState, useEffect, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Wrench } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -28,6 +29,7 @@ export function MaintenanceDialog({
   window: MaintenanceRow | null;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const mode = window ? "edit" : "create";
   const [pending, startTransition] = useTransition();
 
@@ -143,7 +145,7 @@ export function MaintenanceDialog({
         </div>
 
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={handleSave} disabled={pending || !title.trim() || !startsAt || !endsAt} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
             {pending ? "..." : mode === "create" ? "Planifier" : "Enregistrer"}
           </Button>

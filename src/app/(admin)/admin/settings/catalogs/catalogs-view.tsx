@@ -3,6 +3,7 @@
 // Sources · Industries · Catégories dépenses · Statuts workflow · Devises ·
 // Modes de paiement · Modes de contact.
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -71,6 +72,7 @@ export function CatalogsView({
   promos: PromoRow[];
   catalogItems: CatalogItemRow[];
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("services");
 
@@ -146,7 +148,7 @@ export function CatalogsView({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour">
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}>
           <ChevronLeft className="h-5 w-5" />
         </Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-amber-500 shrink-0">
@@ -208,7 +210,7 @@ export function CatalogsView({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-semibold text-sm">{s.name}</p>
-                      {!s.isActive && <Badge className="text-[10px] bg-gray-500 hover:bg-gray-500">Désactivé</Badge>}
+                      {!s.isActive && <Badge className="text-[10px] bg-gray-500 hover:bg-gray-500">{tc("disabled")}</Badge>}
                       {s.category && <Badge variant="outline" className="text-[10px]">{s.category}</Badge>}
                     </div>
                     {s.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{s.description}</p>}
@@ -220,10 +222,10 @@ export function CatalogsView({
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setServiceDialog({ open: true, service: s })}><Edit className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setServiceDialog({ open: true, service: s })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => toggleServiceActive(s)}><Power className="h-4 w-4 mr-2" />{s.isActive ? "Désactiver" : "Activer"}</DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "service", id: s.id, label: s.name })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "service", id: s.id, label: s.name })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -255,7 +257,7 @@ export function CatalogsView({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-mono font-bold text-sm">{p.code}</p>
-                        {!p.isActive && <Badge className="text-[10px] bg-gray-500 hover:bg-gray-500">Désactivé</Badge>}
+                        {!p.isActive && <Badge className="text-[10px] bg-gray-500 hover:bg-gray-500">{tc("disabled")}</Badge>}
                         {expired && <Badge className="text-[10px] bg-red-500 hover:bg-red-500">Expiré</Badge>}
                       </div>
                       {p.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{p.description}</p>}
@@ -271,10 +273,10 @@ export function CatalogsView({
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setPromoDialog({ open: true, promo: p })}><Edit className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setPromoDialog({ open: true, promo: p })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => togglePromoActive(p)}><Power className="h-4 w-4 mr-2" />{p.isActive ? "Désactiver" : "Activer"}</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "promo", id: p.id, label: p.code })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "promo", id: p.id, label: p.code })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -316,14 +318,14 @@ export function CatalogsView({
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setCatalogDialog({ open: true, item, type: item.type })}><Edit className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setCatalogDialog({ open: true, item, type: item.type })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => moveItem(item, "up")}><ArrowUp className="h-4 w-4 mr-2" />Monter</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => moveItem(item, "down")}><ArrowDown className="h-4 w-4 mr-2" />Descendre</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => toggleCatalogActive(item)}><Power className="h-4 w-4 mr-2" />{item.isActive ? "Désactiver" : "Activer"}</DropdownMenuItem>
                         {!item.isSystem && (
                           <>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "catalog", id: item.id, label: item.name })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "catalog", id: item.id, label: item.name })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                           </>
                         )}
                       </DropdownMenuContent>
@@ -367,7 +369,7 @@ export function CatalogsView({
         onOpenChange={(open) => !open && setConfirmDelete(null)}
         title={`Supprimer ${confirmDelete?.label} ?`}
         description="Cette action est irréversible."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleConfirmDelete}
       />

@@ -12,6 +12,7 @@
 // pour chaque bouton icone.
 // =============================================================
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Award,
   Briefcase,
@@ -96,6 +97,7 @@ export function TemplateLibraryCard({
   previewEmployeeId,
   onPreviewWithoutEmployee,
 }: Props) {
+  const tc = useTranslations("common");
   const [busy] = useState(false);
 
   const preview = plainPreview(template.bodyMarkdown);
@@ -172,7 +174,7 @@ export function TemplateLibraryCard({
                 variant="outline"
                 className="text-[10px] gap-1 px-1.5 py-0 h-4 border-red-300 bg-red-50 text-red-700"
               >
-                Obligatoire
+                {tc("required")}
               </Badge>
             )}
           </div>
@@ -303,7 +305,7 @@ export function TemplateLibraryCard({
         )}
 
         {onEdit && (
-          <ActionTooltip label="Modifier">
+          <ActionTooltip label={tc("edit")}>
             <Button
               type="button"
               variant="ghost"

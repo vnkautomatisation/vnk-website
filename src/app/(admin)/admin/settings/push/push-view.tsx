@@ -1,6 +1,7 @@
 "use client";
 // Vue Notifications Push — abonnement navigateur + liste des appareils.
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -39,6 +40,7 @@ export function PushView({
   subscriptions: SubscriptionRow[];
   vapidConfigured: boolean;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
   const [subscribing, setSubscribing] = useState(false);
@@ -136,7 +138,7 @@ export function PushView({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour"><ChevronLeft className="h-5 w-5" /></Link>
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}><ChevronLeft className="h-5 w-5" /></Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-yellow-500 shrink-0">
           <Bell className="h-6 w-6" />
         </div>

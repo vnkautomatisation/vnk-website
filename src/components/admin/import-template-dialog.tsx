@@ -13,6 +13,7 @@
 // ActionTooltip, lucide-react, FR uniquement.
 // ─────────────────────────────────────────────────────────
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   AlertCircle,
@@ -158,6 +159,7 @@ function variableLabel(key: string): string {
 // ─── Composant principal ──────────────────────────────────
 
 export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
+  const tc = useTranslations("common");
   const [tab, setTab] = useState<"paste" | "upload">("paste");
   const [pasted, setPasted] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -610,7 +612,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
             disabled={analyzing}
             className="w-full sm:w-auto"
           >
-            Annuler
+            {tc("cancel")}
           </Button>
           <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-initial">
             {hasResult && (

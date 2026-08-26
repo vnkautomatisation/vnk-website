@@ -1,6 +1,7 @@
 "use client";
 // AppointmentDetailPanel — slide-out VNK avec edition inline
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -58,6 +59,7 @@ export function AppointmentDetailPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
   const { confirm, ConfirmModal } = useConfirm();
@@ -165,7 +167,7 @@ export function AppointmentDetailPanel({
       headerStats={
         appt ? (
           <div className="grid grid-cols-3 gap-2">
-            <PanelStatBox icon={Calendar} label="Date" value={formatDate(new Date(appt.appointmentDate))} />
+            <PanelStatBox icon={Calendar} label={tc("date")} value={formatDate(new Date(appt.appointmentDate))} />
             <PanelStatBox icon={Clock} label="Heure" value={`${appt.startTime} - ${displayEndTime}`} />
             <PanelStatBox icon={MeetIcon} label="Type" value={MEETING_LABELS[appt.meetingType] ?? appt.meetingType} />
           </div>
@@ -191,7 +193,7 @@ export function AppointmentDetailPanel({
                 <Button size="sm" variant="secondary" disabled={busy}
                   className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur"
                   onClick={handleCancel}>
-                  <X className="h-3 w-3" />Annuler
+                  <X className="h-3 w-3" />{tc("cancel")}
                 </Button>
               </>
             )}
@@ -221,7 +223,7 @@ export function AppointmentDetailPanel({
           {/* Section Statut */}
           <PanelSection icon={Calendar} title="Statut & timing">
             <EditableField
-              label="Statut"
+              label={tc("status")}
               display={<StatusBadge status={appt.status} />}
               renderEdit={(v, setV) => (
                 <Select value={v} onValueChange={setV}>
@@ -239,7 +241,7 @@ export function AppointmentDetailPanel({
               disabled={busy}
             />
             <EditableField
-              label="Date"
+              label={tc("date")}
               display={<span className="text-sm">{formatDate(new Date(appt.appointmentDate))}</span>}
               renderEdit={(v, setV) => <Input type="date" value={v} onChange={(e) => setV(e.target.value)} />}
               initialValue={appt.appointmentDate.slice(0, 10)}
@@ -444,6 +446,7 @@ function EditableTextarea({
   disabled?: boolean;
   rows?: number;
 }) {
+  const tc = useTranslations("common");
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(initialValue);
   useEffect(() => { if (!editing) setValue(initialValue); }, [initialValue, editing]);
@@ -458,8 +461,8 @@ function EditableTextarea({
       <div className="space-y-2">
         <Textarea value={value} onChange={(e) => setValue(e.target.value)} rows={rows} autoFocus className="bg-amber-50/30" />
         <div className="flex gap-2 justify-end">
-          <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={disabled}>Annuler</Button>
-          <Button size="sm" onClick={handleSave} disabled={disabled} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">Enregistrer</Button>
+          <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={disabled}>{tc("cancel")}</Button>
+          <Button size="sm" onClick={handleSave} disabled={disabled} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">{tc("save")}</Button>
         </div>
       </div>
     );

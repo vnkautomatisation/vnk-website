@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -70,6 +71,7 @@ function formatRelativeDate(iso: string | null): string {
 }
 
 export function TemplatesView({ templates }: { templates: Template[] }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
   const [search, setSearch] = useState("");
@@ -393,7 +395,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-              <X className="h-3.5 w-3.5 mr-1" />Annuler
+              <X className="h-3.5 w-3.5 mr-1" />{tc("cancel")}
             </Button>
             <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
               <Trash2 className="h-3.5 w-3.5 mr-1" />Supprimer tous
@@ -454,7 +456,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
                         <Copy className="h-3.5 w-3.5 mr-2" />Copier raccourci
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => openEdit(t)}>
-                        <Pencil className="h-3.5 w-3.5 mr-2" />Modifier
+                        <Pencil className="h-3.5 w-3.5 mr-2" />{tc("edit")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => handleDuplicate(t)}>
                         <Copy className="h-3.5 w-3.5 mr-2" />Dupliquer
@@ -473,7 +475,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onSelect={() => setDeleting(t)} className="text-destructive">
-                        <Trash2 className="h-3.5 w-3.5 mr-2" />Supprimer
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />{tc("delete")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -537,7 +539,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
         onOpenChange={(o) => { if (!o) setDeleting(null); }}
         title="Supprimer ce template ?"
         description={`Le template /${deleting?.shortcut} sera supprimé définitivement.`}
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
 
@@ -577,6 +579,7 @@ function TemplateFormDialog({
   setters: FormSetters;
   onSubmit: () => void;
 }) {
+  const tc = useTranslations("common");
   const isCreate = mode === "create";
   const [showPreview, setShowPreview] = useState(false);
   const [tagInput, setTagInput] = useState("");
@@ -697,7 +700,7 @@ function TemplateFormDialog({
                 <Select value={values.channel || "none"} onValueChange={(v) => setters.setChannel(v === "none" ? "" : v as "chat" | "email" | "both")}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Aucun</SelectItem>
+                    <SelectItem value="none">{tc("none")}</SelectItem>
                     <SelectItem value="chat">Chat (portail)</SelectItem>
                     <SelectItem value="email">Email</SelectItem>
                     <SelectItem value="both">Chat + Email</SelectItem>
@@ -775,7 +778,7 @@ function TemplateFormDialog({
         </div>
 
         <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Annuler</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>{tc("cancel")}</Button>
           <Button
             onClick={onSubmit}
             disabled={submitting || !values.shortcut.trim() || !values.title.trim() || !values.body.trim()}
@@ -791,6 +794,7 @@ function TemplateFormDialog({
 
 // ─── Versions dialog ───────────────────────────────────────
 function VersionsDialog({ template, onClose, onRestored }: { template: Template; onClose: () => void; onRestored: () => void }) {
+  const tc = useTranslations("common");
   const [versions, setVersions] = useState<{ id: number; body: string; emailSubject: string | null; editedBy: string | null; createdAt: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -822,7 +826,7 @@ function VersionsDialog({ template, onClose, onRestored }: { template: Template;
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {loading ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Chargement…</p>
+            <p className="text-sm text-muted-foreground text-center py-8">{tc("loading")}</p>
           ) : versions.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">Aucune version antérieure</p>
           ) : (
@@ -843,7 +847,7 @@ function VersionsDialog({ template, onClose, onRestored }: { template: Template;
           )}
         </div>
         <DialogFooter className="px-4 py-3 border-t bg-card shrink-0">
-          <Button variant="outline" onClick={onClose}>Fermer</Button>
+          <Button variant="outline" onClick={onClose}>{tc("close")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

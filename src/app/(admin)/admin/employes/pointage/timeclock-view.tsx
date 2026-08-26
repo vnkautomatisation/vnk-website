@@ -411,6 +411,7 @@ function TimeclockEmployeeView({
   kioskPinSetAt?: string | null;
   kioskPinRequestedAt?: string | null;
 }) {
+  const tc = useTranslations("common");
   const t = useTranslations("admin.timeclock");
   const router = useRouter();
   const [manualOpen, setManualOpen] = useState(false);
@@ -950,7 +951,7 @@ function TimeclockEmployeeView({
               disabled={dayPage <= 1}
               onClick={() => { setDayPage((n) => n - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             >
-              <ChevronLeft className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">Précédent</span>
+              <ChevronLeft className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">{tc("previous")}</span>
             </Button>
             <span className="text-xs text-muted-foreground tabular-nums px-1">
               {dayPage} / {dayTotalPages}
@@ -960,7 +961,7 @@ function TimeclockEmployeeView({
               disabled={dayPage >= dayTotalPages}
               onClick={() => { setDayPage((n) => n + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
             >
-<span className="hidden sm:inline">Suivant</span><ChevronRight className="h-3.5 w-3.5 sm:ml-1" />
+<span className="hidden sm:inline">{tc("next")}</span><ChevronRight className="h-3.5 w-3.5 sm:ml-1" />
             </Button>
           </div>
         </div>
@@ -1315,6 +1316,7 @@ function MyKioskPinCard({
   pinSetAt: string | null;
   pinRequestedAt: string | null;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [revealed, setRevealed] = useState<string | null>(null);
@@ -1442,7 +1444,7 @@ function MyKioskPinCard({
                 }
               }}
             >
-              <Copy className="h-3.5 w-3.5 mr-1.5" />Copier
+              <Copy className="h-3.5 w-3.5 mr-1.5" />{tc("copy")}
             </Button>
             <p className="text-[11px] text-muted-foreground">
               Tapez ce NIP sur la tablette partagée pour poinçonner. Ne le communiquez à personne.
@@ -1450,7 +1452,7 @@ function MyKioskPinCard({
           </div>
           <DialogFooter className="px-5 py-3 border-t bg-muted/30">
             <Button onClick={() => setRevealed(null)} className="bg-[#0F2D52] hover:bg-[#15406d]">
-              Fermer
+              {tc("close")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2265,6 +2267,7 @@ function ByEmployeeTab({
   periodTo?: string;
   overtimeWeeklyMin: number;
 }) {
+  const tc = useTranslations("common");
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   // Progress bar vs the weekly threshold: only meaningful on a ~1 week period.
   const showBar = useMemo(() => {
@@ -2370,8 +2373,8 @@ function ByEmployeeTab({
                   <th className="text-right px-3 py-2 font-semibold">Heures période</th>
                   <th className="text-right px-3 py-2 font-semibold">À approuver</th>
                   <th className="text-right px-3 py-2 font-semibold">Approuvées</th>
-                  <th className="text-left px-3 py-2 font-semibold">Statut</th>
-                  <th className="text-right px-3 py-2 font-semibold">Actions</th>
+                  <th className="text-left px-3 py-2 font-semibold">{tc("status")}</th>
+                  <th className="text-right px-3 py-2 font-semibold">{tc("actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -2646,6 +2649,7 @@ function ToApproveTab(props: {
   onReject: (ids: number[]) => Promise<void>;
   overtimeWeeklyMin: number;
 }) {
+  const tc = useTranslations("common");
   const {
     teams, departments, q, teamFilter, departmentFilter, statusFilter,
     items, total, page, pageSize, onPage,
@@ -3004,7 +3008,7 @@ function ToApproveTab(props: {
                         className="h-7 text-xs text-muted-foreground"
                         onClick={() => onFocusEmployee(emp.adminId)}
                       >
-                        Voir
+                        {tc("view")}
                       </Button>
                     </div>
                   ))}
@@ -3379,6 +3383,7 @@ function Pagination({
   totalPages: number;
   onPage: (n: number) => void;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -3429,7 +3434,7 @@ function Pagination({
           onClick={() => onPage(page - 1)}
           disabled={page <= 1}
         >
-          <ChevronLeft className="h-3.5 w-3.5 mr-1" />Précédent
+          <ChevronLeft className="h-3.5 w-3.5 mr-1" />{tc("previous")}
         </Button>
         {pages.map((p, i) =>
           p === "ellipsis" ? (
@@ -3453,7 +3458,7 @@ function Pagination({
           onClick={() => onPage(page + 1)}
           disabled={page >= totalPages}
         >
-          Suivant<ChevronRight className="h-3.5 w-3.5 ml-1" />
+          {tc("next")}<ChevronRight className="h-3.5 w-3.5 ml-1" />
         </Button>
       </div>
     </div>
@@ -3484,6 +3489,7 @@ function SubmitWeekDialog({
   weekEntries: Entry[];
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const [pending, setPending] = useState(false);
 
   // Aggregats
@@ -3567,7 +3573,7 @@ function SubmitWeekDialog({
           </FormSection>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending || buckets.workMin === 0}>
             {pending ? "..." : "Soumettre"}
           </Button>
@@ -3588,6 +3594,7 @@ function ForceCloseDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const [when, setWhen] = useState(toLocalInput(new Date()));
   const [pending, setPending] = useState(false);
   // A shift can have been left open for days; the picker defaults to this week.
@@ -3631,7 +3638,7 @@ function ForceCloseDialog({
           </FormSection>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button variant="destructive" onClick={submit} disabled={pending}>
             {pending ? "..." : "Fermer le pointage"}
           </Button>

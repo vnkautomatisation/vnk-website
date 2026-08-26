@@ -1,6 +1,7 @@
 "use client";
 // Vue RH Équipement — 2 onglets (Actifs / Retournés), assignation + retour.
 import { useState, useEffect, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -61,6 +62,7 @@ export function EquipmentView({
   employees: EmpLite[];
   isHr: boolean;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("active");
   const [editDialog, setEditDialog] = useState<{ open: boolean; existing: Equipment | null }>({ open: false, existing: null });
@@ -202,7 +204,7 @@ export function EquipmentView({
         onOpenChange={(o) => !o && setDeleteConfirm(null)}
         title={`Supprimer cet équipement ?`}
         description={deleteConfirm ? `${deleteConfirm.name} — supprimera l'enregistrement définitivement.` : ""}
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!deleteConfirm) return;
@@ -225,6 +227,7 @@ function EquipmentCard({
   onReturn: () => void;
   onDelete: () => void;
 }) {
+  const tc = useTranslations("common");
   const meta = CAT_META[eq.category] ?? CAT_META.other;
   const Icon = meta.icon;
   const isReturned = !!eq.returnedAt;
@@ -286,7 +289,7 @@ function EquipmentCard({
         {isHr && (
           <div className="flex flex-wrap gap-1.5 pt-1 border-t">
             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onEdit}>
-              <Edit className="h-3 w-3 mr-1" />Modifier
+              <Edit className="h-3 w-3 mr-1" />{tc("edit")}
             </Button>
             {!isReturned && (
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onReturn}>
@@ -298,7 +301,7 @@ function EquipmentCard({
               size="sm"
               className="h-7 text-xs hover:text-destructive ml-auto"
               onClick={onDelete}
-              aria-label="Supprimer"
+              aria-label={tc("delete")}
             >
               <Trash2 className="h-3 w-3" />
             </Button>
@@ -318,6 +321,7 @@ function EquipmentDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const [employeeId, setEmployeeId] = useState<string>("");
   const [category, setCategory] = useState<Category>("laptop");
   const [name, setName] = useState("");
@@ -459,7 +463,7 @@ function EquipmentDialog({
         </div>
 
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending}>
             {pending ? "..." : existing ? "Enregistrer" : "Assigner"}
           </Button>

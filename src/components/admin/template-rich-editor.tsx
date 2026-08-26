@@ -25,6 +25,7 @@ import {
   useState,
 } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
+import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/react";
 import { Extension, Node, mergeAttributes } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -3271,6 +3272,7 @@ function PillActionMenu({
   onDelete: () => void;
   onClose: () => void;
 }) {
+  const tc = useTranslations("common");
   const [showReplace, setShowReplace] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -3307,7 +3309,7 @@ function PillActionMenu({
           type="button"
           onClick={onClose}
           className="text-white/80 hover:text-white transition"
-          aria-label="Fermer"
+          aria-label={tc("close")}
         >
           <X className="h-3.5 w-3.5" />
         </button>

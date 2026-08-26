@@ -10,6 +10,7 @@
 // Clic "Téléverser" → onUpload(requestId) ouvre UploadDocumentResponseDialog.
 // ─────────────────────────────────────────────────────────
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
   FileText, AlertTriangle, Clock, Upload,
   IdCard, GraduationCap, Award, CreditCard, Globe, Stethoscope, FileQuestion,
@@ -72,6 +73,7 @@ export function MyUploadRequestsBanner({
   onUpload: (requestId: number) => void;
   className?: string;
 }) {
+  const tc = useTranslations("common");
   const sorted = useMemo(() => {
     return [...requests].sort((a, b) => {
       // dueDate asc (nulls last), puis createdAt desc
@@ -197,7 +199,7 @@ export function MyUploadRequestsBanner({
                   )}
                 >
                   <Upload className="h-3 w-3 mr-1" />
-                  Téléverser
+                  {tc("upload")}
                 </Button>
               </div>
             );

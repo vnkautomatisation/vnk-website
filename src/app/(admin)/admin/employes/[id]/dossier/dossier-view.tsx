@@ -2,6 +2,7 @@
 // Vue dossier employe : tabs identite/notes/evaluations/contrats/documents/conges/equipement/permis/paie/cnesst.
 // Inclus le dialog VNK navy pour creer/editer une EmployeeNote.
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -276,6 +277,7 @@ export function DossierView(props: {
   family: FamilyRow[];
   bank: BankRow | null;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const {
     actorId, isSuper, admin, notes, files, contracts, reviews, payAgg,
@@ -325,7 +327,7 @@ export function DossierView(props: {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold truncate">{admin.fullName || admin.email}</h1>
               {!admin.isActive && (
-                <Badge className="bg-red-500 text-white border-0">Inactif</Badge>
+                <Badge className="bg-red-500 text-white border-0">{tc("inactive")}</Badge>
               )}
               {admin.customRole && (
                 <Badge variant="outline" className="border-white/40 text-white bg-white/10">
@@ -352,7 +354,7 @@ export function DossierView(props: {
             >
               <Link href="/admin/employes">
                 <FolderClosed className="h-4 w-4 mr-1.5" />
-                Retour
+                {tc("back")}
               </Link>
             </Button>
             <Button
@@ -535,11 +537,11 @@ export function DossierView(props: {
                       </div>
                       {canEdit && (
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setNoteDialog({ open: true, note: n })} aria-label="Modifier">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setNoteDialog({ open: true, note: n })} aria-label={tc("edit")}>
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
                           {isSuper && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDel(n)} aria-label="Supprimer">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDel(n)} aria-label={tc("delete")}>
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           )}
@@ -766,7 +768,7 @@ export function DossierView(props: {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium">
                           {t.title}
-                          {t.isMandatory && <Badge variant="outline" className="ml-2 text-[10px] text-red-700 border-red-300">Obligatoire</Badge>}
+                          {t.isMandatory && <Badge variant="outline" className="ml-2 text-[10px] text-red-700 border-red-300">{tc("required")}</Badge>}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {t.category} · {t.provider || "—"}
@@ -844,7 +846,7 @@ export function DossierView(props: {
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer la note "${confirmDel?.title}" ?`}
         description="Cette action est irreversible et reservee aux super_admin."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={onDeleteNote}
       />
@@ -884,6 +886,7 @@ function EmployeeNoteDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const [category, setCategory] = useState<NoteCategory>((note?.category as NoteCategory) || "general");
   const [severity, setSeverity] = useState<NoteSeverity | "">((note?.severity as NoteSeverity) || "");
   const [title, setTitle] = useState(note?.title ?? "");
@@ -997,7 +1000,7 @@ function EmployeeNoteDialog({
         </div>
 
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending || !title.trim() || !body.trim()}>
             {pending ? "..." : note ? "Enregistrer" : "Ajouter"}
           </Button>

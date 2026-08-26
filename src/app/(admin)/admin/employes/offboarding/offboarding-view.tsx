@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { LogOut, Plus, CheckCircle2, Calendar, FileText, AlertTriangle, Lock } from "lucide-react";
@@ -106,6 +107,7 @@ export function OffboardingView({ checklists, candidates }: { checklists: Offboa
 }
 
 function StartDialog({ open, candidates, onClose, onSaved }: { open: boolean; candidates: Emp[]; onClose: () => void; onSaved: () => void }) {
+  const tc = useTranslations("common");
   const [adminId, setAdminId] = useState("");
   const [reason, setReason] = useState<"resignation" | "termination" | "retirement" | "end_contract">("resignation");
   const [lastDay, setLastDay] = useState(new Date().toISOString().slice(0, 10));
@@ -159,7 +161,7 @@ function StartDialog({ open, candidates, onClose, onSaved }: { open: boolean; ca
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Successeur</Label>
             <Select value={successorId || "none"} onValueChange={(v) => setSuccessorId(v === "none" ? "" : v)}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Aucun" /></SelectTrigger>
+              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={tc("none")} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">— Aucun —</SelectItem>
                 {candidates.filter((c) => String(c.id) !== adminId).map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>)}
@@ -168,7 +170,7 @@ function StartDialog({ open, candidates, onClose, onSaved }: { open: boolean; ca
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending}>{pending ? "..." : "Démarrer"}</Button>
         </DialogFooter>
       </DialogContent>
@@ -177,6 +179,7 @@ function StartDialog({ open, candidates, onClose, onSaved }: { open: boolean; ca
 }
 
 function DetailDialog({ offboard, onClose, onChanged }: { offboard: Offboard | null; onClose: () => void; onChanged: () => void }) {
+  const tc = useTranslations("common");
   const [exitNotes, setExitNotes] = useState(offboard?.exitInterview ?? "");
   const [pending, setPending] = useState(false);
 
@@ -308,7 +311,7 @@ function DetailDialog({ offboard, onClose, onChanged }: { offboard: Offboard | n
           ) : (
             <span className="text-xs text-muted-foreground">Compte désactivé · sessions fermées</span>
           )}
-          <Button variant="outline" onClick={onClose}>Fermer</Button>
+          <Button variant="outline" onClick={onClose}>{tc("close")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

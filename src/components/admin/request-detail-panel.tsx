@@ -1,6 +1,7 @@
 "use client";
 // RequestDetailPanel — slide-out VNK avec edition inline + conversion en mandat/devis
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -68,6 +69,7 @@ export function RequestDetailPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
   const { confirm, ConfirmModal } = useConfirm();
@@ -178,7 +180,7 @@ export function RequestDetailPanel({
       headerStats={
         request ? (
           <div className="grid grid-cols-3 gap-2">
-            <PanelStatBox icon={Tag} label="Statut" value={
+            <PanelStatBox icon={Tag} label={tc("status")} value={
               request.status === "new" ? "Nouvelle"
               : request.status === "in_progress" ? "Traitement"
               : request.status === "converted" ? "Convertie"
@@ -227,7 +229,7 @@ export function RequestDetailPanel({
                     if (request.convertedToMandateId) openEntity("mandate", request.convertedToMandateId);
                     else if (request.convertedToQuoteId) openEntity("quote", request.convertedToQuoteId);
                   }}>
-                  <ExternalLink className="h-3 w-3 mr-1" />Voir
+                  <ExternalLink className="h-3 w-3 mr-1" />{tc("view")}
                 </Button>
               </div>
             </div>
@@ -236,7 +238,7 @@ export function RequestDetailPanel({
           {/* Section Statut & traitement */}
           <PanelSection icon={Tag} title="Statut & traitement">
             <EditableField
-              label="Statut"
+              label={tc("status")}
               display={<StatusBadge status={request.status} />}
               renderEdit={(v, setV) => (
                 <Select value={v} onValueChange={setV}>
@@ -421,7 +423,7 @@ export function RequestDetailPanel({
             </div>
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-card sm:gap-2">
-            <Button variant="outline" onClick={() => setConvertOpen(false)} disabled={busy}>Annuler</Button>
+            <Button variant="outline" onClick={() => setConvertOpen(false)} disabled={busy}>{tc("cancel")}</Button>
             <Button
               onClick={handleConvert}
               disabled={busy || (convertTarget === "quote" && !convertAmount)}
@@ -520,6 +522,7 @@ function EditableTextarea({
   disabled?: boolean;
   rows?: number;
 }) {
+  const tc = useTranslations("common");
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(initialValue);
   useEffect(() => { if (!editing) setValue(initialValue); }, [initialValue, editing]);
@@ -534,8 +537,8 @@ function EditableTextarea({
       <div className="space-y-2">
         <Textarea value={value} onChange={(e) => setValue(e.target.value)} rows={rows} autoFocus />
         <div className="flex gap-2 justify-end">
-          <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={disabled}>Annuler</Button>
-          <Button size="sm" onClick={handleSave} disabled={disabled} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">Enregistrer</Button>
+          <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={disabled}>{tc("cancel")}</Button>
+          <Button size="sm" onClick={handleSave} disabled={disabled} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">{tc("save")}</Button>
         </div>
       </div>
     );

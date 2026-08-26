@@ -37,6 +37,7 @@ const DURATIONS = [
 type DaySchedule = { enabled: boolean; start: string; end: string };
 
 export function TabDisponibilites() {
+  const tc = useTranslations("common");
   const t = useTranslations("admin.profile.availability");
   const [days, setDays] = useState<Record<string, DaySchedule>>({
     lun: { enabled: true, start: "09:00", end: "17:00" },
@@ -207,7 +208,7 @@ export function TabDisponibilites() {
               <Select value={notice} onValueChange={setNotice}>
                 <SelectTrigger className="mt-1.5 h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">Aucun</SelectItem>
+                  <SelectItem value="0">{tc("none")}</SelectItem>
                   <SelectItem value="60">1 heure</SelectItem>
                   <SelectItem value="120">2 heures</SelectItem>
                   <SelectItem value="1440">24 heures</SelectItem>

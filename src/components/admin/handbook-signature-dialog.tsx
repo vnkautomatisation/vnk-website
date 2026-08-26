@@ -28,6 +28,7 @@
 //   }
 // ─────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertCircle,
   Book,
@@ -79,6 +80,7 @@ export function HandbookSignatureDialog({
     checkboxStates: CheckboxStates,
   ) => Promise<void> | void;
 }) {
+  const tc = useTranslations("common");
   // Detection desktop (>= 1280px) : layout 2 colonnes (iframe PDF gauche
    // | panneau actions droite). Sous 1280px : HandbookSignatureMobile avec
    // UI 2 onglets ET iframe PDF inline dans l'onglet Apercu.
@@ -570,7 +572,7 @@ export function HandbookSignatureDialog({
               onClick={onClose}
               disabled={pending}
             >
-              Annuler
+              {tc("cancel")}
             </Button>
             <Button
               type="button"

@@ -1,6 +1,7 @@
 "use client";
 // Dialog création/édition d'un EmailTemplate avec rich editor + variables.
 import { useState, useEffect, useTransition, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Mail, Code, Variable, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -28,6 +29,7 @@ export function EmailTemplateDialog({
   commonVars: Record<string, string>;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const mode = template ? "edit" : "create";
   const [pending, startTransition] = useTransition();
   const [tab, setTab] = useState<"edit" | "text" | "vars" | "preview">("edit");
@@ -128,7 +130,7 @@ export function EmailTemplateDialog({
             </DialogTitle>
             <p className="text-xs text-white/70">Courriel transactionnel · variables : {`{{nom_variable}}`}</p>
           </div>
-          <Switch checked={isEnabled} onCheckedChange={setIsEnabled} aria-label="Activé" />
+          <Switch checked={isEnabled} onCheckedChange={setIsEnabled} aria-label={tc("enabled")} />
         </div>
 
         <div className="border-b px-6">
@@ -237,7 +239,7 @@ export function EmailTemplateDialog({
         </div>
 
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={handleSave} disabled={pending || !key.trim() || !subject.trim()} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
             {pending ? "..." : "Enregistrer"}
           </Button>

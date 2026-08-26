@@ -1,6 +1,7 @@
 "use client";
 // Vue Mode démo — active/désactive + génère ou purge data fictive.
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ export function DemoView({
   counts: { clients: number; quotes: number; invoices: number };
   isSuperAdmin: boolean;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [confirmDisable, setConfirmDisable] = useState(false);
@@ -67,7 +69,7 @@ export function DemoView({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour"><ChevronLeft className="h-5 w-5" /></Link>
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}><ChevronLeft className="h-5 w-5" /></Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-fuchsia-500 to-violet-500 shrink-0">
           <FlaskConical className="h-6 w-6" />
         </div>
@@ -77,7 +79,7 @@ export function DemoView({
             Génère un jeu de données fictives pour les démonstrations et formations
           </p>
         </div>
-        {enabled && <Badge className="text-[10px] bg-violet-600 hover:bg-violet-600">Actif</Badge>}
+        {enabled && <Badge className="text-[10px] bg-violet-600 hover:bg-violet-600">{tc("active")}</Badge>}
       </div>
 
       {/* Statut */}

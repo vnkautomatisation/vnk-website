@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -60,6 +61,7 @@ export function ClientsView({
   clients: Client[];
   counts: { total: number; active: number; inactive: number; newThisMonth: number };
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
   const [view, setView] = useViewMode("clients", "list");
@@ -593,7 +595,7 @@ export function ClientsView({
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-              <X className="h-3.5 w-3.5 mr-1" />Annuler
+              <X className="h-3.5 w-3.5 mr-1" />{tc("cancel")}
             </Button>
             <Button size="sm" variant="destructive" onClick={handleBulkArchive}>
               <Archive className="h-3.5 w-3.5 mr-1" />Archiver tous
@@ -782,6 +784,7 @@ function ClientFormDialog({
   setters: FormSetters;
   onSubmit: () => Promise<{ success: boolean; error?: string }>;
 }) {
+  const tc = useTranslations("common");
   const [submitting, setSubmitting] = useState(false);
   const isCreate = mode === "create";
 
@@ -824,7 +827,7 @@ function ClientFormDialog({
         {/* Body scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-muted/30">
           {loading ? (
-            <div className="text-center py-12 text-sm text-muted-foreground">Chargement…</div>
+            <div className="text-center py-12 text-sm text-muted-foreground">{tc("loading")}</div>
           ) : (
             <>
               <FormSection title="Identité" icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>}>
@@ -894,7 +897,7 @@ function ClientFormDialog({
         {/* Footer fixe */}
         <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             onClick={handleSubmit}

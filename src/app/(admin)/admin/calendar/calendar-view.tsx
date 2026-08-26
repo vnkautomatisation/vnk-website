@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -142,6 +143,7 @@ export function CalendarView({
   appointments: Appointment[];
   clients: ClientOption[];
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
   const { confirm, ConfirmModal } = useConfirm();
@@ -547,11 +549,11 @@ export function CalendarView({
       {/* Toolbar : navigation + toggle vue */}
       <div className="flex items-center justify-between gap-2 flex-wrap shrink-0">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={goPrev} aria-label="Précédent">
+          <Button variant="outline" size="sm" onClick={goPrev} aria-label={tc("previous")}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={goToday}>Aujourd&apos;hui</Button>
-          <Button variant="outline" size="sm" onClick={goNext} aria-label="Suivant">
+          <Button variant="outline" size="sm" onClick={goNext} aria-label={tc("next")}>
             <ChevronRight className="h-4 w-4" />
           </Button>
           <span className="text-sm font-medium ml-2 capitalize">{periodLabel}</span>
@@ -762,7 +764,7 @@ export function CalendarView({
             </FormSection>
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
-            <Button variant="outline" onClick={() => setCreateSlotOpen(false)} disabled={submitting}>Annuler</Button>
+            <Button variant="outline" onClick={() => setCreateSlotOpen(false)} disabled={submitting}>{tc("cancel")}</Button>
             <Button onClick={handleCreateSlot} disabled={submitting} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md">
               {submitting ? "Création…" : (slotClientId ? "Créer le rendez-vous" : "Créer le créneau")}
             </Button>
@@ -843,7 +845,7 @@ export function CalendarView({
             </FormSection>
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
-            <Button variant="outline" onClick={() => setCreateApptOpen(false)} disabled={submitting}>Annuler</Button>
+            <Button variant="outline" onClick={() => setCreateApptOpen(false)} disabled={submitting}>{tc("cancel")}</Button>
             <Button onClick={handleCreateAppt} disabled={submitting} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md">
               {submitting ? "Création…" : "Créer le rendez-vous"}
             </Button>
@@ -915,7 +917,7 @@ export function CalendarView({
             </div>
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-card sm:gap-2">
-            <Button variant="outline" onClick={() => setBulkOpen(false)} disabled={submitting}>Annuler</Button>
+            <Button variant="outline" onClick={() => setBulkOpen(false)} disabled={submitting}>{tc("cancel")}</Button>
             <Button onClick={handleBulkCreate} disabled={submitting} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md">
               <Repeat className="h-4 w-4 mr-1.5" />{submitting ? "Génération…" : "Générer"}
             </Button>
@@ -1151,6 +1153,7 @@ function MonthView({
 // ─── Chips ─────────────────────────────────────────────────
 
 function SlotChip({ slot, onAction, compact }: { slot: Slot; onAction: (s: Slot, action: "delete" | "toggle" | "book") => void; compact?: boolean }) {
+  const tc = useTranslations("common");
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -1178,7 +1181,7 @@ function SlotChip({ slot, onAction, compact }: { slot: Slot; onAction: (s: Slot,
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => onAction(slot, "delete")} className="text-destructive">
-          <X className="h-3 w-3 mr-2" />Supprimer
+          <X className="h-3 w-3 mr-2" />{tc("delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

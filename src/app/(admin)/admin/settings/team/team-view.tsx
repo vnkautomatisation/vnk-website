@@ -1,6 +1,7 @@
 "use client";
 // Vue Équipe — 3 sous-onglets : Utilisateurs · Rôles · Postes
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -158,6 +159,7 @@ export function TeamView({
   defaultTab?: Tab;
   hideTabs?: boolean;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(defaultTab);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
@@ -863,7 +865,7 @@ export function TeamView({
               Filtres rapides :
             </span>
             <QuickChip
-              label="Tous"
+              label={tc("all")}
               active={quickFilter === "none"}
               onClick={() => setQuickFilter("none")}
             />
@@ -1185,7 +1187,7 @@ export function TeamView({
                   // Filtres appliqués mais aucun résultat
                   <div className="p-12 text-center">
                     <Search className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-sm font-medium">Aucun résultat</p>
+                    <p className="text-sm font-medium">{tc("no_results")}</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Ajustez vos filtres ou la recherche.
                     </p>
@@ -1254,7 +1256,7 @@ export function TeamView({
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-sm leading-tight">{u.fullName || u.email}</p>
                         {isMe && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Vous</Badge>}
-                        {!u.isActive && <Badge className="text-[9px] px-1.5 py-0 bg-gray-500 hover:bg-gray-500">Désactivé</Badge>}
+                        {!u.isActive && <Badge className="text-[9px] px-1.5 py-0 bg-gray-500 hover:bg-gray-500">{tc("disabled")}</Badge>}
                         {u.twoFactorEnabled && (
                           <Badge className="text-[9px] px-1.5 py-0 bg-emerald-600 hover:bg-emerald-600">2FA</Badge>
                         )}
@@ -1354,7 +1356,7 @@ export function TeamView({
                           <FolderOpen className="h-4 w-4 mr-2" />Voir le dossier
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setUserDialog({ open: true, user: u })}>
-                          <Edit className="h-4 w-4 mr-2" />Modifier
+                          <Edit className="h-4 w-4 mr-2" />{tc("edit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setUserDialog({ open: true, user: u, initialTab: "password" })}>
                           <Key className="h-4 w-4 mr-2" />Réinitialiser le mot de passe
@@ -1373,7 +1375,7 @@ export function TeamView({
                               onClick={() => setConfirmDelete({ type: "user", id: u.id, label: u.fullName || u.email })}
                               className="text-red-600 focus:text-red-600"
                             >
-                              <Trash2 className="h-4 w-4 mr-2" />Supprimer
+                              <Trash2 className="h-4 w-4 mr-2" />{tc("delete")}
                             </DropdownMenuItem>
                           </>
                         )}
@@ -1486,7 +1488,7 @@ export function TeamView({
             ) : (
               <div className="rounded-xl border bg-card p-12 text-center">
                 <Search className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-sm font-medium">Aucun résultat</p>
+                <p className="text-sm font-medium">{tc("no_results")}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Essayez un autre terme de recherche.
                 </p>
@@ -1559,7 +1561,7 @@ export function TeamView({
                                 className="text-red-600 focus:text-red-600 focus:bg-red-50"
                                 disabled={r._count.admins > 0 || r._count.positions > 0}
                               >
-                                <Trash2 className="h-4 w-4" />Supprimer
+                                <Trash2 className="h-4 w-4" />{tc("delete")}
                               </DropdownMenuItem>
                             </>
                           )}
@@ -1688,7 +1690,7 @@ export function TeamView({
             ) : (
               <div className="rounded-xl border bg-card p-12 text-center">
                 <Search className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-sm font-medium">Aucun résultat</p>
+                <p className="text-sm font-medium">{tc("no_results")}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Essayez un autre terme de recherche.
                 </p>
@@ -1738,7 +1740,7 @@ export function TeamView({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenuItem onClick={() => setPositionDialog({ open: true, position: p })}>
-                          <Edit className="h-4 w-4" />Modifier
+                          <Edit className="h-4 w-4" />{tc("edit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => movePosition(p.id, "up")}>
                           <ArrowUp className="h-4 w-4" />Monter
@@ -1754,7 +1756,7 @@ export function TeamView({
                               className="text-red-600 focus:text-red-600 focus:bg-red-50"
                               disabled={p._count.admins > 0}
                             >
-                              <Trash2 className="h-4 w-4" />Supprimer
+                              <Trash2 className="h-4 w-4" />{tc("delete")}
                             </DropdownMenuItem>
                           </>
                         )}
@@ -1991,7 +1993,7 @@ export function TeamView({
                 setOffboardingChecklist({});
               }}
             >
-              Annuler
+              {tc("cancel")}
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
               <UserX className="h-4 w-4 mr-1.5" />
@@ -2007,7 +2009,7 @@ export function TeamView({
         onOpenChange={(open) => !open && setConfirmDelete(null)}
         title={`Supprimer ${confirmDelete?.label} ?`}
         description="Cette action est irréversible."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleConfirmDelete}
       />
@@ -2248,7 +2250,7 @@ export function TeamView({
           </Button>
           <div className="h-5 w-px bg-white/20 shrink-0" />
           <Button size="sm" variant="ghost" onClick={() => setBulkConfirmDelete(true)} className="text-red-300 hover:bg-red-500/20 hover:text-red-200 h-8 shrink-0">
-            <Trash2 className="h-3.5 w-3.5 mr-1.5" />Supprimer
+            <Trash2 className="h-3.5 w-3.5 mr-1.5" />{tc("delete")}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} className="text-white/70 hover:bg-white/10 hover:text-white h-8 shrink-0">
             <X className="h-3.5 w-3.5" />
@@ -2305,7 +2307,7 @@ export function TeamView({
             </div>
           </div>
           <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-            <Button variant="outline" onClick={() => { setBulkConfirmDelete(false); setBulkReassignToId("none"); }}>Annuler</Button>
+            <Button variant="outline" onClick={() => { setBulkConfirmDelete(false); setBulkReassignToId("none"); }}>{tc("cancel")}</Button>
             <Button variant="destructive" onClick={() => {
               handleBulkAction("delete", bulkReassignToId !== "none" ? Number(bulkReassignToId) : null);
               setBulkConfirmDelete(false);
@@ -2478,6 +2480,7 @@ function InlinePicker({
   emptyTone?: "warning";
   onChange: (newId: number | null) => void | Promise<void>;
 }) {
+  const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const filtered = options.filter((o) =>
@@ -2548,7 +2551,7 @@ function InlinePicker({
             <span className="text-muted-foreground italic">{emptyLabel}</span>
           </button>
           {filtered.length === 0 ? (
-            <p className="px-2 py-2 text-xs text-muted-foreground italic">Aucun résultat</p>
+            <p className="px-2 py-2 text-xs text-muted-foreground italic">{tc("no_results")}</p>
           ) : (
             filtered.map((o) => (
               <button

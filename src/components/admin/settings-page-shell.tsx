@@ -23,6 +23,7 @@
 //   </SettingsPageShell>
 // ─────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -53,6 +54,7 @@ export function SettingsPageShell({
   stickyBadges?: StickyBadge[]; // info affichée dans la barre sticky
   children: React.ReactNode;
 }) {
+  const tc = useTranslations("common");
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
 
@@ -85,7 +87,7 @@ export function SettingsPageShell({
             <Link
               href={backHref}
               className="mt-1.5 text-white/60 hover:text-white transition-colors -ml-1"
-              aria-label="Retour"
+              aria-label={tc("back")}
             >
               <ChevronLeft className="h-5 w-5" />
             </Link>

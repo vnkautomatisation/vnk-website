@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -182,6 +183,7 @@ function IntegrationDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   // Pour chaque champ, on garde l'état :
   // - valeur affichée (vide si jamais configuré, "••••" si configuré et non révélé, vraie valeur si révélé/édité)
   // - "isMasked" = true si on n'a pas révélé, donc en cas de save on ignore ce champ
@@ -447,7 +449,7 @@ function IntegrationDialog({
                   {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Tester"}
                 </Button>
               )}
-              <Button variant="outline" onClick={onClose}>Annuler</Button>
+              <Button variant="outline" onClick={onClose}>{tc("cancel")}</Button>
               <Button onClick={handleSave} disabled={pending}>
                 {pending ? "Enregistrement…" : "Enregistrer"}
               </Button>
@@ -457,7 +459,7 @@ function IntegrationDialog({
 
         {provider.oauthFlow && (
           <DialogFooter className="px-5 pb-5">
-            <Button variant="outline" onClick={onClose}>Fermer</Button>
+            <Button variant="outline" onClick={onClose}>{tc("close")}</Button>
           </DialogFooter>
         )}
       </DialogContent>
@@ -570,7 +572,7 @@ function IntegrationDialog({
           </div>
 
           <DialogFooter className="px-5 pb-5">
-            <Button variant="outline" onClick={() => setRevealDialog(false)}>Annuler</Button>
+            <Button variant="outline" onClick={() => setRevealDialog(false)}>{tc("cancel")}</Button>
             <Button
               onClick={handleRevealSubmit}
               disabled={revealing || !revealCode.trim() || (revealMethod === "email" && !emailChallengeId)}

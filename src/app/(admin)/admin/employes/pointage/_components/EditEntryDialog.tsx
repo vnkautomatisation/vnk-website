@@ -1,6 +1,7 @@
 "use client";
 // Edit a time entry: start (date + time) and duration are both editable.
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Pencil, Calendar, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ export function EditEntryDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const initialStart = useMemo(() => {
     const d = new Date(entry.clockIn);
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -129,7 +131,7 @@ export function EditEntryDialog({
           </FormSection>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending || durationMin <= 0 || !startDate}>
             {pending ? "..." : "Enregistrer"}
           </Button>

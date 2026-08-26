@@ -18,6 +18,7 @@ import {
 import type { AdminProfile } from "../profile-view";
 
 export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
+  const tc = useTranslations("common");
   const t = useTranslations("admin.profile.privacy");
   const [exporting, setExporting] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -223,7 +224,7 @@ export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
             </div>
           </div>
           <DialogFooter className="px-5 pb-5">
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Annuler</Button>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>{tc("cancel")}</Button>
             <Button variant="destructive" onClick={handleDeleteRequest} disabled={deletePending || deleteConfirm !== admin.email}>
               {deletePending ? "…" : t("send_request")}
             </Button>

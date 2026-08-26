@@ -11,6 +11,7 @@
 // signContract (employee/employer), terminateContract.
 // =============================================================
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -196,6 +197,7 @@ export function ContractsView({
   currentAdminId: number;
   isHr: boolean;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<TabKey>(isHr ? "overview" : "contracts");
 
@@ -679,7 +681,7 @@ export function ContractsView({
         onOpenChange={(o) => !o && setConfirmDelTpl(null)}
         title={`Supprimer ${confirmDelTpl?.name ?? ""} ?`}
         description="Si le template est deja utilise, il sera desactive au lieu d'etre supprime."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDelTpl) return;
@@ -995,6 +997,7 @@ function ContractsTab({
   onNewContract: () => void;
   templateById: Map<number, Template>;
 }) {
+  const tc = useTranslations("common");
   // Mes contrats vs ceux des autres
   const myContracts = useMemo(
     () => contracts.filter((c) => c.adminId === currentAdminId),
@@ -1111,7 +1114,7 @@ function ContractsTab({
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Statut" />
+                  <SelectValue placeholder={tc("status")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous les statuts</SelectItem>
@@ -1225,6 +1228,7 @@ function ContractRichCard({
   /** Template source pour activer l'apercu PDF des contrats brouillons. */
   template: Template | null;
 }) {
+  const tc = useTranslations("common");
   const c = contract;
   const status = STATUS_TONE[c.status] ?? { label: c.status, tone: "neutral" as const };
   const canSignEmployee = mine && c.status === "sent" && !c.employeeSignedAt;
@@ -1297,7 +1301,7 @@ function ContractRichCard({
           {canSend && (
             <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onSend}>
               <Send className="h-3 w-3 mr-1" />
-              Envoyer
+              {tc("send")}
             </Button>
           )}
           {canSignEmployee && (
@@ -1490,6 +1494,7 @@ function TemplateCard({
   onDelete: () => void;
   onPreview: () => void;
 }) {
+  const tc = useTranslations("common");
   const meta: string[] = [];
   if (t.defaultSalary != null) meta.push(`${Number(t.defaultSalary).toLocaleString("fr-CA")} $/an`);
   if (t.defaultRate != null) meta.push(`${Number(t.defaultRate).toFixed(2)} $/h`);
@@ -1529,26 +1534,26 @@ function TemplateCard({
                 <Eye className="h-4 w-4" />
               </Button>
             </ActionTooltip>
-            <ActionTooltip label="Modifier">
+            <ActionTooltip label={tc("edit")}>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
                 onClick={onEdit}
-                aria-label="Modifier"
+                aria-label={tc("edit")}
               >
                 <FileText className="h-4 w-4" />
               </Button>
             </ActionTooltip>
-            <ActionTooltip label="Supprimer">
+            <ActionTooltip label={tc("delete")}>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 hover:text-destructive"
                 onClick={onDelete}
-                aria-label="Supprimer"
+                aria-label={tc("delete")}
               >
                 <Ban className="h-4 w-4" />
               </Button>
@@ -1588,6 +1593,7 @@ function SignDialog({
   onClose: () => void;
   onSigned: () => void;
 }) {
+  const tc = useTranslations("common");
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [pending, setPending] = useState(false);
@@ -1705,7 +1711,7 @@ function SignDialog({
             Effacer
           </Button>
           <Button variant="outline" onClick={onClose} disabled={pending}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             onClick={submit}

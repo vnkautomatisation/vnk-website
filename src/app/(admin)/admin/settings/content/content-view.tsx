@@ -1,6 +1,7 @@
 "use client";
 // Vue Contenu — 3 sous-onglets : Blog · FAQ · Témoignages.
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -55,6 +56,7 @@ export function ContentView({
   faqs: FaqRow[];
   testimonials: TestimonialRow[];
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("blog");
 
@@ -125,7 +127,7 @@ export function ContentView({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour"><ChevronLeft className="h-5 w-5" /></Link>
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}><ChevronLeft className="h-5 w-5" /></Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-teal-500 shrink-0">
           <Newspaper className="h-6 w-6" />
         </div>
@@ -204,12 +206,12 @@ export function ContentView({
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setPostDialog({ open: true, post: p })}><Edit className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setPostDialog({ open: true, post: p })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => togglePostStatus(p)}>
                         {p.status === "published" ? (<><EyeOff className="h-4 w-4 mr-2" />Dépublier</>) : (<><Eye className="h-4 w-4 mr-2" />Publier</>)}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "post", id: p.id, label: p.title })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "post", id: p.id, label: p.title })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -248,10 +250,10 @@ export function ContentView({
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setFaqDialog({ open: true, faq: f })}><Edit className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setFaqDialog({ open: true, faq: f })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => toggleFaqPublished(f)}><Power className="h-4 w-4 mr-2" />{f.isPublished ? "Masquer" : "Publier"}</DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "faq", id: f.id, label: f.question })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "faq", id: f.id, label: f.question })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -305,7 +307,7 @@ export function ContentView({
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setTestimonialDialog({ open: true, t })}><Edit className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setTestimonialDialog({ open: true, t })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => toggleTestimonialApproved(t)}>
                           {t.isApproved ? <><EyeOff className="h-4 w-4 mr-2" />Retirer</> : <><Eye className="h-4 w-4 mr-2" />Approuver</>}
                         </DropdownMenuItem>
@@ -313,7 +315,7 @@ export function ContentView({
                           <Star className="h-4 w-4 mr-2" />{t.isFeatured ? "Retirer vitrine" : "Mettre en vitrine"}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "testimonial", id: t.id, label: t.clientName })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "testimonial", id: t.id, label: t.clientName })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -353,7 +355,7 @@ export function ContentView({
         onOpenChange={(open) => !open && setConfirmDelete(null)}
         title={`Supprimer ${confirmDelete?.label} ?`}
         description="Cette action est irréversible."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleConfirmDelete}
       />

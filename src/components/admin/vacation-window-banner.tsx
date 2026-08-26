@@ -6,6 +6,7 @@
 //   - in_review  : "RH revise les preferences"
 //   - allocated  : afficher granted/denied par rang
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarRange, Plus, Trash2, Clock, CheckCircle2, XCircle, Lock, Eye, Users, ChevronLeft, ChevronRight, Megaphone, Undo2 } from "lucide-react";
@@ -352,6 +353,7 @@ const ABS_TYPE_LABELS: Record<string, string> = {
 };
 
 function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onClose: () => void }) {
+  const tc = useTranslations("common");
   type AnonHeat = { date: string; count: number };
   const [prefByDate, setPrefByDate] = useState<Map<string, number>>(new Map());
   const [submittedCount, setSubmittedCount] = useState<number | null>(null);
@@ -606,7 +608,7 @@ function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onCl
           })()}
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
-          <Button variant="outline" onClick={onClose}>Fermer</Button>
+          <Button variant="outline" onClick={onClose}>{tc("close")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -851,6 +853,7 @@ function EmployeeRow({
 }
 
 function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose: () => void }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   type Choice = { rank: number; startDate: string; endDate: string };
   const initialChoices: Choice[] = w.myPreferences.length > 0
@@ -978,7 +981,7 @@ function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose
           )}
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button
             onClick={submit}
             disabled={pending}

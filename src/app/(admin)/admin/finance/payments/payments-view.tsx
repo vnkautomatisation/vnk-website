@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -200,6 +201,7 @@ export function PaymentsView({
   countryList: string[];
   kpis: Kpis;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
 
@@ -658,7 +660,7 @@ export function PaymentsView({
               <DropdownMenuTrigger asChild>
                 <Button size="sm" className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold">
                   <Download className="h-3.5 w-3.5 mr-1.5" />
-                  Exporter
+                  {tc("export")}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -810,7 +812,7 @@ export function PaymentsView({
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Pays du client</Label>
                 <Select value={countryFilter} onValueChange={setCountryFilter}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tous" /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={tc("all")} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les pays</SelectItem>
                     {countryList.map((c) => (
@@ -825,9 +827,9 @@ export function PaymentsView({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Statut</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{tc("status")}</Label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tous" /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={tc("all")} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les statuts</SelectItem>
                     {statusList.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -837,7 +839,7 @@ export function PaymentsView({
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Moyen de paiement</Label>
                 <Select value={methodFilter} onValueChange={setMethodFilter}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tous" /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={tc("all")} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Toutes méthodes</SelectItem>
                     {methodList.map((m) => <SelectItem key={m} value={m} className="capitalize">{METHOD_LABELS[m] ?? m}</SelectItem>)}
@@ -913,7 +915,7 @@ export function PaymentsView({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs">
-                <Download className="h-3 w-3 mr-1" />Exporter <MoreHorizontal className="h-3 w-3 ml-1" />
+                <Download className="h-3 w-3 mr-1" />{tc("export")} <MoreHorizontal className="h-3 w-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -924,7 +926,7 @@ export function PaymentsView({
             </DropdownMenuContent>
           </DropdownMenu>
           <Button size="sm" variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 h-7 text-xs" onClick={() => setSelectedIds(new Set())}>
-            <X className="h-3 w-3 mr-1" />Annuler
+            <X className="h-3 w-3 mr-1" />{tc("cancel")}
           </Button>
         </div>
       )}

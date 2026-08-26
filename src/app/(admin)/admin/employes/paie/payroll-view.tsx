@@ -11,6 +11,7 @@
 //  - ActionTooltip (jamais title="...")
 // =============================================================
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -717,6 +718,7 @@ function PeriodCard({ period, onChanged }: { period: Period; onChanged: () => vo
 // TAB : STUBS (admin)
 // =============================================================
 function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Period[]; onOpenPdf: (s: Stub) => void }) {
+  const tc = useTranslations("common");
   const [search, setSearch] = useState("");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all"); // all | released | draft
@@ -775,7 +777,7 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Statut" /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={tc("status")} /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous statuts</SelectItem>
               <SelectItem value="released">Publies</SelectItem>
@@ -1005,6 +1007,7 @@ function CreatePeriodDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const today = new Date();
   const twoWeeksAgo = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
   const [start, setStart] = useState(twoWeeksAgo.toISOString().slice(0, 10));
@@ -1061,7 +1064,7 @@ function CreatePeriodDialog({
           </FormSection>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button
             onClick={submit}
             disabled={pending}

@@ -1,5 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
   Sheet,
   SheetContent,
@@ -42,6 +43,7 @@ export function DetailPanelBase({
   children: ReactNode;
   preventClose?: boolean;
 }) {
+  const tc = useTranslations("common");
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -55,7 +57,7 @@ export function DetailPanelBase({
 
         {loading ? (
           <div className="h-full flex items-center justify-center text-muted-foreground">
-            Chargement…
+            {tc("loading")}
           </div>
         ) : (
           <>

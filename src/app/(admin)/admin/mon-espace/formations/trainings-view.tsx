@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { GraduationCap, BadgeCheck, AlertTriangle, Plus, Edit, Trash2, CheckCircle2 } from "lucide-react";
@@ -31,6 +32,7 @@ function ExpiryBadge({ date }: { date: string | null }) {
 }
 
 export function TrainingsView({ adminId, licenses, trainings }: { adminId: number; licenses: License[]; trainings: Training[] }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<"licenses" | "trainings">("licenses");
   const [licenseDialog, setLicenseDialog] = useState<{ open: boolean; existing: License | null }>({ open: false, existing: null });
@@ -75,7 +77,7 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <h3 className="font-bold text-sm">{l.type}</h3>
-                    {l.isMandatory && <Badge variant="outline" className="text-[9px] text-red-700 border-red-300 bg-red-50">Obligatoire</Badge>}
+                    {l.isMandatory && <Badge variant="outline" className="text-[9px] text-red-700 border-red-300 bg-red-50">{tc("required")}</Badge>}
                     <ExpiryBadge date={l.expiresAt} />
                   </div>
                   <p className="text-xs text-muted-foreground">{l.issuer ?? "—"}{l.number && ` · n° ${l.number}`}</p>
@@ -84,10 +86,10 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
                   )}
                 </div>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setLicenseDialog({ open: true, existing: l })} aria-label="Modifier">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setLicenseDialog({ open: true, existing: l })} aria-label={tc("edit")}>
                     <Edit className="h-3.5 w-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDelLic(l)} aria-label="Supprimer">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDelLic(l)} aria-label={tc("delete")}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -108,7 +110,7 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <h3 className="font-bold text-sm">{t.title}</h3>
                     <Badge variant="outline" className="text-[9px]">{t.category}</Badge>
-                    {t.isMandatory && <Badge variant="outline" className="text-[9px] text-red-700 border-red-300 bg-red-50">Obligatoire</Badge>}
+                    {t.isMandatory && <Badge variant="outline" className="text-[9px] text-red-700 border-red-300 bg-red-50">{tc("required")}</Badge>}
                     <ExpiryBadge date={t.expiresAt} />
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -123,10 +125,10 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
                   )}
                 </div>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setTrainingDialog({ open: true, existing: t })} aria-label="Modifier">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setTrainingDialog({ open: true, existing: t })} aria-label={tc("edit")}>
                     <Edit className="h-3.5 w-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDelTr(t)} aria-label="Supprimer">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDelTr(t)} aria-label={tc("delete")}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -144,7 +146,7 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
         onOpenChange={(o) => !o && setConfirmDelLic(null)}
         title={`Supprimer ${confirmDelLic?.type} ?`}
         description="Ce permis sera retiré de votre dossier."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDelLic) return;
@@ -158,7 +160,7 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
         onOpenChange={(o) => !o && setConfirmDelTr(null)}
         title={`Supprimer ${confirmDelTr?.title} ?`}
         description="Cette formation sera retirée de votre dossier."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDelTr) return;
@@ -172,6 +174,7 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
 }
 
 function LicenseDialog({ open, existing, adminId, onClose, onSaved }: { open: boolean; existing: License | null; adminId: number; onClose: () => void; onSaved: () => void }) {
+  const tc = useTranslations("common");
   const [type, setType] = useState(existing?.type ?? "");
   const [number, setNumber] = useState(existing?.number ?? "");
   const [issuer, setIssuer] = useState(existing?.issuer ?? "");
@@ -246,7 +249,7 @@ function LicenseDialog({ open, existing, adminId, onClose, onSaved }: { open: bo
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending}>{pending ? "..." : "Enregistrer"}</Button>
         </DialogFooter>
       </DialogContent>
@@ -255,6 +258,7 @@ function LicenseDialog({ open, existing, adminId, onClose, onSaved }: { open: bo
 }
 
 function TrainingDialog({ open, existing, adminId, onClose, onSaved }: { open: boolean; existing: Training | null; adminId: number; onClose: () => void; onSaved: () => void }) {
+  const tc = useTranslations("common");
   const [title, setTitle] = useState(existing?.title ?? "");
   const [category, setCategory] = useState(existing?.category ?? "safety");
   const [provider, setProvider] = useState(existing?.provider ?? "");
@@ -342,7 +346,7 @@ function TrainingDialog({ open, existing, adminId, onClose, onSaved }: { open: b
           </label>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending}>{pending ? "..." : "Enregistrer"}</Button>
         </DialogFooter>
       </DialogContent>

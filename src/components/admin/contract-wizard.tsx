@@ -19,6 +19,7 @@
 // DialogFooter sticky, DatePopover, ActionTooltip, texte FR.
 // =============================================================
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   FileSignature,
@@ -206,6 +207,7 @@ export function ContractWizard({
   templates,
   onCreate,
 }: Props) {
+  const tc = useTranslations("common");
   // ---- Wizard state ---------------------------------------------
   const [step, setStep] = useState(1);
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -685,7 +687,7 @@ export function ContractWizard({
             disabled={submitting}
             className="sm:mr-auto"
           >
-            Annuler
+            {tc("cancel")}
           </Button>
           {step > 1 && (
             <Button
@@ -703,7 +705,7 @@ export function ContractWizard({
               disabled={!canNext}
               className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             >
-              Suivant
+              {tc("next")}
               <ChevronRight className="h-3.5 w-3.5 ml-1.5" />
             </Button>
           )}
@@ -768,7 +770,7 @@ export function ContractWizard({
           </div>
           <div className="border-t bg-muted/30 px-3 sm:px-5 py-2 sm:py-3 flex flex-wrap justify-end gap-2 [&>button]:flex-1 sm:[&>button]:flex-initial">
             <Button variant="outline" onClick={() => setEditorSheetOpen(false)}>
-              Annuler
+              {tc("cancel")}
             </Button>
             <Button
               onClick={saveEditor}

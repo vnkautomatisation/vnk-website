@@ -22,6 +22,7 @@ export function DayDetailPanel({
   entries: Entry[];
   onEdit: (entry: Entry) => void;
 }) {
+  const tc = useTranslations("common");
   const t = useTranslations("admin.timeclock");
   const dateLabel = capFirst(new Date(date + "T12:00:00").toLocaleDateString("fr-CA", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -102,7 +103,7 @@ export function DayDetailPanel({
                         variant="ghost"
                         className="h-6 w-6 shrink-0"
                         onClick={() => onEdit(e)}
-                        aria-label="Modifier"
+                        aria-label={tc("edit")}
                       >
                         <Pencil className="h-3 w-3" />
                       </Button>

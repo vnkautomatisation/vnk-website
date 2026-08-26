@@ -2,6 +2,7 @@
 // Dialog création/édition d'un PdfTemplate avec sections header/body/footer +
 // configuration page (taille, marges, couleur d'accent).
 import { useState, useEffect, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { FileSignature, Variable, Palette, Ruler, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -30,6 +31,7 @@ export function PdfTemplateDialog({
   commonVars: Record<string, string>;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const mode = template ? "edit" : "create";
   const [pending, startTransition] = useTransition();
   const [section, setSection] = useState<Section>("body");
@@ -66,7 +68,7 @@ export function PdfTemplateDialog({
       setKey(defaultKey ?? "");
       setLocale("fr"); setIsEnabled(true);
       setHeaderHtml('<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid {{accent}};padding-bottom:8px"><img src="{{company_logo}}" style="height:48px" /><div style="text-align:right"><h1 style="color:{{accent}};margin:0">{{document_title}}</h1><p style="margin:4px 0 0;color:#666">{{document_number}}</p></div></div>');
-      setBodyHtml('<p>Bonjour {{client_name}},</p>\n<p></p>\n<table style="width:100%;border-collapse:collapse;margin-top:16px">\n  <thead style="background:{{accent}};color:white"><tr><th style="padding:8px;text-align:left">Description</th><th style="padding:8px;text-align:right">Montant</th></tr></thead>\n  <tbody><tr><td style="padding:8px;border-bottom:1px solid #eee">{{item_description}}</td><td style="padding:8px;text-align:right;border-bottom:1px solid #eee">{{item_amount}}</td></tr></tbody>\n</table>');
+      setBodyHtml('<p>Bonjour {{client_name}},</p>\n<p></p>\n<table style="width:100%;border-collapse:collapse;margin-top:16px">\n  <thead style="background:{{accent}};color:white"><tr><th style="padding:8px;text-align:left">Description</th><th style="padding:8px;text-align:right">{tc("amount")}</th></tr></thead>\n  <tbody><tr><td style="padding:8px;border-bottom:1px solid #eee">{{item_description}}</td><td style="padding:8px;text-align:right;border-bottom:1px solid #eee">{{item_amount}}</td></tr></tbody>\n</table>');
       setFooterHtml('<p style="text-align:center;color:#666;font-size:10px">{{company_name}} · {{company_phone}} · {{company_email}} · © {{current_year}}</p>');
       setPageSize("A4"); setMarginTop(40); setMarginRight(40);
       setMarginBottom(40); setMarginLeft(40); setAccentColor("#0F2D52");
@@ -158,7 +160,7 @@ export function PdfTemplateDialog({
             </DialogTitle>
             <p className="text-xs text-white/70">Document PDF · sections en-tête / corps / pied de page</p>
           </div>
-          <Switch checked={isEnabled} onCheckedChange={setIsEnabled} aria-label="Activé" />
+          <Switch checked={isEnabled} onCheckedChange={setIsEnabled} aria-label={tc("enabled")} />
         </div>
 
         {/* Métadonnées en haut */}
@@ -302,7 +304,7 @@ export function PdfTemplateDialog({
         </div>
 
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={handleSave} disabled={pending || !key.trim()} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
             {pending ? "..." : "Enregistrer"}
           </Button>

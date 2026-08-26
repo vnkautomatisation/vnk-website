@@ -12,6 +12,7 @@
 // définit le type localement.
 // ─────────────────────────────────────────────────────────
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   BadgeCheck,
   GraduationCap,
@@ -119,6 +120,7 @@ export function PersonalDocCard({
   onVerify?: (notes: string) => Promise<void> | void;
   className?: string;
 }) {
+  const tc = useTranslations("common");
   const meta = CATEGORY_META[doc.category] ?? CATEGORY_META.other;
   const Icon = meta.icon;
   const issued = formatDate(doc.issuedAt);
@@ -213,42 +215,42 @@ export function PersonalDocCard({
                 </ActionTooltip>
               )}
               {onDownload && (
-                <ActionTooltip label="Télécharger">
+                <ActionTooltip label={tc("download")}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
                     onClick={onDownload}
-                    aria-label="Télécharger"
+                    aria-label={tc("download")}
                   >
                     <Download className="h-4 w-4" />
                   </Button>
                 </ActionTooltip>
               )}
               {onEdit && (
-                <ActionTooltip label="Modifier">
+                <ActionTooltip label={tc("edit")}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
                     onClick={onEdit}
-                    aria-label="Modifier"
+                    aria-label={tc("edit")}
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
                 </ActionTooltip>
               )}
               {onDelete && (
-                <ActionTooltip label="Supprimer">
+                <ActionTooltip label={tc("delete")}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 hover:text-destructive"
                     onClick={onDelete}
-                    aria-label="Supprimer"
+                    aria-label={tc("delete")}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -352,7 +354,7 @@ export function PersonalDocCard({
               onClick={() => setVerifyOpen(false)}
               disabled={verifying}
             >
-              Annuler
+              {tc("cancel")}
             </Button>
             <Button
               type="button"

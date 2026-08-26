@@ -4,6 +4,7 @@
 //
 // Fallback : si l'API d'upload n'existe pas, l'utilisateur peut coller une URL manuellement.
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Upload, FileText, X, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export function FileUploadInput({
   placeholder = "https://… ou cliquez « Téléverser »",
   folder = "uploads",
 }: Props) {
+  const tc = useTranslations("common");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -92,7 +94,7 @@ export function FileUploadInput({
           onClick={() => setMode("upload")}
           className={`px-2 py-1 rounded transition ${mode === "upload" ? "bg-[#0F2D52] text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
         >
-          <Upload className="h-3 w-3 inline mr-1" />Téléverser
+          <Upload className="h-3 w-3 inline mr-1" />{tc("upload")}
         </button>
         <button
           type="button"

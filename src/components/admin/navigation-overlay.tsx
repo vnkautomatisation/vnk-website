@@ -12,6 +12,7 @@
 // L'overlay est NON-bloquant : pointer-events-none sur le wrapper, juste visuel.
 // L'utilisateur peut continuer à interagir avec la page si le chargement tarde.
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
@@ -19,6 +20,7 @@ const SHOW_DELAY_MS = 300; // attendre avant d'afficher (évite flicker sur navs
 const MAX_VISIBLE_MS = 8000; // safety : auto-hide après 8s
 
 export function NavigationOverlay() {
+  const tc = useTranslations("common");
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [visible, setVisible] = useState(false);
@@ -145,7 +147,7 @@ export function NavigationOverlay() {
             <Loader2 className="h-5 w-5 text-white animate-spin" />
           </div>
         </div>
-        <p className="text-sm font-bold text-[#0F2D52]">Chargement…</p>
+        <p className="text-sm font-bold text-[#0F2D52]">{tc("loading")}</p>
         <p className="text-[10px] text-muted-foreground">Cliquez ou appuyez sur Échap pour fermer</p>
       </div>
     </div>

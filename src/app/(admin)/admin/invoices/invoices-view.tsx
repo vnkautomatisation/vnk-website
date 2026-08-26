@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -123,6 +124,7 @@ export function InvoicesView({
   signedContracts: LinkedContract[];
   kpis: { unpaidTotal: number; overdueTotal: number; paidThisMonth: number; overdueCount: number; unpaidCount: number };
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { confirm, ConfirmModal } = useConfirm();
@@ -509,7 +511,7 @@ export function InvoicesView({
         <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors" aria-label="Actions">
+              <button className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors" aria-label={tc("actions")}>
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
@@ -671,7 +673,7 @@ export function InvoicesView({
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-              <X className="h-3.5 w-3.5 mr-1" />Annuler
+              <X className="h-3.5 w-3.5 mr-1" />{tc("cancel")}
             </Button>
             <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
               <Trash2 className="h-3.5 w-3.5 mr-1" />Supprimer tous
@@ -778,7 +780,7 @@ export function InvoicesView({
         onOpenChange={(o) => { if (!o) setDeleteInvoice(null); }}
         title="Supprimer cette facture ?"
         description={`La facture "${deleteInvoice?.invoiceNumber}" sera supprimée définitivement.`}
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
 
@@ -814,7 +816,7 @@ export function InvoicesView({
             </div>
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-card sm:gap-2">
-            <Button variant="outline" onClick={() => setPaidDialog(null)} disabled={submitting}>Annuler</Button>
+            <Button variant="outline" onClick={() => setPaidDialog(null)} disabled={submitting}>{tc("cancel")}</Button>
             <Button onClick={confirmMarkPaid} disabled={submitting} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md">
               {submitting ? "Enregistrement…" : "Confirmer le paiement"}
             </Button>
@@ -872,6 +874,7 @@ function InvoiceFormDialog({
   setters: IFormSetters;
   onSubmit: () => void | Promise<void>;
 }) {
+  const tc = useTranslations("common");
   const isCreate = mode === "create";
   const amountNum = Number(values.amount) || 0;
   const tps = amountNum * 0.05;
@@ -950,7 +953,7 @@ function InvoiceFormDialog({
               <Select value={values.serviceType || "none"} onValueChange={(v) => setters.setServiceType(v === "none" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Sélectionner un service" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Aucun</SelectItem>
+                  <SelectItem value="none">{tc("none")}</SelectItem>
                   {SERVICE_TYPES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -1092,7 +1095,7 @@ function InvoiceFormDialog({
               </div>
               {!isCreate && (
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Statut</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{tc("status")}</Label>
                   <Select value={values.status} onValueChange={setters.setStatus}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -1106,7 +1109,7 @@ function InvoiceFormDialog({
         </div>
 
         <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Annuler</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>{tc("cancel")}</Button>
           <Button
             onClick={onSubmit}
             disabled={submitting || !values.title.trim() || !values.amount || (isCreate && !values.clientId)}

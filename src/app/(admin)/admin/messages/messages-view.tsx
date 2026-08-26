@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -170,6 +171,7 @@ export function MessagesView({
   templates: Template[];
   kpis: { totalConversations: number; totalMessages: number; todayMessages: number; weekMessages: number; totalUnread: number };
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { open: openEntity } = useEntityPanels();
@@ -902,7 +904,7 @@ export function MessagesView({
             <>
               {/* Header */}
               <div className="flex items-center gap-2 p-3 border-b shrink-0">
-                <Button variant="ghost" size="sm" className="lg:hidden h-8 w-8 p-0" onClick={() => setSelectedId(null)} aria-label="Retour">
+                <Button variant="ghost" size="sm" className="lg:hidden h-8 w-8 p-0" onClick={() => setSelectedId(null)} aria-label={tc("back")}>
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <button
@@ -990,7 +992,7 @@ export function MessagesView({
                   <div className="flex-1 min-h-0 min-w-0 relative overflow-hidden">
                     {loadingMsgs ? (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <p className="text-sm text-muted-foreground">Chargement…</p>
+                        <p className="text-sm text-muted-foreground">{tc("loading")}</p>
                       </div>
                     ) : virtualItems.length === 0 ? (
                       <div className="absolute inset-0 flex items-center justify-center">
@@ -1280,8 +1282,8 @@ export function MessagesView({
             />
           </div>
           <DialogFooter className="px-4 py-3 border-t bg-card sm:gap-2">
-            <Button variant="outline" onClick={() => setEditingMsg(null)}>Annuler</Button>
-            <Button onClick={handleEditSave} className="bg-[#0F2D52] hover:bg-[#1a3a66]">Enregistrer</Button>
+            <Button variant="outline" onClick={() => setEditingMsg(null)}>{tc("cancel")}</Button>
+            <Button onClick={handleEditSave} className="bg-[#0F2D52] hover:bg-[#1a3a66]">{tc("save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1291,7 +1293,7 @@ export function MessagesView({
         onOpenChange={(o) => { if (!o) setDeleteMsg(null); }}
         title="Supprimer ce message ?"
         description="Le message sera masqué pour tous (texte et pièces jointes). Action irréversible."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
 
@@ -1563,6 +1565,7 @@ function MessageActionsButton({
   canEditDelete?: boolean;
   onReact: (emoji: string) => void;
 }) {
+  const tc = useTranslations("common");
   return (
     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 self-center">
       <Popover>
@@ -1595,7 +1598,7 @@ function MessageActionsButton({
           <button
             type="button"
             className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Actions"
+            aria-label={tc("actions")}
           >
             <MoreVertical className="h-3.5 w-3.5" />
           </button>
@@ -1606,14 +1609,14 @@ function MessageActionsButton({
           </DropdownMenuItem>
           {canEditDelete && onEdit && (
             <DropdownMenuItem onSelect={onEdit}>
-              <Pencil className="h-3.5 w-3.5 mr-2" />Modifier
+              <Pencil className="h-3.5 w-3.5 mr-2" />{tc("edit")}
             </DropdownMenuItem>
           )}
           {canEditDelete && onDelete && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={onDelete} className="text-destructive">
-                <Trash2 className="h-3.5 w-3.5 mr-2" />Supprimer
+                <Trash2 className="h-3.5 w-3.5 mr-2" />{tc("delete")}
               </DropdownMenuItem>
             </>
           )}

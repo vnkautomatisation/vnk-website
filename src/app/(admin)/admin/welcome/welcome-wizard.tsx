@@ -1,6 +1,7 @@
 "use client";
 // Wizard de bienvenue pour les nouveaux utilisateurs invités.
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ type AdminInfo = {
 };
 
 export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require2FA: boolean }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [step, setStep] = useState(1);
@@ -157,7 +159,7 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
 
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
-                  Précédent
+                  {tc("previous")}
                 </Button>
                 {!admin.twoFactorEnabled ? (
                   <Button asChild className="flex-1 bg-[#0F2D52] hover:bg-[#0F2D52]/90">
@@ -213,7 +215,7 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
 
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
-                  Précédent
+                  {tc("previous")}
                 </Button>
                 <Button onClick={finish} disabled={pending} className="flex-1 bg-[#0F2D52] hover:bg-[#0F2D52]/90">
                   {pending ? "..." : (

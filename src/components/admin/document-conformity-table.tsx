@@ -16,6 +16,7 @@
 // pour création bulk et POST /api/admin/signature-requests/[id]/remind.
 // ─────────────────────────────────────────────────────────
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Check,
   X,
@@ -157,6 +158,7 @@ export function DocumentConformityTable({
   onRequest: (templateId: number, employeeIds: number[]) => void | Promise<void>;
   className?: string;
 }) {
+  const tc = useTranslations("common");
   const [search, setSearch] = useState("");
   const [teamFilter, setTeamFilter] = useState<string>("all");
   const [templateFilter, setTemplateFilter] = useState<string>("all");
@@ -388,7 +390,7 @@ export function DocumentConformityTable({
         >
           <SelectTrigger className="h-9 text-sm md:w-44">
             <Filter className="h-3.5 w-3.5 mr-1.5 text-[#0F2D52]" />
-            <SelectValue placeholder="Statut" />
+            <SelectValue placeholder={tc("status")} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous statuts</SelectItem>

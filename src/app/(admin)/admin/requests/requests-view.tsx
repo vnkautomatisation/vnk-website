@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -83,6 +84,7 @@ export function RequestsView({
   requests: Request[];
   kpis: { total: number; newCount: number; inProgress: number; converted: number; criticalCount: number };
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
   const { confirm, ConfirmModal } = useConfirm();
@@ -319,7 +321,7 @@ export function RequestsView({
         <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors" aria-label="Actions">
+              <button className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors" aria-label={tc("actions")}>
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
@@ -491,7 +493,7 @@ export function RequestsView({
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-              <X className="h-3.5 w-3.5 mr-1" />Annuler
+              <X className="h-3.5 w-3.5 mr-1" />{tc("cancel")}
             </Button>
             <Button size="sm" variant="outline" onClick={handleBulkClose}>
               <Lock className="h-3.5 w-3.5 mr-1" />Fermer tous

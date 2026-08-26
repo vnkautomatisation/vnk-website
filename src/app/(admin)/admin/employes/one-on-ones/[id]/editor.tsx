@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
   isEmployee: boolean;
   currentAdminId: number;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [agenda, setAgenda] = useState(meeting.agenda ?? "");
   const [notes, setNotes] = useState(meeting.notes ?? "");
@@ -101,7 +103,7 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
     <div className="space-y-4 max-w-3xl">
       <div className="flex items-center gap-2 text-sm">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/admin/employes/one-on-ones"><ArrowLeft className="h-4 w-4 mr-1" />Retour</Link>
+          <Link href="/admin/employes/one-on-ones"><ArrowLeft className="h-4 w-4 mr-1" />{tc("back")}</Link>
         </Button>
       </div>
 
@@ -176,7 +178,7 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
                 className="h-7 text-xs"
                 onClick={() => { setActionItems((arr) => [...arr, { text: "", owner: "employee", done: false }]); markDirty(); }}
               >
-                <Plus className="h-3 w-3 mr-1" />Ajouter
+                <Plus className="h-3 w-3 mr-1" />{tc("add")}
               </Button>
             )}
           </div>
@@ -269,7 +271,7 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
               }}
               disabled={pending}
             >
-              Annuler
+              {tc("cancel")}
             </Button>
           )}
         </div>

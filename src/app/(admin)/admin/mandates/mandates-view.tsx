@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -104,6 +105,7 @@ export function MandatesView({
   clients: ClientOption[];
   counts: { active: number; pending: number; completed: number; total: number };
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { open: openEntity } = useEntityPanels();
@@ -423,7 +425,7 @@ export function MandatesView({
         <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors" aria-label="Actions">
+              <button className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors" aria-label={tc("actions")}>
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
@@ -591,7 +593,7 @@ export function MandatesView({
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-              <X className="h-3.5 w-3.5 mr-1" />Annuler
+              <X className="h-3.5 w-3.5 mr-1" />{tc("cancel")}
             </Button>
             <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
               <Trash2 className="h-3.5 w-3.5 mr-1" />Supprimer tous
@@ -695,7 +697,7 @@ export function MandatesView({
         onOpenChange={(o) => { if (!o) setDeleteMandate(null); }}
         title="Supprimer ce mandat ?"
         description={`Le mandat "${deleteMandate?.title}" sera supprimé. Cette action est irréversible.`}
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
 
@@ -733,6 +735,7 @@ function MandateFormDialog({
   setters: MFormSetters;
   onSubmit: () => Promise<{ success: boolean; error?: string }>;
 }) {
+  const tc = useTranslations("common");
   const [submitting, setSubmitting] = useState(false);
   const isCreate = mode === "create";
 
@@ -773,7 +776,7 @@ function MandateFormDialog({
         {/* Body scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-muted/30">
           {loading ? (
-            <div className="text-center py-12 text-sm text-muted-foreground">Chargement…</div>
+            <div className="text-center py-12 text-sm text-muted-foreground">{tc("loading")}</div>
           ) : (
             <>
               <FormSection title="Identité" icon={<FileText className="h-3.5 w-3.5" />}>
@@ -810,12 +813,12 @@ function MandateFormDialog({
                   </div>
                   {!isCreate && (
                     <div className="space-y-2">
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">Statut</Label>
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{tc("status")}</Label>
                       <Select value={values.status} onValueChange={setters.setStatus}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="pending">En attente</SelectItem>
-                          <SelectItem value="active">Actif</SelectItem>
+                          <SelectItem value="active">{tc("active")}</SelectItem>
                           <SelectItem value="in_progress">En cours</SelectItem>
                           <SelectItem value="completed">Complété</SelectItem>
                           <SelectItem value="paused">En pause</SelectItem>
@@ -901,7 +904,7 @@ function MandateFormDialog({
         </div>
 
         <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Annuler</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>{tc("cancel")}</Button>
           <Button
             onClick={handleSubmit}
             disabled={submitting || loading || !values.title.trim() || (isCreate && !values.clientId)}

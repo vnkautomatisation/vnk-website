@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { BarChart, Plus, Gift, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
@@ -246,6 +247,7 @@ function PaginationBar({ page, totalPages, total, onPrev, onNext }: { page: numb
 }
 
 function SalaryDialog({ open, employees, onClose, onSaved }: { open: boolean; employees: Emp[]; onClose: () => void; onSaved: () => void }) {
+  const tc = useTranslations("common");
   const [adminId, setAdminId] = useState("");
   const [type, setType] = useState<"initial" | "raise" | "promotion" | "adjustment" | "bonus_base" | "demotion">("raise");
   const [salaryAnnual, setSalaryAnnual] = useState("");
@@ -324,7 +326,7 @@ function SalaryDialog({ open, employees, onClose, onSaved }: { open: boolean; em
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending}>{pending ? "..." : "Enregistrer"}</Button>
         </DialogFooter>
       </DialogContent>
@@ -333,6 +335,7 @@ function SalaryDialog({ open, employees, onClose, onSaved }: { open: boolean; em
 }
 
 function BonusDialog({ open, employees, onClose, onSaved }: { open: boolean; employees: Emp[]; onClose: () => void; onSaved: () => void }) {
+  const tc = useTranslations("common");
   const [adminId, setAdminId] = useState("");
   const [type, setType] = useState<"annual_bonus" | "spot_bonus" | "commission" | "sign_on" | "referral" | "retention">("spot_bonus");
   const [amount, setAmount] = useState("");
@@ -392,7 +395,7 @@ function BonusDialog({ open, employees, onClose, onSaved }: { open: boolean; emp
               <Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Date</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{tc("date")}</Label>
               <Input type="date" value={awardedAt} onChange={(e) => setAwardedAt(e.target.value)} />
             </div>
           </div>
@@ -402,7 +405,7 @@ function BonusDialog({ open, employees, onClose, onSaved }: { open: boolean; emp
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending}>{pending ? "..." : "Accorder"}</Button>
         </DialogFooter>
       </DialogContent>

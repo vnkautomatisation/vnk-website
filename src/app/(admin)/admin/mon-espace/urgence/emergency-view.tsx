@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Heart, Plus, Edit, Trash2, Phone, Mail, Star } from "lucide-react";
@@ -18,6 +19,7 @@ type Contact = {
 };
 
 export function EmergencyContactsView({ adminId, contacts }: { adminId: number; contacts: Contact[] }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [dialog, setDialog] = useState<{ open: boolean; existing: Contact | null }>({ open: false, existing: null });
   const [confirmDel, setConfirmDel] = useState<Contact | null>(null);
@@ -34,7 +36,7 @@ export function EmergencyContactsView({ adminId, contacts }: { adminId: number; 
           </p>
         </div>
         <Button onClick={() => setDialog({ open: true, existing: null })}>
-          <Plus className="h-4 w-4 mr-1.5" />Ajouter
+          <Plus className="h-4 w-4 mr-1.5" />{tc("add")}
         </Button>
       </div>
 
@@ -63,10 +65,10 @@ export function EmergencyContactsView({ adminId, contacts }: { adminId: number; 
                   <p className="text-xs text-muted-foreground">{c.relationship}</p>
                 </div>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, existing: c })} aria-label="Modifier">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, existing: c })} aria-label={tc("edit")}>
                     <Edit className="h-3.5 w-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDel(c)} aria-label="Supprimer">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDel(c)} aria-label={tc("delete")}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -108,7 +110,7 @@ export function EmergencyContactsView({ adminId, contacts }: { adminId: number; 
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.name} ?`}
         description="Ce contact d'urgence sera retiré."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDel) return;
@@ -125,6 +127,7 @@ export function EmergencyContactsView({ adminId, contacts }: { adminId: number; 
 function ContactDialog({ open, existing, adminId, onClose, onSaved }: {
   open: boolean; existing: Contact | null; adminId: number; onClose: () => void; onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const [name, setName] = useState(existing?.name ?? "");
   const [relationship, setRelationship] = useState(existing?.relationship ?? "");
   const [phone, setPhone] = useState(existing?.phone ?? "");
@@ -204,7 +207,7 @@ function ContactDialog({ open, existing, adminId, onClose, onSaved }: {
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending}>{pending ? "..." : existing ? "Enregistrer" : "Ajouter"}</Button>
         </DialogFooter>
       </DialogContent>

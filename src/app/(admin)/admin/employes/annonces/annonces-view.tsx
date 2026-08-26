@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Megaphone, Plus, Send, Edit, Trash2, Pin } from "lucide-react";
@@ -27,6 +28,7 @@ export function AnnouncementsAdminView({ announcements, teams, roles }: {
   teams: Array<{ id: number; name: string }>;
   roles: Array<{ id: number; name: string }>;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [dialog, setDialog] = useState<{ open: boolean; existing: Ann | null }>({ open: false, existing: null });
   const [confirmDel, setConfirmDel] = useState<Ann | null>(null);
@@ -73,10 +75,10 @@ export function AnnouncementsAdminView({ announcements, teams, roles }: {
                     </Button>
                   )}
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, existing: a })} aria-label="Modifier">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, existing: a })} aria-label={tc("edit")}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDel(a)} aria-label="Supprimer">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDel(a)} aria-label={tc("delete")}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -101,7 +103,7 @@ export function AnnouncementsAdminView({ announcements, teams, roles }: {
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.title} ?`}
         description="Cette annonce sera retirée définitivement. Les notifications déjà envoyées restent."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDel) return;
@@ -121,6 +123,7 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
   roles: Array<{ id: number; name: string }>;
   onClose: () => void; onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const [title, setTitle] = useState(existing?.title ?? "");
   const [body, setBody] = useState(existing?.body ?? "");
   const [category, setCategory] = useState(existing?.category ?? "general");
@@ -243,7 +246,7 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
           )}
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending}>{pending ? "..." : "Enregistrer"}</Button>
         </DialogFooter>
       </DialogContent>

@@ -219,6 +219,7 @@ export function CompactEntryRow({
   onDelete?: () => void;
   onRequestUnlock?: () => void;
 }) {
+  const tc = useTranslations("common");
   const t = useTranslations("admin.timeclock");
   const cat = CAT_LABEL[entry.category] ?? { key: "", color: "bg-gray-100 text-gray-700" };
   const start = new Date(entry.clockIn);
@@ -337,12 +338,12 @@ export function CompactEntryRow({
         </>
       )}
       {!isLocked && canEdit && onEdit && (
-        <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={onEdit} aria-label="Modifier">
+        <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={onEdit} aria-label={tc("edit")}>
           <Pencil className="h-3.5 w-3.5" />
         </Button>
       )}
       {!isLocked && !entry.approvedAt && !entry.payStubId && (
-        <Button size="icon" variant="ghost" className="h-7 w-7 hover:text-destructive shrink-0" onClick={onDelete} aria-label="Supprimer">
+        <Button size="icon" variant="ghost" className="h-7 w-7 hover:text-destructive shrink-0" onClick={onDelete} aria-label={tc("delete")}>
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       )}
@@ -365,6 +366,7 @@ export function EntryRow({
   onEdit?: () => void;
   holidayName?: string;
 }) {
+  const tc = useTranslations("common");
   const t = useTranslations("admin.timeclock");
   const cat = CAT_LABEL[entry.category] ?? { key: "", color: "bg-gray-100 text-gray-700" };
   const date = new Date(entry.clockIn);
@@ -467,7 +469,7 @@ export function EntryRow({
                   }
                   onEdit();
                 }}
-                aria-label="Modifier"
+                aria-label={tc("edit")}
               >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
@@ -663,6 +665,7 @@ export function PanelEntryRowWithHistory({
   onUnapprove: () => void;
   onEdit?: () => void;
 }) {
+  const tc = useTranslations("common");
   const t = useTranslations("admin.timeclock");
   const cat = CAT_LABEL[entry.category] ?? { key: "", color: "bg-gray-100 text-gray-700" };
   const start = new Date(entry.clockIn);
@@ -789,7 +792,7 @@ export function PanelEntryRowWithHistory({
                 className="h-7 w-7"
                 disabled={pending}
                 onClick={onEdit}
-                aria-label="Modifier"
+                aria-label={tc("edit")}
               >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>

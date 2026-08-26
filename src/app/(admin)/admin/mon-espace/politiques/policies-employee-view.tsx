@@ -6,6 +6,7 @@
 // TemplatePdfPreviewButton (rendu a la volee depuis le markdown).
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -54,6 +55,7 @@ function isRecent(iso: string | null | undefined): boolean {
 }
 
 export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
+  const tc = useTranslations("common");
   const [search, setSearch] = useState("");
   const [openPolicy, setOpenPolicy] = useState<Policy | null>(null);
 
@@ -136,7 +138,7 @@ export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
           }
         />
         <DocumentStatsCard
-          label="Statut"
+          label={tc("status")}
           value={policies.length > 0 ? "A jour" : "-"}
           icon={CheckCircle2}
           accent={policies.length > 0 ? "success" : "navy"}
@@ -341,6 +343,7 @@ function PolicyReaderSheet({
   policy: Policy | null;
   onClose: () => void;
 }) {
+  const tc = useTranslations("common");
   return (
     <Sheet open={!!policy} onOpenChange={(o) => !o && onClose()}>
       <SheetContent
@@ -373,13 +376,13 @@ function PolicyReaderSheet({
                     )}
                   </p>
                 </div>
-                <ActionTooltip label="Fermer">
+                <ActionTooltip label={tc("close")}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={onClose}
-                    aria-label="Fermer"
+                    aria-label={tc("close")}
                     className="h-8 w-8 text-white hover:bg-white/15 hover:text-white"
                   >
                     <X className="h-4 w-4" />
@@ -423,7 +426,7 @@ function PolicyReaderSheet({
                   onClick={onClose}
                   className="h-8 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
                 >
-                  Fermer
+                  {tc("close")}
                 </Button>
               </div>
             </div>

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -174,6 +175,7 @@ export function PaymentDetailDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
+  const tc = useTranslations("common");
   const [data, setData] = useState<PaymentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState<number | null>(null);
@@ -359,7 +361,7 @@ export function PaymentDetailDialog({
                         aria-label="Modifier le type"
                       >
                         <Edit3 className="h-2.5 w-2.5" />
-                        Modifier
+                        {tc("edit")}
                       </button>
                     </ActionTooltip>
                     {p.paymentMethod && <span>· {METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod}</span>}
@@ -391,7 +393,7 @@ export function PaymentDetailDialog({
                       className="h-7 text-[10px] px-2 text-white/80 hover:bg-white/20"
                       onClick={() => setEditingType(false)}
                     >
-                      Annuler
+                      {tc("cancel")}
                     </Button>
                     <span className="text-[10px] text-amber-200">⚠ Impact comptable</span>
                   </span>
@@ -402,15 +404,15 @@ export function PaymentDetailDialog({
         </DialogHeader>
 
         <div className="overflow-y-auto p-5 space-y-4 flex-1">
-          {loading && <p className="text-sm text-muted-foreground text-center py-8">Chargement…</p>}
-          {!loading && !data && <p className="text-sm text-muted-foreground text-center py-8">Aucune donnée</p>}
+          {loading && <p className="text-sm text-muted-foreground text-center py-8">{tc("loading")}</p>}
+          {!loading && !data && <p className="text-sm text-muted-foreground text-center py-8">{tc("no_data")}</p>}
 
           {data && p && (
             <>
               {/* Sommaire principal — 3 cartes */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 rounded-md border bg-card">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Montant</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{tc("amount")}</p>
                   <p className={cn("text-xl font-bold mt-1 tabular-nums", Number(p.amount) < 0 && "text-red-600")}>
                     {Number(p.amount) < 0 ? "−" : ""}{Math.abs(Number(p.amount)).toFixed(2)} {p.currency.toUpperCase()}
                   </p>
@@ -421,7 +423,7 @@ export function PaymentDetailDialog({
                   )}
                 </div>
                 <div className="p-3 rounded-md border bg-card">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Statut</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{tc("status")}</p>
                   <div className="mt-1.5"><StatusBadge status={p.status} /></div>
                   <p className="text-[10px] text-muted-foreground mt-1">
                     {p.paymentMethod ? METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod : "—"}
@@ -590,7 +592,7 @@ export function PaymentDetailDialog({
                   !editingAccounting && (
                     <button onClick={() => setEditingAccounting(true)} className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
                       <Edit3 className="h-2.5 w-2.5" />
-                      Modifier
+                      {tc("edit")}
                     </button>
                   )
                 }
@@ -663,7 +665,7 @@ export function PaymentDetailDialog({
                     </div>
                     <div className="px-3 py-2 flex gap-2 justify-end">
                       <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setEditingAccounting(false); setEditCategory(p.accountingCategory ?? ""); setEditNotes(p.accountantNotes ?? ""); }}>
-                        Annuler
+                        {tc("cancel")}
                       </Button>
                       <Button size="sm" className="h-7 text-xs" onClick={saveAccounting} disabled={savingAccounting}>
                         <Save className="h-3 w-3 mr-1" />

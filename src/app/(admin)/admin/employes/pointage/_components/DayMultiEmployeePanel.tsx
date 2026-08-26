@@ -1,6 +1,7 @@
 "use client";
 // One day, every employee in scope: their punches, then those with none.
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
   Clock, CheckCircle2, AlertCircle, Plus, Calendar,
@@ -38,6 +39,7 @@ export function DayMultiEmployeePanel({
   onUnapprove: (ids: number[]) => Promise<void>;
   onEditEntry: (entry: Entry) => void;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [data, setData] = useState<{
     entries: Entry[];
@@ -341,7 +343,7 @@ export function DayMultiEmployeePanel({
 
       <div className="border-t bg-muted/30 p-3 flex items-center gap-2 shrink-0 flex-wrap">
         <Button variant="ghost" size="sm" onClick={onClose} disabled={pending}>
-          Fermer
+          {tc("close")}
         </Button>
         <div className="flex-1" />
         {allPendingIds.length > 0 && (

@@ -1,6 +1,7 @@
 "use client";
 // Dialog création/édition d'un poste (template de profil employé).
 import { useState, useEffect, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Briefcase } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -26,6 +27,7 @@ export function PositionDialog({
   roles: RoleRow[];
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const mode = position ? "edit" : "create";
   const [pending, startTransition] = useTransition();
 
@@ -170,7 +172,7 @@ export function PositionDialog({
         {/* Footer */}
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2 shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             onClick={handleSave}

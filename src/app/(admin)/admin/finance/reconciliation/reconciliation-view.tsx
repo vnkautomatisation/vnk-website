@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -68,6 +69,7 @@ export function ReconciliationView({
   byMethod: { method: string; count: number; total: number }[];
   methodList: string[];
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [methodFilter, setMethodFilter] = useState<string>("all");
@@ -364,7 +366,7 @@ export function ReconciliationView({
             <CheckCircle2 className="h-3 w-3 mr-1" />Confirmer la sélection
           </Button>
           <Button size="sm" variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 h-7 text-xs" onClick={() => setSelectedIds(new Set())}>
-            Annuler
+            {tc("cancel")}
           </Button>
         </div>
       )}

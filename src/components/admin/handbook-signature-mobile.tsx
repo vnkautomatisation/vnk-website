@@ -16,6 +16,7 @@
 //   { __handbook: { finalRead, finalInitials, globalAccepted } }
 // ─────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertCircle,
   BookOpen,
@@ -63,6 +64,7 @@ export function HandbookSignatureMobile({
     checkboxStates: CheckboxStates,
   ) => Promise<void> | void;
 }) {
+  const tc = useTranslations("common");
   // Onglet actif
   const [tab, setTab] = useState<Tab>("preview");
 
@@ -282,7 +284,7 @@ export function HandbookSignatureMobile({
             )}
           >
             <FileSignature className="h-3.5 w-3.5" />
-            <span>Actions</span>
+            <span>{tc("actions")}</span>
             {finalAckDone && (
               <CheckCircle2 className="h-3 w-3 text-emerald-600" />
             )}
@@ -486,7 +488,7 @@ export function HandbookSignatureMobile({
             disabled={pending}
             className="flex-1"
           >
-            Annuler
+            {tc("cancel")}
           </Button>
           {tab === "preview" ? (
             <Button

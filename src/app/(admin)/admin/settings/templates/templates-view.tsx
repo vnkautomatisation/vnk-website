@@ -1,6 +1,7 @@
 "use client";
 // Vue Templates — Emails et PDF avec éditeur visuel + variables.
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -89,6 +90,7 @@ export function TemplatesView({
   emailTemplates: EmailTemplateRow[];
   pdfTemplates: PdfTemplateRow[];
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("email");
 
@@ -144,7 +146,7 @@ export function TemplatesView({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour"><ChevronLeft className="h-5 w-5" /></Link>
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}><ChevronLeft className="h-5 w-5" /></Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-sky-500 shrink-0">
           <FileText className="h-6 w-6" />
         </div>
@@ -197,7 +199,7 @@ export function TemplatesView({
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold text-sm">{def?.label ?? t.key}</p>
                           <Badge variant="outline" className="text-[10px] uppercase">{t.locale}</Badge>
-                          {!t.isEnabled && <Badge variant="secondary" className="text-[10px]">Désactivé</Badge>}
+                          {!t.isEnabled && <Badge variant="secondary" className="text-[10px]">{tc("disabled")}</Badge>}
                         </div>
                         <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{t.key}</p>
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
@@ -207,10 +209,10 @@ export function TemplatesView({
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setEmailDialog({ open: true, template: t })}><Edit className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setEmailDialog({ open: true, template: t })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => toggleEmailEnabled(t)}><Power className="h-4 w-4 mr-2" />{t.isEnabled ? "Désactiver" : "Activer"}</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "email", id: t.id, label: def?.label ?? t.key })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "email", id: t.id, label: def?.label ?? t.key })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -271,7 +273,7 @@ export function TemplatesView({
                           <p className="font-semibold text-sm">{def?.label ?? t.key}</p>
                           <Badge variant="outline" className="text-[10px] uppercase">{t.locale}</Badge>
                           <Badge variant="outline" className="text-[10px]">{t.content.pageSize}</Badge>
-                          {!t.isEnabled && <Badge variant="secondary" className="text-[10px]">Désactivé</Badge>}
+                          {!t.isEnabled && <Badge variant="secondary" className="text-[10px]">{tc("disabled")}</Badge>}
                         </div>
                         <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{t.key}</p>
                         {def?.description && <p className="text-xs text-muted-foreground mt-1">{def.description}</p>}
@@ -279,10 +281,10 @@ export function TemplatesView({
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setPdfDialog({ open: true, template: t })}><Edit className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setPdfDialog({ open: true, template: t })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => togglePdfEnabled(t)}><Power className="h-4 w-4 mr-2" />{t.isEnabled ? "Désactiver" : "Activer"}</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "pdf", id: t.id, label: def?.label ?? t.key })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "pdf", id: t.id, label: def?.label ?? t.key })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -348,7 +350,7 @@ export function TemplatesView({
         onOpenChange={(open) => !open && setConfirmDelete(null)}
         title={`Supprimer ${confirmDelete?.label} ?`}
         description="Cette action est irréversible. Le modèle par défaut sera utilisé à la place."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleConfirmDelete}
       />

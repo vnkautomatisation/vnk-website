@@ -42,6 +42,7 @@ function formatIp(ip: string | null): string {
 }
 
 export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
+  const tc = useTranslations("common");
   const t = useTranslations("admin.profile.sessions");
   const tCommon = useTranslations("admin.profile.common");
   const router = useRouter();
@@ -208,7 +209,7 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
                               onKeyDown={(e) => { if (e.key === "Enter") handleRename(s.id); if (e.key === "Escape") { setRenamingId(null); setLabelValue(""); } }}
                             />
                             <Button size="sm" variant="ghost" className="h-7" onClick={() => handleRename(s.id)} disabled={pending}>OK</Button>
-                            <Button size="sm" variant="ghost" className="h-7" onClick={() => { setRenamingId(null); setLabelValue(""); }}>Annuler</Button>
+                            <Button size="sm" variant="ghost" className="h-7" onClick={() => { setRenamingId(null); setLabelValue(""); }}>{tc("cancel")}</Button>
                           </div>
                         ) : (
                           <p className="text-sm font-medium truncate">{s.label || parsed.label}</p>

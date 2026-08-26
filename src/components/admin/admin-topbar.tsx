@@ -29,6 +29,7 @@ export function AdminTopbar({
   adminAvatarUrl?: string | null;
   overdueCount?: number;
 }) {
+  const tc = useTranslations("common");
   const t = useTranslations("admin.topbar");
   const currentLocale = useLocale();
   const [pending, startTransition] = useTransition();
@@ -167,7 +168,7 @@ export function AdminTopbar({
                 <div className="py-1">
                   <DropdownMenuItem onClick={() => window.location.reload()} className="cursor-pointer focus:bg-[#0F2D52]/5 focus:text-[#0F2D52]">
                     <RefreshCw className="h-4 w-4 mr-2 text-[#0F2D52]" />
-                    Rafraîchir
+                    {tc("refresh")}
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="cursor-pointer focus:bg-[#0F2D52]/5 focus:text-[#0F2D52]">
                     <a href="/" target="_blank" rel="noopener">

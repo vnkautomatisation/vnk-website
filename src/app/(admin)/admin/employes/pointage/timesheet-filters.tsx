@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ export function TimesheetFilters({
   departmentFilter: string | null;
   statusFilter: StatusFilter;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -149,7 +151,7 @@ export function TimesheetFilters({
       {showStatus && (
         <Select value={statusFilter} onValueChange={onStatusChange}>
           <SelectTrigger className="h-9 w-[140px] text-sm">
-            <SelectValue placeholder="Statut" />
+            <SelectValue placeholder={tc("status")} />
           </SelectTrigger>
           <SelectContent>
             {(Object.keys(STATUS_LABEL) as StatusFilter[]).map((k) => (

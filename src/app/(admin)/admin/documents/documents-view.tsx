@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -120,6 +121,7 @@ export function DocumentsView({
   mandates: MandateOption[];
   kpis: { total: number; thisMonth: number; unread: number; uniqueClients: number; totalStorageBytes: number };
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { confirm, ConfirmModal } = useConfirm();
@@ -548,7 +550,7 @@ export function DocumentsView({
         <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors" aria-label="Actions">
+              <button className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors" aria-label={tc("actions")}>
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
@@ -593,7 +595,7 @@ export function DocumentsView({
             )}
             <Button className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold"
               onClick={() => { resetForm(); setCreateOpen(true); }}>
-              <Upload className="h-4 w-4" />Téléverser
+              <Upload className="h-4 w-4" />{tc("upload")}
             </Button>
           </div>
         </div>
@@ -715,7 +717,7 @@ export function DocumentsView({
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-              <X className="h-3.5 w-3.5 mr-1" />Annuler
+              <X className="h-3.5 w-3.5 mr-1" />{tc("cancel")}
             </Button>
             <Button size="sm" variant="outline" onClick={() => handleBulkMarkRead(true)}>
               <Eye className="h-3.5 w-3.5 mr-1" />Marquer lus
@@ -724,7 +726,7 @@ export function DocumentsView({
               <EyeOff className="h-3.5 w-3.5 mr-1" />Marquer non lus
             </Button>
             <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
-              <Trash2 className="h-3.5 w-3.5 mr-1" />Supprimer
+              <Trash2 className="h-3.5 w-3.5 mr-1" />{tc("delete")}
             </Button>
           </div>
         </div>
@@ -793,7 +795,7 @@ export function DocumentsView({
               <div className="flex items-center justify-between gap-2 px-2 pt-1">
                 <p className="text-xs text-muted-foreground truncate">{imgDoc.fileName ?? imgDoc.title} · {fmtBytes(imgDoc.fileSize)}</p>
                 <Button size="sm" onClick={() => handleDownload(imgDoc)} className="bg-[#0F2D52] hover:bg-[#1a3a66]">
-                  <Download className="h-3 w-3 mr-1" />Télécharger
+                  <Download className="h-3 w-3 mr-1" />{tc("download")}
                 </Button>
               </div>
             </>
@@ -838,7 +840,7 @@ export function DocumentsView({
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Mandat (optionnel)</Label>
                   <Select value={fMandateId || "none"} onValueChange={(v) => setFMandateId(v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="Aucun" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={tc("none")} /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Aucun mandat</SelectItem>
                       {availableMandates.map((m) => (
@@ -933,7 +935,7 @@ export function DocumentsView({
           </div>
 
           <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
-            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={submitting}>Annuler</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={submitting}>{tc("cancel")}</Button>
             <Button
               onClick={handleCreate}
               disabled={submitting || !fClientId}
@@ -980,7 +982,7 @@ export function DocumentsView({
             </div>
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-card sm:gap-2">
-            <Button variant="outline" onClick={() => setEditDoc(null)} disabled={submitting}>Annuler</Button>
+            <Button variant="outline" onClick={() => setEditDoc(null)} disabled={submitting}>{tc("cancel")}</Button>
             <Button onClick={handleEdit} disabled={submitting || !fTitle.trim()} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
               {submitting ? "Enregistrement…" : "Enregistrer"}
             </Button>
@@ -1014,7 +1016,7 @@ export function DocumentsView({
         onOpenChange={(o) => { if (!o) setDeleteDoc(null); }}
         title="Supprimer ce document ?"
         description={`Le document "${deleteDoc?.title}" sera supprimé définitivement.`}
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
 
@@ -1040,6 +1042,7 @@ function DocumentDetailDialog({
   onOpenSourcePanel: (type: "quote" | "invoice" | "contract", id: number) => void;
   onOpenMandate: (d: Doc) => void;
 }) {
+  const tc = useTranslations("common");
   const t = (doc.fileType ?? "").toLowerCase();
   const isPdf = t.includes("pdf");
   const isImage = t.startsWith("image/");
@@ -1159,7 +1162,7 @@ function DocumentDetailDialog({
                 <Row label="Déposé le" value={formatDate(new Date(doc.createdAt))} />
                 <Row label="Mis à jour" value={formatDate(new Date(doc.updatedAt))} />
                 <Row label="Par" value={doc.uploadedBy ?? "système"} />
-                <Row label="Statut" value={doc.status ?? "disponible"} />
+                <Row label={tc("status")} value={doc.status ?? "disponible"} />
               </dl>
             </div>
           </div>
@@ -1195,18 +1198,18 @@ function DocumentDetailDialog({
         </div>
 
         <DialogFooter className="px-6 py-3 border-t bg-card shrink-0 sm:gap-2 flex-wrap">
-          <Button variant="ghost" onClick={onClose}>Fermer</Button>
+          <Button variant="ghost" onClick={onClose}>{tc("close")}</Button>
           <div className="flex gap-2 flex-wrap">
             {doc.fileUrl && (
               <Button variant="outline" size="sm" onClick={() => onDownload(doc)}>
-                <Download className="h-3.5 w-3.5 mr-1" />Télécharger
+                <Download className="h-3.5 w-3.5 mr-1" />{tc("download")}
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={() => onToggleRead(doc)}>
               {doc.isRead ? <><EyeOff className="h-3.5 w-3.5 mr-1" />Marquer non lu</> : <><Eye className="h-3.5 w-3.5 mr-1" />Marquer lu</>}
             </Button>
             <Button variant="outline" size="sm" onClick={() => onSendToClient(doc)}>
-              <Send className="h-3.5 w-3.5 mr-1" />Envoyer
+              <Send className="h-3.5 w-3.5 mr-1" />{tc("send")}
             </Button>
             {source ? (
               <Button size="sm" onClick={() => onEditSource(source.type, source.id)} className="bg-[#0F2D52] hover:bg-[#1a3a66]">
@@ -1214,11 +1217,11 @@ function DocumentDetailDialog({
               </Button>
             ) : (
               <Button size="sm" onClick={() => onEditMeta(doc)} className="bg-[#0F2D52] hover:bg-[#1a3a66]">
-                <Pencil className="h-3.5 w-3.5 mr-1" />Modifier
+                <Pencil className="h-3.5 w-3.5 mr-1" />{tc("edit")}
               </Button>
             )}
             <Button size="sm" variant="destructive" onClick={() => onDelete(doc)}>
-              <Trash2 className="h-3.5 w-3.5 mr-1" />Supprimer
+              <Trash2 className="h-3.5 w-3.5 mr-1" />{tc("delete")}
             </Button>
           </div>
         </DialogFooter>

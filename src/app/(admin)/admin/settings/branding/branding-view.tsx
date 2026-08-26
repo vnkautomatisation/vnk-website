@@ -2,6 +2,7 @@
 // Vue Charte graphique — upload des 6 logos, palette de couleurs, polices.
 // Live preview des éléments d'interface (header, login, email).
 import { useState, useRef, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -28,6 +29,7 @@ const LOGO_SLOTS: { key: LogoSlot; label: string; description: string; previewBg
 ];
 
 export function BrandingView({ initial }: { initial: Record<string, string | null> }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [logos, setLogos] = useState<Record<LogoSlot, string | null>>(() => ({
@@ -98,7 +100,7 @@ export function BrandingView({ initial }: { initial: Record<string, string | nul
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour">
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}>
           <ChevronLeft className="h-5 w-5" />
         </Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-pink-500 shrink-0">

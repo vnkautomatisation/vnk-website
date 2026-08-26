@@ -1,6 +1,7 @@
 "use client";
 // Vue Activité équipe — feed temps réel des actions admins + filtres.
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -77,6 +78,7 @@ export function TeamActivityView({
   totalLogs: number;
   currentFilters: { admin?: number; entity?: string; action?: string };
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [filterAdmin, setFilterAdmin] = useState<string>(currentFilters.admin?.toString() ?? "all");
   const [filterEntity, setFilterEntity] = useState<string>(currentFilters.entity ?? "all");
@@ -98,7 +100,7 @@ export function TeamActivityView({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour"><ChevronLeft className="h-5 w-5" /></Link>
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}><ChevronLeft className="h-5 w-5" /></Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-violet-500 shrink-0">
           <Users className="h-6 w-6" />
         </div>

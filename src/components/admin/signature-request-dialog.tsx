@@ -21,6 +21,7 @@
 // `customFieldValues` et la section inline est masquée.
 // ─────────────────────────────────────────────────────────
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   FileSignature,
@@ -122,6 +123,7 @@ export function SignatureRequestDialog({
    */
   customFieldValues?: Record<string, string> | null;
 }) {
+  const tc = useTranslations("common");
   const [templateId, setTemplateId] = useState<number | null>(
     template?.id ?? null
   );
@@ -581,7 +583,7 @@ export function SignatureRequestDialog({
             onClick={onClose}
             disabled={submitting}
           >
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             type="button"

@@ -8,6 +8,7 @@
 // Si pas de délégation outgoing ni incoming → ne render rien (collapsable).
 
 import { useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Shield, ShieldCheck, Pencil, UserMinus, UserPlus, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -41,6 +42,7 @@ export type DelegationState = {
 type Candidate = { id: number; fullName: string | null; email: string };
 
 export function DelegationBanner({ onChange }: { onChange?: () => void }) {
+  const tc = useTranslations("common");
   const [state, setState] = useState<DelegationState | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,7 +106,7 @@ export function DelegationBanner({ onChange }: { onChange?: () => void }) {
                   className="h-8 text-xs shrink-0"
                 >
                   <Pencil className="h-3.5 w-3.5 sm:mr-1" />
-                  <span className="hidden sm:inline">Modifier</span>
+                  <span className="hidden sm:inline">{tc("edit")}</span>
                 </Button>
               </ActionTooltip>
             </div>
@@ -156,6 +158,7 @@ function ManageDelegationDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const [sel, setSel] = useState<string>(currentDelegate ? String(currentDelegate.id) : "");
   const [pending, startTransition] = useTransition();
 
@@ -232,7 +235,7 @@ function ManageDelegationDialog({
           )}
           <div className="flex-1" />
           <Button variant="outline" onClick={onClose} disabled={pending}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             onClick={() => {

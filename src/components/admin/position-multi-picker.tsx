@@ -19,6 +19,7 @@
 //   />
 // =============================================================
 import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Plus, X, Briefcase, Search, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -292,6 +293,7 @@ function NewPositionDialog({
   onOpenChange: (open: boolean) => void;
   onCreated: (name: string) => void;
 }) {
+  const tc = useTranslations("common");
   const [name, setName] = useState("");
   const [defaultDepartment, setDefaultDepartment] = useState("");
   const [description, setDescription] = useState("");
@@ -391,7 +393,7 @@ function NewPositionDialog({
             onClick={() => onOpenChange(false)}
             disabled={pending}
           >
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             onClick={handleSave}

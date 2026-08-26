@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CreditCard, Lock, CheckCircle2, Lightbulb } from "lucide-react";
@@ -13,6 +14,7 @@ export function BankInfoView({ adminId, current }: {
   adminId: number;
   current: { institutionLabel: string | null; institutionMasked: string; transitMasked: string; accountMasked: string; verifiedAt: string | null } | null;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [editing, setEditing] = useState(!current);
   const [institutionLabel, setInstitutionLabel] = useState(current?.institutionLabel ?? "");
@@ -85,7 +87,7 @@ export function BankInfoView({ adminId, current }: {
               </div>
             </div>
             <Button variant="outline" onClick={() => setEditing(true)}>
-              Modifier
+              {tc("edit")}
             </Button>
           </div>
         ) : (
@@ -116,7 +118,7 @@ export function BankInfoView({ adminId, current }: {
             </div>
             <div className="flex gap-2 pt-2">
               {current && (
-                <Button variant="outline" onClick={() => setEditing(false)}>Annuler</Button>
+                <Button variant="outline" onClick={() => setEditing(false)}>{tc("cancel")}</Button>
               )}
               <Button onClick={submit} disabled={pending}>
                 {pending ? "..." : current ? "Mettre à jour" : "Enregistrer"}

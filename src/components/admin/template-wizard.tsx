@@ -15,6 +15,7 @@
 // Theme VNK : header navy gradient, FormSection/Field, footer sticky.
 // ─────────────────────────────────────────────────────────
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -168,6 +169,7 @@ export function TemplateWizard({
   onSave,
   previewEmployees: previewEmployeesProp,
 }: Props) {
+  const tc = useTranslations("common");
   // En mode edit : on saute directement a etape 4
   const initialStep: WizardStep = mode === "edit" ? 4 : 1;
   const [step, setStep] = useState<WizardStep>(initialStep);
@@ -819,7 +821,7 @@ export function TemplateWizard({
               disabled={submitting}
             >
               <X className="h-3.5 w-3.5 mr-1.5" />
-              Annuler
+              {tc("cancel")}
             </Button>
             {step === 1 && mode === "create" ? null : step < 4 ? (
               <Button
@@ -829,7 +831,7 @@ export function TemplateWizard({
                 disabled={!canGoNext}
                 className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white gap-1.5"
               >
-                Suivant
+                {tc("next")}
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             ) : (
@@ -990,6 +992,7 @@ function ChipsInput({
   onChange: (next: string[]) => void;
   placeholder?: string;
 }) {
+  const tc = useTranslations("common");
   const [draft, setDraft] = useState("");
 
   const add = () => {
@@ -1031,7 +1034,7 @@ function ChipsInput({
           className="gap-1.5 shrink-0"
         >
           <Plus className="h-3.5 w-3.5" />
-          Ajouter
+          {tc("add")}
         </Button>
       </div>
       {values.length > 0 && (

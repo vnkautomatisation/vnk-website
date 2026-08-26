@@ -2,6 +2,7 @@
 // Drawer latéral fiche détaillée d'un utilisateur admin.
 // Chargement lazy via /api/admin/team/[id] à l'ouverture.
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -88,6 +89,7 @@ export function UserDetailDrawer({
   onEdit: () => void;
   onResetPassword: () => void;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [data, setData] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -248,11 +250,11 @@ export function UserDetailDrawer({
                   <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                     {data.admin.isActive ? (
                       <Badge className="text-[10px] bg-emerald-500/90 hover:bg-emerald-500/90 text-white border-0">
-                        <CircleDot className="h-2.5 w-2.5 mr-0.5" />Actif
+                        <CircleDot className="h-2.5 w-2.5 mr-0.5" />{tc("active")}
                       </Badge>
                     ) : (
                       <Badge className="text-[10px] bg-gray-500/90 hover:bg-gray-500/90 text-white border-0">
-                        Désactivé
+                        {tc("disabled")}
                       </Badge>
                     )}
                     {data.admin.twoFactorEnabled && (
@@ -282,7 +284,7 @@ export function UserDetailDrawer({
                   onClick={onEdit}
                   className="bg-white/15 hover:bg-white/25 text-white border-white/20 backdrop-blur"
                 >
-                  <Edit className="h-3.5 w-3.5 mr-1.5" />Modifier
+                  <Edit className="h-3.5 w-3.5 mr-1.5" />{tc("edit")}
                 </Button>
                 <Button
                   size="sm"
@@ -300,7 +302,7 @@ export function UserDetailDrawer({
               {/* Stats globales */}
               <div className="grid grid-cols-3 border-b bg-muted/30">
                 <StatCell icon={Activity} label="Sessions" value={data.stats.sessionsCount} />
-                <StatCell icon={History} label="Actions" value={data.stats.auditCount} />
+                <StatCell icon={History} label={tc("actions")} value={data.stats.auditCount} />
                 <StatCell icon={Briefcase} label="Paiements assignés" value={data.stats.assignedPayments} />
               </div>
 
@@ -315,7 +317,7 @@ export function UserDetailDrawer({
                   <div className="grid grid-cols-4 gap-px bg-border">
                     <KpiCell label="Heures saisies" value={data.stats.kpi30d.hoursLogged} suffix="h" />
                     <KpiCell label="Saisies temps" value={data.stats.kpi30d.timeEntries} />
-                    <KpiCell label="Actions" value={data.stats.kpi30d.actions} />
+                    <KpiCell label={tc("actions")} value={data.stats.kpi30d.actions} />
                     <KpiCell label="Connexions" value={data.stats.kpi30d.logins} />
                   </div>
                 </div>
@@ -593,10 +595,10 @@ export function UserDetailDrawer({
                         onClick={() => { setEditingNotes(false); setNotesValue(data.admin.internalNotes ?? ""); }}
                         disabled={notesSaving}
                       >
-                        Annuler
+                        {tc("cancel")}
                       </Button>
                       <Button size="sm" onClick={handleSaveNotes} disabled={notesSaving} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-                        <Save className="h-3.5 w-3.5 mr-1.5" />Enregistrer
+                        <Save className="h-3.5 w-3.5 mr-1.5" />{tc("save")}
                       </Button>
                     </div>
                   </div>

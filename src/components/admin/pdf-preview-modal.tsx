@@ -3,6 +3,7 @@
 // Convention VNK : tous les PDF s'ouvrent via ce modal (jamais window.open direct).
 // L'utilisateur peut prévisualiser, télécharger, ou ouvrir en nouvel onglet.
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, ExternalLink, Loader2, FileText } from "lucide-react";
@@ -19,6 +20,7 @@ export function PdfPreviewModal({
   downloadFilename?: string;
   onClose: () => void;
 }) {
+  const tc = useTranslations("common");
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
@@ -130,9 +132,9 @@ export function PdfPreviewModal({
             <span className="sm:hidden">Onglet</span>
           </Button>
           <Button size="sm" onClick={download} disabled={!fullUrl} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
-            <Download className="h-3.5 w-3.5 mr-1.5" />Télécharger
+            <Download className="h-3.5 w-3.5 mr-1.5" />{tc("download")}
           </Button>
-          <Button size="sm" variant="outline" onClick={onClose}>Fermer</Button>
+          <Button size="sm" variant="outline" onClick={onClose}>{tc("close")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

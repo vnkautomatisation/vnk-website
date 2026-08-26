@@ -1,6 +1,7 @@
 "use client";
 // Manual time entry dialog. `targetAdmin` fills in for another employee.
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   AlertCircle, AlertTriangle, History, ChevronLeft, ChevronRight, ChevronDown,
@@ -68,6 +69,7 @@ export function ManualEntryDialog({
   /** When set, the entry is created for that admin instead of the caller. */
   targetAdmin?: { id: number; name: string } | null;
 }) {
+  const tc = useTranslations("common");
   const [entry, setEntry] = useState<ManualEntry>(() => defaultManualEntry(presetDate));
   const [pending, setPending] = useState(false);
   // Progressive disclosure: calendar collapsed by default (the day is almost
@@ -313,7 +315,7 @@ export function ManualEntryDialog({
           </p>
         </div>
         <DialogFooter className="px-4 sm:px-5 py-3 border-t bg-muted/30 shrink-0">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button
             onClick={submit}
             disabled={pending || !validation.ok || !!overlap?.overlap}

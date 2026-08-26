@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -148,6 +149,7 @@ function StepWelcome({ admin, onNext }: { admin: AdminSeed; onNext: () => void }
 }
 
 function StepProfile({ admin, onBack, onNext }: { admin: AdminSeed; onBack: () => void; onNext: () => void }) {
+  const tc = useTranslations("common");
   const [fullName, setFullName] = useState(admin.fullName ?? "");
   const [phone, setPhone] = useState(admin.phone ?? "");
   const [title, setTitle] = useState(admin.title ?? "");
@@ -189,7 +191,7 @@ function StepProfile({ admin, onBack, onNext }: { admin: AdminSeed; onBack: () =
         </div>
       </div>
       <div className="flex justify-between pt-2">
-        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" />Retour</Button>
+        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" />{tc("back")}</Button>
         <Button onClick={submit} disabled={pending || !fullName.trim()}>
           {pending ? "..." : "Enregistrer et continuer"}
           <ArrowRight className="h-4 w-4 ml-1.5" />
@@ -200,6 +202,7 @@ function StepProfile({ admin, onBack, onNext }: { admin: AdminSeed; onBack: () =
 }
 
 function StepTwoFactor({ done, onBack, onNext }: { done: boolean; onBack: () => void; onNext: () => void }) {
+  const tc = useTranslations("common");
   return (
     <div className="space-y-4">
       <div>
@@ -229,7 +232,7 @@ function StepTwoFactor({ done, onBack, onNext }: { done: boolean; onBack: () => 
         </Card>
       )}
       <div className="flex justify-between pt-2">
-        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" />Retour</Button>
+        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" />{tc("back")}</Button>
         <Button onClick={onNext} variant={done ? "default" : "outline"}>
           {done ? "Continuer" : "Passer pour l'instant"}
           <ArrowRight className="h-4 w-4 ml-1.5" />
@@ -240,6 +243,7 @@ function StepTwoFactor({ done, onBack, onNext }: { done: boolean; onBack: () => 
 }
 
 function StepPasskey({ done, onBack, onNext }: { done: boolean; onBack: () => void; onNext: () => void }) {
+  const tc = useTranslations("common");
   return (
     <div className="space-y-4">
       <div>
@@ -268,7 +272,7 @@ function StepPasskey({ done, onBack, onNext }: { done: boolean; onBack: () => vo
         </Card>
       )}
       <div className="flex justify-between pt-2">
-        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" />Retour</Button>
+        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" />{tc("back")}</Button>
         <Button onClick={onNext} variant={done ? "default" : "outline"}>
           {done ? "Continuer" : "Passer"}
           <ArrowRight className="h-4 w-4 ml-1.5" />
@@ -285,6 +289,7 @@ function StepDocs({
   onBack: () => void;
   onNext: () => void;
 }) {
+  const tc = useTranslations("common");
   return (
     <div className="space-y-4">
       <div>
@@ -317,7 +322,7 @@ function StepDocs({
         </Button>
       </Card>
       <div className="flex justify-between pt-2">
-        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" />Retour</Button>
+        <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" />{tc("back")}</Button>
         <Button onClick={onNext} variant="outline">
           Continuer (je signerai plus tard)
           <ArrowRight className="h-4 w-4 ml-1.5" />

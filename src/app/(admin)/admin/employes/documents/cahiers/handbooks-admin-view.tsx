@@ -11,6 +11,7 @@
 //   - Action "Modifier" et "Archiver"
 // =============================================================
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -126,6 +127,7 @@ export function HandbooksAdminView({
   templates: Template[];
   employees: Employee[];
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Handbook | null>(null);
@@ -249,7 +251,7 @@ export function HandbooksAdminView({
                           variant="outline"
                           className="text-[9px] bg-red-50 text-red-700 border-red-200"
                         >
-                          Obligatoire
+                          {tc("required")}
                         </Badge>
                       )}
                       {!h.isActive && (
@@ -318,7 +320,7 @@ export function HandbooksAdminView({
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
                   </ActionTooltip>
-                  <ActionTooltip label="Modifier">
+                  <ActionTooltip label={tc("edit")}>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -424,6 +426,7 @@ function HandbookEditorDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const mode: "create" | "edit" = handbook ? "edit" : "create";
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
@@ -768,7 +771,7 @@ function HandbookEditorDialog({
 
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
           <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             type="button"

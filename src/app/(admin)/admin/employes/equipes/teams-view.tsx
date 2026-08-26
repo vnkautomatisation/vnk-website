@@ -1,6 +1,7 @@
 "use client";
 // Vue Équipes — création, hiérarchie, lead, assignation membres.
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -39,6 +40,7 @@ type TeamRow = {
 };
 
 export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLite[] }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [dialog, setDialog] = useState<{ open: boolean; team: TeamRow | null }>({ open: false, team: null });
   const [confirmDel, setConfirmDel] = useState<TeamRow | null>(null);
@@ -100,10 +102,10 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
                     )}
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, team: t })} aria-label="Modifier">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, team: t })} aria-label={tc("edit")}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDel(t)} aria-label="Supprimer">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDel(t)} aria-label={tc("delete")}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -180,7 +182,7 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.name} ?`}
         description="Les membres et sous-équipes seront détachés. Cette action ne peut être annulée."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={onDelete}
       />
@@ -198,6 +200,7 @@ function TeamDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const [name, setName] = useState(team?.name ?? "");
   const [description, setDescription] = useState(team?.description ?? "");
   const [color, setColor] = useState(team?.color ?? "#0F2D52");
@@ -287,7 +290,7 @@ function TeamDialog({
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wider font-semibold">Chef d&apos;équipe</Label>
             <Select value={leadId} onValueChange={setLeadId}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Aucun" /></SelectTrigger>
+              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={tc("none")} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">— Aucun —</SelectItem>
                 {admins.map((a) => (
@@ -298,7 +301,7 @@ function TeamDialog({
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending || !name.trim()}>
             {pending ? "..." : team ? "Enregistrer" : "Créer"}
           </Button>
@@ -317,6 +320,7 @@ function AssignMembersDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const [pending, setPending] = useState(false);
 
   if (!team) return null;
@@ -391,7 +395,7 @@ function AssignMembersDialog({
           })}
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose}>Fermer</Button>
+          <Button variant="outline" onClick={onClose}>{tc("close")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

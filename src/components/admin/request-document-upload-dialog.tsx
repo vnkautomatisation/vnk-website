@@ -7,6 +7,7 @@
 // Action : createUploadRequestAction → toast → onCreated.
 // ─────────────────────────────────────────────────────────
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   FileText,
@@ -63,6 +64,7 @@ export function RequestDocumentUploadDialog({
   /** Pré-sélectionner un employé (depuis une fiche employé). */
   presetEmployeeId?: number | null;
 }) {
+  const tc = useTranslations("common");
   const [employeeId, setEmployeeId] = useState<number | null>(presetEmployeeId ?? null);
   const [empSearch, setEmpSearch] = useState("");
   const [title, setTitle] = useState("");
@@ -259,7 +261,7 @@ export function RequestDocumentUploadDialog({
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Échéance" hint="Optionnel">
+              <Field label="Échéance" hint={tc("optional")}>
                 <DatePopover value={dueDate} onChange={setDueDate} />
               </Field>
             </div>
@@ -309,7 +311,7 @@ export function RequestDocumentUploadDialog({
             onClick={onClose}
             disabled={submitting}
           >
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             type="button"

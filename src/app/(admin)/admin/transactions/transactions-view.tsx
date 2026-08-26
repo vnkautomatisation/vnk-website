@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -109,6 +110,7 @@ export function TransactionsView({
     count: number;
   };
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [methodFilter, setMethodFilter] = useState<string>("all");
@@ -420,7 +422,7 @@ export function TransactionsView({
             </DropdownMenuContent>
           </DropdownMenu>
           <Button size="sm" variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 h-7 text-xs" onClick={() => setSelectedIds(new Set())}>
-            Annuler
+            {tc("cancel")}
           </Button>
         </div>
       )}
@@ -448,7 +450,7 @@ export function TransactionsView({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
-                  <Download className="h-3.5 w-3.5 mr-1.5" />Exporter
+                  <Download className="h-3.5 w-3.5 mr-1.5" />{tc("export")}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">

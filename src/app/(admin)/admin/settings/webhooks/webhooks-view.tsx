@@ -1,6 +1,7 @@
 "use client";
 // Vue Webhooks — sortants + entrants avec test, replay, rotation.
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -56,6 +57,7 @@ export function WebhooksView({
   outgoing: OutgoingWebhookRow[];
   incoming: IncomingLogRow[];
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("outgoing");
 
@@ -127,7 +129,7 @@ export function WebhooksView({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour"><ChevronLeft className="h-5 w-5" /></Link>
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}><ChevronLeft className="h-5 w-5" /></Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-orange-600 shrink-0">
           <Webhook className="h-6 w-6" />
         </div>
@@ -186,7 +188,7 @@ export function WebhooksView({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-sm">{w.name}</p>
-                        {!w.isEnabled && <Badge variant="secondary" className="text-[10px]">Désactivé</Badge>}
+                        {!w.isEnabled && <Badge variant="secondary" className="text-[10px]">{tc("disabled")}</Badge>}
                         {w.lastStatus && w.lastStatus >= 200 && w.lastStatus < 300 ? (
                           <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600">
                             <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />{w.lastStatus}
@@ -218,11 +220,11 @@ export function WebhooksView({
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setWebhookDialog({ open: true, webhook: w })}><Edit className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setWebhookDialog({ open: true, webhook: w })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => toggleEnabled(w)}><Power className="h-4 w-4 mr-2" />{w.isEnabled ? "Désactiver" : "Activer"}</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleRotateSecret(w)}><RotateCw className="h-4 w-4 mr-2" />Régénérer le secret</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "outgoing", id: w.id, label: w.name })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "outgoing", id: w.id, label: w.name })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -232,10 +234,10 @@ export function WebhooksView({
                       <p className="text-xs font-semibold text-emerald-900 mb-1.5">Nouveau secret généré · à copier maintenant :</p>
                       <div className="flex items-center gap-2">
                         <code className="text-[11px] font-mono bg-white px-2 py-1 rounded border flex-1 break-all">{revealedSecret.secret}</code>
-                        <Button size="sm" variant="outline" onClick={() => copySecret(revealedSecret.secret)} title="Copier">
+                        <Button size="sm" variant="outline" onClick={() => copySecret(revealedSecret.secret)} title={tc("copy")}>
                           <Copy className="h-3.5 w-3.5" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setRevealedSecret(null)}>Fermer</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setRevealedSecret(null)}>{tc("close")}</Button>
                       </div>
                     </div>
                   )}
@@ -306,7 +308,7 @@ export function WebhooksView({
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleReplay(log)}><RefreshCw className="h-4 w-4 mr-2" />Re-traiter</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "incoming", id: log.id, label: log.eventType })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "incoming", id: log.id, label: log.eventType })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -335,7 +337,7 @@ export function WebhooksView({
         onOpenChange={(open) => !open && setConfirmDelete(null)}
         title={`Supprimer ${confirmDelete?.label} ?`}
         description="Cette action est irréversible."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleConfirmDelete}
       />

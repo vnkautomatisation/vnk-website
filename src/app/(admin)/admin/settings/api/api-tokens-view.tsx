@@ -1,6 +1,7 @@
 "use client";
 // Vue API Tokens — création + révocation + scopes cochables.
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -43,6 +44,7 @@ const SCOPE_GROUPS = [
 ];
 
 export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [creating, setCreating] = useState(false);
@@ -117,7 +119,7 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour"><ChevronLeft className="h-5 w-5" /></Link>
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}><ChevronLeft className="h-5 w-5" /></Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-purple-600 shrink-0">
           <Key className="h-6 w-6" />
         </div>
@@ -237,7 +239,7 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
                 <div className="flex gap-2 mt-1.5">
                   <code className="flex-1 text-xs font-mono bg-muted px-3 py-2 rounded border break-all">{createdToken}</code>
                   <Button onClick={() => copyToken(createdToken)} variant="outline">
-                    <Copy className="h-4 w-4 mr-1.5" />Copier
+                    <Copy className="h-4 w-4 mr-1.5" />{tc("copy")}
                   </Button>
                 </div>
               </div>
@@ -293,7 +295,7 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
                 </div>
               </div>
               <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
-                <Button variant="outline" onClick={closeCreate} disabled={pending}>Annuler</Button>
+                <Button variant="outline" onClick={closeCreate} disabled={pending}>{tc("cancel")}</Button>
                 <Button onClick={handleCreate} disabled={pending || !name.trim() || selectedScopes.size === 0} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
                   {pending ? "..." : "Créer le token"}
                 </Button>
@@ -317,7 +319,7 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
         onOpenChange={(o) => !o && setConfirmDelete(null)}
         title={`Supprimer définitivement ${confirmDelete?.name} ?`}
         description="L'historique sera perdu. Préférez la révocation pour conserver la trace."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={() => confirmDelete && handleDelete(confirmDelete.id)}
       />

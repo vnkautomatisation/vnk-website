@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AlertTriangle, Plus, Edit, FileText, Calendar, MapPin, Trash2, Send, CheckCircle2 } from "lucide-react";
@@ -33,6 +34,7 @@ const STATUS: Record<string, { label: string; color: string }> = {
 };
 
 export function CnesstView({ incidents, employees }: { incidents: Incident[]; employees: Emp[] }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [dialog, setDialog] = useState<{ open: boolean; existing: Incident | null }>({ open: false, existing: null });
 
@@ -170,10 +172,10 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, existing: i })} aria-label="Modifier">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, existing: i })} aria-label={tc("edit")}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(i)} aria-label="Supprimer">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(i)} aria-label={tc("delete")}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -196,6 +198,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
 }
 
 function IncidentDialog({ open, existing, employees, onClose, onSaved }: { open: boolean; existing: Incident | null; employees: Emp[]; onClose: () => void; onSaved: () => void }) {
+  const tc = useTranslations("common");
   const [adminId, setAdminId] = useState(existing?.adminId?.toString() ?? "");
   const [incidentDate, setIncidentDate] = useState(existing?.incidentDate?.slice(0, 16) ?? new Date().toISOString().slice(0, 16));
   const [location, setLocation] = useState(existing?.location ?? "");
@@ -304,7 +307,7 @@ function IncidentDialog({ open, existing, employees, onClose, onSaved }: { open:
               <Input type="number" value={daysAbsent} onChange={(e) => setDaysAbsent(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Statut</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{tc("status")}</Label>
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -318,7 +321,7 @@ function IncidentDialog({ open, existing, employees, onClose, onSaved }: { open:
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button variant="destructive" onClick={submit} disabled={pending}>{pending ? "..." : "Enregistrer"}</Button>
         </DialogFooter>
       </DialogContent>

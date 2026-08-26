@@ -1,6 +1,7 @@
 "use client";
 // Client Detail Panel — slide-out right
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -152,6 +153,7 @@ export function ClientDetailPanel({
   onOpenChange: (open: boolean) => void;
   initialTab?: "info" | "mandates" | "quotes" | "invoices" | "contracts";
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
   const { open: openEntity } = useEntityPanels();
@@ -423,7 +425,7 @@ export function ClientDetailPanel({
 
         {loading || !client ? (
           <div className="h-full flex items-center justify-center text-muted-foreground">
-            Chargement…
+            {tc("loading")}
           </div>
         ) : (
           <>
@@ -603,7 +605,7 @@ export function ClientDetailPanel({
           {/* Footer */}
           <div className="flex items-center justify-end gap-2 px-6 py-4 bg-muted/30 border-t">
             <Button variant="outline" onClick={() => setEditOpen(false)} disabled={busy}>
-              Annuler
+              {tc("cancel")}
             </Button>
             <Button
               className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
@@ -673,7 +675,7 @@ export function ClientDetailPanel({
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => { setPaidDialog(null); setPaidMethod(""); setPaidNote(""); }} disabled={busy}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
@@ -758,7 +760,7 @@ export function ClientDetailPanel({
                 a.target = "_blank";
                 a.click();
               }}>
-              <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />Télécharger
+              <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />{tc("download")}
             </Button>
           );
 
@@ -816,6 +818,7 @@ const TECH_CATALOG: { category: string; items: string[] }[] = [
 ];
 
 function TechPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const tc = useTranslations("common");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [customInput, setCustomInput] = useState("");
@@ -885,7 +888,7 @@ function TechPicker({ value, onChange }: { value: string; onChange: (v: string) 
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-dashed text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-              Ajouter
+              {tc("add")}
             </button>
           </PopoverTrigger>
           <PopoverContent
@@ -947,7 +950,7 @@ function TechPicker({ value, onChange }: { value: string; onChange: (v: string) 
                   className="h-8 text-xs flex-1"
                 />
                 <Button type="button" variant="outline" size="sm" onClick={addCustom} disabled={!customInput.trim()} className="h-8 px-2 text-xs">
-                  Ajouter
+                  {tc("add")}
                 </Button>
               </div>
               {customItems.length > 0 && (
@@ -1226,6 +1229,7 @@ function ClientTabs({
   markPaid: (id: number, num: string) => void;
   setPdfPreview: (p: { url: string; title: string; documentNumber?: string; downloadName?: string; entityType?: "quote" | "invoice" | "contract"; entityId?: number; status?: string; isAdminSigned?: boolean }) => void;
 }) {
+  const tc = useTranslations("common");
   const [tab, setTab] = useState("identite");
   const [activity, setActivity] = useState<AuditEvent[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
@@ -1281,7 +1285,7 @@ function ClientTabs({
             <MessageSquare className="h-3.5 w-3.5 mr-1.5" />Conversation
           </Button>
           <Button size="sm" variant="outline" onClick={openEdit}>
-            <Pencil className="h-3.5 w-3.5 mr-1.5" />Modifier
+            <Pencil className="h-3.5 w-3.5 mr-1.5" />{tc("edit")}
           </Button>
         </div>
         <InfoRow icon={Mail} label="Courriel" value={client.email} />
@@ -1436,7 +1440,7 @@ function ClientTabs({
       {/* 5. Activité (timeline event-sourcing) */}
       <TabsContent value="activite" className="space-y-2 mt-4">
         {activityLoading ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Chargement…</p>
+          <p className="text-sm text-muted-foreground text-center py-8">{tc("loading")}</p>
         ) : activity.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Aucun événement enregistré pour ce client</p>
         ) : (

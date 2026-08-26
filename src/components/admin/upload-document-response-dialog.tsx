@@ -7,6 +7,7 @@
 // → serveur appelle submitUploadResponseAction → passe à "uploaded".
 // ─────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Upload,
@@ -130,6 +131,7 @@ export function UploadDocumentResponseDialog({
   onUploaded: () => void;
   request: UploadResponseRequest | null;
 }) {
+  const tc = useTranslations("common");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -290,7 +292,7 @@ export function UploadDocumentResponseDialog({
               <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px]">
                 {request.isRequired && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/20 text-red-100 border border-red-300/40 font-semibold">
-                    Obligatoire
+                    {tc("required")}
                   </span>
                 )}
                 {request.dueDate && (
@@ -428,7 +430,7 @@ export function UploadDocumentResponseDialog({
             onClick={handleClose}
             disabled={uploading}
           >
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             type="button"
@@ -444,7 +446,7 @@ export function UploadDocumentResponseDialog({
             ) : (
               <>
                 <Upload className="h-3.5 w-3.5 mr-1.5" />
-                Téléverser
+                {tc("upload")}
               </>
             )}
           </Button>

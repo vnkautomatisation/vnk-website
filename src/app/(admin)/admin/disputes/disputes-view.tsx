@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -159,6 +160,7 @@ export function DisputesView({
   mandates: MandateOption[];
   kpis: { total: number; open: number; won: number; lost: number; overdueEvidence: number; totalAtStake: number };
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
   const { open: openEntity } = useEntityPanels();
@@ -661,7 +663,7 @@ export function DisputesView({
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-              <X className="h-3.5 w-3.5 mr-1" />Annuler
+              <X className="h-3.5 w-3.5 mr-1" />{tc("cancel")}
             </Button>
             <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
               <Trash2 className="h-3.5 w-3.5 mr-1" />Supprimer tous
@@ -755,7 +757,7 @@ export function DisputesView({
         onOpenChange={(o) => { if (!o) setDeleteDispute(null); }}
         title="Supprimer ce litige ?"
         description={`Le litige "${deleteDispute?.title}" sera supprimé définitivement.`}
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
 
@@ -803,6 +805,7 @@ function DisputeFormDialog({
   setters: DFormSetters;
   onSubmit: () => void | Promise<void>;
 }) {
+  const tc = useTranslations("common");
   const isCreate = mode === "create";
   const isChargeback = values.type === "chargeback";
   const isLegal = values.type === "legal" || !!values.tribunal || !!values.lawFirmInvolved || !!values.caseNumber;
@@ -890,9 +893,9 @@ function DisputeFormDialog({
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">Mandat concerné</Label>
                   <Select value={values.mandateId || "none"} onValueChange={(v) => setters.setMandateId(v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="Aucun" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={tc("none")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Aucun</SelectItem>
+                      <SelectItem value="none">{tc("none")}</SelectItem>
                       {mandates.map((m) => <SelectItem key={m.id} value={String(m.id)}>{m.title}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -1020,7 +1023,7 @@ function DisputeFormDialog({
             </div>
             {!isCreate && (
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Statut</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{tc("status")}</Label>
                 <Select value={values.status} onValueChange={setters.setStatus}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -1073,7 +1076,7 @@ function DisputeFormDialog({
         </div>
 
         <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Annuler</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>{tc("cancel")}</Button>
           <Button
             onClick={onSubmit}
             disabled={submitting || !values.clientId || !values.title.trim() || (isCreate && !values.description.trim())}

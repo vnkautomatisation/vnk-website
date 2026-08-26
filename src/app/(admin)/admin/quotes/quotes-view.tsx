@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -93,6 +94,7 @@ export function QuotesView({
   clients: ClientOption[];
   mandates: MandateOption[];
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { confirm, ConfirmModal } = useConfirm();
@@ -452,7 +454,7 @@ export function QuotesView({
         <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors" aria-label="Actions">
+              <button className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors" aria-label={tc("actions")}>
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
@@ -609,7 +611,7 @@ export function QuotesView({
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-              <X className="h-3.5 w-3.5 mr-1" />Annuler
+              <X className="h-3.5 w-3.5 mr-1" />{tc("cancel")}
             </Button>
             <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
               <Trash2 className="h-3.5 w-3.5 mr-1" />Supprimer tous
@@ -706,7 +708,7 @@ export function QuotesView({
         onOpenChange={(o) => { if (!o) setDeleteQuote(null); }}
         title="Supprimer ce devis ?"
         description={`Le devis "${deleteQuote?.quoteNumber}" sera supprimé définitivement.`}
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
 
@@ -753,6 +755,7 @@ function QuoteFormDialog({
   setters: QFormSetters;
   onSubmit: () => void | Promise<void>;
 }) {
+  const tc = useTranslations("common");
   const isCreate = mode === "create";
   const amountNum = Number(values.amount) || 0;
   const tps = amountNum * 0.05;
@@ -823,7 +826,7 @@ function QuoteFormDialog({
               <Select value={values.service || "__none__"} onValueChange={(v) => setters.setService(v === "__none__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Aucun</SelectItem>
+                  <SelectItem value="__none__">{tc("none")}</SelectItem>
                   {SERVICE_TYPES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -874,7 +877,7 @@ function QuoteFormDialog({
         </div>
 
         <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Annuler</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>{tc("cancel")}</Button>
           <Button
             onClick={onSubmit}
             disabled={submitting || !values.title.trim() || !values.amount || (isCreate && !values.clientId)}

@@ -10,6 +10,7 @@
 //   PersonalDocCard.
 // =============================================================
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -264,6 +265,7 @@ export function DocumentsAdminView({
   templateIdsInActiveHandbooks?: number[];
   isSuper: boolean;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<TabKey>("overview");
 
@@ -950,7 +952,7 @@ export function DocumentsAdminView({
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.title ?? ""} ?`}
         description="Si le document a deja ete signe par des employes, il sera desactive au lieu d'etre supprime."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDel) return;
@@ -1568,6 +1570,7 @@ function RequestsTab({
   onPreviewPdf: (r: PendingRequest) => void;
   onNewRequest: () => void;
 }) {
+  const tc = useTranslations("common");
   const [busyId, setBusyId] = useState<number | null>(null);
   // Mission 6 : toggle visibilite "En cours / Completees / Tout" (defaut "En cours").
   const [viewFilter, setViewFilter] = useState<"pending" | "completed" | "all">("pending");
@@ -1654,7 +1657,7 @@ function RequestsTab({
                   Cible
                 </th>
                 <th className="px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
-                  Statut
+                  {tc("status")}
                 </th>
                 <th className="hidden md:table-cell px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
                   Demandee par
@@ -1663,7 +1666,7 @@ function RequestsTab({
                   Echeance
                 </th>
                 <th className="px-3 py-2 text-right font-semibold text-[10px] uppercase tracking-wider">
-                  Actions
+                  {tc("actions")}
                 </th>
               </tr>
             </thead>
@@ -1811,7 +1814,7 @@ function RequestsTab({
                               size="icon"
                               className="h-8 w-8 hover:text-destructive"
                               onClick={() => onCancel(r)}
-                              aria-label="Annuler"
+                              aria-label={tc("cancel")}
                             >
                               <XCircle className="h-4 w-4" />
                             </Button>
@@ -2232,6 +2235,7 @@ function EmployeePersonalDocsDialog({
   isSuper: boolean;
   onClose: () => void;
 }) {
+  const tc = useTranslations("common");
   const [docs, setDocs] = useState<PersonalDocCardData[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [previewDoc, setPreviewDoc] = useState<PersonalDocCardData | null>(null);
@@ -2352,7 +2356,7 @@ function EmployeePersonalDocsDialog({
 
           <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
             <Button variant="outline" onClick={onClose}>
-              Fermer
+              {tc("close")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2371,7 +2375,7 @@ function EmployeePersonalDocsDialog({
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer "${confirmDel?.title ?? ""}" ?`}
         description="Cette action est irreversible."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDel) return;
@@ -2454,6 +2458,7 @@ function SignaturesTab({
   templates: Template[];
   employees: Employee[];
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [templateFilter, setTemplateFilter] = useState<string>("all");
@@ -2591,7 +2596,7 @@ function SignaturesTab({
                   PDF
                 </th>
                 <th className="px-3 py-2 text-right font-semibold text-[10px] uppercase tracking-wider">
-                  Actions
+                  {tc("actions")}
                 </th>
               </tr>
             </thead>
@@ -2807,7 +2812,7 @@ function SignaturesTab({
               onClick={() => setEmployerSignFor(null)}
               disabled={employerSignBusy}
             >
-              Annuler
+              {tc("cancel")}
             </Button>
             <Button
               size="sm"
@@ -2879,7 +2884,7 @@ function SignaturesTab({
           </div>
           <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
             <Button variant="outline" onClick={() => setSigPreview(null)}>
-              Fermer
+              {tc("close")}
             </Button>
           </DialogFooter>
         </DialogContent>

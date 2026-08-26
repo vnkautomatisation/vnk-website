@@ -1,6 +1,7 @@
 "use client";
 // Vue Diagnostics — affichage temps réel des health checks.
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -36,6 +37,7 @@ const STATUS_META: Record<CheckStatus, { color: string; bg: string; icon: React.
 };
 
 export function DiagnosticsView() {
+  const tc = useTranslations("common");
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -66,7 +68,7 @@ export function DiagnosticsView() {
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour"><ChevronLeft className="h-5 w-5" /></Link>
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}><ChevronLeft className="h-5 w-5" /></Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-indigo-600 shrink-0">
           <Activity className="h-6 w-6" />
         </div>

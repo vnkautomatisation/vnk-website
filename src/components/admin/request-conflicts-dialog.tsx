@@ -7,6 +7,7 @@
 //   { conflicts: [{ id, fullName, type, startDate, endDate, status }], count }
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, Users, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,6 +66,7 @@ export function RequestConflictsDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const tc = useTranslations("common");
   const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -173,7 +175,7 @@ export function RequestConflictsDialog({
         </div>
         <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button variant="outline" onClick={onClose}>
-            Fermer
+            {tc("close")}
           </Button>
         </DialogFooter>
       </DialogContent>

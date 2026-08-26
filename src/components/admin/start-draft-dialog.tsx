@@ -8,6 +8,7 @@
 // pour les templates long-form (Evaluation 30/60/90, etc.).
 // ─────────────────────────────────────────────────────────
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ClipboardList, Loader2, Search, User } from "lucide-react";
 import {
@@ -40,6 +41,7 @@ type EmployeeItem = {
 export function StartDraftDialog({
   open, templateId, templateTitle, onClose, onCreated,
 }: StartDraftDialogProps) {
+  const tc = useTranslations("common");
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -161,7 +163,7 @@ export function StartDraftDialog({
 
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0 gap-2">
           <Button variant="outline" size="sm" onClick={onClose} disabled={creating}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             size="sm"

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -107,6 +108,7 @@ export function PayoutDetailDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
+  const tc = useTranslations("common");
   const [data, setData] = useState<PayoutDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [drillPaymentId, setDrillPaymentId] = useState<number | null>(null);
@@ -152,8 +154,8 @@ export function PayoutDetailDialog({
         </DialogHeader>
 
         <div className="overflow-y-auto p-5 space-y-4 flex-1">
-          {loading && <p className="text-sm text-muted-foreground text-center py-8">Chargement…</p>}
-          {!loading && !data && <p className="text-sm text-muted-foreground text-center py-8">Aucune donnée</p>}
+          {loading && <p className="text-sm text-muted-foreground text-center py-8">{tc("loading")}</p>}
+          {!loading && !data && <p className="text-sm text-muted-foreground text-center py-8">{tc("no_data")}</p>}
 
           {data && p && statusMeta && StatusIcon && (
             <>
@@ -165,7 +167,7 @@ export function PayoutDetailDialog({
                   <p className="text-[10px] text-muted-foreground mt-0.5">{p.currency}</p>
                 </div>
                 <div className="p-3 rounded-md border bg-card">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Statut</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{tc("status")}</p>
                   <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium mt-1.5", statusMeta.color)}>
                     <StatusIcon className="h-3 w-3" />
                     {statusMeta.label}
@@ -294,7 +296,7 @@ export function PayoutDetailDialog({
 
               {/* Footer */}
               <div className="flex flex-wrap gap-2 pt-2 border-t">
-                <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Fermer</Button>
+                <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>{tc("close")}</Button>
                 <a
                   href={`/admin/finance/payments?payoutId=${p.stripePayoutId}`}
                   className="inline-flex items-center justify-center text-xs h-9 px-3 rounded-md bg-[#0F2D52] text-white hover:bg-[#15406d] flex-1 min-w-[160px]"

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -89,6 +90,7 @@ export function RefundsView({
   invoices: InvoiceOption[];
   kpis: { total: number; pending: number; processed: number };
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
   const [view, setView] = useViewMode("refunds", "list");
@@ -466,7 +468,7 @@ export function RefundsView({
             <span className="font-semibold">{filtered.length} affichés</span>
             <span className="text-muted-foreground">En attente <span className="font-semibold text-amber-600">{kpis.pending}</span></span>
             <span className="text-muted-foreground">Traités <span className="font-semibold text-emerald-600">{kpis.processed}</span></span>
-            <span className="ml-auto text-muted-foreground">Montant <span className="font-semibold">{formatCurrency(totalAmount)}</span></span>
+            <span className="ml-auto text-muted-foreground">{tc("amount")} <span className="font-semibold">{formatCurrency(totalAmount)}</span></span>
           </div>
         </div>
       )}
@@ -557,7 +559,7 @@ export function RefundsView({
         <div className="space-y-4">
           <div className="space-y-2"><Label>Raison *</Label><Textarea value={editReason} onChange={(e) => setEditReason(e.target.value)} rows={3} /></div>
           <div className="space-y-2"><Label>Montant HT (CAD) *</Label><Input type="number" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} /></div>
-          <div className="space-y-2"><Label>Statut</Label>
+          <div className="space-y-2"><Label>{tc("status")}</Label>
             <Select value={editStatus} onValueChange={setEditStatus}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -576,7 +578,7 @@ export function RefundsView({
         onOpenChange={(o) => { if (!o) setDeleteRefund(null); }}
         title="Supprimer ce remboursement ?"
         description={`Le remboursement "${deleteRefund?.refundNumber}" sera supprimé définitivement.`}
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
 

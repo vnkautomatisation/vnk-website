@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -130,6 +131,7 @@ export function MonEspaceDashboard({
   pendingSignatureRequests?: Array<{ id: number; dueDate: string | null; reason: string | null; targetAll: boolean; template: { id: number; title: string; version: string } }>;
   recentNotifications?: Array<{ id: number; title: string; body: string | null; type: string; link: string | null; icon: string | null; createdAt: string; readAt: string | null }>;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const totalActions =
     unsignedDocs.length + pendingContracts.length + expiringLicenses.length +
@@ -466,7 +468,7 @@ export function MonEspaceDashboard({
                   </div>
                   {n.link && (
                     <Link href={n.link} className="text-[11px] text-[#0F2D52] hover:underline shrink-0 self-center">
-                      Voir
+                      {tc("view")}
                     </Link>
                   )}
                 </div>
@@ -751,7 +753,7 @@ export function MonEspaceDashboard({
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowJobCodeDialog(false)}>Annuler</Button>
+            <Button variant="outline" onClick={() => setShowJobCodeDialog(false)}>{tc("cancel")}</Button>
             <Button
               onClick={() => selectedJobCodeId && doClockIn(selectedJobCodeId)}
               disabled={!selectedJobCodeId}

@@ -25,6 +25,7 @@
 // TemplateFieldsDialog, TemplateRichEditorDialog, etc.
 // ─────────────────────────────────────────────────────────
 import { useMemo, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -194,6 +195,7 @@ export function DocumentsAdminViewV2({
   templateIdsInActiveHandbooks?: number[];
   isSuper: boolean;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   void isSuper;
 
@@ -491,7 +493,7 @@ export function DocumentsAdminViewV2({
                 className="text-white hover:bg-white/10"
                 onClick={() => toast.info("À implémenter : envoyer en masse")}
               >
-                <Send className="h-3.5 w-3.5 mr-1" /> Envoyer
+                <Send className="h-3.5 w-3.5 mr-1" /> {tc("send")}
               </Button>
               <Button
                 size="sm"
@@ -521,7 +523,7 @@ export function DocumentsAdminViewV2({
                   <th className="px-3 py-2">Nom</th>
                   <th className="px-3 py-2 hidden md:table-cell">Catégorie</th>
                   <th className="px-3 py-2 hidden lg:table-cell">Destinataire</th>
-                  <th className="px-3 py-2">Statut</th>
+                  <th className="px-3 py-2">{tc("status")}</th>
                   <th className="px-3 py-2 w-12" />
                 </tr>
               </thead>
@@ -805,6 +807,7 @@ function TableRow({
 function DrawerContent({ row, onClose, onSendForSignature }: {
   row: RowItem; onClose: () => void; onSendForSignature: () => void;
 }) {
+  const tc = useTranslations("common");
   const pdfUrl = row.templateId
     ? `/api/admin/document-templates/preview-pdf?templateId=${row.templateId}`
     : null;
@@ -830,10 +833,10 @@ function DrawerContent({ row, onClose, onSendForSignature }: {
         )}
       </div>
       <div className="px-4 py-3 border-t bg-muted/30 shrink-0 flex gap-2 flex-wrap [&>button]:flex-1">
-        <Button variant="outline" size="sm" onClick={onClose}>Fermer</Button>
+        <Button variant="outline" size="sm" onClick={onClose}>{tc("close")}</Button>
         {row.kind === "template" && (
           <Button size="sm" onClick={onSendForSignature} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
-            <Send className="h-3.5 w-3.5 mr-1.5" /> Envoyer
+            <Send className="h-3.5 w-3.5 mr-1.5" /> {tc("send")}
           </Button>
         )}
       </div>

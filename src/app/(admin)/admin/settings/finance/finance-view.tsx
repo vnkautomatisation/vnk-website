@@ -2,6 +2,7 @@
 // Vue Finance · Fiscalité · Loi 25 — paramètres regroupés en sections.
 // Utilise updateSettingsAction (catégorie par catégorie).
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -50,6 +51,7 @@ const PROVINCES = [
 ];
 
 export function FinanceView({ initial }: { initial: Record<string, string> }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [section, setSection] = useState<Section>("bank");
   const [pending, startTransition] = useTransition();
@@ -100,7 +102,7 @@ export function FinanceView({ initial }: { initial: Record<string, string> }) {
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour"><ChevronLeft className="h-5 w-5" /></Link>
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}><ChevronLeft className="h-5 w-5" /></Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-emerald-500 shrink-0">
           <Wallet className="h-6 w-6" />
         </div>
@@ -476,7 +478,7 @@ export function FinanceView({ initial }: { initial: Record<string, string> }) {
               </p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={handleDiscard} disabled={pending}>
-                  <RotateCcw className="h-3.5 w-3.5 mr-1.5" />Annuler
+                  <RotateCcw className="h-3.5 w-3.5 mr-1.5" />{tc("cancel")}
                 </Button>
                 <Button size="sm" onClick={handleSave} disabled={pending} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
                   <Save className="h-3.5 w-3.5 mr-1.5" />{pending ? "..." : "Enregistrer"}

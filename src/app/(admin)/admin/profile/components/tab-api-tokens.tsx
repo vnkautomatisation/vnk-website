@@ -29,6 +29,7 @@ const SCOPES = [
 ];
 
 export function TabApiTokens({ tokens }: { tokens: ApiTokenRow[] }) {
+  const tc = useTranslations("common");
   const t = useTranslations("admin.profile.api_tokens");
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
@@ -191,7 +192,7 @@ export function TabApiTokens({ tokens }: { tokens: ApiTokenRow[] }) {
             </div>
           </div>
           <DialogFooter className="px-5 pb-5">
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Annuler</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>{tc("cancel")}</Button>
             <Button onClick={handleCreate} disabled={pending}>
               {pending ? t("creating") : t("create")}
             </Button>

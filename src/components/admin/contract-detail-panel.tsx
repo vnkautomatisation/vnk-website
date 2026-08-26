@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -41,6 +42,7 @@ export function ContractDetailPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
   const { confirm, ConfirmModal } = useConfirm();
@@ -121,7 +123,7 @@ export function ContractDetailPanel({
             <TabsContent value="info" className="space-y-4 mt-4">
               <div className="rounded-lg border p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs uppercase tracking-wider text-muted-foreground">Statut</span>
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground">{tc("status")}</span>
                   <StatusBadge status={contract.status} />
                 </div>
                 <div className="flex items-center justify-between gap-2">

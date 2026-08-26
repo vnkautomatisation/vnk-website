@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -79,6 +80,7 @@ export function ContractsView({
   acceptedQuotes: LinkedQuote[];
   kpis: { total: number; pendingCount: number; signedCount: number; signedThisMonth: number; totalValue: number };
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { confirm, ConfirmModal } = useConfirm();
@@ -427,7 +429,7 @@ export function ContractsView({
         <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors" aria-label="Actions">
+              <button className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted transition-colors" aria-label={tc("actions")}>
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
@@ -584,7 +586,7 @@ export function ContractsView({
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-              <X className="h-3.5 w-3.5 mr-1" />Annuler
+              <X className="h-3.5 w-3.5 mr-1" />{tc("cancel")}
             </Button>
             <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
               <Trash2 className="h-3.5 w-3.5 mr-1" />Supprimer tous
@@ -680,7 +682,7 @@ export function ContractsView({
         onOpenChange={(o) => { if (!o) setDeleteContract(null); }}
         title="Supprimer ce contrat ?"
         description={`Le contrat "${deleteContract?.contractNumber}" sera supprimé définitivement.`}
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
 
@@ -778,6 +780,7 @@ function ContractFormDialog({
   setters: CFormSetters;
   onSubmit: () => void | Promise<void>;
 }) {
+  const tc = useTranslations("common");
   const isCreate = mode === "create";
   const clientIdNum = Number(values.clientId) || 0;
   const filteredMandates = mandates.filter((m) => m.clientId === clientIdNum);
@@ -897,7 +900,7 @@ function ContractFormDialog({
             </div>
             {!isCreate && (
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Statut</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{tc("status")}</Label>
                 <Select value={values.status} onValueChange={setters.setStatus}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -912,7 +915,7 @@ function ContractFormDialog({
         </div>
 
         <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Annuler</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>{tc("cancel")}</Button>
           <Button
             onClick={onSubmit}
             disabled={submitting || !values.title.trim() || (isCreate && !values.clientId)}

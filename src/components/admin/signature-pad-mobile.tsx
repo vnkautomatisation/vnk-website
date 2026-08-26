@@ -14,6 +14,7 @@
 //   onSigned(signatureDataUrl, checkboxStates)
 // ─────────────────────────────────────────────────────────
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertCircle,
   BookOpen,
@@ -83,6 +84,7 @@ export function SignaturePadMobile({
   requireAcknowledgment?: boolean;
   acknowledgmentLabel?: string;
 }) {
+  const tc = useTranslations("common");
   const [tab, setTab] = useState<Tab>("preview");
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -363,7 +365,7 @@ export function SignaturePadMobile({
             )}
           >
             <FileSignature className="h-3.5 w-3.5" />
-            <span>Actions</span>
+            <span>{tc("actions")}</span>
             {actionsComplete && (
               <CheckCircle2 className="h-3 w-3 text-emerald-600" />
             )}
@@ -610,7 +612,7 @@ export function SignaturePadMobile({
             disabled={pending}
             className="flex-1"
           >
-            Annuler
+            {tc("cancel")}
           </Button>
           {tab === "preview" ? (
             <Button

@@ -8,6 +8,7 @@
 // Input recherche + liste scrollable + bouton "Apercu" final.
 // =============================================================
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Search, Users, FileText, CheckCircle2 } from "lucide-react";
 import {
   Dialog,
@@ -59,6 +60,7 @@ export function PickEmployeeForPreviewDialog({
   description = "Selectionnez un employe pour resoudre les variables du template (nom, poste, salaire...).",
   confirmLabel = "Apercu PDF",
 }: PickEmployeeForPreviewDialogProps) {
+  const tc = useTranslations("common");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
@@ -163,7 +165,7 @@ export function PickEmployeeForPreviewDialog({
         {/* Footer */}
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0 gap-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             type="button"

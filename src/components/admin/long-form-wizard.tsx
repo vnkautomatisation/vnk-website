@@ -22,6 +22,7 @@
 // modaux admin doivent avoir header navy + sections).
 // ─────────────────────────────────────────────────────────
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
   ChevronDown,
@@ -68,6 +69,7 @@ export function LongFormWizard({
   onClose,
   onSubmit,
 }: LongFormWizardProps) {
+  const tc = useTranslations("common");
   const structure = useMemo(() => parseFillFields(bodyMarkdown), [bodyMarkdown]);
   const [values, setValues] = useState<Record<string, string>>(initialValues ?? {});
   const [submitting, setSubmitting] = useState(false);
@@ -178,7 +180,7 @@ export function LongFormWizard({
         {/* Footer sticky */}
         <DialogFooter className="px-4 sm:px-6 py-3 border-t bg-card shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button variant="outline" size="sm" onClick={onClose} disabled={submitting}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button
             size="sm"
@@ -309,6 +311,7 @@ export function FieldRow({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const tc = useTranslations("common");
   // Detection du type d'input selon le label :
   //   - Date / annee / mois / jour     -> DatePopover (calendrier inline)
   //   - longtext / Notes / Commentaires -> Textarea
@@ -334,7 +337,7 @@ export function FieldRow({
         <span className="truncate">{displayLabel}</span>
         {isDate && (
           <span className="text-[9px] uppercase tracking-wide text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-            Date
+            {tc("date")}
           </span>
         )}
       </label>

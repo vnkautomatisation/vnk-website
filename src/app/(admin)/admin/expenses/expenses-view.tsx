@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -161,6 +162,7 @@ export function ExpensesView({
   expenses: Expense[];
   kpis: Kpis;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [view, setView] = useViewMode("expenses", "list");
   const [searchQuery, setSearchQuery] = useState("");
@@ -520,7 +522,7 @@ export function ExpensesView({
             <button
               onClick={() => openEdit(r)}
               className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              aria-label="Modifier"
+              aria-label={tc("edit")}
             >
               <Pencil className="h-3.5 w-3.5" />
             </button>
@@ -529,7 +531,7 @@ export function ExpensesView({
             <button
               onClick={() => setDeleteExpense(r)}
               className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-red-600"
-              aria-label="Supprimer"
+              aria-label={tc("delete")}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -891,7 +893,7 @@ export function ExpensesView({
         onOpenChange={(o) => { if (!o) setDeleteExpense(null); }}
         title="Supprimer cette dépense ?"
         description={`La dépense "${deleteExpense?.title}" sera supprimée définitivement.`}
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
 
@@ -983,6 +985,7 @@ function ExpenseFormDialog({
   onPreviewReceipt: () => void;
   onSubmit: () => Promise<{ success: boolean; error?: string }>;
 }) {
+  const tc = useTranslations("common");
   const [pending, startTransition] = useTransition();
   const isCreate = mode === "create";
 
@@ -1130,7 +1133,7 @@ function ExpenseFormDialog({
                     </span>
                     <Button type="button" size="sm" variant="outline" className="h-8" onClick={onPreviewReceipt}>
                       <Eye className="h-3 w-3 mr-1" />
-                      Voir
+                      {tc("view")}
                     </Button>
                     <Label htmlFor="ef-receipt-replace" className="cursor-pointer">
                       <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-medium border bg-background hover:bg-muted">
@@ -1161,7 +1164,7 @@ function ExpenseFormDialog({
                       Le reçu sera retiré à l&apos;enregistrement
                     </span>
                     <Button type="button" size="sm" variant="ghost" className="h-8" onClick={() => setReceiptAction("keep")}>
-                      Annuler
+                      {tc("cancel")}
                     </Button>
                   </div>
                 ) : (
@@ -1187,7 +1190,7 @@ function ExpenseFormDialog({
 
         {/* Footer */}
         <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button
             onClick={handleSubmit}
             disabled={pending || !canSubmit}

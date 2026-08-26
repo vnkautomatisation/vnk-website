@@ -10,6 +10,7 @@
 //   PdfPreviewModal.
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -314,6 +315,7 @@ export function MyDocumentsView({
   handbooksToSign?: HandbookToSign[];
   myHandbookSignatures?: HandbookSignature[];
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
 
   // --- Derived datasets --------------------------------------
@@ -747,7 +749,7 @@ export function MyDocumentsView({
                       {hb.isRequired && (
                         <>
                           <span className="mx-1">·</span>
-                          <span className="text-red-700 font-medium">Obligatoire</span>
+                          <span className="text-red-700 font-medium">{tc("required")}</span>
                         </>
                       )}
                     </p>
@@ -965,7 +967,7 @@ export function MyDocumentsView({
         onOpenChange={(o) => !o && setConfirmDelDoc(null)}
         title={`Supprimer "${confirmDelDoc?.title ?? ""}" ?`}
         description="Cette action est irreversible."
-        confirmLabel="Supprimer"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDelDoc) return;
@@ -1330,6 +1332,7 @@ function PersonalTab({
   onPreview: (d: PersonalDoc) => void;
   onDelete: (d: PersonalDoc) => void;
 }) {
+  const tc = useTranslations("common");
   void employeeId;
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
@@ -1379,7 +1382,7 @@ function PersonalTab({
                     </div>
                     {r.isRequired && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200 font-semibold shrink-0">
-                        Obligatoire
+                        {tc("required")}
                       </span>
                     )}
                   </div>
@@ -1396,7 +1399,7 @@ function PersonalTab({
                       }`}
                     >
                       <Upload className="h-3 w-3 mr-1" />
-                      Téléverser
+                      {tc("upload")}
                     </Button>
                   </div>
                 </Card>
@@ -1699,6 +1702,7 @@ function RequestLetterDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const [purpose, setPurpose] = useState<"bank" | "rental" | "embassy" | "hypothec" | "other">("bank");
   const [recipient, setRecipient] = useState("");
   const [includeSalary, setIncludeSalary] = useState(true);
@@ -1794,7 +1798,7 @@ function RequestLetterDialog({
 
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
           <Button variant="outline" onClick={onClose} disabled={pending}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button onClick={submit} disabled={pending} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
             {pending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}

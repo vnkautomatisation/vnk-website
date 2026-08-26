@@ -1,6 +1,7 @@
 "use client";
 // Dialog création/édition d'un témoignage client.
 import { useState, useEffect, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { MessageSquareQuote, Star } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -24,6 +25,7 @@ export function TestimonialDialog({
   testimonial: TestimonialRow | null;
   onSaved: () => void;
 }) {
+  const tc = useTranslations("common");
   const mode = testimonial ? "edit" : "create";
   const [pending, startTransition] = useTransition();
 
@@ -165,7 +167,7 @@ export function TestimonialDialog({
         </div>
 
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={handleSave} disabled={pending || !clientName.trim() || !content.trim()} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
             {pending ? "..." : mode === "create" ? "Créer" : "Enregistrer"}
           </Button>

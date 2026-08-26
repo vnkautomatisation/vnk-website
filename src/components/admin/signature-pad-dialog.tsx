@@ -21,6 +21,7 @@
 // interactif dans la colonne actions. checkboxStates propage au backend.
 // ─────────────────────────────────────────────────────────
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertCircle,
   BookOpen,
@@ -90,6 +91,7 @@ export function SignaturePadDialog({
   requireAcknowledgment?: boolean;
   acknowledgmentLabel?: string;
 }) {
+  const tc = useTranslations("common");
   // Detection desktop (>= 1280px) : layout 2 colonnes
   const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
@@ -671,7 +673,7 @@ export function SignaturePadDialog({
               onClick={onClose}
               disabled={pending}
             >
-              Annuler
+              {tc("cancel")}
             </Button>
             <Button
               type="button"

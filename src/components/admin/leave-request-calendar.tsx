@@ -11,6 +11,7 @@
 //
 // Theme VNK navy partout, pas de dependance externe.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   CalendarDays, ChevronLeft, ChevronRight, Sun, Bandage, Baby, Home,
   AlertTriangle, Users, Loader2, Sparkles,
@@ -132,6 +133,7 @@ export function LeaveRequestCalendar({
   /** Nombre de mois visibles cote a cote sur desktop (default 1). Mobile reste 1 mois. */
   monthsVisible?: 1 | 2 | 3;
 }) {
+  const tc = useTranslations("common");
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
   // Determination du mois visible initial : si edit avec date de debut, on l'utilise
   const initialMonth = useMemo(() => {
@@ -617,11 +619,11 @@ export function LeaveRequestCalendar({
             </h2>
             <p className="text-white/80 text-xs">{headerSubtitle}</p>
           </div>
-          <ActionTooltip label="Fermer">
+          <ActionTooltip label={tc("close")}>
             <button
               onClick={onClose}
               className="h-8 w-8 rounded-md hover:bg-white/15 flex items-center justify-center shrink-0"
-              aria-label="Fermer"
+              aria-label={tc("close")}
             >
               <span aria-hidden className="text-lg leading-none">×</span>
             </button>
@@ -948,7 +950,7 @@ export function LeaveRequestCalendar({
             ) : "Selectionnez une periode"}
           </p>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+            <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
             <Button
               onClick={submit}
               disabled={!canSubmit || (balanceInsufficient ?? false)}

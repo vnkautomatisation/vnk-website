@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ShieldCheck, Plus, Edit2, Trash2, Star, Users, FileSearch } from "lucide-react";
@@ -243,6 +244,7 @@ function PolicyCard({ policy, adminsCount, onEdit, onDelete, busy }: {
 }
 
 function PolicyDialog({ open, policy, onClose, onSaved }: { open: boolean; policy?: Policy; onClose: () => void; onSaved: () => void }) {
+  const tc = useTranslations("common");
   const [name, setName] = useState(policy?.name ?? "");
   const [refMonth, setRefMonth] = useState(policy?.referenceMonthStart ?? 5);
   const [rateBelow, setRateBelow] = useState(policy?.accrualRateBelow3y ?? 4);
@@ -341,7 +343,7 @@ function PolicyDialog({ open, policy, onClose, onSaved }: { open: boolean; polic
           </FormSection>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
-          <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button
             onClick={submit}
             disabled={pending || !name.trim()}

@@ -1,6 +1,7 @@
 "use client";
 // Vue Sécurité — politique globale + events critiques + verrouillage comptes.
 import React, { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -54,6 +55,7 @@ export function SecurityView({
   currentAdminId: number;
   isSuperAdmin: boolean;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("policy");
   const [pending, startTransition] = useTransition();
@@ -142,7 +144,7 @@ export function SecurityView({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label="Retour"><ChevronLeft className="h-5 w-5" /></Link>
+        <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}><ChevronLeft className="h-5 w-5" /></Link>
         <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-red-600 shrink-0">
           <Shield className="h-6 w-6" />
         </div>
@@ -446,6 +448,7 @@ type Passkey = {
 };
 
 function PasskeysSection() {
+  const tc = useTranslations("common");
   const [passkeys, setPasskeys] = React.useState<Passkey[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [registering, setRegistering] = React.useState(false);
@@ -543,7 +546,7 @@ function PasskeysSection() {
           {registering ? "Configuration…" : "Ajouter une passkey"}
         </Button>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Chargement…</p>
+          <p className="text-sm text-muted-foreground">{tc("loading")}</p>
         ) : passkeys.length === 0 ? (
           <p className="text-sm text-muted-foreground italic">Aucune passkey enregistrée.</p>
         ) : (

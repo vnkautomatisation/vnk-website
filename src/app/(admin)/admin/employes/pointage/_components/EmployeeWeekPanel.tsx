@@ -2,6 +2,7 @@
 // Quick approval panel for one employee's week.
 // EmployeeWeekPanelRemote fetches; EmployeeWeekPanel is pure presentation.
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -29,6 +30,7 @@ export function EmployeeWeekPanelRemote({
   focusDate?: string | null;
   onClose: () => void;
 }) {
+  const tc = useTranslations("common");
   const router = useRouter();
   const [data, setData] = useState<{
     name: string;
@@ -131,7 +133,7 @@ export function EmployeeWeekPanelRemote({
       <>
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-5">
           <SheetHeader>
-            <SheetTitle className="text-white">Chargement…</SheetTitle>
+            <SheetTitle className="text-white">{tc("loading")}</SheetTitle>
           </SheetHeader>
         </div>
         <div className="p-5">
@@ -183,6 +185,7 @@ export function EmployeeWeekPanel({
   onApproveWeek: () => Promise<void>;
   onClose: () => void;
 }) {
+  const tc = useTranslations("common");
   const entries = employee.entries;
 
 
@@ -359,7 +362,7 @@ export function EmployeeWeekPanel({
 
       <div className="border-t bg-muted/30 p-3 shrink-0 flex flex-col sm:flex-row sm:items-center gap-2">
         <Button variant="ghost" size="sm" onClick={onClose} disabled={pending} className="hidden sm:inline-flex">
-          Fermer
+          {tc("close")}
         </Button>
         <div className="hidden sm:block flex-1" />
         {allPendingIds.length > 0 && (
@@ -384,7 +387,7 @@ export function EmployeeWeekPanel({
           <span className="truncate">Approuver la semaine</span>
         </Button>
         <Button variant="ghost" size="sm" onClick={onClose} disabled={pending} className="sm:hidden">
-          Fermer
+          {tc("close")}
         </Button>
       </div>
     </div>
