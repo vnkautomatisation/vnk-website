@@ -51,7 +51,7 @@ export function CalendarMonthView({
     cursor.setDate(cursor.getDate() + 1);
   }
 
-  // Nav précédent/suivant
+  // Previous / next month
   const prev = new Date(year, month - 1, 1);
   const next = new Date(year, month + 1, 1);
 
@@ -87,7 +87,7 @@ export function CalendarMonthView({
         </div>
       </div>
 
-      {/* Légende */}
+      {/* Legend */}
       <div className="flex flex-wrap gap-2">
         {Object.entries(TYPE_META).map(([k, m]) => (
           <span key={k} className="inline-flex items-center gap-1.5 text-xs">
@@ -114,7 +114,13 @@ export function CalendarMonthView({
           {days.map((d, idx) => {
             const isCurrentMonth = d.getMonth() === month;
             const isToday = isSameDay(d, today);
-            const dayHolidays = holidays.filter((h) => isSameDay(new Date(h.date), d));
+            // Holiday.date is a @db.Date: its calendar day is the UTC one.
+            const dayHolidays = holidays.filter((h) => {
+              const hd = new Date(h.date);
+              return hd.getUTCFullYear() === d.getFullYear()
+                && hd.getUTCMonth() === d.getMonth()
+                && hd.getUTCDate() === d.getDate();
+            });
             const dayLeaves = leaves.filter((l) => inRange(d, l.startDate, l.endDate));
             const isWeekend = d.getDay() === 0 || d.getDay() === 6;
             return (
@@ -156,7 +162,7 @@ export function CalendarMonthView({
         </div>
       </Card>
 
-      {/* Liste détaillée du mois */}
+      {/* Detailed list for the month */}
       <section>
         <h2 className="text-sm font-semibold mb-2 uppercase tracking-wider text-muted-foreground">
           Détails du mois ({leaves.length} congé{leaves.length !== 1 ? "s" : ""})
