@@ -37,7 +37,7 @@ const MONTHS_FR_SHORT = [
   "Janv", "Févr", "Mars", "Avril", "Mai", "Juin",
   "Juil", "Août", "Sept", "Oct", "Nov", "Déc",
 ];
-const DAYS_FR_SHORT = ["L", "M", "M", "J", "V", "S", "D"]; // lundi-first
+const DAYS_FR_SHORT = ["D", "L", "M", "M", "J", "V", "S"]; // dimanche-first (convention projet)
 
 type ViewMode = "days" | "months" | "years";
 
@@ -71,10 +71,10 @@ export function DatePopover({
     if (value) setVisibleMonth(parseISO(value));
   }, [value]);
 
-  // Construit la grille 6 semaines (lundi-first)
+  // Construit la grille 6 semaines (dimanche-first)
   const grid = useMemo(() => {
     const first = startOfMonth(visibleMonth);
-    const firstDayIdx = (first.getDay() + 6) % 7; // 0 = lundi
+    const firstDayIdx = first.getDay(); // 0 = dimanche
     const start = new Date(first);
     start.setDate(start.getDate() - firstDayIdx);
     const days: Date[] = [];
@@ -108,9 +108,11 @@ export function DatePopover({
 
   const today = new Date();
 
-  // Label trigger compact : "30 avr 2026" au lieu de "jeu. 30 avril 2026"
+  // Label trigger compact : "30 avr 2026" au lieu de "jeu. 30 avril 2026".
+  // Mois en minuscule (convention francaise) — la casse titre reste pour
+  // l'en-tete du calendrier.
   const label = selected
-    ? `${selected.getDate()} ${MONTHS_FR_SHORT[selected.getMonth()]} ${selected.getFullYear()}`
+    ? `${selected.getDate()} ${MONTHS_FR_SHORT[selected.getMonth()].toLowerCase()} ${selected.getFullYear()}`
     : placeholder;
 
   const goPrev = () => setVisibleMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));

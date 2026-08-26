@@ -15,12 +15,12 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
-  // Inclure jours du mois précédent pour aligner sur lundi (convention QC)
+  // Inclure jours du mois précédent pour aligner sur dimanche (convention projet)
   const gridStart = new Date(firstDay);
-  const dayOfWeek = (firstDay.getDay() + 6) % 7; // 0 = lundi
+  const dayOfWeek = firstDay.getDay(); // 0 = dimanche
   gridStart.setDate(gridStart.getDate() - dayOfWeek);
   const gridEnd = new Date(lastDay);
-  gridEnd.setDate(gridEnd.getDate() + (6 - ((lastDay.getDay() + 6) % 7)));
+  gridEnd.setDate(gridEnd.getDate() + (6 - lastDay.getDay()));
 
   const [leaves, holidays] = await Promise.all([
     prisma.leaveRequest.findMany({

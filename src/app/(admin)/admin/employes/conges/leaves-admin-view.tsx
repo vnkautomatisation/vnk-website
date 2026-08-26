@@ -1128,15 +1128,14 @@ function Heatmap({ days, onClickDay }: { days: HeatmapDay[]; onClickDay?: (date:
     return <div className="p-6 text-center text-xs text-muted-foreground">Aucune donnee.</div>;
   }
 
-  // Organise les jours en semaines (commencant lundi)
+  // Organise les jours en semaines (commencant dimanche — convention projet)
   // On affiche 4 lignes (semaines) x 7 colonnes (jours)
   const weeks: Array<Array<HeatmapDay | null>> = [];
   let currentWeek: Array<HeatmapDay | null> = [];
-  // Padding pour aligner sur lundi
+  // Padding pour aligner sur dimanche
   if (days.length > 0) {
     const first = new Date(days[0].date);
-    const dow = first.getDay();
-    const pad = dow === 0 ? 6 : dow - 1;
+    const pad = first.getDay(); // 0 = dimanche
     for (let i = 0; i < pad; i++) currentWeek.push(null);
   }
   for (const d of days) {
@@ -1152,7 +1151,7 @@ function Heatmap({ days, onClickDay }: { days: HeatmapDay[]; onClickDay?: (date:
   }
 
   const maxCount = Math.max(1, ...days.map((d) => d.count));
-  const dowLabels = ["L", "M", "M", "J", "V", "S", "D"];
+  const dowLabels = ["D", "L", "M", "M", "J", "V", "S"]; // dimanche-first
   const todayKey = isoDay(new Date());
 
   // Mini calendar compact : ~250px max, cellules carrees fixees a 28px de cote.

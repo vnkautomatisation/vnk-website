@@ -61,7 +61,7 @@ const MONTHS_FR = [
   "Janvier", "Fevrier", "Mars", "Avril", "Mai", "Juin",
   "Juillet", "Aout", "Septembre", "Octobre", "Novembre", "Decembre",
 ];
-const DAYS_FR_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
+const DAYS_FR_SHORT = ["D", "L", "M", "M", "J", "V", "S"]; // dimanche-first (convention projet)
 
 function pad(n: number) { return n.toString().padStart(2, "0"); }
 function toISO(d: Date): string {
@@ -268,13 +268,13 @@ export function LeaveRequestCalendar({
     return m;
   }, [holidays]);
 
-  // ─── Grilles 6 semaines (lundi-first) — une par mois visible ────
+  // ─── Grilles 6 semaines (dimanche-first) — une par mois visible ────
   const grids = useMemo(() => {
     const out: Array<{ month: Date; days: Date[] }> = [];
     for (let i = 0; i < monthsVisible; i++) {
       const month = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + i, 1);
       const first = startOfMonth(month);
-      const firstDayIdx = (first.getDay() + 6) % 7;
+      const firstDayIdx = first.getDay(); // 0 = dimanche
       const startGrid = new Date(first);
       startGrid.setDate(startGrid.getDate() - firstDayIdx);
       const days: Date[] = [];

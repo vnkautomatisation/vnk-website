@@ -19,15 +19,14 @@ function authorize(req: Request): boolean {
   return header === `Bearer ${expected}`;
 }
 
-// Lundi de la semaine derniere
-function lastMondayUTC(): Date {
+// Sunday of last week (project week convention: Sunday -> Saturday)
+function lastSundayUTC(): Date {
   const now = new Date();
-  const dow = now.getUTCDay(); // 0=dim ... 6=sam
-  const offsetToMonday = (dow + 6) % 7; // jours depuis lundi cette sem
-  const thisMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - offsetToMonday));
-  const lastMonday = new Date(thisMonday);
-  lastMonday.setUTCDate(lastMonday.getUTCDate() - 7);
-  return lastMonday;
+  const dow = now.getUTCDay(); // 0 = Sunday
+  const thisSunday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - dow));
+  const lastSunday = new Date(thisSunday);
+  lastSunday.setUTCDate(lastSunday.getUTCDate() - 7);
+  return lastSunday;
 }
 
 export async function POST(req: Request) {
@@ -35,7 +34,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Non autorise" }, { status: 401 });
   }
 
-  const weekStart = lastMondayUTC();
+  const weekStart = lastSundayUTC();
   const weekEnd = new Date(weekStart);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
 

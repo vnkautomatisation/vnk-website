@@ -1,6 +1,8 @@
 import "server-only";
+import { startOfWeek, endOfWeek } from "@/lib/week";
 
 // Heures supplementaires QC : seuil par defaut 40h/semaine.
+// Semaine projet : dimanche -> samedi (cf. src/lib/week.ts).
 // Le taux x1.5 sera applique cote generation paie (pas ici).
 
 export type WeekOvertimeCheck = {
@@ -19,25 +21,8 @@ export type EntryForOvertime = {
 const WORK_CATEGORIES = new Set(["work", "meeting", "training"]);
 const DEFAULT_THRESHOLD_MIN = 40 * 60;
 
-function startOfWeekMonday(d: Date): Date {
-  const n = new Date(d);
-  n.setHours(0, 0, 0, 0);
-  const day = n.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  n.setDate(n.getDate() + diff);
-  return n;
-}
-
-function endOfWeekSunday(d: Date): Date {
-  const s = startOfWeekMonday(d);
-  const e = new Date(s);
-  e.setDate(e.getDate() + 6);
-  e.setHours(23, 59, 59, 999);
-  return e;
-}
-
 function weekKey(d: Date): string {
-  const s = startOfWeekMonday(d);
+  const s = startOfWeek(d);
   return `${s.getFullYear()}-${String(s.getMonth() + 1).padStart(2, "0")}-${String(s.getDate()).padStart(2, "0")}`;
 }
 
@@ -49,7 +34,7 @@ export function calculateOvertimeForWeek(
   return Math.max(0, workMinPerWeek - threshold);
 }
 
-// Regroupe les entries par semaine (lundi/dimanche) et calcule l'overtime de chaque.
+// Regroupe les entries par semaine (dimanche/samedi) et calcule l'overtime de chaque.
 export function calculateOvertimeForEntries(
   entries: EntryForOvertime[],
   threshold: number = DEFAULT_THRESHOLD_MIN,
@@ -62,8 +47,8 @@ export function calculateOvertimeForEntries(
     const key = weekKey(e.clockIn);
     if (!byWeek.has(key)) {
       byWeek.set(key, {
-        weekStart: startOfWeekMonday(e.clockIn),
-        weekEnd: endOfWeekSunday(e.clockIn),
+        weekStart: startOfWeek(e.clockIn),
+        weekEnd: endOfWeek(e.clockIn),
         workMin: 0,
       });
     }

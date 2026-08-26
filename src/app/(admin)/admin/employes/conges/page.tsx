@@ -10,6 +10,7 @@
 //
 // Scope : getLeavesScope (founder = tout, HR = tous-sauf-soi, manager = subordonnés+teams)
 import { prisma } from "@/lib/prisma";
+import { startOfWeek, endOfWeek } from "@/lib/week";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { LeavesAdminView } from "./leaves-admin-view";
@@ -23,13 +24,6 @@ const PAGE_SIZE = 50;
 
 function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-function startOfWeekMonday(d: Date): Date {
-  const n = startOfDay(d);
-  const day = n.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  n.setDate(n.getDate() + diff);
-  return n;
 }
 function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -110,7 +104,7 @@ export default async function CongesPage({
 
   const now = new Date();
   const today = startOfDay(now);
-  const weekStart = startOfWeekMonday(now);
+  const weekStart = startOfWeek(now);
   const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);

@@ -14,9 +14,8 @@ export default async function MonEspaceHome() {
   const adminId = session.user.adminId!;
 
   const today = new Date();
-  // Debut de semaine = LUNDI (convention Quebec). getDay() = 0 pour dimanche,
-  // 1 pour lundi. (getDay() + 6) % 7 donne 0 pour lundi, 6 pour dimanche.
-  const dayIndex = (today.getDay() + 6) % 7;
+  // Project week convention: SUNDAY -> Saturday (cf. src/lib/week.ts).
+  const dayIndex = today.getDay(); // 0 = Sunday
   const startOfWeek = new Date(today);
   startOfWeek.setDate(today.getDate() - dayIndex);
   startOfWeek.setHours(0, 0, 0, 0);

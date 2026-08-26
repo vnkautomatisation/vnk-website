@@ -5,7 +5,8 @@
 //     l'edition d'une periode existante.
 //
 // Toutes les sorties sont au format "YYYY-MM-DDTHH:MM" (compatible <input
-// datetime-local>). Max = aujourd'hui, Min = lundi semaine en cours.
+// datetime-local>). Max = aujourd'hui, Min = dimanche semaine en cours
+// (semaine projet : dimanche -> samedi).
 import { useMemo } from "react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -19,11 +20,10 @@ function todayISO(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function startOfWeekMondayISO(): string {
+function startOfWeekISO(): string {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
-  const dayIdx = (d.getDay() + 6) % 7;
-  d.setDate(d.getDate() - dayIdx);
+  d.setDate(d.getDate() - d.getDay()); // getDay(): 0 = Sunday
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
@@ -54,7 +54,7 @@ export function TimePicker({
   disabled?: boolean;
 }) {
   const { date, h, m } = useMemo(() => parseLocal(value), [value]);
-  const min = minDate ?? startOfWeekMondayISO();
+  const min = minDate ?? startOfWeekISO();
   const max = maxDate ?? todayISO();
 
   const update = (next: { date?: string; h?: string; m?: string }) => {
@@ -158,7 +158,7 @@ export function DurationPicker({
   maxDate?: string;
   disabled?: boolean;
 }) {
-  const min = minDate ?? startOfWeekMondayISO();
+  const min = minDate ?? startOfWeekISO();
   const max = maxDate ?? todayISO();
   const h = Math.floor(Math.max(0, durationMin) / 60);
   const m = Math.max(0, durationMin) % 60;
@@ -182,7 +182,7 @@ export function DurationPicker({
       />
       <div className="flex items-center gap-1">
         <Select value={String(h)} onValueChange={(v) => setH(Number(v))} disabled={disabled}>
-          <SelectTrigger className="h-9 w-[78px] text-sm font-mono tabular-nums"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-9 w-[82px] text-sm font-mono tabular-nums"><SelectValue /></SelectTrigger>
           <SelectContent className="max-h-[280px]">
             {hourOptions.map((hr) => (
               <SelectItem key={hr} value={String(hr)} className="font-mono">{hr} h</SelectItem>
@@ -190,7 +190,7 @@ export function DurationPicker({
           </SelectContent>
         </Select>
         <Select value={String(mRounded)} onValueChange={(v) => setM(Number(v))} disabled={disabled}>
-          <SelectTrigger className="h-9 w-[72px] text-sm font-mono tabular-nums"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-9 w-[94px] text-sm font-mono tabular-nums"><SelectValue /></SelectTrigger>
           <SelectContent className="max-h-[280px]">
             {minuteOptions.map((mn) => (
               <SelectItem key={mn} value={String(mn)} className="font-mono">{pad(mn)} min</SelectItem>

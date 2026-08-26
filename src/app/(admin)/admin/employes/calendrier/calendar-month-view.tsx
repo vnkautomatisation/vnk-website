@@ -13,7 +13,7 @@ type Leave = {
 type Holiday = { id: number; date: string; name: string; isPaid: boolean };
 
 const MONTHS_FR = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
-const DAYS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+const DAYS_FR = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"]; // dimanche-first (convention projet)
 
 const TYPE_META: Record<string, { label: string; color: string; icon: typeof Sun }> = {
   vacation: { label: "Vacances", color: "bg-cyan-500", icon: Sun },
