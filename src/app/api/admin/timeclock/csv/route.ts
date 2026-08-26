@@ -1,7 +1,7 @@
 // GET /api/admin/timeclock/csv
-// Export CSV des pointages approuves (UTF-8 BOM pour Excel).
-// Auth : admin avec permission payroll/users write.
-// Query optionnels : ?from=YYYY-MM-DD&to=YYYY-MM-DD
+// CSV export of approved punches (UTF-8 BOM so Excel opens it correctly).
+// Auth: admin with payroll/users write permission.
+// Optional query: ?from=YYYY-MM-DD&to=YYYY-MM-DD
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
@@ -38,8 +38,7 @@ export async function GET(req: NextRequest) {
   const from = fromStr ? new Date(fromStr) : null;
   const to = toStr ? new Date(toStr + "T23:59:59") : null;
 
-  // Scope hierarchique : un manager n'exporte QUE ses subordonnes ; HR/founder
-  // voient tout (mais HR non-fondateur s'exclut lui-meme).
+  // A manager exports only their reports; a non-founder HR excludes self.
   const scope = await getTimesheetScope(adminId);
   const scopeWhere = timeClockScopeWhere(scope);
 

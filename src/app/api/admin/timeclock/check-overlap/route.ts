@@ -1,11 +1,13 @@
 // GET /api/admin/timeclock/check-overlap
-// Detection live de chevauchement pour le modal de saisie manuelle.
-// Auth: admin (cherche dans ses propres pointages).
-// Query: ?from=ISO&to=ISO[&excludeId=N]
+// Live overlap detection for the manual entry dialog.
+// Defaults to the caller's punches; `adminId` needs review authority, like
+// manualTimeEntryAction.
+// Query: ?from=ISO&to=ISO[&excludeId=N][&adminId=N]
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getTimesheetScope, checkReadAccess } from "@/lib/services/timesheet-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +16,19 @@ export async function GET(req: NextRequest) {
   if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
-  const adminId = session.user.adminId!;
+  const actorId = session.user.adminId!;
   const url = new URL(req.url);
   const fromStr = url.searchParams.get("from");
   const toStr = url.searchParams.get("to");
   const excludeIdStr = url.searchParams.get("excludeId");
+  const targetIdStr = url.searchParams.get("adminId");
+
+  let adminId = actorId;
+  if (targetIdStr) {
+    const access = checkReadAccess(await getTimesheetScope(actorId), targetIdStr, actorId);
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+    adminId = access.targetId;
+  }
 
   if (!fromStr || !toStr) {
     return NextResponse.json({ overlap: false });
@@ -35,9 +45,9 @@ export async function GET(req: NextRequest) {
       adminId,
       ...(excludeId ? { id: { not: excludeId } } : {}),
       OR: [
-        // Cas 1 : entry fermee qui chevauche [from, to]
+        // Closed entry overlapping [from, to]
         { AND: [{ clockOut: { not: null } }, { clockIn: { lt: to } }, { clockOut: { gt: from } }] },
-        // Cas 2 : entry ouverte dont le clockIn precede to (peut courir jusqu'a maintenant)
+        // Open entry started before `to` (may still be running)
         { clockOut: null, clockIn: { lt: to } },
       ],
     },

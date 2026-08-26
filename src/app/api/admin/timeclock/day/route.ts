@@ -1,9 +1,6 @@
 // GET /api/admin/timeclock/day?date=YYYY-MM-DD
-// Retourne TOUS les pointages d'une journée pour TOUS les admins du scope hiérarchique
-// du manager/HR connecté, ET la liste des admins du scope qui n'ont AUCUNE entry ce jour
-// (utile pour identifier les oublis).
-//
-// Auth : même scope que la page admin/employes/pointage (HR ou manager hierarchique).
+// One day for every admin in scope: the punches, plus those with none.
+// Both lists are capped; the CSV export is the exhaustive tool.
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
@@ -11,6 +8,10 @@ import { prisma } from "@/lib/prisma";
 import { getTimesheetScope } from "@/lib/services/timesheet-scope";
 
 export const dynamic = "force-dynamic";
+
+// The panel renders every row without virtualization.
+const MAX_ENTRIES = 2000;
+const MAX_WITHOUT_ENTRIES = 50;
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -33,13 +34,15 @@ export async function GET(req: NextRequest) {
 
   const scope = await getTimesheetScope(currentAdminId);
 
-  // Si manager sans subordonné, on retourne vide proprement.
+  // Manager with no direct report: return an empty payload.
   if (!scope.isHr && (scope.allowedAdminIds ?? []).length === 0) {
-    return NextResponse.json({ entries: [], adminsWithoutEntries: [], date: dateParam });
+    return NextResponse.json({
+      entries: [], adminsWithoutEntries: [], adminsWithoutEntriesTotal: 0,
+      entriesTruncated: false, date: dateParam,
+    });
   }
 
-  // ── Where commun : scope + exclude self (non-founder) ──
-  // Reprend exactement la logique de pointage/page.tsx pour rester cohérent.
+  // Shared where: scope + exclude self (non-founder), mirroring pointage/page.tsx.
   const timeClockScopeWhere: Record<string, unknown> = scope.isHr
     ? (scope.excludeSelfId ? { adminId: { not: scope.excludeSelfId } } : {})
     : { adminId: { in: scope.allowedAdminIds! } };
@@ -48,7 +51,6 @@ export async function GET(req: NextRequest) {
     ? (scope.excludeSelfId ? { id: { not: scope.excludeSelfId } } : {})
     : { id: { in: scope.allowedAdminIds! } };
 
-  // ── Entries du jour ──
   const entries = await prisma.timeClock.findMany({
     where: {
       ...timeClockScopeWhere,
@@ -77,28 +79,41 @@ export async function GET(req: NextRequest) {
       },
     },
     orderBy: [{ adminId: "asc" }, { clockIn: "asc" }],
+    take: MAX_ENTRIES + 1,
   });
+  const entriesTruncated = entries.length > MAX_ENTRIES;
+  if (entriesTruncated) entries.length = MAX_ENTRIES;
 
-  // ── Admins du scope qui n'ont aucune entry ce jour ──
-  const adminIdsWithEntries = new Set(entries.map((e) => e.adminId));
-  const allScopedAdmins = await prisma.admin.findMany({
-    where: { ...adminScopeWhere, isActive: true },
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-      avatarUrl: true,
-      title: true,
-      position: { select: { name: true } },
-      team: { select: { id: true, name: true, color: true } },
-    },
-    orderBy: { fullName: "asc" },
-  });
-  const adminsWithoutEntries = allScopedAdmins.filter((a) => !adminIdsWithEntries.has(a.id));
+  // Filtered and counted in SQL so the panel can say "50 of 3214".
+  const adminIdsWithEntries = Array.from(new Set(entries.map((e) => e.adminId)));
+  const withoutWhere = {
+    ...adminScopeWhere,
+    isActive: true,
+    ...(adminIdsWithEntries.length > 0 ? { id: { notIn: adminIdsWithEntries } } : {}),
+  };
+  const [adminsWithoutEntriesTotal, adminsWithoutEntries] = await Promise.all([
+    prisma.admin.count({ where: withoutWhere }),
+    prisma.admin.findMany({
+      where: withoutWhere,
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        avatarUrl: true,
+        title: true,
+        position: { select: { name: true } },
+        team: { select: { id: true, name: true, color: true } },
+      },
+      orderBy: { fullName: "asc" },
+      take: MAX_WITHOUT_ENTRIES,
+    }),
+  ]);
 
   return NextResponse.json({
     date: dateParam,
     entries: JSON.parse(JSON.stringify(entries)),
+    entriesTruncated,
     adminsWithoutEntries,
+    adminsWithoutEntriesTotal,
   });
 }

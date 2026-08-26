@@ -5,6 +5,7 @@
 //   - GPS capture at punch (best-effort)
 //   - geofencing (reject web punches outside the configured radius)
 //   - kiosk mode (PIN-based shared tablet punching)
+//   - weekly overtime threshold (40h by default; payroll pays past it at 1.5x)
 import "server-only";
 import { getSetting } from "@/lib/settings";
 
@@ -16,6 +17,8 @@ export type TimeclockConfig = {
   geofenceLng: number | null;
   geofenceRadiusM: number;
   kioskEnabled: boolean;
+  /** Minutes worked in a week past which the hours count as overtime. */
+  overtimeWeeklyMin: number;
 };
 
 // getSetting() parses by the row's declared `type`, so a "boolean" setting
@@ -31,7 +34,7 @@ function toNum(v: unknown, fallback: number): number {
 }
 
 export async function getTimeclockConfig(): Promise<TimeclockConfig> {
-  const [rounding, geoloc, fence, lat, lng, radius, kiosk] = await Promise.all([
+  const [rounding, geoloc, fence, lat, lng, radius, kiosk, overtime] = await Promise.all([
     getSetting("hr_pointage", "rounding_min", "0"),
     getSetting("hr_pointage", "geoloc_enabled", "false"),
     getSetting("hr_pointage", "geofence_enabled", "false"),
@@ -39,6 +42,7 @@ export async function getTimeclockConfig(): Promise<TimeclockConfig> {
     getSetting("hr_pointage", "geofence_lng", ""),
     getSetting("hr_pointage", "geofence_radius_m", "250"),
     getSetting("hr_pointage", "kiosk_enabled", "false"),
+    getSetting("hr_pointage", "overtime_weekly_min", "2400"),
   ]);
   const latN = Number(lat);
   const lngN = Number(lng);
@@ -52,6 +56,8 @@ export async function getTimeclockConfig(): Promise<TimeclockConfig> {
     geofenceLng: Number.isFinite(lngN) && hasLng ? lngN : null,
     geofenceRadiusM: Math.max(10, toNum(radius, 250)),
     kioskEnabled: toBool(kiosk),
+    // 20h to 80h: below is not a work week, above cannot be a legal threshold.
+    overtimeWeeklyMin: Math.min(4800, Math.max(1200, toNum(overtime, 2400))),
   };
 }
 
@@ -97,7 +103,7 @@ export function geofenceError(
   source: "web" | "kiosk",
 ): string | null {
   if (!cfg.geofenceEnabled || source === "kiosk") return null;
-  if (cfg.geofenceLat === null || cfg.geofenceLng === null) return null; // fence mal configurée -> ne bloque pas
+  if (cfg.geofenceLat === null || cfg.geofenceLng === null) return null; // misconfigured fence: never blocks
   if (!coords) {
     return "Position GPS requise pour pointer (géofencing actif). Autorisez la localisation dans votre navigateur.";
   }

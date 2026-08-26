@@ -1,11 +1,12 @@
 "use client";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { startOfWeek, endOfWeek } from "@/lib/week";
+import { overtimeMinutes } from "@/lib/services/payroll-hours";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { promptDialog, confirmDialog } from "@/components/admin/prompt-dialog";
 import { LiveShiftCounter } from "@/components/admin/live-shift-counter";
-import { DurationPicker, HourMinutePicker } from "@/components/admin/time-picker";
+import { DurationPicker, HourMinutePicker, TimePicker } from "@/components/admin/time-picker";
 import { DatePopover } from "@/components/admin/date-popover";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import {
@@ -41,7 +42,6 @@ import {
   notifyForgottenDaysAction, remindSubmitWeekAction,
   revealMyKioskPinAction, requestKioskPinAction,
 } from "@/app/actions/hr-timeclock";
-// Types partages + composants extraits (refactor #18 + #11 + #87).
 import type { Entry, HistoryEvent, ForgottenEmployee, ManualEntry, ManualCategory } from "./_types";
 import { formatShiftDuration as _formatShiftDuration } from "./_types";
 import { ApprovedBadge } from "./_components/ApprovedBadge";
@@ -49,15 +49,13 @@ import { StatBox } from "./_components/StatBox";
 import { HistoryPopover } from "./_components/HistoryPopover";
 import { ManualEntryDialog } from "./_components/ManualEntryDialog";
 import { EditEntryDialog } from "./_components/EditEntryDialog";
-// Refactor #87 : extraction des panels + rows reutilisables
 import { PdfPreviewModal } from "@/components/admin/pdf-preview-modal";
 import { EmployeeWeekPanelRemote } from "./_components/EmployeeWeekPanel";
 import { DayMultiEmployeePanel } from "./_components/DayMultiEmployeePanel";
 import { DayDetailPanel } from "./_components/DayDetailPanel";
 import { CompactEntryRow, DayAggregateRow } from "./_components/EntryRows";
 import { dayKey, startOfDay, fmtDuration, capFirst, fmtTime, avatarColor, CAT_LABEL } from "./_components/_utils";
-
-// CAT_LABEL extrait dans ./_components/_utils.ts (refactor #87)
+import { entryTiming, minutesBetween, workedMin, MERGE_MAX_GAP_MIN } from "@/lib/time-entry";
 
 type EditRequest = {
   id: number;
@@ -71,11 +69,9 @@ type EditRequest = {
 
 type HolidayMap = Record<string, { name: string; isPaid: boolean; type: string }>;
 
-// Re-export pour la page (consommatrice). Le type vit dans _types.ts.
+// Re-exported for the page; the type itself lives in _types.ts.
 export type { ForgottenEmployee } from "./_types";
 
-// fmtDuration, dayKey, startOfDay, CAT_LABEL → extraits dans ./_components/_utils.ts (refactor #87)
-// formatShiftDuration vit dans ./_types.ts (utilise par les dialogs extraits)
 const formatShiftDuration = _formatShiftDuration;
 
 function todayKey(): string {
@@ -86,14 +82,14 @@ function todayKey(): string {
   return `${y}-${m}-${dd}`;
 }
 
-// Helpers de date pour les presets
+// Date helpers for the period presets.
 function endOfDay(d: Date): Date { const n = new Date(d); n.setHours(23, 59, 59, 999); return n; }
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 // ════════════════════════════════════════════════════════════════
-// Types pour la nouvelle vue admin (review) — props scopées + paginées
+// Admin review view types: scoped and paginated props.
 // ════════════════════════════════════════════════════════════════
 export type TeamLite = { id: number; name: string; color: string | null };
 
@@ -155,7 +151,6 @@ type ReviewProps = {
   teams: TeamLite[];
   departments: string[];
   editRequests: EditRequest[];
-  openEntries: Entry[];
   teamStats: TeamStat[] | null;
   adminKpis: {
     totalMin: number;
@@ -163,6 +158,7 @@ type ReviewProps = {
     approvedCount: number;
     activeAdmins: number;
     overtimeMin: number;
+    overtimeWeeklyMin: number;
     complianceRate: number;
     pendingRequests: number;
     forgottenTodayCount: number;
@@ -202,6 +198,8 @@ type ReviewProps = {
 type EmployeeProps = {
   mode: "employee";
   myEntries: Entry[];
+  entriesTruncated?: boolean;
+  overtimeWeeklyMin?: number;
   openEntry: Entry | null;
   currentAdminId: number;
   periodFrom?: string;
@@ -224,7 +222,9 @@ export function TimeclockView(props: ReviewProps | EmployeeProps) {
     return (
       <TimeclockEmployeeView
         myEntries={props.myEntries}
+        entriesTruncated={props.entriesTruncated}
         openEntry={props.openEntry}
+        overtimeWeeklyMin={props.overtimeWeeklyMin}
         currentAdminId={props.currentAdminId}
         periodFrom={props.periodFrom}
         periodTo={props.periodTo}
@@ -241,14 +241,14 @@ export function TimeclockView(props: ReviewProps | EmployeeProps) {
 }
 
 // ════════════════════════════════════════════════════════════════
-// PeriodFilter — composant de selection de plage
+// PeriodFilter: date-range selector.
 // ════════════════════════════════════════════════════════════════
 type Period = { from: Date; to: Date; label: string };
 
 function getPresets(): Period[] {
   const now = new Date();
   const cw = startOfWeek(now);
-  // "Cette semaine" = dimanche -> aujourd'hui (pas dimanche futur)
+  // "This week" runs Sunday -> today, never to the upcoming Sunday.
   const cwE = endOfDay(now);
   const lw = startOfWeek(new Date(now.getTime() - 7 * 86400000));
   const lwE = endOfWeek(new Date(now.getTime() - 7 * 86400000));
@@ -286,7 +286,7 @@ function PeriodFilter({ from, to }: { from?: string; to?: string }) {
     return `${isoDate(f)} → ${isoDate(t)}`;
   }, [from, to, presets]);
 
-  // Préserve l'URL courante (tab, filtres…) — ne remplace que from/to.
+  // Preserves the current URL (tab, filters) and only swaps from/to.
   const apply = useCallback((f: Date, t: Date) => {
     const params = new URLSearchParams(sp.toString());
     params.set("from", isoDate(f));
@@ -310,7 +310,7 @@ function PeriodFilter({ from, to }: { from?: string; to?: string }) {
     apply(f, t);
   };
 
-  // Icônes par preset (visuel pro)
+  // One icon per period preset.
   const presetIcons: Record<string, typeof Calendar> = {
     "Cette semaine": Calendar,
     "Semaine dernière": CalendarRange,
@@ -330,13 +330,11 @@ function PeriodFilter({ from, to }: { from?: string; to?: string }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72 p-0 overflow-hidden">
-        {/* Header navy compact */}
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-3 py-2">
           <p className="text-[10px] uppercase tracking-wider font-bold opacity-80">Période sélectionnée</p>
           <p className="text-sm font-semibold mt-0.5 truncate">{currentLabel}</p>
         </div>
 
-        {/* Presets avec icônes navy */}
         <div className="p-1">
           {presets.map((p) => {
             const Icon = presetIcons[p.label] ?? Calendar;
@@ -360,17 +358,16 @@ function PeriodFilter({ from, to }: { from?: string; to?: string }) {
           })}
         </div>
 
-        {/* Personnalisé avec DatePopover thémé (pas input natif) */}
         <div className="border-t bg-muted/20 p-3 space-y-2" onClick={(e) => e.stopPropagation()}>
           <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52]">Personnalisé</p>
           <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Du</Label>
-              <DatePopover value={customFrom} onChange={setCustomFrom} max={isoDate(new Date())} />
+            <div className="space-y-1 min-w-0">
+              <Label className="block text-[9px] uppercase tracking-wider text-muted-foreground">Du</Label>
+              <DatePopover value={customFrom} onChange={setCustomFrom} max={isoDate(new Date())} className="w-full justify-start" />
             </div>
-            <div className="space-y-1">
-              <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Au</Label>
-              <DatePopover value={customTo} onChange={setCustomTo} min={customFrom || undefined} max={isoDate(new Date())} />
+            <div className="space-y-1 min-w-0">
+              <Label className="block text-[9px] uppercase tracking-wider text-muted-foreground">Au</Label>
+              <DatePopover value={customTo} onChange={setCustomTo} min={customFrom || undefined} max={isoDate(new Date())} className="w-full justify-start" />
             </div>
           </div>
           <Button
@@ -388,17 +385,20 @@ function PeriodFilter({ from, to }: { from?: string; to?: string }) {
 }
 
 // ════════════════════════════════════════════════════════════════
-// VUE EMPLOYÉ : clock in/out + historique groupé par jour + stats
+// Employee view: clock in/out, history grouped by day, stats.
 // ════════════════════════════════════════════════════════════════
 const SUBMITTABLE_CATS = new Set(["work", "meeting", "training"]);
 const LEAVE_CATS = new Set(["vacation", "sick", "parental", "bereavement"]);
 
 function TimeclockEmployeeView({
-  myEntries, openEntry, currentAdminId, periodFrom, periodTo, holidays,
+  myEntries, entriesTruncated = false, openEntry, currentAdminId, periodFrom, periodTo, holidays,
+  overtimeWeeklyMin = 40 * 60,
   geolocEnabled = false, kioskEnabled = false, hasKioskPin = false, kioskPinSetAt = null,
   kioskPinRequestedAt = null,
 }: {
   myEntries: Entry[];
+  entriesTruncated?: boolean;
+  overtimeWeeklyMin?: number;
   openEntry: Entry | null;
   currentAdminId: number;
   periodFrom?: string;
@@ -416,19 +416,36 @@ function TimeclockEmployeeView({
   const [editEntry, setEditEntry] = useState<Entry | null>(null);
   const [submitWeekOpen, setSubmitWeekOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set([todayKey()]));
-  // PDF preview modal (convention VNK : tout PDF passe par PdfPreviewModal)
+  // VNK rule: every PDF goes through PdfPreviewModal.
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  // A long period is dozens of screens of day cards without this.
+  const DAYS_PER_PAGE = 15;
+  const [dayPage, setDayPage] = useState(1);
+  // The bar only carries the totals once the KPI tiles have scrolled away;
+  // otherwise it repeats them a few pixels below.
+  const kpiSentinelRef = useRef<HTMLDivElement>(null);
+  const [kpisHidden, setKpisHidden] = useState(false);
+  useEffect(() => {
+    const el = kpiSentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setKpisHidden(!entry.isIntersecting),
+      { threshold: 0, rootMargin: "-64px 0px 0px 0px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
-  // Stats personnelles sur la periode courante
   const myStats = useMemo(() => {
-    const total = myEntries.reduce((s, e) => s + (e.durationMin ?? 0), 0);
+    // Gross = worked + deducted breaks; durationMin alone is already net.
+    const total = myEntries.reduce((s, e) => s + (entryTiming(e).gross ?? 0), 0);
     const work = myEntries.filter((e) => SUBMITTABLE_CATS.has(e.category)).reduce((s, e) => s + (e.durationMin ?? 0), 0);
     const approved = myEntries.filter((e) => e.approvedAt).reduce((s, e) => s + (e.durationMin ?? 0), 0);
     const pending = myEntries.filter((e) => !e.approvedAt && e.clockOut).reduce((s, e) => s + (e.durationMin ?? 0), 0);
     return { total, work, approved, pending };
   }, [myEntries]);
 
-  // Entrees de la semaine en cours (dimanche -> samedi) eligibles a soumettre
+  // Current-week entries (Sunday -> Saturday) eligible for submission.
   const submittableThisWeek = useMemo(() => {
     const ws = startOfWeek(new Date());
     const we = endOfWeek(new Date());
@@ -438,24 +455,34 @@ function TimeclockEmployeeView({
     });
   }, [myEntries]);
 
-  // Heures sup. cumulees sur la periode affichee (somme des OT de chaque semaine
-  // qui intersecte la periode). Calcul Quebec standard : tout ce qui depasse
-  // 40h/semaine est compte comme heures sup.
-  const totalOvertimeMin = useMemo(() => {
-    const minPerWeek = new Map<string, number>();
-    for (const e of myEntries) {
-      if (!SUBMITTABLE_CATS.has(e.category)) continue;
-      const wk = isoDate(startOfWeek(new Date(e.clockIn)));
-      minPerWeek.set(wk, (minPerWeek.get(wk) ?? 0) + (e.durationMin ?? 0));
-    }
-    let total = 0;
-    for (const [, m] of minPerWeek) {
-      total += Math.max(0, m - 40 * 60);
-    }
-    return total;
-  }, [myEntries]);
+  // A day paid at double time. Its minutes never enter the overtime base:
+  // payroll already pays them x2 and would otherwise stack the premiums.
+  const isPaidHolidayDay = useCallback(
+    (date: string) => holidays[date]?.isPaid === true,
+    [holidays],
+  );
 
-  // Group by date + insert jours vides ouvres pour la semaine en cours
+  // Overtime over the displayed period, same rule as payroll: past the weekly
+  // threshold (40h by default), holidays counted in but never paid 1.5x.
+  const { totalOvertimeMin, holidayWorkedMin } = useMemo(() => {
+    const worked = myEntries
+      .filter((e) => SUBMITTABLE_CATS.has(e.category))
+      .map((e) => ({ clockIn: new Date(e.clockIn), durationMin: e.durationMin, category: e.category }));
+    const holidayMin = worked
+      .filter((e) => isPaidHolidayDay(isoDate(e.clockIn)))
+      .reduce((s, e) => s + (e.durationMin ?? 0), 0);
+    return {
+      totalOvertimeMin: overtimeMinutes(
+        worked,
+        (d) => isoDate(startOfWeek(d)),
+        overtimeWeeklyMin,
+        (d) => isPaidHolidayDay(isoDate(d)),
+      ),
+      holidayWorkedMin: holidayMin,
+    };
+  }, [myEntries, overtimeWeeklyMin, isPaidHolidayDay]);
+
+  // Group by date and inject the empty working days of the current week.
   const groupedByDay = useMemo(() => {
     const map = new Map<string, Entry[]>();
     for (const e of myEntries) {
@@ -464,10 +491,8 @@ function TimeclockEmployeeView({
       map.get(key)!.push(e);
     }
 
-    // Inserer jours vides ouvres entre dimanche et aujourd'hui (skip we sauf si entries existent)
-    // Gating : on n'injecte les jours vides que si la période sélectionnée
-    // inclut aujourd'hui (sinon on pollue les vues "Mois dernier", "90j", etc.
-    // avec des cases vides hors période).
+    // Empty working days between Sunday and today, only when the period
+    // covers them and includes today, else "90 days" fills up with blanks.
     const today = new Date();
     const periodFromDate = periodFrom ? new Date(periodFrom) : null;
     const periodToDate = periodTo ? new Date(periodTo) : null;
@@ -492,23 +517,19 @@ function TimeclockEmployeeView({
     return Array.from(map.entries())
       .map(([date, entries]) => {
         const sorted = [...entries].sort((a, b) => new Date(a.clockIn).getTime() - new Date(b.clockIn).getTime());
-        // Conformite pauses — compte les DEUX mecanismes : les entrees de
-        // categorie "break" (legacy) ET les pauses cumulees Pause/Reprendre
-        // (totalBreakMin + paidBreakMin) sur les entrees de travail. Sans ca,
-        // un employe qui punch sa pause via le bouton etait marque non
-        // conforme a tort.
+        // Counts legacy "break" entries AND pause/resume minutes, otherwise a
+        // button-punched break reads as non-compliant.
         let workMin = 0;
         let breakMin = 0;
         for (const e of sorted) {
           const dur = e.durationMin ?? 0;
           if (SUBMITTABLE_CATS.has(e.category)) workMin += dur;
           else if (e.category === "break") breakMin += dur;
-          breakMin += (e.totalBreakMin ?? 0) + ((e as { paidBreakMin?: number }).paidBreakMin ?? 0);
+          const t = entryTiming(e);
+          breakMin += t.breakMin + t.paidBreakMin;
         }
-        // Si tous les pointages du jour sont des saisies manuelles, on n'a
-        // pas le detail des pauses (employe declare ses heures). On considere
-        // le jour comme conforme par defaut — la regle CNESST ne s'applique
-        // qu'aux clock-in/out reels.
+        // A day made only of manual entries has no tracked break detail, so
+        // treat it as compliant: the CNESST rule only targets real punches.
         const allManual = sorted.length > 0 && sorted.every((e) => e.isManual);
         const compliant = allManual || workMin < 300 || breakMin >= 30;
         // Real bracket of the day and the time inside it that was NOT worked,
@@ -521,7 +542,7 @@ function TimeclockEmployeeView({
           ? Math.max(...closed.map((e) => new Date(e.clockOut!).getTime()))
           : null;
         const spanMin = firstIn != null && lastOut != null
-          ? Math.round((lastOut - firstIn) / 60000)
+          ? minutesBetween(new Date(firstIn), new Date(lastOut))
           : 0;
         const totalMin = sorted.reduce((s, e) => s + (e.durationMin ?? 0), 0);
         return {
@@ -550,8 +571,7 @@ function TimeclockEmployeeView({
               (e) => e.category === "work" && e.clockOut && !e.approvedAt && !e.submittedAt && !e.payStubId,
             );
             const close = ok.filter((e, i) =>
-              i > 0
-              && new Date(e.clockIn).getTime() - new Date(ok[i - 1].clockOut!).getTime() <= 15 * 60_000);
+              i > 0 && minutesBetween(ok[i - 1].clockOut!, e.clockIn) <= MERGE_MAX_GAP_MIN);
             return close.length > 0 ? ok.length : 0;
           })(),
           holiday: holidays[date] ?? null,
@@ -603,18 +623,17 @@ function TimeclockEmployeeView({
     if (openEntry && !openEntry.pausedAt) {
       const ci = new Date(openEntry.clockIn);
       if (ci >= ws && SUBMITTABLE_CATS.has(openEntry.category)) {
-        const elapsed = Math.floor((Date.now() - ci.getTime()) / 60000) - (openEntry.totalBreakMin ?? 0);
-        total += Math.max(0, elapsed);
+        total += workedMin(ci, new Date(), openEntry.totalBreakMin);
       }
     }
-    const THRESHOLD = 40 * 60;
-    const WARN = 36 * 60;
+    const THRESHOLD = overtimeWeeklyMin;
+    const WARN = Math.round(overtimeWeeklyMin * 0.9);
     return {
       totalMin: total,
       level: total >= THRESHOLD ? ("over" as const) : total >= WARN ? ("warn" as const) : null,
       overMin: Math.max(0, total - THRESHOLD),
     };
-  }, [myEntries, openEntry]);
+  }, [myEntries, openEntry, overtimeWeeklyMin]);
 
   const toggleDay = (date: string) => {
     setExpanded((s) => {
@@ -643,9 +662,8 @@ function TimeclockEmployeeView({
   // No idle detection: an employee's hours are never changed automatically.
   // He alone decides when he starts, pauses and ends.
 
-  // Pause / Reprendre : modifie le shift en cours (pas de nouvelle entrée).
-  // Deux types de pause (normes QC) : repas = non payée (déduite),
-  // courte = payée (tracée mais non déduite).
+  // Pause / resume mutate the running shift instead of creating an entry.
+  // QC rules: meal unpaid (deducted), short break paid (never deducted).
   const handlePause = async (kind: "meal" | "paid") => {
     if (!openEntry) return;
     const r = await pauseClockAction({ kind });
@@ -684,6 +702,13 @@ function TimeclockEmployeeView({
   }, [router]);
 
   const TODAY = todayKey();
+
+  useEffect(() => { setDayPage(1); }, [periodFrom, periodTo, groupedByDay.length]);
+
+  const dayTotalPages = Math.max(1, Math.ceil(groupedByDay.length / DAYS_PER_PAGE));
+  const dayFrom = groupedByDay.length === 0 ? 0 : (dayPage - 1) * DAYS_PER_PAGE + 1;
+  const dayTo = Math.min(groupedByDay.length, dayPage * DAYS_PER_PAGE);
+  const pagedDays = groupedByDay.slice((dayPage - 1) * DAYS_PER_PAGE, dayPage * DAYS_PER_PAGE);
   const pdfHref = useMemo(() => {
     if (periodFrom && periodTo) {
       return `/api/admin/timeclock/me/pdf?from=${isoDate(new Date(periodFrom))}&to=${isoDate(new Date(periodTo))}`;
@@ -693,7 +718,6 @@ function TimeclockEmployeeView({
 
   return (
     <div className="space-y-4">
-      {/* Header navy gradient — cohérent thème VNK */}
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" aria-hidden />
         <div className="relative flex items-start justify-between gap-3 flex-wrap">
@@ -709,7 +733,6 @@ function TimeclockEmployeeView({
             </div>
           </div>
 
-          {/* Actions header : classes explicites sur chaque élément (pas de descendant selector) */}
           {openEntry ? (
             <div className="flex items-center gap-2 flex-wrap">
               {openEntry.pausedAt ? (
@@ -847,14 +870,47 @@ function TimeclockEmployeeView({
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+      {openEntry && dayKey(openEntry.clockIn) !== TODAY && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-700" />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">
+              Pointage du {capFirst(new Date(openEntry.clockIn).toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long" }))} jamais fermé
+            </p>
+            <p className="mt-0.5">
+              Il tourne encore depuis {fmtTime(openEntry.clockIn)}. Tant qu&apos;il reste ouvert, vous ne pouvez pas soumettre votre semaine —
+              arrêtez-le et corrigez l&apos;heure de fin si besoin.
+            </p>
+          </div>
+          <Button size="sm" variant="destructive" className="h-8 text-xs shrink-0" onClick={handleClockOut}>
+            <Square className="h-3 w-3 mr-1" />Arrêter
+          </Button>
+        </div>
+      )}
+
+      {entriesTruncated && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <span>
+            Période trop longue : seuls les premiers pointages sont chargés, les totaux
+            ci-dessous sont donc incomplets. Choisissez une période plus courte.
+          </span>
+        </div>
+      )}
+      <div className={`grid grid-cols-2 gap-2 ${holidayWorkedMin > 0 ? "md:grid-cols-6" : "md:grid-cols-5"}`}>
         <StatBox label="Total brut" value={fmtDuration(myStats.total)} accent="emerald" hint="Avec pauses" icon={Clock} />
         <StatBox label="Travail" value={fmtDuration(myStats.work)} accent="blue" icon={Briefcase} />
-        <StatBox label="Heures sup." value={fmtDuration(totalOvertimeMin)} accent="blue" icon={TrendingUp} />
+        <StatBox label="Heures sup." value={fmtDuration(totalOvertimeMin)} accent="blue" hint="Payées x1,5" icon={TrendingUp} />
+        {holidayWorkedMin > 0 && (
+          <StatBox label="Férié travaillé" value={fmtDuration(holidayWorkedMin)} accent="amber" hint="Payé x2" icon={CalendarDays} />
+        )}
         <StatBox label="Approuvé" value={fmtDuration(myStats.approved)} accent="emerald" icon={CheckCircle2} />
-        <StatBox label="En attente" value={fmtDuration(myStats.pending)} accent="amber" icon={AlertCircle} />
+        {/* Odd tile count in a 2-col grid: the last one spans, no orphan half-row. */}
+        <div className={holidayWorkedMin > 0 ? "md:col-span-1" : "col-span-2 md:col-span-1"}>
+          <StatBox label="En attente" value={fmtDuration(myStats.pending)} accent="amber" icon={AlertCircle} />
+        </div>
       </div>
+      <div ref={kpiSentinelRef} aria-hidden className="h-px" />
 
       {/* Kiosk punch, only when the kiosk is enabled */}
       {kioskEnabled && (
@@ -865,7 +921,49 @@ function TimeclockEmployeeView({
         />
       )}
 
-      {/* Historique groupé par jour */}
+      {dayTotalPages > 1 && (
+        <div className="sticky top-[100px] lg:top-[64px] z-20 px-3 sm:px-4 rounded-b-lg pt-3 pb-2.5 bg-slate-50 border-t-[3px] border-t-[#0F2D52] border-b border-b-slate-200 shadow-[0_3px_8px_-3px_rgba(15,45,82,0.22)] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <p className="text-xs text-muted-foreground tabular-nums truncate">
+              Jours {dayFrom}–{dayTo} sur {groupedByDay.length}
+            </p>
+            {kpisHidden && (
+              <>
+                <span className="hidden sm:inline-flex items-center gap-1.5 text-xs shrink-0">
+                  <span className="text-muted-foreground">Travail</span>
+                  <span className="font-mono font-bold tabular-nums text-[#0F2D52]">{fmtDuration(myStats.work)}</span>
+                </span>
+                {myStats.pending > 0 && (
+                  <span className="hidden md:inline-flex items-center gap-1.5 text-xs shrink-0">
+                    <span className="text-muted-foreground">En attente</span>
+                    <span className="font-mono font-bold tabular-nums text-amber-700">{fmtDuration(myStats.pending)}</span>
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              variant="outline" size="sm" className="h-8 text-xs px-2 sm:px-3"
+              disabled={dayPage <= 1}
+              onClick={() => { setDayPage((n) => n - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            >
+              <ChevronLeft className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">Précédent</span>
+            </Button>
+            <span className="text-xs text-muted-foreground tabular-nums px-1">
+              {dayPage} / {dayTotalPages}
+            </span>
+            <Button
+              variant="outline" size="sm" className="h-8 text-xs px-2 sm:px-3"
+              disabled={dayPage >= dayTotalPages}
+              onClick={() => { setDayPage((n) => n + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            >
+<span className="hidden sm:inline">Suivant</span><ChevronRight className="h-3.5 w-3.5 sm:ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-2">
         {groupedByDay.length === 0 ? (
           <Card>
@@ -874,7 +972,7 @@ function TimeclockEmployeeView({
             </div>
           </Card>
         ) : (
-          groupedByDay.map((day) => {
+          pagedDays.map((day) => {
             const isOpen = expanded.has(day.date);
             const isToday = day.date === TODAY;
             const dateLabel = capFirst(new Date(day.date + "T12:00:00").toLocaleDateString("fr-CA", {
@@ -883,7 +981,7 @@ function TimeclockEmployeeView({
             const canMerge = day.mergeableCount >= 2;
             const canDeleteShorts = day.shortCount >= 1;
 
-            // Carte journee vide (uniquement pour jours ouvres entre dimanche et aujourd'hui)
+            // Empty-day card: working days between Sunday and today only.
             if (day.isEmpty) {
               return (
                 <Card key={day.date} className="border-amber-200 bg-amber-50/40 p-0 overflow-hidden">
@@ -944,7 +1042,6 @@ function TimeclockEmployeeView({
                       {day.hasOpen && (
                         <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-700 bg-blue-50">En cours</Badge>
                       )}
-                      {/* Heures sup. affichees en KPI global en haut, pas sur les jours. */}
                       {!day.hasOpen && day.allApproved && (
                         <Badge className="text-[10px] bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700">
                           <CheckCircle2 className="h-2.5 w-2.5 mr-1" />Tout validé
@@ -975,7 +1072,7 @@ function TimeclockEmployeeView({
                 </button>
 
                 {/* Where the day actually happened: blocks are worked, gaps are not. */}
-                <DayTimeline entries={day.entries} />
+                <DayTimeline entries={day.entries} showLegend={day.date === pagedDays[0]?.date} />
 
                 {isOpen && (
                   <div>
@@ -1080,7 +1177,7 @@ function TimeclockEmployeeView({
         presetDate={manualPresetDate}
       />
 
-      {/* Modal aperçu PDF (convention VNK : jamais window.open / <a href> direct pour PDF) */}
+      {/* VNK rule: PDFs never open via window.open or a bare <a href>. */}
       <PdfPreviewModal
         open={pdfPreviewOpen}
         url={pdfPreviewOpen ? pdfHref : null}
@@ -1108,8 +1205,7 @@ function TimeclockEmployeeView({
           const ws = startOfWeek(new Date());
           const we = endOfWeek(new Date());
           const d = new Date(e.clockIn);
-          // Cohérent avec submittableThisWeek : on exclut les entrées déjà
-          // approuvées ou soumises pour ne pas gonfler artificiellement le récap.
+          // Like submittableThisWeek: approved/submitted excluded.
           return d >= ws && d <= we && e.clockOut && !e.approvedAt && !e.submittedAt;
         })}
         onSaved={() => { setSubmitWeekOpen(false); router.refresh(); }}
@@ -1120,37 +1216,87 @@ function TimeclockEmployeeView({
 }
 
 // ════════════════════════════════════════════════════════════════
-// DayTimeline — proportional bar of the day: filled blocks are worked
-// periods, the gaps between them are not. Makes scattered punches obvious
-// at a glance instead of hiding behind a single start -> end range.
-function DayTimeline({ entries }: { entries: Entry[] }) {
-  const closed = entries.filter((e) => e.clockOut);
+// DayTimeline — proportional bar of the day. Worked blocks are solid, the
+// stretches between them are hatched and labelled, so a day of scattered
+// punches cannot read as one long shift.
+function DayTimeline({ entries, showLegend = false }: { entries: Entry[]; showLegend?: boolean }) {
+  const closed = entries
+    .filter((e) => e.clockOut)
+    .sort((a, b) => new Date(a.clockIn).getTime() - new Date(b.clockIn).getTime());
   if (closed.length === 0) return null;
-  const start = Math.min(...closed.map((e) => new Date(e.clockIn).getTime()));
+  const start = new Date(closed[0].clockIn).getTime();
   const end = Math.max(...closed.map((e) => new Date(e.clockOut!).getTime()));
   const span = end - start;
   if (span <= 60_000) return null;
 
+  // Worked blocks and the gaps between them, so the empty stretches are
+  // labelled instead of reading as a broken bar.
+  type Seg = { kind: "work" | "gap"; from: number; to: number };
+  const segs: Seg[] = [];
+  let cursor = start;
+  for (const e of closed) {
+    const s = new Date(e.clockIn).getTime();
+    const t = new Date(e.clockOut!).getTime();
+    if (s > cursor) segs.push({ kind: "gap", from: cursor, to: s });
+    segs.push({ kind: "work", from: s, to: t });
+    cursor = Math.max(cursor, t);
+  }
+
+  const pct = (v: number) => (v / span) * 100;
+
   return (
     <div className="px-3 pb-2.5 -mt-0.5">
-      <div className="relative h-1.5 rounded-full bg-muted overflow-hidden">
-        {closed.map((e) => {
-          const s = new Date(e.clockIn).getTime();
-          const w = new Date(e.clockOut!).getTime() - s;
+      <div className="relative h-2.5 rounded-full bg-muted/70 overflow-hidden ring-1 ring-border">
+        {segs.map((seg) => {
+          const mins = minutesBetween(new Date(seg.from), new Date(seg.to));
+          const range = `${fmtTime(new Date(seg.from))} → ${fmtTime(new Date(seg.to))}`;
+          const label = seg.kind === "work"
+            ? `Travaillé · ${range} · ${fmtDuration(mins)}`
+            : `Hors travail · ${range} · ${fmtDuration(mins)}`;
           return (
-            <div
-              key={e.id}
-              className="absolute inset-y-0 rounded-full bg-[#0F2D52]"
-              style={{
-                left: `${((s - start) / span) * 100}%`,
-                width: `${Math.max(0.7, (w / span) * 100)}%`,
-              }}
-            />
+            <ActionTooltip key={`${seg.kind}-${seg.from}`} label={label}>
+              <div
+                className={
+                  seg.kind === "work"
+                    ? "absolute inset-y-0 rounded-full bg-[#0F2D52] cursor-help"
+                    : "absolute inset-y-0 cursor-help"
+                }
+                style={{
+                  left: `${pct(seg.from - start)}%`,
+                  width: `${Math.max(seg.kind === "work" ? 0.7 : 0, pct(seg.to - seg.from))}%`,
+                  ...(seg.kind === "gap"
+                    ? {
+                        backgroundImage:
+                          "repeating-linear-gradient(135deg, rgba(100,116,139,.35) 0 3px, transparent 3px 6px)",
+                      }
+                    : {}),
+                }}
+              />
+            </ActionTooltip>
           );
         })}
       </div>
-      <div className="flex justify-between text-[9px] text-muted-foreground tabular-nums mt-1">
+      <div className="flex items-center justify-between gap-2 mt-1 text-[9px] text-muted-foreground tabular-nums">
         <span>{fmtTime(new Date(start))}</span>
+        <span className={`items-center gap-2.5 shrink-0 ${showLegend ? "flex" : "hidden"}`}>
+          <span className="flex items-center gap-1">
+            <span className="h-1.5 w-3 rounded-full bg-[#0F2D52]" aria-hidden />
+            Travaillé
+          </span>
+          {segs.some((x) => x.kind === "gap") && (
+            <span className="flex items-center gap-1">
+              <span
+                className="h-1.5 w-3 rounded-full ring-1 ring-border"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(135deg, rgba(100,116,139,.35) 0 3px, transparent 3px 6px)",
+                }}
+                aria-hidden
+              />
+              Hors travail
+            </span>
+          )}
+        </span>
         <span>{fmtTime(new Date(end))}</span>
       </div>
     </div>
@@ -1188,7 +1334,7 @@ function MyKioskPinCard({
     else toast.error(r.error || "Erreur");
   };
 
-  // Retrouver son NIP : verification par mot de passe du compte.
+  // Revealing the PIN requires re-entering the account password.
   const reveal = async () => {
     const password = await promptDialog({
       title: "Afficher mon NIP",
@@ -1241,7 +1387,7 @@ function MyKioskPinCard({
             </p>
           </div>
           {/* The employee reads or requests his PIN; HR issues it. */}
-          <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
             {!pinRequestedAt && (
               <Button
                 variant={hasPin ? "ghost" : "outline"}
@@ -1268,7 +1414,6 @@ function MyKioskPinCard({
         </div>
       </Card>
 
-      {/* PIN display */}
       <Dialog open={revealed != null} onOpenChange={(o) => { if (!o) setRevealed(null); }}>
         <DialogContent className="max-w-sm p-0 overflow-hidden">
           <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
@@ -1313,16 +1458,16 @@ function MyKioskPinCard({
 }
 
 // ════════════════════════════════════════════════════════════════
-// VUE ADMIN RH : approbation des heures — onglets scalables
+// HR admin view: hour approval, scalable tabs.
 // ════════════════════════════════════════════════════════════════
 function TimeclockReviewView({
   scope, currentAdminId, periodFrom, periodTo, holidays, teams, departments,
-  editRequests, openEntries, adminKpis,
+  editRequests, adminKpis,
   tab, page, pageSize, q, teamFilter, departmentFilter, statusFilter,
   overview, byEmployee, toApprove, employeesWithForgottenDays, approveQueue, reachedEntryCap,
 }: ReviewProps) {
   const isFounder = scope.isFounder;
-  const showSelfNotice = !isFounder; // tout le monde sauf fondateur voit le rappel
+  const showSelfNotice = !isFounder; // everyone but the founder sees the reminder
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -1330,8 +1475,7 @@ function TimeclockReviewView({
   const [selectedToApprove, setSelectedToApprove] = useState<Set<number>>(new Set());
   const [focusAdmin, setFocusAdmin] = useState<{ adminId: number; date?: string | null } | null>(null);
 
-  // Deep-link « ?focus=<adminId> » (notifications de soumission) : ouvre
-  // directement le panneau semaine de l'employé.
+  // "?focus=<adminId>" opens that employee's week panel directly.
   const focusParam = sp.get("focus");
   useEffect(() => {
     if (!focusParam) return;
@@ -1346,9 +1490,8 @@ function TimeclockReviewView({
   const [editEntry, setEditEntry] = useState<Entry | null>(null);
   const [detailAgg, setDetailAgg] = useState<DayAggRow | null>(null);
 
-  // Sticky compress-on-scroll : sentinel + IntersectionObserver (pattern Finance).
-  // rootMargin -64px top compense le topbar sticky (h-[64px], z-30) : le sentinel est
-  // considéré "out" dès qu'il passe SOUS le topbar, pas seulement hors viewport.
+  // Sticky compress-on-scroll. rootMargin -64px offsets the sticky topbar so
+  // the sentinel counts as "out" once it passes UNDER it, not off-viewport.
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -1362,7 +1505,6 @@ function TimeclockReviewView({
     return () => obs.disconnect();
   }, []);
 
-  // ── Helpers de navigation (URL sync) ──
   const setTab = useCallback(
     (next: "overview" | "by-employee" | "to-approve") => {
       const params = new URLSearchParams(sp.toString());
@@ -1406,7 +1548,7 @@ function TimeclockReviewView({
     });
   }, [router]);
 
-  // ── État vide : manager sans subordonné ──
+  // Empty state: manager with no direct report.
   if (!scope.isHr && scope.allowedAdminCount === 0) {
     return (
       <div className="space-y-4">
@@ -1432,31 +1574,31 @@ function TimeclockReviewView({
     );
   }
 
-  // ── Onglets ──
   const tabs: TabItem<"overview" | "by-employee" | "to-approve">[] = [
-    { key: "overview", label: "Vue d'ensemble", icon: LayoutGrid },
+    { key: "overview", label: "Vue d'ensemble", shortLabel: "Ensemble", icon: LayoutGrid },
     {
       // No count here: headcount is static info, not a workload.
       key: "by-employee",
       label: "Par employé",
+      shortLabel: "Employés",
       icon: UserIcon,
     },
     {
       key: "to-approve",
       label: "À approuver",
+      shortLabel: "Approuver",
       icon: ListChecks,
       count: adminKpis?.toApproveCount || undefined,
     },
   ];
 
-  // ── Sous-titre selon scope ──
+  // Subtitle depends on the scope.
   const subtitle = scope.isHr
     ? "Vue d'ensemble de tous les employés"
     : `Mon équipe (${scope.allowedAdminCount ?? 0} employé${(scope.allowedAdminCount ?? 0) > 1 ? "s" : ""})`;
 
   return (
     <div className="space-y-4">
-      {/* Header navy gradient — cohérent thème VNK */}
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" aria-hidden />
         <div className="relative flex items-start justify-between gap-3 flex-wrap">
@@ -1519,7 +1661,6 @@ function TimeclockReviewView({
         </div>
       </div>
 
-      {/* Tabs dans le flow normal (pattern Finance) */}
       <SettingsTabs
         tabs={tabs}
         active={tab}
@@ -1533,14 +1674,16 @@ function TimeclockReviewView({
       {/* Sticky mini bar, only while scrolled. Mobile top-[108px] (64 topbar
           + 44 sub-header), desktop top-[64px]. */}
       {scrolled && (
-      <div className="sticky top-[108px] lg:top-[64px] z-20 py-2 bg-background shadow-sm border-b animate-overlay-fade-in">
-        <div className="flex items-center gap-3 flex-wrap px-3">
-          <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 shrink-0">
+      <div className="sticky top-[100px] lg:top-[64px] z-20 px-3 sm:px-4 rounded-b-lg pt-3 pb-2 bg-slate-50 border-t-[3px] border-t-[#0F2D52] border-b border-b-slate-200 shadow-[0_3px_8px_-3px_rgba(15,45,82,0.22)] animate-overlay-fade-in">
+        <div className="flex flex-col gap-2 px-3 sm:flex-row sm:items-center sm:gap-3">
+          <span className="font-bold text-sm text-[#0F2D52] hidden lg:inline-flex items-center gap-1.5 shrink-0">
             <CheckCircle2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Approbation des heures</span>
-            <span className="sm:hidden">Heures</span>
+            Approbation des heures
           </span>
-          <div className="flex items-center gap-1.5 ml-auto">
+          <div className="min-w-0 w-full sm:flex-1 lg:max-w-md">
+            <SettingsTabs tabs={tabs} active={tab} onChange={setTab} ariaLabel="Vues du pointage" dense />
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0 sm:ml-0">
             <PeriodFilter from={periodFrom} to={periodTo} />
             <DropdownMenu>
               <ActionTooltip label="Actions supplémentaires">
@@ -1572,7 +1715,6 @@ function TimeclockReviewView({
       </div>
       )}
 
-      {/* Section toujours visible : demandes de modification (urgent) */}
       {editRequests.length > 0 && (
         <Card className="border-blue-200 bg-blue-50/40">
           <div className="p-3">
@@ -1644,42 +1786,7 @@ function TimeclockReviewView({
         </Card>
       )}
 
-      {/* Section toujours visible : pointages en cours (urgent) */}
-      {openEntries.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50/40">
-          <div className="p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="h-4 w-4 text-amber-700" />
-              <span className="text-sm font-semibold text-amber-900">
-                Pointages en cours ({openEntries.length})
-              </span>
-            </div>
-            <div className="divide-y divide-amber-200/60">
-              {openEntries.map((e) => (
-                <div key={e.id} className="flex items-center gap-2 py-2 text-xs">
-                  <span className="font-medium flex-1">{e.admin?.fullName || e.admin?.email}</span>
-                  <span className="font-mono text-muted-foreground">
-                    Depuis {new Date(e.clockIn).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="h-7 text-xs"
-                    onClick={() => setForceClose({
-                      adminId: e.adminId,
-                      name: e.admin?.fullName || e.admin?.email || "",
-                    })}
-                  >
-                    <Square className="h-3 w-3 mr-1" />Forcer fermeture
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Note : pas d'auto-approbation pour les managers/HR non-fondateurs */}
+      {/* No self-approval for non-founder managers/HR. */}
       {showSelfNotice && (
         <div className="flex items-start gap-2 rounded-md border border-[#0F2D52]/20 bg-[#0F2D52]/5 p-3 text-xs text-[#0F2D52]">
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -1689,7 +1796,6 @@ function TimeclockReviewView({
         </div>
       )}
 
-      {/* Alerte : plafond de chargement atteint */}
       {reachedEntryCap && (
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -1700,8 +1806,7 @@ function TimeclockReviewView({
         </div>
       )}
 
-      {/* ── Bulk actions bar (sticky sous le mini-header + tabs) ──
-        Mobile : top-[176px] (108 + ~68 mini-header tabs). Desktop : top-[140px]. */}
+      {/* Bulk bar, sticky under the mini-header + tabs. */}
       {selectedToApprove.size > 0 && (
         <div className="sticky top-[176px] lg:top-[140px] z-10 flex items-center gap-2 p-3 rounded-md bg-[#0F2D52] text-white shadow-lg flex-wrap">
           <Badge className="text-[11px] bg-white text-[#0F2D52] border-white">
@@ -1739,7 +1844,6 @@ function TimeclockReviewView({
                 required: true,
               });
               if (!reason) return;
-              // 1 seul appel SQL au lieu de N
               const r = await rejectManyTimeClockAction({ ids, reason });
               if (r.success) {
                 toast.success(`${r.data.rejected} entrée(s) rejetée(s)${r.data.skipped > 0 ? ` (${r.data.skipped} ignorée(s))` : ""}`);
@@ -1758,7 +1862,6 @@ function TimeclockReviewView({
         </div>
       )}
 
-      {/* ── Onglet 1 : Vue d'ensemble ── */}
       {tab === "overview" && overview && (
         <OverviewTab
           isHr={scope.isHr}
@@ -1772,9 +1875,9 @@ function TimeclockReviewView({
         />
       )}
 
-      {/* ── Onglet 2 : Par employé ── */}
       {tab === "by-employee" && (
         <ByEmployeeTab
+          overtimeWeeklyMin={adminKpis?.overtimeWeeklyMin ?? 40 * 60}
           teams={teams}
           departments={departments}
           q={q}
@@ -1790,7 +1893,7 @@ function TimeclockReviewView({
           periodTo={periodTo}
           onFocusEmployee={(id) => setFocusAdmin({ adminId: id })}
           onApproveWeek={async (empId, name) => {
-            // Approuve la semaine AFFICHÉE (pas la semaine en cours par défaut)
+            // Approves the DISPLAYED week, not the current one.
             const weekStartD = periodFrom ? startOfWeek(new Date(periodFrom)) : startOfWeek(new Date());
             const weekLabel = `la semaine du ${weekStartD.toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}`;
             const ok = await confirmDialog({
@@ -1808,9 +1911,9 @@ function TimeclockReviewView({
         />
       )}
 
-      {/* ── Onglet 3 : À approuver ── */}
       {tab === "to-approve" && (
         <ToApproveTab
+          overtimeWeeklyMin={adminKpis?.overtimeWeeklyMin ?? 40 * 60}
           teams={teams}
           departments={departments}
           q={q}
@@ -1851,7 +1954,7 @@ function TimeclockReviewView({
             else toast.error(r.error || "");
           }}
           onApproveWeek={async (empId, name) => {
-            // Approuve la semaine AFFICHÉE (pas la semaine en cours par défaut)
+            // Approves the DISPLAYED week, not the current one.
             const weekStartD = periodFrom ? startOfWeek(new Date(periodFrom)) : startOfWeek(new Date());
             const weekLabel = `la semaine du ${weekStartD.toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}`;
             const ok = await confirmDialog({
@@ -1897,7 +2000,6 @@ function TimeclockReviewView({
         />
       )}
 
-      {/* Force-close dialog */}
       {forceClose && (
         <ForceCloseDialog
           adminId={forceClose.adminId}
@@ -1907,7 +2009,6 @@ function TimeclockReviewView({
         />
       )}
 
-      {/* Edit override */}
       {editEntry && (
         <EditEntryDialog
           entry={editEntry}
@@ -1917,7 +2018,6 @@ function TimeclockReviewView({
         />
       )}
 
-      {/* Employee week panel : approbation rapide click-to-open (depuis "Par employé") */}
       <Sheet open={focusAdmin != null} onOpenChange={(o) => { if (!o) setFocusAdmin(null); }}>
         <SheetContent side="right" className="overflow-y-auto p-0 sm:max-w-xl w-full">
           {focusAdmin != null && (
@@ -1932,7 +2032,6 @@ function TimeclockReviewView({
         </SheetContent>
       </Sheet>
 
-      {/* Day multi-employee panel : approbation par journée, tous employés du scope */}
       <Sheet open={focusDay != null} onOpenChange={(o) => { if (!o) setFocusDay(null); }}>
         <SheetContent side="right" className="overflow-y-auto p-0 sm:max-w-2xl w-full">
           {focusDay != null && (
@@ -1984,7 +2083,6 @@ function TimeclockReviewView({
         </SheetContent>
       </Sheet>
 
-      {/* Drill-down jour : audit des sous-entrées */}
       <Sheet open={detailAgg != null} onOpenChange={(o) => { if (!o) setDetailAgg(null); }}>
         <SheetContent side="right" className="overflow-y-auto p-0">
           {detailAgg && (
@@ -2004,7 +2102,7 @@ function TimeclockReviewView({
 }
 
 // ════════════════════════════════════════════════════════════════
-// Onglet 1 : Vue d'ensemble (KPIs + cards par équipe)
+// Tab 1: overview (KPIs + per-team cards).
 // ════════════════════════════════════════════════════════════════
 function OverviewTab({
   isHr, overview, adminKpis, onPickTeam, onGoToApprove,
@@ -2023,7 +2121,6 @@ function OverviewTab({
 }) {
   return (
     <div className="space-y-4">
-      {/* KPIs principaux : decompose pour donner une vue d'ensemble actionnable */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <StatBox
           label="Total heures période"
@@ -2075,7 +2172,6 @@ function OverviewTab({
         </div>
       )}
 
-      {/* Cards par équipe */}
       <Card className="p-3">
         <div className="flex items-center gap-2 mb-3">
           <Users className="h-4 w-4 text-[#0F2D52]" />
@@ -2143,12 +2239,12 @@ function OverviewTab({
 }
 
 // ════════════════════════════════════════════════════════════════
-// Onglet 2 : Par employé (table paginée)
+// Tab 2: per employee (paginated table).
 // ════════════════════════════════════════════════════════════════
 function ByEmployeeTab({
   teams, departments, q, teamFilter, departmentFilter, statusFilter,
   items, total, page, pageSize, onPage,
-  onFocusEmployee, onApproveWeek, periodFrom, periodTo,
+  onFocusEmployee, onApproveWeek, periodFrom, periodTo, overtimeWeeklyMin,
 }: {
   teams: TeamLite[];
   departments: string[];
@@ -2165,9 +2261,10 @@ function ByEmployeeTab({
   onApproveWeek: (empId: number, name: string) => void;
   periodFrom?: string;
   periodTo?: string;
+  overtimeWeeklyMin: number;
 }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  // Progress bar vs 40h: only meaningful on a ~1 week period.
+  // Progress bar vs the weekly threshold: only meaningful on a ~1 week period.
   const showBar = useMemo(() => {
     if (!periodFrom || !periodTo) return true;
     return (new Date(periodTo).getTime() - new Date(periodFrom).getTime()) / 86400_000 <= 8;
@@ -2199,8 +2296,69 @@ function ByEmployeeTab({
             Aucun employé correspondant aux filtres.
           </div>
         ) : (
-          // max-h + overflow creates the scroll container the sticky header needs.
-          <div className="overflow-auto max-h-[70vh]">
+          <>
+          {/* Below sm the table becomes a card list: a seven-column table asks
+              the reader to drag sideways, and the header leaves with it. */}
+          <div className="divide-y sm:hidden">
+            {items.map((emp) => {
+              const name = emp.fullName || emp.email;
+              return (
+                <button
+                  key={emp.id}
+                  type="button"
+                  onClick={() => onFocusEmployee(emp.id)}
+                  className="w-full text-left p-3 hover:bg-[#0F2D52]/5 transition-colors"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={`h-8 w-8 rounded-full ${avatarColor(name)} flex items-center justify-center text-[10px] font-bold shrink-0`}>
+                      {name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{name}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {emp.position?.name ?? emp.title ?? emp.email}
+                      </p>
+                    </div>
+                    <span className="font-mono tabular-nums text-sm font-bold text-[#0F2D52] shrink-0">
+                      {fmtDuration(emp.totalMin)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                    {emp.status === "pending" && (
+                      <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">En attente</Badge>
+                    )}
+                    {emp.status === "approved" && <ApprovedBadge />}
+                    {emp.status === "none" && (
+                      <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-200 bg-slate-50">Aucune heure</Badge>
+                    )}
+                    {emp.team && (
+                      <Badge variant="outline" className="text-[10px]"
+                        style={emp.team.color ? { borderColor: `${emp.team.color}55`, color: emp.team.color } : undefined}>
+                        {emp.team.name}
+                      </Badge>
+                    )}
+                    {emp.toApprove > 0 && (
+                      <span className="text-[10px] text-amber-800">{emp.toApprove} à approuver</span>
+                    )}
+                    <span className="text-[10px] text-muted-foreground">{emp.approved} approuvées</span>
+                  </div>
+                  {emp.toApprove > 0 && (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={(ev) => { ev.stopPropagation(); onApproveWeek(emp.id, name); }}
+                      onKeyDown={(ev) => { if (ev.key === "Enter") { ev.stopPropagation(); onApproveWeek(emp.id, name); } }}
+                      className="mt-2 inline-flex items-center justify-center gap-1.5 h-8 w-full rounded-md border border-emerald-300 text-emerald-700 text-xs hover:bg-emerald-50"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />Approuver la semaine
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {/* max-h + overflow creates the scroll container the sticky header needs. */}
+          <div className="hidden sm:block overflow-auto max-h-[70vh]">
             <table className="w-full text-sm">
               {/* Sticky header: keeps the columns readable at 50/100 rows per page */}
               <thead className="bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground sticky top-0 z-10 shadow-[0_1px_0_0_hsl(var(--border))]">
@@ -2263,12 +2421,11 @@ function ByEmployeeTab({
                         <span className="font-mono tabular-nums text-[#0F2D52] font-semibold">
                           {fmtDuration(emp.totalMin)}
                         </span>
-                        {/* Progress vs 40h */}
                         {showBar && (
                           <div className="h-1 w-16 rounded-full bg-muted ml-auto mt-1" aria-hidden>
                             <div
-                              className={`h-1 rounded-full ${emp.totalMin > OVERTIME_WEEK_MIN ? "bg-amber-500" : "bg-[#0F2D52]"}`}
-                              style={{ width: `${Math.min(100, Math.round((emp.totalMin / OVERTIME_WEEK_MIN) * 100))}%` }}
+                              className={`h-1 rounded-full ${emp.totalMin > overtimeWeeklyMin ? "bg-amber-500" : "bg-[#0F2D52]"}`}
+                              style={{ width: `${Math.min(100, Math.round((emp.totalMin / overtimeWeeklyMin) * 100))}%` }}
                             />
                           </div>
                         )}
@@ -2324,6 +2481,7 @@ function ByEmployeeTab({
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
 
@@ -2366,10 +2524,8 @@ type ApproveQueueData = {
   upToDate: Array<{ adminId: number; name: string; email: string }>;
   pastPendingCount: number;
   pastPendingWeeks: number;
-  pastPendingLatestWeek: string | null; // "YYYY-MM-DD" (dimanche local) de la plus récente semaine en attente
+  pastPendingLatestWeek: string | null; // local Sunday of the most recent pending week
 };
-
-const OVERTIME_WEEK_MIN = 40 * 60;
 
 // WeekNav — URL-driven week stepper.
 function WeekNav({ periodFrom, periodTo }: { periodFrom?: string; periodTo?: string }) {
@@ -2461,7 +2617,6 @@ function WeekNav({ periodFrom, periodTo }: { periodFrom?: string; periodTo?: str
   );
 }
 
-// ── ToApproveTab v2 ─────────────────────────────────────────────────
 function ToApproveTab(props: {
   teams: Array<{ id: number; name: string; color: string | null }>;
   departments: string[];
@@ -2487,6 +2642,7 @@ function ToApproveTab(props: {
   onApprove: (ids: number[]) => Promise<void>;
   onApproveWeek: (empId: number, name: string) => Promise<void>;
   onReject: (ids: number[]) => Promise<void>;
+  overtimeWeeklyMin: number;
 }) {
   const {
     teams, departments, q, teamFilter, departmentFilter, statusFilter,
@@ -2494,6 +2650,7 @@ function ToApproveTab(props: {
     employeesWithForgottenDays, approveQueue, periodFrom, periodTo,
     selectedToApprove, onToggleSelectAll, holidaysByDay,
     onFocusEmployee, onClickDay, onShowDetails, onApprove, onReject,
+    overtimeWeeklyMin,
   } = props;
   const [viewMode, setViewMode] = useState<ApproveViewMode>("queue");
   const [showUpToDate, setShowUpToDate] = useState(false);
@@ -2519,7 +2676,7 @@ function ToApproveTab(props: {
     [approveQueue.upToDate, ql],
   );
 
-  // Overtime badge only makes sense on a ~1 week period (40h threshold).
+  // Overtime badge only makes sense on a ~1 week period.
   const showOvertimeBadge = useMemo(() => {
     if (!periodFrom || !periodTo) return true;
     const days = (new Date(periodTo).getTime() - new Date(periodFrom).getTime()) / 86400_000;
@@ -2610,14 +2767,12 @@ function ToApproveTab(props: {
 
   return (
     <div className="space-y-3">
-      {/* ── Barre de tête : semaine + (filtres, vue) ───────────────── */}
       <Card className="p-3">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <div className="flex-1 flex justify-center sm:justify-start">
             <WeekNav periodFrom={periodFrom} periodTo={periodTo} />
           </div>
           <div className="flex items-center justify-center gap-2 shrink-0 flex-wrap">
-            {/* Filtres repliés (progressive disclosure) */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 text-xs relative">
@@ -2664,7 +2819,6 @@ function ToApproveTab(props: {
         </div>
       </Card>
 
-      {/* ── Semaines antérieures oubliées ──────────────────────────── */}
       {approveQueue.pastPendingCount > 0 && (
         <div className="flex items-center gap-2.5 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 flex-wrap">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
@@ -2676,7 +2830,6 @@ function ToApproveTab(props: {
         </div>
       )}
 
-      {/* ── FILE (vue par défaut) ──────────────────────────────────── */}
       {viewMode === "queue" && (
         <>
           {queueRows.length === 0 ? (
@@ -2697,7 +2850,7 @@ function ToApproveTab(props: {
                 <strong className="text-[#0F2D52]">{queueRows.length}</strong> employé{queueRows.length > 1 ? "s" : ""} en attente de votre décision.
               </p>
               {queueRows.map((row) => {
-                const overtimeMin = Math.max(0, row.weekTotalMin - OVERTIME_WEEK_MIN);
+                const overtimeMin = Math.max(0, row.weekTotalMin - overtimeWeeklyMin);
                 const initials = row.name.slice(0, 2).toUpperCase();
                 const busy = busyId === row.adminId;
                 return (
@@ -2755,7 +2908,6 @@ function ToApproveTab(props: {
             </div>
           )}
 
-          {/* ── Sections repliées (secondaire) ─────────────────────── */}
           {awaiting.length > 0 && (
             <Card className="p-0 overflow-hidden">
               <div className="flex items-center">
@@ -2861,7 +3013,6 @@ function ToApproveTab(props: {
         </>
       )}
 
-      {/* ── Vue « Par jour » (granularité fine + sélection bulk) ───── */}
       {viewMode === "by-day" && (
         <>
           <DayOnlyView
@@ -2922,9 +3073,8 @@ function WeekNavBackButton({ periodFrom, targetWeek }: { periodFrom?: string; ta
   );
 }
 // ════════════════════════════════════════════════════════════════
-// DayOnlyView — vue "Par jour" : 1 carte par jour avec TOUS les
-// employés agrégés (compteurs validés / en attente / sans pointage).
-// Clic carte → ouvre DayMultiEmployeePanel.
+// DayOnlyView: one card per day listing every
+// aggregated employees (approved / pending / missing counters).
 // ════════════════════════════════════════════════════════════════
 type DayBucket = {
   date: string;                 // YYYY-MM-DD
@@ -2934,9 +3084,9 @@ type DayBucket = {
   submittedCount: number;
   rejectedCount: number;
   totalWorkMin: number;
-  uniqueAdminCount: number;     // employés avec au moins 1 entry
-  missingAdminCount: number;    // employés actifs du scope SANS entry
-  pendingIds: number[];         // ids des entries pending (pour bulk select)
+  uniqueAdminCount: number;     // employees with at least one entry
+  missingAdminCount: number;    // active scoped employees with none
+  pendingIds: number[];         // pending entry ids, for the bulk select
 };
 
 function DayOnlyView({
@@ -2952,7 +3102,7 @@ function DayOnlyView({
   onToggleSelectAll: (ids: number[], v: boolean) => void;
   onClickDay: (date: string) => void;
 }) {
-  // Inverse forgottenDays : date -> Set<adminId>
+  // Invert forgottenDays: date -> Set<adminId>
   const missingByDay = useMemo(() => {
     const m = new Map<string, Set<number>>();
     for (const emp of employeesWithForgottenDays) {
@@ -2964,7 +3114,7 @@ function DayOnlyView({
     return m;
   }, [employeesWithForgottenDays]);
 
-  // Group DayAggRow par date (chaque DayAggRow = 1 employé × 1 jour)
+  // Group DayAggRow by date (each row is one employee on one day).
   const buckets = useMemo<DayBucket[]>(() => {
     const byDate = new Map<string, {
       adminIds: Set<number>;
@@ -2993,10 +3143,9 @@ function DayOnlyView({
       }
       b.adminIds.add(agg.adminId);
       b.totalWorkMin += agg.workMin;
-      // Compter par entry (1 DayAggRow contient N entries).
-      // Règle soumission-avant-approbation : seules les entrées SOUMISES
+      // Submission-before-approval: only SUBMITTED entries are selectable.
       // are approvable, so they feed pendingIds for the bulk selection.
-      // Les brouillons (non soumis) sont comptés à part, non sélectionnables.
+      // Drafts are counted separately and cannot be selected.
       for (const e of agg.entries) {
         b.totalEntries++;
         if (e.approvedAt) b.approvedCount++;
@@ -3004,18 +3153,18 @@ function DayOnlyView({
           b.submittedCount++;
           b.pendingIds.push(e.id);
         } else if (!e.clockOut) {
-          // shift en cours : pas finalisé, ne compte nulle part
+          // Running shift: not finalized, counted nowhere.
         } else {
-          b.pendingCount++; // brouillon en attente de soumission par l'employé
+          b.pendingCount++; // draft still awaiting the employee's submission
         }
-        // rejet : pas de flag explicite côté Entry, on ne sait que via status agrégé
+        // Rejection has no flag on Entry; only the aggregate status carries it.
       }
-      // Si l'agrégat est entièrement rejeté → on les compte comme rejected
+      // A fully rejected aggregate counts as rejected.
       if (agg.status === "rejected") {
         b.rejectedCount += agg.entries.length;
       }
     }
-    // Ajouter les jours "missing only" (aucun entry mais des employés en oubli)
+    // Add "missing only" days: no entry at all, but employees who forgot.
     for (const [date, adminSet] of missingByDay) {
       if (!byDate.has(date) && adminSet.size > 0) {
         byDate.set(date, {
@@ -3030,15 +3179,13 @@ function DayOnlyView({
         });
       }
     }
-    // Filtre statut : si l'utilisateur a filtré, ne montrer que les jours
-    // ayant au moins 1 entry du bon statut (les items eux-mêmes sont déjà filtrés
-    // côté serveur, mais la branche "missing only" doit être respectée).
+    // Status filter: keep only days with at least one entry of that status.
+    // Items are server-filtered, but "missing only" must still be honoured.
     const out: DayBucket[] = [];
     for (const [date, b] of byDate) {
       const missingAdminIds = missingByDay.get(date);
       const missingAdminCount = missingAdminIds ? missingAdminIds.size : 0;
-      // Si statusFilter restreint et qu'il n'y a aucune entry pertinente
-      // ET pas de jour "missing", on skip.
+      // Skip days with no matching entry and nobody missing.
       const hasAnyEntry = b.totalEntries > 0;
       if (!hasAnyEntry && missingAdminCount === 0) continue;
       out.push({
@@ -3054,13 +3201,11 @@ function DayOnlyView({
         pendingIds: b.pendingIds,
       });
     }
-    // Tri date desc
     out.sort((a, b) => b.date.localeCompare(a.date));
     return out;
   }, [items, missingByDay]);
 
-  // Note : statusFilter est déjà appliqué côté serveur sur `items`.
-  // Référence pour suppression d'éventuel warning unused :
+  // Applied server-side on `items`; referenced to silence the unused warning.
   void statusFilter;
 
   return (
@@ -3116,7 +3261,7 @@ function DayOnlyRow({
       }}
       aria-label={`Voir détail de la journée ${dateLabel}`}
     >
-      {/* Bulk select : sélectionne les entrées SOUMISES de ce jour (les seules approuvables) */}
+      {/* Only SUBMITTED entries of the day are selectable. */}
       {hasPending && (
         <div onClick={(e) => e.stopPropagation()} className="shrink-0">
           <ActionTooltip label={allSelected ? "Désélectionner le jour" : "Sélectionner tous les pointages soumis de ce jour"}>
@@ -3148,7 +3293,15 @@ function DayOnlyRow({
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-wrap mt-1">
+        <p className="sm:hidden mt-1 text-[11px] text-muted-foreground flex flex-wrap items-center gap-x-1.5">
+          {bucket.uniqueAdminCount > 0 && <span>{bucket.uniqueAdminCount} pointé{bucket.uniqueAdminCount > 1 ? "s" : ""}</span>}
+          {bucket.approvedCount > 0 && <span className="text-emerald-700">· {bucket.approvedCount} validé{bucket.approvedCount > 1 ? "s" : ""}</span>}
+          {bucket.submittedCount > 0 && <span className="text-blue-700">· {bucket.submittedCount} soumis</span>}
+          {bucket.pendingCount > 0 && <span className="text-amber-800">· {bucket.pendingCount} brouillon{bucket.pendingCount > 1 ? "s" : ""}</span>}
+          {bucket.missingAdminCount > 0 && <span className="text-red-700">· {bucket.missingAdminCount} sans pointage</span>}
+          {bucket.rejectedCount > 0 && <span className="text-violet-700">· {bucket.rejectedCount} rejeté{bucket.rejectedCount > 1 ? "s" : ""}</span>}
+        </p>
+        <div className="hidden sm:flex items-center gap-2 flex-wrap mt-1">
           {bucket.uniqueAdminCount > 0 && (
             <ActionTooltip label="Employés ayant au moins 1 pointage">
               <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1 cursor-help">
@@ -3238,7 +3391,7 @@ function Pagination({
   if (total <= PAGE_SIZES[0]) return null;
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(total, page * pageSize);
-  // Affichage compact : 1 .. p-1 p p+1 .. last
+  // Compact display: 1 .. p-1 p p+1 .. last
   const pages: Array<number | "ellipsis"> = [];
   const push = (v: number | "ellipsis") => pages.push(v);
   const window = 1;
@@ -3305,14 +3458,9 @@ function Pagination({
   );
 }
 
-// EmployeeWeekPanelRemote + EmployeeWeekPanel + PanelEntryRow + CompactEntryRow +
-// EntryRow + DayAggregateRow + DayDetailPanel + DayMultiEmployeePanel +
-// PanelEntryRowWithHistory : extraits dans _components/ (refactor #87)
-
 // ════════════════════════════════════════════════════════════════
-// ManualEntryDialog — single entry, presets visuels, rattrapage
+// ManualEntryDialog helpers
 // ════════════════════════════════════════════════════════════════
-// ManualEntry / ManualCategory : maintenant dans ./_types.ts (utilises par ManualEntryDialog)
 
 function toLocalInput(d: Date): string {
   const y = d.getFullYear();
@@ -3323,10 +3471,8 @@ function toLocalInput(d: Date): string {
   return `${y}-${m}-${dd}T${h}:${mn}`;
 }
 
-// ManualEntryDialog + EditEntryDialog + defaultManualEntry : extraits vers _components/ (refactor #11)
-
 // ════════════════════════════════════════════════════════════════
-// SubmitWeekDialog — soumettre la semaine pour validation
+// SubmitWeekDialog: submit the week for review.
 // ════════════════════════════════════════════════════════════════
 function SubmitWeekDialog({
   open, onClose, weekEntries, onSaved,
@@ -3352,7 +3498,6 @@ function SubmitWeekDialog({
     return { workMin, breakMin, leaveMin };
   }, [weekEntries]);
 
-  // Conformite par jour
   const nonCompliantDays = useMemo(() => {
     const byDay = new Map<string, { workMin: number; breakMin: number }>();
     for (const e of weekEntries) {
@@ -3399,7 +3544,6 @@ function SubmitWeekDialog({
         </div>
         <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
           <FormSection icon={Clock} title="Récapitulatif de la semaine">
-            {/* Encart navy : heures travaillees */}
             <div className="rounded-lg border-2 border-[#0F2D52] bg-gradient-to-br from-[#0F2D52]/5 to-[#0F2D52]/10 p-4">
               <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52]">Heures travaillées</p>
               <p className="font-mono text-3xl font-bold text-[#0F2D52] tabular-nums mt-1">{workHours}h</p>
@@ -3432,7 +3576,7 @@ function SubmitWeekDialog({
 }
 
 // ════════════════════════════════════════════════════════════════
-// ForceCloseDialog — admin force la fermeture d'un pointage ouvert
+// ForceCloseDialog: an admin force-closes a shift left open.
 // ════════════════════════════════════════════════════════════════
 function ForceCloseDialog({
   adminId, name, onClose, onSaved,
@@ -3444,6 +3588,11 @@ function ForceCloseDialog({
 }) {
   const [when, setWhen] = useState(toLocalInput(new Date()));
   const [pending, setPending] = useState(false);
+  // A shift can have been left open for days; the picker defaults to this week.
+  const minDate = useMemo(() => {
+    const d = new Date(); d.setDate(d.getDate() - 60);
+    return isoDate(d);
+  }, []);
 
   const submit = async () => {
     setPending(true);
@@ -3472,7 +3621,7 @@ function ForceCloseDialog({
         <div className="p-5 space-y-3">
           <FormSection icon={Clock} title="Fermeture du pointage">
             <Field label="Heure de fermeture" required>
-              <Input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="h-9" />
+              <TimePicker value={when} onChange={setWhen} minDate={minDate} />
             </Field>
             <p className="text-[11px] text-muted-foreground">
               L&apos;employé sera notifié. Une note d&apos;audit sera ajoutée à l&apos;entrée.

@@ -2,8 +2,8 @@
 import { CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-// Badge "Validé" reutilise dans toute la vue pointage (cartes, lignes, panels).
-// `strong` = fond plein (header de carte) ; defaut = fond clair (badge inline).
+// Shared "approved" badge (cards, rows, panels).
+// `strong` = solid fill for card headers; default = light inline badge.
 export function ApprovedBadge({ strong = false, className = "" }: { strong?: boolean; className?: string }) {
   if (strong) {
     return (

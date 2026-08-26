@@ -1,17 +1,18 @@
 "use client";
-// EditEntryDialog — modal de modification d'une entree de pointage existante.
-// Extrait de timeclock-view.tsx (refactor #11). Logique inchangee.
+// Edit a time entry: start (date + time) and duration are both editable.
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Pencil } from "lucide-react";
-import { Calendar, FileText } from "lucide-react";
+import { Pencil, Calendar, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { FormSection } from "@/components/admin/form-section";
-import { DurationPicker } from "@/components/admin/time-picker";
+import { TimePicker, HourMinutePicker } from "@/components/admin/time-picker";
 import { updateTimeClockAction } from "@/app/actions/hr-timeclock";
+import { entryTiming } from "@/lib/time-entry";
 import type { Entry } from "../_types";
+
+function pad(n: number) { return n.toString().padStart(2, "0"); }
 
 export function EditEntryDialog({
   entry, isAdminOverride, onClose, onSaved,
@@ -21,56 +22,70 @@ export function EditEntryDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const initialDate = useMemo(() => {
+  const initialStart = useMemo(() => {
     const d = new Date(entry.clockIn);
-    const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${dd}`;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }, [entry.clockIn]);
-  const initialStartHM = useMemo(() => {
+  // TimePicker defaults to the current week; overrides target older entries.
+  const minDate = useMemo(() => {
     const d = new Date(entry.clockIn);
-    return { h: d.getHours(), m: d.getMinutes() };
+    d.setFullYear(d.getFullYear() - 1);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }, [entry.clockIn]);
-  const initialDuration = useMemo(() => {
-    if (entry.durationMin != null) return entry.durationMin;
-    if (entry.clockOut) {
-      return Math.floor((new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / 60000);
-    }
-    return 480;
-  }, [entry.clockIn, entry.clockOut, entry.durationMin]);
 
-  // Catégories acceptées par updateTimeClockAction. On garde une whitelist
-  // locale pour préserver le type du payload (P1-8 : auparavant la catégorie
-  // était forcée à "work" lors d'un edit → un congé pouvait basculer en travail).
+  const timing = useMemo(() => entryTiming(entry), [entry]);
+  const initialDuration = timing.stored ?? timing.worked ?? 480;
+
+  // Preserve the original category: forcing "work" turned leaves into work.
   type AllowedCat = "work" | "break" | "meeting" | "training" | "sick" | "vacation";
   const ALLOWED_CATS: ReadonlyArray<AllowedCat> = ["work", "break", "meeting", "training", "sick", "vacation"];
-  const initialCategory: AllowedCat =
+  const category: AllowedCat =
     (ALLOWED_CATS as readonly string[]).includes(entry.category)
       ? (entry.category as AllowedCat)
       : "work";
 
-  const [date, setDate] = useState(initialDate);
-  const [durationMin, setDurationMin] = useState(initialDuration);
+  const initialDurationHM = `${pad(Math.floor(initialDuration / 60))}:${pad(initialDuration % 60)}`;
+  const [start, setStart] = useState(initialStart);
+  const [durationHM, setDurationHM] = useState(initialDurationHM);
   const [notes, setNotes] = useState(entry.notes ?? "");
-  const [category] = useState<AllowedCat>(initialCategory);
   const [pending, setPending] = useState(false);
 
-  const formattedDuration = useMemo(() => {
-    const h = Math.floor(durationMin / 60);
-    const m = durationMin % 60;
-    return `${h}h${m.toString().padStart(2, "0")}`;
-  }, [durationMin]);
+  const durationMin = useMemo(() => {
+    const [h, m] = durationHM.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  }, [durationHM]);
+
+  const startDate = useMemo(() => {
+    const [datePart, timePart] = start.split("T");
+    const [y, mo, d] = (datePart ?? "").split("-").map(Number);
+    const [h, mi] = (timePart ?? "").split(":").map(Number);
+    if (!y || !mo || !d) return null;
+    return new Date(y, mo - 1, d, h || 0, mi || 0, 0, 0);
+  }, [start]);
+
+  // The duration is WORKED time, so the bracket also has to cover the breaks.
+  const breakMin = timing.breakMin;
+  const endLabel = useMemo(() => {
+    if (!startDate || durationMin <= 0) return null;
+    const end = new Date(startDate.getTime() + (durationMin + breakMin) * 60_000);
+    const sameDay = end.getDate() === startDate.getDate();
+    return `${pad(end.getHours())}:${pad(end.getMinutes())}${sameDay ? "" : " (+1 jour)"}`;
+  }, [startDate, durationMin, breakMin]);
 
   const submit = async () => {
+    if (!startDate) { toast.error("Date de début invalide"); return; }
     if (durationMin <= 0) { toast.error("La durée doit être supérieure à 0"); return; }
     setPending(true);
-    const [y, mo, d] = date.split("-").map(Number);
-    const newClockIn = new Date(y, mo - 1, d, initialStartHM.h, initialStartHM.m, 0, 0);
-    const newClockOut = new Date(newClockIn.getTime() + durationMin * 60_000);
+    // Leave the punches alone when only the notes changed: recomputing them
+    // would shift the real end by the stored rounding.
+    const timesUnchanged = start === initialStart && durationHM === initialDurationHM;
+    const newClockOut = new Date(startDate.getTime() + (durationMin + breakMin) * 60_000);
     const r = await updateTimeClockAction({
       id: entry.id,
-      clockIn: newClockIn.toISOString(),
-      clockOut: newClockOut.toISOString(),
+      ...(timesUnchanged ? {} : {
+        clockIn: startDate.toISOString(),
+        clockOut: newClockOut.toISOString(),
+      }),
       category,
       notes: notes || null,
     });
@@ -95,15 +110,18 @@ export function EditEntryDialog({
           </DialogHeader>
         </div>
         <div className="p-5 space-y-5">
-          <FormSection icon={Calendar} title="Jour et durée totale">
-            <DurationPicker
-              date={date}
-              durationMin={durationMin}
-              onChange={(v) => { setDate(v.date); setDurationMin(v.durationMin); }}
-            />
+          <FormSection icon={Calendar} title="Début">
+            <TimePicker value={start} onChange={setStart} minDate={minDate} disabled={pending} />
+          </FormSection>
+          <FormSection icon={Calendar} title="Durée travaillée">
+            <HourMinutePicker value={durationHM} onChange={setDurationHM} disabled={pending} />
             <p className="text-[11px] text-muted-foreground">
-              Total : <span className="font-mono font-bold text-[#0F2D52]">{formattedDuration}</span>
-              {" · "}début à {String(initialStartHM.h).padStart(2, "0")}:{String(initialStartHM.m).padStart(2, "0")}
+              {endLabel
+                ? <>
+                    Fin calculée : <span className="font-mono font-bold text-[#0F2D52]">{endLabel}</span>
+                    {breakMin > 0 && <> · pause de {breakMin} min incluse dans la plage</>}
+                  </>
+                : "Renseignez une durée supérieure à 0."}
             </p>
           </FormSection>
           <FormSection icon={FileText} title="Notes (optionnel)">
@@ -112,7 +130,9 @@ export function EditEntryDialog({
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>Annuler</Button>
-          <Button onClick={submit} disabled={pending || durationMin <= 0}>{pending ? "..." : "Enregistrer"}</Button>
+          <Button onClick={submit} disabled={pending || durationMin <= 0 || !startDate}>
+            {pending ? "..." : "Enregistrer"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

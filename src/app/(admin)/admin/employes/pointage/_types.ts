@@ -1,6 +1,5 @@
-// Types partages du module pointage admin.
-// Extraits de timeclock-view.tsx pour reutilisation par les composants
-// distincts (_components/*).
+// Shared types for the admin timeclock module.
+import { fmtBracket } from "@/lib/time-entry";
 
 export type Entry = {
   id: number;
@@ -33,6 +32,11 @@ export type Entry = {
   clockOutLng?: number | null;
   /** "web" (default) | "kiosk" */
   source?: string;
+  /** Number of punches this entry replaced. Null/absent = not a merge. */
+  mergedFrom?: number | null;
+  /** Gap minutes between the merged punches, counted as break time. */
+  mergedGapMin?: number | null;
+  restoredFromSnapshotId?: number | null;
 };
 
 export type HistoryEvent = {
@@ -63,13 +67,5 @@ export type ManualEntry = {
   notes: string;
 };
 
-// ─── Helpers de formatage durée (utilises par plusieurs composants extraits) ────
-export function formatShiftDuration(clockIn: string, clockOut: string | null): string {
-  if (!clockOut) return "—";
-  const sec = Math.max(0, Math.floor((new Date(clockOut).getTime() - new Date(clockIn).getTime()) / 1000));
-  if (sec < 60) return `${sec}s`;
-  if (sec < 3600) return `${Math.floor(sec / 60)}m ${(sec % 60).toString().padStart(2, "0")}s`;
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  return `${h}h${m.toString().padStart(2, "0")}`;
-}
+// Gross bracket, breaks included. Use fmtDuration(durationMin) for worked time.
+export const formatShiftDuration = fmtBracket;

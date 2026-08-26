@@ -32,6 +32,7 @@ type Config = {
   geofenceLng: number | null;
   geofenceRadiusM: number;
   kioskEnabled: boolean;
+  overtimeWeeklyMin: number;
 };
 
 // Setting row: label + hint on the left, control on the right.
@@ -95,6 +96,10 @@ export function TimeclockSettingsView({
   const [pinBusyId, setPinBusyId] = useState<number | null>(null);
   const [issued, setIssued] = useState<{ name: string; pin: string } | null>(null);
   const [pinSearch, setPinSearch] = useState(pinList.q);
+  // Coordinates are held as text: Number("-") is NaN, so parsing on each
+  // keystroke broke the field on the first character of a negative longitude.
+  const [latText, setLatText] = useState(config.geofenceLat?.toString() ?? "");
+  const [lngText, setLngText] = useState(config.geofenceLng?.toString() ?? "");
   const [navPending, startNav] = useTransition();
 
   // URL-driven search, filters and paging: the server only loads the visible page.
@@ -151,9 +156,27 @@ export function TimeclockSettingsView({
     else toast.error(r.error || "Erreur");
   };
 
+  const parseCoord = (t: string): number | null | undefined => {
+    const v = t.trim();
+    if (v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined; // undefined = still being typed
+  };
+  const lat = parseCoord(latText);
+  const lng = parseCoord(lngText);
+  // Mirrors the server rules: both coordinates required and in range.
+  const coordsValid =
+    !form.geofenceEnabled
+    || (lat != null && lng != null && Math.abs(lat) <= 90 && Math.abs(lng) <= 180);
+
   const dirty = useMemo(
-    () => (Object.keys(form) as Array<keyof Config>).some((k) => form[k] !== config[k]),
-    [form, config],
+    () =>
+      (Object.keys(form) as Array<keyof Config>)
+        .filter((k) => k !== "geofenceLat" && k !== "geofenceLng")
+        .some((k) => form[k] !== config[k])
+      || latText !== (config.geofenceLat?.toString() ?? "")
+      || lngText !== (config.geofenceLng?.toString() ?? ""),
+    [form, config, latText, lngText],
   );
 
   const set = <K extends keyof Config>(k: K, v: Config[K]) => setForm((s) => ({ ...s, [k]: v }));
@@ -165,11 +188,8 @@ export function TimeclockSettingsView({
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setForm((s) => ({
-          ...s,
-          geofenceLat: Number(pos.coords.latitude.toFixed(6)),
-          geofenceLng: Number(pos.coords.longitude.toFixed(6)),
-        }));
+        setLatText(pos.coords.latitude.toFixed(6));
+        setLngText(pos.coords.longitude.toFixed(6));
         toast.success("Position actuelle utilisée comme centre de la zone");
       },
       () => toast.error("Position refusée ou indisponible"),
@@ -178,15 +198,17 @@ export function TimeclockSettingsView({
   };
 
   const save = async () => {
+    if (!coordsValid) { toast.error("Latitude ou longitude invalide"); return; }
     setPending(true);
     const r = await updateTimeclockSettingsAction({
       roundingMin: form.roundingMin,
       geolocEnabled: form.geolocEnabled,
       geofenceEnabled: form.geofenceEnabled,
-      geofenceLat: form.geofenceLat,
-      geofenceLng: form.geofenceLng,
+      geofenceLat: lat ?? null,
+      geofenceLng: lng ?? null,
       geofenceRadiusM: form.geofenceRadiusM,
       kioskEnabled: form.kioskEnabled,
+      overtimeWeeklyMin: form.overtimeWeeklyMin,
     });
     setPending(false);
     if (r.success) {
@@ -199,7 +221,6 @@ export function TimeclockSettingsView({
 
   return (
     <div className="space-y-4">
-      {/* Header navy VNK */}
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" aria-hidden />
         <div className="relative flex items-start justify-between gap-3 flex-wrap">
@@ -230,10 +251,26 @@ export function TimeclockSettingsView({
         </div>
       </div>
 
-      {/* ── Punchs ────────────────────────────────────────────── */}
       <Card className="p-4">
         <FormSection icon={Clock} title="Punchs">
           <div className="divide-y">
+            <SettingRow
+              label="Seuil des heures supplémentaires"
+              hint="Au-delà de ce total hebdomadaire, les heures sont comptées en supplémentaires et payées à 1,5× par la paie. Semaine du dimanche au samedi."
+            >
+              <Select
+                value={String(form.overtimeWeeklyMin)}
+                onValueChange={(v) => set("overtimeWeeklyMin", Number(v))}
+              >
+                <SelectTrigger className="h-9 w-[150px] text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[35, 37.5, 38, 40, 44, 48].map((h) => (
+                    <SelectItem key={h} value={String(Math.round(h * 60))}>{String(h).replace(".", ",")} h / semaine</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </SettingRow>
+
             <SettingRow
               label="Arrondi des punchs"
               hint="Arrondit l'heure d'entrée et de sortie au pas le plus proche. « Aucun » conserve la minute exacte."
@@ -255,7 +292,6 @@ export function TimeclockSettingsView({
         </FormSection>
       </Card>
 
-      {/* ── Localisation ──────────────────────────────────────── */}
       <Card className="p-4">
         <FormSection icon={MapPin} title="Localisation">
           <div className="divide-y">
@@ -295,21 +331,21 @@ export function TimeclockSettingsView({
                   <div>
                     <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Latitude</label>
                     <Input
-                      value={form.geofenceLat ?? ""}
-                      onChange={(e) => set("geofenceLat", e.target.value === "" ? null : Number(e.target.value))}
+                      value={latText}
+                      onChange={(e) => setLatText(e.target.value)}
                       placeholder="45.501690"
                       inputMode="decimal"
-                      className="h-9 text-sm font-mono mt-1"
+                      className={`h-9 text-sm font-mono mt-1 ${lat === undefined ? "border-red-400" : ""}`}
                     />
                   </div>
                   <div>
                     <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Longitude</label>
                     <Input
-                      value={form.geofenceLng ?? ""}
-                      onChange={(e) => set("geofenceLng", e.target.value === "" ? null : Number(e.target.value))}
+                      value={lngText}
+                      onChange={(e) => setLngText(e.target.value)}
                       placeholder="-73.567253"
                       inputMode="decimal"
-                      className="h-9 text-sm font-mono mt-1"
+                      className={`h-9 text-sm font-mono mt-1 ${lng === undefined ? "border-red-400" : ""}`}
                     />
                   </div>
                   <div>
@@ -326,11 +362,11 @@ export function TimeclockSettingsView({
                   <Button variant="outline" size="sm" className="h-8 text-xs" onClick={useMyPosition}>
                     <Crosshair className="h-3.5 w-3.5 mr-1.5" />Utiliser ma position actuelle
                   </Button>
-                  {form.geofenceLat !== null && form.geofenceLng !== null && (
+                  {lat != null && lng != null && (
                     <ActionTooltip label="Vérifier le centre de la zone sur Google Maps">
                       <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" asChild>
                         <a
-                          href={`https://www.google.com/maps?q=${form.geofenceLat},${form.geofenceLng}`}
+                          href={`https://www.google.com/maps?q=${lat},${lng}`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
@@ -346,7 +382,6 @@ export function TimeclockSettingsView({
         </FormSection>
       </Card>
 
-      {/* ── Borne kiosque ─────────────────────────────────────── */}
       <Card className="p-4">
         <FormSection icon={Monitor} title="Borne kiosque">
           <div className="divide-y">
@@ -422,9 +457,9 @@ export function TimeclockSettingsView({
               ) : employees.map((emp) => (
                 <div
                   key={emp.id}
-                  className={`flex items-center gap-3 px-3 py-2.5 ${emp.requestedAt ? "bg-amber-50/50" : ""}`}
+                  className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 ${emp.requestedAt ? "bg-amber-50/50" : ""}`}
                 >
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-[11rem]">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium truncate">{emp.name}</p>
                       {emp.requestedAt && (
@@ -456,7 +491,7 @@ export function TimeclockSettingsView({
                   >
                     {emp.hasPin ? (emp.canReveal ? "Configuré" : "À remplacer") : "Aucun"}
                   </Badge>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                     {emp.hasPin && (
                       <Button
                         variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground"
@@ -513,7 +548,7 @@ export function TimeclockSettingsView({
           {form.kioskEnabled && (
             <div className="rounded-md border bg-muted/20 px-3 py-2.5 text-[11px] text-muted-foreground space-y-1">
               <p className="font-semibold text-[#0F2D52] uppercase tracking-wider text-[10px]">Mise en place</p>
-              <p>1. Générez un NIP ci-dessus pour chaque employé et remettez-le-lui.</p>
+              <p>1. Générez un NIP ci-dessus pour chaque employé : il est envoyé dans son espace automatiquement.</p>
               <p>2. Ouvrez <span className="font-mono">/kiosque</span> en plein écran sur la tablette laissée sur place.</p>
               <p>3. L&apos;employé tape son NIP, voit son nom, poinçonne — l&apos;écran se réinitialise pour le suivant.</p>
               <Button variant="ghost" size="sm" className="h-7 text-xs px-0 text-[#0F2D52]" asChild>
@@ -567,14 +602,17 @@ export function TimeclockSettingsView({
         </DialogContent>
       </Dialog>
 
-      {/* Barre d'enregistrement : n'apparait qu'en cas de changement */}
       {dirty && (
         <div className="sticky bottom-4 z-20 flex items-center gap-3 rounded-lg bg-[#0F2D52] text-white px-4 py-3 shadow-lg flex-wrap">
           <span className="text-xs flex-1">Modifications non enregistrées</span>
           <Button
             variant="ghost" size="sm"
             className="text-white hover:bg-white/20 h-8 text-xs"
-            onClick={() => setForm(config)}
+            onClick={() => {
+              setForm(config);
+              setLatText(config.geofenceLat?.toString() ?? "");
+              setLngText(config.geofenceLng?.toString() ?? "");
+            }}
             disabled={pending}
           >
             Annuler
@@ -583,7 +621,7 @@ export function TimeclockSettingsView({
             size="sm"
             className="h-8 text-xs bg-white text-[#0F2D52] hover:bg-white/90 font-semibold"
             onClick={save}
-            disabled={pending}
+            disabled={pending || !coordsValid}
           >
             <Save className="h-3.5 w-3.5 mr-1.5" />
             {pending ? "Enregistrement…" : "Enregistrer"}

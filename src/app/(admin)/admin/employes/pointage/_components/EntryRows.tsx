@@ -1,6 +1,5 @@
 "use client";
-// Rangees d'entries reutilisables — extraites de timeclock-view.tsx (refactor #87).
-// Chaque ligne est presentation pure : props + callbacks, aucune logique business.
+// Reusable entry rows. Pure presentation: props + callbacks.
 import {
   Clock, CheckCircle2, XCircle, Pencil, Trash2, Lock, Unlock, RotateCcw,
   ChevronRight, AlertCircle, FileText, Send, MapPin,
@@ -13,11 +12,30 @@ import type { Entry } from "../_types";
 import { formatShiftDuration } from "../_types";
 import { ApprovedBadge } from "./ApprovedBadge";
 import { HistoryPopover } from "./HistoryPopover";
-import { CAT_LABEL, fmtDuration, fmtTime, capFirst } from "./_utils";
+import { entryTiming, type TimingInput } from "@/lib/time-entry";
+import { CAT_LABEL, fmtDuration, fmtTime, capFirst, displayNotes } from "./_utils";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PanelEntryRow — ligne d'entry dans l'EmployeeWeekPanel (revue admin).
-// ─────────────────────────────────────────────────────────────────────────────
+// A merge is truthful only when gross - breaks = worked. Legacy merges
+// bridged unrecorded gaps.
+export function mergeInfo(entry: TimingInput) {
+  const t = entryTiming(entry);
+  return { isMerged: t.isMerged, count: t.mergedCount, gapMin: t.mergedGapMin, grossIsCoherent: t.isCoherent };
+}
+
+export function MergedBadge({ count, gapMin, coherent, small = false }: { count: number; gapMin: number; coherent: boolean; small?: boolean }) {
+  const label = coherent
+    ? `${count} pointages fusionnés : la plage va du premier début à la dernière fin${gapMin > 0 ? `, et les ${gapMin} min d'écart entre eux sont comptées en pause` : ""}.`
+    : "Fusion ancienne : le temps entre les pointages n'a pas été comptabilisé, ces heures de début et de fin ne sont pas fiables.";
+  return (
+    <ActionTooltip label={label}>
+      <Badge variant="outline" className={`${small ? "text-[9px]" : "text-[10px]"} text-violet-700 border-violet-300 bg-violet-50 cursor-help`}>
+        {count > 0 ? `Fusion de ${count}` : "Fusion"}
+      </Badge>
+    </ActionTooltip>
+  );
+}
+
+// PanelEntryRow: one entry inside EmployeeWeekPanel (admin review).
 export function PanelEntryRow({
   entry, pending, onApprove, onReject, onUnapprove,
 }: {
@@ -29,6 +47,7 @@ export function PanelEntryRow({
 }) {
   const cat = CAT_LABEL[entry.category] ?? { label: entry.category, color: "bg-gray-100 text-gray-700" };
   const start = new Date(entry.clockIn);
+  const { isMerged, count: mergedCount, gapMin: mergedGapMin, grossIsCoherent } = mergeInfo(entry);
   const isApproved = !!entry.approvedAt;
   const isSubmitted = !!entry.submittedAt;
   // Workflow rule: only SUBMITTED entries are reviewable.
@@ -58,6 +77,7 @@ export function PanelEntryRow({
                 : " · en cours"}
             </span>
             <Badge className={`text-[9px] ${cat.color}`}>{cat.label}</Badge>
+            {isMerged && <MergedBadge count={mergedCount} gapMin={mergedGapMin} coherent={grossIsCoherent} small />}
             {entry.jobCode && (
               <ActionTooltip label={entry.jobCode.label}>
                 <Badge variant="outline" className="font-mono text-[9px] cursor-help">
@@ -100,7 +120,7 @@ export function PanelEntryRow({
             </p>
           )}
           {entry.notes && !isRejected && (
-            <p className="text-[10px] text-muted-foreground italic mt-0.5 truncate">{entry.notes}</p>
+            <p className="text-[10px] text-muted-foreground italic mt-0.5 truncate">{displayNotes(entry.notes)}</p>
           )}
           {isApproved && entry.approver && entry.approvedBy !== entry.adminId && (
             <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -117,7 +137,7 @@ export function PanelEntryRow({
           </p>
           {(entry.totalBreakMin > 0 || (entry.durationMin != null && entry.clockOut)) && (
             <p className="text-[9px] text-muted-foreground tabular-nums">
-              {entry.clockOut && <span>brut {formatShiftDuration(entry.clockIn, entry.clockOut)}</span>}
+              {entry.clockOut && grossIsCoherent && <span>brut {formatShiftDuration(entry.clockIn, entry.clockOut)}</span>}
               {entry.totalBreakMin > 0 && (
               <span className="text-amber-700"> · pause {fmtDuration(entry.totalBreakMin)}</span>
             )}
@@ -128,7 +148,6 @@ export function PanelEntryRow({
           )}
         </div>
       </div>
-      {/* Actions inline */}
       {!isPaid && !isOpen && (
         <div className="flex items-center gap-1 mt-1.5 justify-end">
           {(entry.history?.length ?? 0) > 0 && <HistoryPopover history={entry.history} />}
@@ -187,9 +206,7 @@ export function PanelEntryRow({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CompactEntryRow — ligne compacte utilisee dans un jour deplie (vue employe).
-// ─────────────────────────────────────────────────────────────────────────────
+// CompactEntryRow: compact line inside an expanded day (employee view).
 export function CompactEntryRow({
   entry, canEdit, isLocked, onEdit, onDelete, onRequestUnlock,
 }: {
@@ -202,20 +219,7 @@ export function CompactEntryRow({
 }) {
   const cat = CAT_LABEL[entry.category] ?? { label: entry.category, color: "bg-gray-100 text-gray-700" };
   const start = new Date(entry.clockIn);
-  const isMerged = (entry.notes ?? "").startsWith("[FUSION");
-  // How many punches were assembled, so the range never reads as one punch.
-  const mergedCount = isMerged
-    ? Number(/\[FUSION de (\d+)/.exec(entry.notes ?? "")?.[1] ?? 0)
-    : 0;
-  // Show the gross span only when it adds up (gross - breaks = worked).
-  // Legacy merges bridged unrecorded gaps, so their bracket means nothing.
-  const grossMin = entry.clockOut
-    ? Math.round((new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / 60000)
-    : null;
-  const grossIsCoherent =
-    grossMin != null
-    && entry.durationMin != null
-    && Math.abs(grossMin - (entry.totalBreakMin ?? 0) - entry.durationMin) <= 1;
+  const { isMerged, count: mergedCount, gapMin: mergedGapMin, grossIsCoherent } = mergeInfo(entry);
   return (
     <div className="flex items-center gap-3 px-3 py-2 hover:bg-muted/30">
       <div className="flex-1 min-w-0">
@@ -227,17 +231,7 @@ export function CompactEntryRow({
               : " · en cours"}
           </span>
           <Badge className={`text-[10px] ${cat.color}`}>{cat.label}</Badge>
-          {isMerged && (
-            <ActionTooltip
-              label={grossIsCoherent
-                ? "Pointages fusionnés : la plage va du premier début à la dernière fin, et le temps non travaillé entre eux est compté en pause."
-                : "Fusion ancienne : le temps entre les pointages n'a pas été comptabilisé, ces heures de début et de fin ne sont pas fiables."}
-            >
-              <Badge variant="outline" className="text-[10px] text-violet-700 border-violet-300 bg-violet-50 cursor-help">
-                {mergedCount > 0 ? `Fusion de ${mergedCount}` : "Fusion"}
-              </Badge>
-            </ActionTooltip>
-          )}
+          {isMerged && <MergedBadge count={mergedCount} gapMin={mergedGapMin} coherent={grossIsCoherent} />}
           {entry.jobCode && (
             <ActionTooltip label={entry.jobCode.label}>
               <Badge variant="outline" className="font-mono text-[10px] cursor-help">
@@ -271,7 +265,7 @@ export function CompactEntryRow({
               <Clock className="h-2.5 w-2.5 mr-1" />En attente d&apos;approbation
             </Badge>
           )}
-          {/* Rejet : historique structuré d'abord, préfixe [REJET legacy en fallback. */}
+          {/* Structured history first, legacy [REJET notes as fallback. */}
           {!entry.submittedAt && !entry.approvedAt
             && ((entry.history ?? []).some((h) => h.event === "rejected") || (entry.notes ?? "").startsWith("[REJET")) && (
             <ActionTooltip
@@ -288,7 +282,7 @@ export function CompactEntryRow({
             </Badge>
           )}
         </div>
-        {entry.notes && <p className="text-[11px] text-muted-foreground italic mt-0.5 truncate">{entry.notes}</p>}
+        {displayNotes(entry.notes) && <p className="text-[11px] text-muted-foreground italic mt-0.5 truncate">{displayNotes(entry.notes)}</p>}
         {entry.approvedAt && entry.approver && entry.approvedBy !== entry.adminId && (
           <p className="text-[10px] text-muted-foreground">
             Approuvé par {entry.approver.fullName || entry.approver.email}
@@ -296,7 +290,7 @@ export function CompactEntryRow({
         )}
       </div>
       <div className="text-right shrink-0">
-        {/* Duree NETTE (travail reel apres deduction des pauses) */}
+        {/* Net time: breaks already deducted. */}
         <p className="font-mono text-sm font-bold tabular-nums">
           {entry.durationMin != null
             ? fmtDuration(entry.durationMin)
@@ -353,10 +347,7 @@ export function CompactEntryRow({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// EntryRow — ligne complete (vue revue admin, format detaillé).
-// Garde : peu utilisee actuellement mais conservee pour compatibilite.
-// ─────────────────────────────────────────────────────────────────────────────
+// EntryRow: full row for the detailed admin review view.
 export function EntryRow({
   entry, showAdmin, isReviewer, selected, onSelect, onApprove, onReject, onClickName, onEdit, holidayName,
 }: {
@@ -373,6 +364,7 @@ export function EntryRow({
 }) {
   const cat = CAT_LABEL[entry.category] ?? { label: entry.category, color: "bg-gray-100 text-gray-700" };
   const date = new Date(entry.clockIn);
+  const { isMerged, count: mergedCount, gapMin: mergedGapMin, grossIsCoherent } = mergeInfo(entry);
   return (
     <div className="flex items-center gap-3 p-3 hover:bg-muted/30">
       {isReviewer && !entry.approvedAt && (
@@ -395,6 +387,7 @@ export function EntryRow({
             </button>
           )}
           <Badge className={`text-[10px] ${cat.color}`}>{cat.label}</Badge>
+          {isMerged && <MergedBadge count={mergedCount} gapMin={mergedGapMin} coherent={grossIsCoherent} />}
           {entry.jobCode && (
             <ActionTooltip label={entry.jobCode.label}>
               <Badge variant="outline" className="font-mono text-[10px] cursor-help">
@@ -425,7 +418,7 @@ export function EntryRow({
           {fmtTime(date)}
           {entry.clockOut ? ` → ${fmtTime(entry.clockOut)}` : " · en cours"}
         </p>
-        {entry.notes && <p className="text-[11px] text-muted-foreground italic mt-0.5 truncate">{entry.notes}</p>}
+        {displayNotes(entry.notes) && <p className="text-[11px] text-muted-foreground italic mt-0.5 truncate">{displayNotes(entry.notes)}</p>}
         {entry.approvedAt && entry.approver && entry.approvedBy !== entry.adminId && (
           <p className="text-[10px] text-muted-foreground">
             Approuvé par {entry.approver.fullName || entry.approver.email}
@@ -440,7 +433,7 @@ export function EntryRow({
         </p>
         {(entry.totalBreakMin > 0 || (entry.durationMin != null && entry.clockOut)) && (
           <p className="text-[10px] text-muted-foreground tabular-nums">
-            {entry.clockOut && (
+            {entry.clockOut && grossIsCoherent && (
               <span>brut {formatShiftDuration(entry.clockIn, entry.clockOut)}</span>
             )}
             {entry.totalBreakMin > 0 && (
@@ -496,9 +489,7 @@ export function EntryRow({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DayAggregateRow — ligne agregee (employe, jour) pour la revue admin.
-// ─────────────────────────────────────────────────────────────────────────────
+// DayAggregateRow: one aggregated (employee, day) line for the admin review.
 export function DayAggregateRow({
   adminName, date, workMin, meetingMin, trainingMin, totalMin, status, hasPending,
   pendingIds, allPendingSelected, holidayName,
@@ -521,12 +512,12 @@ export function DayAggregateRow({
   onApprove: () => void;
   onReject: () => void;
 }) {
-  void totalMin; // conserve dans la signature pour compatibilite (non utilise visuellement)
+  void totalMin; // kept in the signature for compatibility, never rendered
   const dateLabel = capFirst(new Date(date + "T12:00:00").toLocaleDateString("fr-CA", {
     weekday: "short", day: "numeric", month: "short",
   }));
   const initials = adminName.slice(0, 2).toUpperCase();
-  // Travail "pur" = work uniquement (sans réunion ni formation)
+  // Pure work only: excludes meetings and training.
   const pureWorkMin = Math.max(0, workMin - meetingMin - trainingMin);
 
   const statusBadge = (() => {
@@ -656,10 +647,8 @@ export function DayAggregateRow({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PanelEntryRowWithHistory — PanelEntryRow + bouton Historique + bouton Modifier.
-// Utilisée dans DayMultiEmployeePanel (admin reviewer).
-// ─────────────────────────────────────────────────────────────────────────────
+// PanelEntryRow plus the history and edit buttons.
+// Used by DayMultiEmployeePanel (admin reviewer).
 export function PanelEntryRowWithHistory({
   entry, pending, onApprove, onReject, onUnapprove, onEdit,
 }: {
@@ -672,8 +661,11 @@ export function PanelEntryRowWithHistory({
 }) {
   const cat = CAT_LABEL[entry.category] ?? { label: entry.category, color: "bg-gray-100 text-gray-700" };
   const start = new Date(entry.clockIn);
+  const { isMerged, count: mergedCount, gapMin: mergedGapMin, grossIsCoherent } = mergeInfo(entry);
   const isApproved = !!entry.approvedAt;
-  const isPending = !isApproved && !!entry.clockOut;
+  // Only SUBMITTED entries are reviewable; drafts are not.
+  const isPending = !isApproved && !!entry.clockOut && !!entry.submittedAt;
+  const isDraft = !isApproved && !!entry.clockOut && !entry.submittedAt;
   const isOpen = !entry.clockOut;
   const isPaid = !!entry.payStubId;
   const hasHistory = (entry.history?.length ?? 0) > 0;
@@ -690,6 +682,7 @@ export function PanelEntryRowWithHistory({
                 : " · en cours"}
             </span>
             <Badge className={`text-[9px] ${cat.color}`}>{cat.label}</Badge>
+            {isMerged && <MergedBadge count={mergedCount} gapMin={mergedGapMin} coherent={grossIsCoherent} small />}
             {entry.jobCode && (
               <ActionTooltip label={entry.jobCode.label}>
                 <Badge variant="outline" className="font-mono text-[9px] cursor-help">
@@ -698,6 +691,11 @@ export function PanelEntryRowWithHistory({
               </ActionTooltip>
             )}
             {isApproved && <ApprovedBadge />}
+            {isDraft && (
+              <Badge variant="outline" className="text-[9px] text-slate-600 border-slate-300 bg-slate-50">
+                Brouillon (non soumis)
+              </Badge>
+            )}
             {isPending && (
               <Badge variant="outline" className="text-[9px] text-amber-700 border-amber-300 bg-amber-50">
                 En attente
@@ -714,8 +712,8 @@ export function PanelEntryRowWithHistory({
               </Badge>
             )}
           </div>
-          {entry.notes && (
-            <p className="text-[10px] text-muted-foreground italic mt-0.5 truncate">{entry.notes}</p>
+          {displayNotes(entry.notes) && (
+            <p className="text-[10px] text-muted-foreground italic mt-0.5 truncate">{displayNotes(entry.notes)}</p>
           )}
         </div>
         <div className="text-right shrink-0">
@@ -724,9 +722,18 @@ export function PanelEntryRowWithHistory({
               ? fmtDuration(entry.durationMin)
               : formatShiftDuration(entry.clockIn, entry.clockOut)}
           </p>
+          {/* Same breakdown as the week panel: without it a merged row cannot
+              be checked against its own bracket. */}
+          {entry.clockOut && grossIsCoherent && (
+            <p className="text-[10px] text-muted-foreground tabular-nums">
+              brut {formatShiftDuration(entry.clockIn, entry.clockOut)}
+              {(entry.totalBreakMin ?? 0) > 0 && (
+                <> · <span className="text-amber-700">pause {fmtDuration(entry.totalBreakMin)}</span></>
+              )}
+            </p>
+          )}
         </div>
       </div>
-      {/* Actions inline + historique */}
       {!isPaid && !isOpen && (
         <div className="flex items-center gap-1 mt-1.5 justify-end">
           {hasHistory && <HistoryPopover history={entry.history} />}

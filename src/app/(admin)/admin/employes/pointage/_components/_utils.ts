@@ -16,15 +16,7 @@ export function startOfDay(d: Date): Date {
   return n;
 }
 
-// Minutes -> "XhMM". Zero is explicit ("0h00"): a dash reads as missing data
-// in a KPI tile. "—" is reserved for null.
-export function fmtDuration(mins: number | null): string {
-  if (mins == null) return "—";
-  if (mins <= 0) return "0h00";
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${h}h${m.toString().padStart(2, "0")}`;
-}
+export { fmtMin as fmtDuration } from "@/lib/time-entry";
 
 // Uppercase the FIRST letter only; CSS `capitalize` would also capitalize
 // the month, which is wrong in French.
@@ -66,3 +58,14 @@ export const CAT_LABEL: Record<string, { label: string; color: string }> = {
   parental: { label: "Parental", color: "bg-pink-100 text-pink-700" },
   bereavement: { label: "Décès", color: "bg-slate-100 text-slate-700" },
 };
+
+// System stubs written into the employee-owned notes field. The leaves module
+// links its entries by parsing "[CONGE AUTO - LeaveRequest #N]", so the value
+// has to stay in the column, but it must never reach the reader.
+const SYSTEM_STUB = /\[(CONGÉ AUTO - LeaveRequest #\d+|REJET[^\]]*|ANNULATION APPROBATION[^\]]*)\]/g;
+
+export function displayNotes(notes: string | null | undefined): string | null {
+  if (!notes) return null;
+  const cleaned = notes.replace(SYSTEM_STUB, "").replace(/\s+/g, " ").trim();
+  return cleaned === "" ? null : cleaned;
+}

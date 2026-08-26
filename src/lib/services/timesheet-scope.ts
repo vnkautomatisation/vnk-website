@@ -1,27 +1,29 @@
 // Scope hierarchique du module pointage
-// ─────────────────────────────────────────────────────────────
-// Determine quels adminId un utilisateur peut consulter dans la file
-// de revue/export :
-//   - Founder : voit tout, y compris ses propres heures
-//   - Super_admin / permission users.write / hr.write / payroll.write :
-//     voit tous les autres (s'exclut lui-meme pour ne pas auto-approuver)
-//   - Manager (Admin.managerId pointe sur lui) ou Team lead (Team.leadAdminId)
-//     voit ses subordonnes directs + membres des equipes qu'il dirige
+// Which adminIds a user may see in the review queue and the exports:
+//   - founder: everyone, their own hours included
+//   - super_admin / users.write / hr.write / payroll.write: everyone else
+//     (themselves excluded, so nobody approves their own hours)
+//   - manager (Admin.managerId) or team lead (Team.leadAdminId): their direct
+//     reports plus the members of the teams they lead
 //
-// Reutilise par la page admin, l'export CSV, et tout endpoint qui
-// recapitule des pointages cross-employes.
+// Shared by the admin page, the CSV export, and every endpoint that
+// summarizes hours across employees.
 import "server-only";
 import { prisma } from "@/lib/prisma";
 
 export type TimesheetScope = {
   isHr: boolean;
   isFounder: boolean;
-  /** null = aucun filtre adminId necessaire (acces "tous les autres") */
+  /** null = no adminId filter needed (access to everyone else). */
   allowedAdminIds: number[] | null;
-  /** null si fondateur ; sinon currentAdminId pour exclure ses propres entries */
+  /** null for the founder; otherwise currentAdminId, to exclude their own entries. */
   excludeSelfId: number | null;
   myTeams: Array<{ id: number; name: string; color: string | null }>;
 };
+
+// Access rules live in ./timesheet-access (dependency-free so tests can
+// reach the refusal paths). Re-exported so routes have a single import.
+export { checkReadAccess, checkReviewAccess, type ScopeAccess } from "./timesheet-access";
 
 async function isFounderAdmin(adminId: number): Promise<boolean> {
   try {
@@ -99,9 +101,9 @@ export async function getTimesheetScope(currentAdminId: number): Promise<Timeshe
 }
 
 /**
- * Construit le where Prisma pour la table TimeClock selon le scope.
- * - HR/founder : pas de filtre adminId (ou exclude soi-meme)
- * - Manager : adminId in liste
+ * The Prisma `where` for TimeClock under a given scope.
+ * HR and founder get no adminId filter (or self excluded); a manager gets the
+ * list of adminIds they may see.
  */
 export function timeClockScopeWhere(scope: TimesheetScope): Record<string, unknown> {
   if (scope.isHr) {
@@ -110,15 +112,13 @@ export function timeClockScopeWhere(scope: TimesheetScope): Record<string, unkno
   return { adminId: { in: scope.allowedAdminIds ?? [] } };
 }
 
-// ─────────────────────────────────────────────────────────────
-// Regles d'autorite pour la revue des conges (LeaveRequest).
-// Reutilise les memes principes que assertCanReviewAdmin du module pointage :
-//   - Fondateur : peut tout, y compris soi-meme
-//   - super_admin / users.write / hr.write / payroll.write : tout sauf soi-meme
-//   - Manager direct (target.managerId === actorId) : ok
-//   - Lead d'equipe (team.leadAdminId === actorId) : ok
-//   - Delegue (target manager a delegueApprovalTo === actorId) : ok
-// ─────────────────────────────────────────────────────────────
+// Authority to review leave requests. Same principles as
+// assertCanReviewAdmin in the time clock module:
+//   - founder: everything, themselves included
+//   - super_admin / users.write / hr.write / payroll.write: everyone but self
+//   - direct manager (target.managerId === actorId)
+//   - team lead (team.leadAdminId === actorId)
+//   - delegate (the target's manager set delegateApprovalTo === actorId)
 export async function assertCanReviewLeave(
   actorId: number,
   targetAdminId: number,
@@ -169,28 +169,28 @@ export async function assertCanReviewLeave(
       `;
       if (rows[0]?.delegate_approval_to === actorId) return true;
     } catch {
-      // colonne pas encore migree -> ignore
+      // column not migrated yet: ignored
     }
   }
 
   return false;
 }
 
-// ─── Scope conges : qui peut etre vu/revue par l'acteur. ────────
-// Distinct de getTimesheetScope : pour un employe STANDARD (pas manager, pas HR),
-// on inclut ses pairs (meme teamId, ou a defaut meme managerId) afin que la vue
-// "Equipe" du module conges affiche les vrais collegues plutot que rien.
+// ─── Leave scope: who the actor may see and review ─────────────
+// Unlike getTimesheetScope, a STANDARD employee (no management, no HR) also
+// sees their peers — same teamId, or failing that same managerId — so the
+// leave module's "Equipe" view shows real colleagues rather than nothing.
 //
-// Regle :
-//   - Founder      : allowedAdminIds = null (tout)
-//   - HR/SuperAdmin: allowedAdminIds = null (tout sauf soi)
-//   - Manager      : subordonnes + membres des teams qu'il dirige
-//   - Employe std  : autres membres de SA teamId, ou a defaut autres directReports de SON managerId
+//   - founder:        allowedAdminIds = null (everyone)
+//   - HR/super_admin: allowedAdminIds = null (everyone but self)
+//   - manager:        reports plus the members of the teams they lead
+//   - employee:       the other members of their team, else the other direct
+//                     reports of their manager
 //
-// `peerSource` est ajoute pour permettre a l'UI de savoir d'ou viennent les pairs
-// (utile pour empty states "Aucun collegue d'equipe").
+// `peerSource` tells the UI where the peers came from, which its empty states
+// need.
 export type LeavesScope = TimesheetScope & {
-  /** Source des pairs pour un employe std : "team" / "manager" / "none" / "manager-or-hr" */
+  /** Where a standard employee's peers came from. */
   peerSource: "founder" | "hr" | "manager" | "team" | "directReports" | "none";
 };
 
@@ -241,6 +241,6 @@ export async function getLeavesScope(currentAdminId: number): Promise<LeavesScop
     }
   }
 
-  // 3) Employe orphelin : aucun pair
+  // 3) Orphan employee: no peer at all.
   return { ...base, allowedAdminIds: [], peerSource: "none" };
 }

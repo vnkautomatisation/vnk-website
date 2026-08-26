@@ -1,5 +1,5 @@
 // GET /api/admin/timeclock/me/pdf
-// PDF "Releve d'heures personnel" pour l'employe connecte.
+// Personal timesheet PDF for the signed-in employee.
 // Auth : tout admin (consulte uniquement ses propres entrees).
 // Query : ?from=YYYY-MM-DD&to=YYYY-MM-DD (defaut: 30 derniers jours)
 import "server-only";

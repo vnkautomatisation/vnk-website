@@ -1,8 +1,5 @@
 "use client";
-// DayMultiEmployeePanel — un jour, tous les employés du scope.
-// Extrait de timeclock-view.tsx (refactor #87).
-// Sections : "Pointages du jour" (groupés par employé) + "Sans pointage".
-// Footer : "Approuver tous les pointages du jour".
+// One day, every employee in scope: their punches, then those with none.
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -44,13 +41,19 @@ export function DayMultiEmployeePanel({
   const router = useRouter();
   const [data, setData] = useState<{
     entries: Entry[];
+    entriesTruncated?: boolean;
     adminsWithoutEntries: AdminWithoutEntry[];
+    adminsWithoutEntriesTotal?: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [pending, setPending] = useState(false);
   const [manualForAdmin, setManualForAdmin] = useState<{ id: number; name: string } | null>(null);
+  // One group per employee, each listing its punches: a full team is a dozen
+  // screens of scrolling inside a side panel.
+  const EMP_PER_PAGE = 10;
+  const [empPage, setEmpPage] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,7 +75,6 @@ export function DayMultiEmployeePanel({
     router.refresh();
   }, [router]);
 
-  // Group entries by adminId
   const groupedByAdmin = useMemo(() => {
     if (!data) return [];
     const m = new Map<number, { admin: NonNullable<Entry["admin"]>; entries: Entry[] }>();
@@ -88,7 +90,6 @@ export function DayMultiEmployeePanel({
     );
   }, [data]);
 
-  // KPIs
   const stats = useMemo(() => {
     if (!data) return { totalEntries: 0, pending: 0, approved: 0, workMin: 0 };
     let pending = 0, approved = 0, workMin = 0;
@@ -128,6 +129,11 @@ export function DayMultiEmployeePanel({
     reload();
   }, [onUnapprove, reload]);
 
+  const empTotalPages = Math.max(1, Math.ceil(groupedByAdmin.length / EMP_PER_PAGE));
+  const empFrom = groupedByAdmin.length === 0 ? 0 : (empPage - 1) * EMP_PER_PAGE + 1;
+  const empTo = Math.min(groupedByAdmin.length, empPage * EMP_PER_PAGE);
+  const pagedAdmins = groupedByAdmin.slice((empPage - 1) * EMP_PER_PAGE, empPage * EMP_PER_PAGE);
+
   const dayLabel = capFirst(new Date(dayDate + "T12:00:00").toLocaleDateString("fr-CA", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   }));
@@ -162,7 +168,6 @@ export function DayMultiEmployeePanel({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header navy */}
       <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-5 shrink-0">
         <SheetHeader>
           <SheetTitle className="text-white">
@@ -195,20 +200,41 @@ export function DayMultiEmployeePanel({
         </div>
       </div>
 
-      {/* Body : 2 sections */}
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
-        {/* Section 1 : Pointages du jour */}
+        {data.entriesTruncated && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-900">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <span>
+              Journée trop volumineuse : seuls les premiers pointages sont affichés.
+              Utilisez l&apos;export CSV pour la liste complète.
+            </span>
+          </div>
+        )}
         <div>
           <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52] mb-2 flex items-center gap-1.5">
             <Clock className="h-3 w-3" />Pointages du jour ({groupedByAdmin.length} employé{groupedByAdmin.length > 1 ? "s" : ""})
           </p>
+          {empTotalPages > 1 && (
+            <div className="sticky -top-4 z-10 -mt-4 -mx-4 px-4 pt-4 pb-2 mb-2 bg-background border-b flex items-center justify-between gap-2">
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {empFrom}–{empTo} sur {groupedByAdmin.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" className="h-7 text-[11px] px-2"
+                  disabled={empPage <= 1} onClick={() => setEmpPage((n) => n - 1)}>Préc.</Button>
+                <span className="text-[11px] text-muted-foreground tabular-nums px-0.5">{empPage}/{empTotalPages}</span>
+                <Button variant="outline" size="sm" className="h-7 text-[11px] px-2"
+                  disabled={empPage >= empTotalPages} onClick={() => setEmpPage((n) => n + 1)}>Suiv.</Button>
+              </div>
+            </div>
+          )}
           {groupedByAdmin.length === 0 ? (
             <Card className="p-4 text-center text-xs text-muted-foreground">
               Aucun pointage enregistré ce jour-là.
             </Card>
           ) : (
             <div className="space-y-2">
-              {groupedByAdmin.map((g) => {
+              {pagedAdmins.map((g) => {
                 const empPendingIds = g.entries.filter((e) => e.submittedAt && !e.approvedAt && e.clockOut).map((e) => e.id);
                 const empTotal = g.entries.reduce((s, e) => s + (e.durationMin ?? 0), 0);
                 const allApproved = g.entries.length > 0 && g.entries.every((e) => e.approvedAt);
@@ -266,12 +292,11 @@ export function DayMultiEmployeePanel({
           )}
         </div>
 
-        {/* Section 2 : Sans pointage ce jour */}
         {data.adminsWithoutEntries.length > 0 && (
           <div>
             <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52] mb-2 flex items-center gap-1.5">
               <AlertCircle className="h-3 w-3 text-amber-600" />
-              Sans pointage ce jour ({data.adminsWithoutEntries.length})
+              Sans pointage ce jour ({data.adminsWithoutEntriesTotal ?? data.adminsWithoutEntries.length})
             </p>
             <Card>
               <div className="divide-y">
@@ -303,12 +328,17 @@ export function DayMultiEmployeePanel({
                   </div>
                 ))}
               </div>
+              {(data.adminsWithoutEntriesTotal ?? 0) > data.adminsWithoutEntries.length && (
+                <p className="border-t px-2.5 py-2 text-[11px] text-muted-foreground">
+                  {data.adminsWithoutEntries.length} affichés sur {data.adminsWithoutEntriesTotal}.
+                  Filtrez par équipe ou département pour cibler, ou exportez le CSV.
+                </p>
+              )}
             </Card>
           </div>
         )}
       </div>
 
-      {/* Footer : actions globales */}
       <div className="border-t bg-muted/30 p-3 flex items-center gap-2 shrink-0 flex-wrap">
         <Button variant="ghost" size="sm" onClick={onClose} disabled={pending}>
           Fermer
@@ -327,7 +357,6 @@ export function DayMultiEmployeePanel({
         )}
       </div>
 
-      {/* Dialog saisie manuelle pour un autre employé */}
       <ManualEntryDialog
         open={manualForAdmin != null}
         onClose={() => setManualForAdmin(null)}

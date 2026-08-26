@@ -9,16 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export type StatusFilter = "all" | "submitted" | "pending" | "approved" | "rejected";
 
+// "pending" is the DRAFT state; "En attente" would clash with the rows' badge.
 const STATUS_LABEL: Record<StatusFilter, string> = {
   all: "Tous les statuts",
-  submitted: "Soumis",
-  pending: "En attente",
+  submitted: "Soumis — à approuver",
+  pending: "Brouillon — non soumis",
   approved: "Approuvé",
   rejected: "Rejeté",
 };
 
-// Filtres avancés : équipe / département / statut + recherche, synchronisés
-// avec searchParams. Réinitialise la pagination quand un filtre change.
+// Team / department / status filters + search, kept in sync with searchParams.
+// Any filter change resets pagination.
 export function TimesheetFilters({
   teams,
   departments,
@@ -53,7 +54,7 @@ export function TimesheetFilters({
         if (v == null || v === "") params.delete(k);
         else params.set(k, v);
       }
-      // Réinitialiser la pagination dès qu'un filtre change
+      // Reset pagination whenever a filter changes
       params.delete("page");
       return `${pathname}?${params.toString()}`;
     },

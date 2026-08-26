@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { HistoryEvent } from "../_types";
 
-// Mapping label/icone/couleur par type d'evenement (timeline d'une entry).
+// Label / icon / color per event type in an entry's timeline.
 const HISTORY_EVENT_CONFIG: Record<string, { icon: typeof History; label: string; color: string }> = {
   approved: { icon: CheckCircle2, label: "Approuvé", color: "text-emerald-700" },
   unapproved: { icon: RotateCcw, label: "Annulé", color: "text-amber-700" },
@@ -13,11 +13,8 @@ const HISTORY_EVENT_CONFIG: Record<string, { icon: typeof History; label: string
   force_closed: { icon: Lock, label: "Fermé (admin)", color: "text-orange-700" },
 };
 
-// Popover compact qui affiche les 5 derniers evenements d'une entry de pointage.
-// Note : pas de ActionTooltip ici — ActionTooltip wrap son enfant dans un
-// TooltipTrigger qui interfere avec PopoverTrigger asChild (asChild en cascade
-// = clone de clone, le click ne propage plus). Le bouton garde son aria-label
-// pour l'accessibilite.
+// Last 5 events of an entry.
+// No ActionTooltip: its asChild trigger nested in PopoverTrigger eats the click.
 export function HistoryPopover({ history }: { history: HistoryEvent[] | undefined }) {
   const events = (history ?? []).slice(0, 5);
   return (

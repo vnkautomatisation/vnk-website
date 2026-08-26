@@ -24,6 +24,7 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { checkRateLimit, getClientIpFromHeaders } from "@/lib/security/rate-limit";
 import { getTimeclockConfig, roundToStep } from "@/lib/services/timeclock-config";
+import { workedMin, closeRunningBreak } from "@/lib/time-entry";
 
 export const dynamic = "force-dynamic";
 
@@ -76,10 +77,9 @@ export async function POST(req: NextRequest) {
   const open = await prisma.timeClock.findFirst({
     where: { adminId: admin.id, clockOut: null },
     orderBy: { clockIn: "desc" },
-    // Cast: column may be missing from a stale generated client.
     select: {
       id: true, clockIn: true, pausedAt: true, totalBreakMin: true, category: true,
-      ...({ pausedKind: true, paidBreakMin: true } as object),
+      pausedKind: true, paidBreakMin: true,
     },
   });
 
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
       paused: r.pausedAt != null,
     }));
 
-    const pausedKind = ((open as unknown as { pausedKind?: string | null } | null)?.pausedKind) ?? null;
+    const pausedKind = open?.pausedKind ?? null;
     return NextResponse.json({
       fullName: displayName,
       open: open
@@ -161,8 +161,7 @@ export async function POST(req: NextRequest) {
         clockIn: roundToStep(new Date(), cfg.roundingMin),
         category: "work",
         jobCodeId,
-        // Cast: column may be missing from a stale generated client.
-        ...({ source: "kiosk" } as object),
+        source: "kiosk",
       },
       select: { id: true, clockIn: true },
     });
@@ -181,7 +180,7 @@ export async function POST(req: NextRequest) {
     const kind = body.kind === "paid" ? "paid" : "meal";
     await prisma.timeClock.update({
       where: { id: open.id },
-      data: { pausedAt: new Date(), ...({ pausedKind: kind } as object) },
+      data: { pausedAt: new Date(), pausedKind: kind },
     });
     await logAudit({ adminId: admin.id, action: "update", entityType: "time_clock", entityId: open.id, changes: { paused: kind, source: "kiosk" } });
     return NextResponse.json({ ok: true, fullName: displayName, kind });
@@ -191,19 +190,10 @@ export async function POST(req: NextRequest) {
     if (!open || !open.pausedAt) {
       return NextResponse.json({ error: "Aucune pause en cours" }, { status: 409 });
     }
-    const added = Math.max(0, Math.floor((Date.now() - open.pausedAt.getTime()) / 60000));
-    const wasPaid = ((open as unknown as { pausedKind?: string | null }).pausedKind) === "paid";
+    const { totalBreakMin, paidBreakMin, addedMin: added } = closeRunningBreak(open, new Date());
     await prisma.timeClock.update({
       where: { id: open.id },
-      data: wasPaid
-        ? {
-            pausedAt: null,
-            ...({
-              paidBreakMin: (((open as unknown as { paidBreakMin?: number }).paidBreakMin) ?? 0) + added,
-              pausedKind: null,
-            } as object),
-          }
-        : { pausedAt: null, totalBreakMin: open.totalBreakMin + added, ...({ pausedKind: null } as object) },
+      data: { pausedAt: null, pausedKind: null, totalBreakMin, paidBreakMin },
     });
     await logAudit({ adminId: admin.id, action: "update", entityType: "time_clock", entityId: open.id, changes: { resumed: true, breakMin: added, source: "kiosk" } });
     return NextResponse.json({ ok: true, fullName: displayName, breakMin: added });
@@ -216,15 +206,11 @@ export async function POST(req: NextRequest) {
     const rawNow = new Date();
     const rounded = roundToStep(rawNow, cfg.roundingMin);
     const now = rounded.getTime() > open.clockIn.getTime() ? rounded : rawNow;
-    let totalBreakMin = open.totalBreakMin;
-    if (open.pausedAt) {
-      totalBreakMin += Math.floor((now.getTime() - open.pausedAt.getTime()) / 60000);
-    }
-    const elapsedMin = Math.floor((now.getTime() - open.clockIn.getTime()) / 60000);
-    const durationMin = Math.max(0, elapsedMin - totalBreakMin);
+    const { totalBreakMin, paidBreakMin } = closeRunningBreak(open, now);
+    const durationMin = workedMin(open.clockIn, now, totalBreakMin);
     await prisma.timeClock.update({
       where: { id: open.id },
-      data: { clockOut: now, durationMin, pausedAt: null, totalBreakMin },
+      data: { clockOut: now, durationMin, pausedAt: null, pausedKind: null, totalBreakMin, paidBreakMin },
     });
     await logAudit({ adminId: admin.id, action: "update", entityType: "time_clock", entityId: open.id, changes: { closed: true, source: "kiosk", durationMin } });
     return NextResponse.json({

@@ -1,6 +1,7 @@
 "use client";
-// Remplace les prompt() et confirm() natifs (bloquants, non-stylables, inaccessibles, brisés mobile).
-// API : await promptDialog({...}) ou await confirmDialog({...})
+// Replaces the native prompt() and confirm(): blocking, unstylable,
+// inaccessible and broken on mobile.
+// Usage: await promptDialog({...}) or await confirmDialog({...})
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,7 +89,7 @@ export function PromptDialogHost() {
 
   return (
     <Dialog open onOpenChange={(o) => !o && close(isConfirm ? false : null)}>
-      <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-md sm:h-auto sm:max-h-[90vh] sm:rounded-lg">
+      <DialogContent className="p-0 overflow-hidden flex flex-col w-screen max-w-none h-auto max-h-[85dvh] rounded-t-2xl rounded-b-none sm:w-[95vw] sm:max-w-md sm:max-h-[90vh] sm:rounded-lg">
         <div className={`px-4 sm:px-5 py-3 sm:py-4 text-white shrink-0 ${headerCls}`}>
           <DialogHeader>
             <DialogTitle className="text-sm sm:text-base text-white pr-8">{state.title}</DialogTitle>

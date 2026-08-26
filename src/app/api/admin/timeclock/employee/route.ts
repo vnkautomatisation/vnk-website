@@ -1,16 +1,17 @@
 // GET /api/admin/timeclock/employee
-// Drill-down stats employé pour le sheet de la vue admin "Approbation des heures".
-// Auth : admin avec scope HR (super_admin / users.write / hr.write / payroll.write)
-// OU manager direct (Admin.managerId = currentAdminId) OU team lead (Team.leadAdminId = currentAdminId
-// d'une équipe dont l'employé est membre).
-// Query : ?adminId=N&from=ISO&to=ISO
+// Per-employee drill-down for the "Approbation des heures" sheet.
+// Query: ?adminId=N&from=ISO&to=ISO
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getTimesheetScope } from "@/lib/services/timesheet-scope";
+import { getTimesheetScope, checkReadAccess } from "@/lib/services/timesheet-scope";
 
 export const dynamic = "force-dynamic";
+
+// The panel renders every row it receives; beyond this it says so instead of
+// showing a partial period in silence.
+const MAX_ENTRIES = 500;
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -25,27 +26,12 @@ export async function GET(req: NextRequest) {
   if (!targetIdStr) {
     return NextResponse.json({ error: "adminId manquant" }, { status: 400 });
   }
-  const targetId = Number(targetIdStr);
-  if (!Number.isFinite(targetId)) {
-    return NextResponse.json({ error: "adminId invalide" }, { status: 400 });
-  }
   const from = fromStr ? new Date(fromStr) : null;
   const to = toStr ? new Date(toStr) : null;
 
-  // ── Verification du scope via le service partage (mêmes règles que la page).
-  //   - Founder / HR : voit tout (founder se voit lui aussi)
-  //   - Manager / team lead : doit avoir le target dans son scope
-  //   - L'employe peut toujours consulter ses propres entries (targetId == self)
-  const scope = await getTimesheetScope(currentAdminId);
-  const isSelf = targetId === currentAdminId;
-  if (!isSelf) {
-    if (!scope.isFounder && !scope.isHr) {
-      const allowed = scope.allowedAdminIds ?? [];
-      if (!allowed.includes(targetId)) {
-        return NextResponse.json({ error: "Hors de votre périmètre" }, { status: 403 });
-      }
-    }
-  }
+  const access = checkReadAccess(await getTimesheetScope(currentAdminId), targetIdStr, currentAdminId);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+  const targetId = access.targetId;
 
   const admin = await prisma.admin.findUnique({
     where: { id: targetId },
@@ -67,7 +53,7 @@ export async function GET(req: NextRequest) {
   const entries = await prisma.timeClock.findMany({
     where,
     orderBy: { clockIn: "desc" },
-    take: 500,
+    take: MAX_ENTRIES + 1,
     include: {
       approver: { select: { fullName: true, email: true } },
       history: {
@@ -78,7 +64,11 @@ export async function GET(req: NextRequest) {
     },
   });
 
+  const truncated = entries.length > MAX_ENTRIES;
+  if (truncated) entries.length = MAX_ENTRIES;
+
   return NextResponse.json({
+    truncated,
     name: admin.fullName || admin.email,
     email: admin.email,
     position: admin.position?.name ?? admin.title ?? null,

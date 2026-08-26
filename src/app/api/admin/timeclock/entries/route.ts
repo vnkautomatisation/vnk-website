@@ -1,20 +1,20 @@
 // GET /api/admin/timeclock/entries
-// Pagination cursor-based de TimeClock pour l'onglet "À approuver" (et autres listes).
+// Cursor-based TimeClock pagination for the "to approve" tab and other lists.
 //
 // Query :
-//   ?cursor=<id>     (optionnel) — id du dernier element de la page precedente
+//   ?cursor=<id>     id of the last item of the previous page
 //   ?take=<n>        (default 200, max 500)
-//   ?from=YYYY-MM-DD&to=YYYY-MM-DD  (filtre date sur clockIn)
+//   ?from=YYYY-MM-DD&to=YYYY-MM-DD  date filter on clockIn
 //   ?status=pending|approved|submitted  (filtre simple)
 //   ?teamId=<n>      (filtre equipe)
-//   ?adminId=<n>     (filtre employe — verifie via scope)
+//   ?adminId=<n>     (employee filter, validated against the scope)
 //
 // Reponse : { entries: [...], nextCursor: number | null, hasMore: boolean }
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getTimesheetScope, timeClockScopeWhere } from "@/lib/services/timesheet-scope";
+import { getTimesheetScope, timeClockScopeWhere, checkReviewAccess } from "@/lib/services/timesheet-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -72,13 +72,16 @@ export async function GET(req: NextRequest) {
     where.admin = { teamId: Number(teamIdStr) };
   }
   if (adminIdStr) {
-    where.adminId = Number(adminIdStr);
+    // Must NARROW the scope, never replace it.
+    const access = checkReviewAccess(scope, adminIdStr, adminId);
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+    where.adminId = access.targetId;
   }
 
-  // Cursor : on prend `take + 1` pour savoir s'il y a plus
+  // Fetch take + 1 to know whether another page exists.
   const entries = await prisma.timeClock.findMany({
     where,
-    orderBy: { id: "desc" }, // cursor stable sur id
+    orderBy: { id: "desc" }, // stable cursor on id
     take: take + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     include: {

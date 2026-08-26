@@ -1,16 +1,15 @@
 "use client";
-// DayDetailPanel — drill-down audit des sous-entrees d'un jour.
-// Extrait de timeclock-view.tsx (refactor #87). Purement presentationnel.
+// DayDetailPanel - audit drill-down of a single day's sub-entries.
 import { Clock, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import type { Entry } from "../_types";
-import { formatShiftDuration } from "../_types";
 import { ApprovedBadge } from "./ApprovedBadge";
+import { mergeInfo, MergedBadge } from "./EntryRows";
 import { StatBox } from "./StatBox";
-import { CAT_LABEL, fmtDuration, fmtTime, capFirst } from "./_utils";
+import { CAT_LABEL, fmtDuration, fmtTime, capFirst, displayNotes } from "./_utils";
 
 export function DayDetailPanel({
   adminName, date, workMin, breakMin, entries, onEdit,
@@ -52,6 +51,7 @@ export function DayDetailPanel({
           <div className="space-y-1 max-h-[500px] overflow-y-auto">
             {entries.map((e) => {
               const cat = CAT_LABEL[e.category] ?? { label: e.category, color: "bg-gray-100 text-gray-700" };
+              const { isMerged, count: mergedCount, gapMin, grossIsCoherent } = mergeInfo(e);
               return (
                 <div key={e.id} className="flex items-start gap-2 p-2 text-xs rounded border">
                   <div className="flex-1 min-w-0">
@@ -63,6 +63,7 @@ export function DayDetailPanel({
                           : " · en cours"}
                       </span>
                       <Badge className={`text-[9px] ${cat.color}`}>{cat.label}</Badge>
+                      {isMerged && <MergedBadge count={mergedCount} gapMin={gapMin} coherent={grossIsCoherent} small />}
                       {e.jobCode && (
                         <ActionTooltip label={e.jobCode.label}>
                           <Badge variant="outline" className="font-mono text-[9px] cursor-help">
@@ -72,19 +73,25 @@ export function DayDetailPanel({
                       )}
                       {e.approvedAt && <ApprovedBadge />}
                       {e.submittedAt && !e.approvedAt && (
-                        <Badge variant="outline" className="text-[9px] text-blue-700 border-blue-300 bg-blue-50">
+                        <Badge variant="outline" className="text-[9px] text-amber-700 border-amber-300 bg-amber-50">
                           En attente
                         </Badge>
                       )}
+                      {!e.submittedAt && !e.approvedAt && e.clockOut && (
+                        <Badge variant="outline" className="text-[9px] text-slate-600 border-slate-300 bg-slate-50">
+                          Brouillon (non soumis)
+                        </Badge>
+                      )}
                     </div>
-                    {e.notes && (
+                    {displayNotes(e.notes) && (
                       <p className="text-[10px] text-muted-foreground italic mt-0.5 break-words">
-                        {e.notes}
+                        {displayNotes(e.notes)}
                       </p>
                     )}
                   </div>
+                  {/* Worked time, not the bracket: pauses and merges differ. */}
                   <span className="font-mono tabular-nums font-bold shrink-0">
-                    {formatShiftDuration(e.clockIn, e.clockOut)}
+                    {e.clockOut ? fmtDuration(e.durationMin) : "—"}
                   </span>
                   {!e.payStubId && (
                     <ActionTooltip label="Modifier (admin override)">

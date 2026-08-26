@@ -215,7 +215,7 @@ export default function KioskPage() {
       <div className="pointer-events-none absolute -bottom-1/3 -right-1/4 w-[60vw] h-[60vw] rounded-full bg-[#0F2D52]/60 blur-3xl" aria-hidden />
 
       {/* Brand bar, pinned to the top */}
-      <header className="relative z-10 shrink-0 flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-10 py-3 sm:py-4">
+      <header className="relative z-10 shrink-0 w-full max-w-[1600px] mx-auto flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-16 py-3 sm:py-4">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-white/10 border border-white/25 backdrop-blur flex items-center justify-center shrink-0">
             <span className="font-bold text-white text-sm sm:text-base tracking-wider">VNK</span>
@@ -235,26 +235,28 @@ export default function KioskPage() {
         </button>
       </header>
 
-      {/* Two columns only in wide landscape: in portrait the column clipped the clock. */}
-      <div className="relative z-10 flex-1 min-h-0 flex flex-col items-center justify-center gap-4 sm:gap-8 px-4 pb-2 lg:landscape:flex-row lg:landscape:justify-between lg:landscape:gap-10 lg:landscape:px-16">
+      {/* Two columns only when there is room for both: wide enough, tall enough
+          and landscape. A phone in landscape is wide but too short, and the
+          parent is overflow-hidden, so the keypad would be clipped. */}
+      <div className="relative z-10 flex-1 min-h-0 w-full max-w-[1600px] mx-auto flex flex-col items-center justify-center gap-4 sm:gap-8 px-4 pb-2 [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:flex-row [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:justify-center [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:gap-24 [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:px-16">
         {/* Clock */}
-        <div className="shrink-0 min-w-0 text-center lg:landscape:text-left lg:landscape:flex-1">
+        <div className="shrink-0 min-w-0 text-center [@media(max-height:520px)_and_(orientation:landscape)]:hidden [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:text-left [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:max-w-[46rem]">
           <div className="inline-flex items-center gap-2 text-white/60 text-[10px] sm:text-xs uppercase tracking-[0.25em] mb-1 sm:mb-2">
             <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
             Borne de pointage
           </div>
-          <div className="font-mono font-bold tabular-nums leading-none text-white text-[clamp(3rem,15vw,8rem)] lg:landscape:text-[clamp(3rem,8vw,9rem)]">
+          <div className="font-mono font-bold tabular-nums leading-none text-white text-[clamp(3rem,15vw,8rem)] [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:text-[clamp(3rem,8vw,9rem)]">
             {timeStr}
           </div>
           <div className="text-white/70 text-sm sm:text-lg mt-2 sm:mt-3">{dateStr}</div>
-          <p className="hidden lg:landscape:block text-white/45 text-sm leading-relaxed mt-8 pt-6 border-t border-white/10 max-w-md">
+          <p className="hidden [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:block text-white/45 text-sm leading-relaxed mt-8 pt-6 border-t border-white/10 max-w-md">
             Entrez votre NIP personnel pour commencer ou terminer votre journée.
             Vos heures sont enregistrées automatiquement.
           </p>
         </div>
 
         {/* Interaction panel */}
-        <div className="w-full max-w-[min(30rem,92vw)] shrink min-h-0 flex items-center justify-center lg:landscape:w-[460px] lg:landscape:shrink-0">
+        <div className="w-full max-w-[min(30rem,92vw)] shrink min-h-0 flex items-center justify-center [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:w-[460px] [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:shrink-0">
           <div className="w-full max-h-full overflow-y-auto bg-white text-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl ring-1 ring-black/5">
         {screen.step === "loading" && (
           <div className="p-12 flex flex-col items-center gap-3">
@@ -264,10 +266,10 @@ export default function KioskPage() {
         )}
 
         {screen.step === "pin" && (
-          <div className="p-4 sm:p-6 lg:p-7 space-y-3 sm:space-y-5">
+          <div className="p-4 sm:p-6 lg:p-7 space-y-3 sm:space-y-5 [@media(max-height:520px)_and_(orientation:landscape)]:p-3 [@media(max-height:520px)_and_(orientation:landscape)]:space-y-2">
             <div className="text-center">
               <p className="text-base sm:text-lg font-bold text-[#0F2D52]">{greeting}</p>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Entrez votre NIP pour poinçonner</p>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 [@media(max-height:520px)_and_(orientation:landscape)]:hidden">Entrez votre NIP pour poinçonner</p>
             </div>
             {/* PIN dots */}
             <div className="flex justify-center gap-2.5 h-5">
@@ -284,13 +286,13 @@ export default function KioskPage() {
               </div>
             )}
             {/* Keypad */}
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-3 [@media(max-height:520px)_and_(orientation:landscape)]:gap-1.5">
               {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
                 <button
                   key={d}
                   type="button"
                   onClick={() => pressDigit(d)}
-                  className="h-14 sm:h-[70px] lg:h-20 rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200/70 text-2xl sm:text-3xl font-semibold text-[#0F2D52] transition active:scale-95"
+                  className="h-14 sm:h-[70px] lg:h-20 [@media(max-height:520px)_and_(orientation:landscape)]:h-11 rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200/70 text-2xl sm:text-3xl font-semibold text-[#0F2D52] transition active:scale-95"
                 >
                   {d}
                 </button>
@@ -298,7 +300,7 @@ export default function KioskPage() {
               <button
                 type="button"
                 onClick={pressErase}
-                className="h-14 sm:h-[70px] lg:h-20 rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200/70 flex items-center justify-center text-slate-500 transition active:scale-95"
+                className="h-14 sm:h-[70px] lg:h-20 [@media(max-height:520px)_and_(orientation:landscape)]:h-11 rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200/70 flex items-center justify-center text-slate-500 transition active:scale-95"
                 aria-label="Effacer"
               >
                 <Delete className="h-6 w-6 sm:h-7 sm:w-7" />
@@ -314,7 +316,7 @@ export default function KioskPage() {
                 type="button"
                 disabled={pin.length < 4}
                 onClick={() => submitPin(pin)}
-                className="h-14 sm:h-[70px] lg:h-20 rounded-xl sm:rounded-2xl bg-[#0F2D52] hover:bg-[#1a3a66] disabled:opacity-25 flex items-center justify-center text-white transition active:scale-95 shadow-md shadow-[#0F2D52]/20"
+                className="h-14 sm:h-[70px] lg:h-20 [@media(max-height:520px)_and_(orientation:landscape)]:h-11 rounded-xl sm:rounded-2xl bg-[#0F2D52] hover:bg-[#1a3a66] disabled:opacity-25 flex items-center justify-center text-white transition active:scale-95 shadow-md shadow-[#0F2D52]/20"
                 aria-label="Valider"
               >
                 <LogIn className="h-6 w-6 sm:h-7 sm:w-7" />

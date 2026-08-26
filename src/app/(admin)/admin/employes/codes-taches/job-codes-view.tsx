@@ -16,6 +16,7 @@ import {
 import {
   createJobCodeAction, updateJobCodeAction, deleteJobCodeAction, toggleJobCodeActiveAction,
 } from "@/app/actions/hr-job-codes";
+import { confirmDialog } from "@/components/admin/prompt-dialog";
 
 type Position = { id: number; name: string; color: string | null };
 type JobCode = {
@@ -41,7 +42,7 @@ export function JobCodesView({
   const [editing, setEditing] = useState<JobCode | null>(null);
   const [creating, setCreating] = useState(false);
 
-  // Groupe par poste
+  // Group by position.
   const grouped = useMemo(() => {
     const filtered = jobCodes.filter((jc) => {
       if (filterPositionId !== "all" && jc.position.id !== Number(filterPositionId)) return false;
@@ -66,7 +67,13 @@ export function JobCodesView({
     else toast.error(r.error);
   };
   const handleDelete = async (id: number, code: string) => {
-    if (!confirm(`Supprimer le code "${code}" ?`)) return;
+    const ok = await confirmDialog({
+      title: "Supprimer le code de tâche",
+      description: `Le code « ${code} » sera retiré des choix proposés au pointage.`,
+      confirmLabel: "Supprimer",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const r = await deleteJobCodeAction({ id });
     if (r.success) { toast.success("Code supprimé"); router.refresh(); }
     else toast.error(r.error);
@@ -116,7 +123,7 @@ export function JobCodesView({
         </Button>
       </div>
 
-      {/* Liste groupée par poste */}
+      {/* Grouped by position */}
       {grouped.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
           Aucun code. Cliquez sur <strong>Nouveau code</strong> pour en créer.

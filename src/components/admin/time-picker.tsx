@@ -1,12 +1,6 @@
 "use client";
-// Pickers heures :
-//   - <TimePicker>      = Date + Heure + Minute (pour les saisies precises)
-//   - <DurationPicker>  = Date + Duree totale (h + min) — plus simple pour
-//     l'edition d'une periode existante.
-//
-// Toutes les sorties sont au format "YYYY-MM-DDTHH:MM" (compatible <input
-// datetime-local>). Max = aujourd'hui, Min = dimanche semaine en cours
-// (semaine projet : dimanche -> samedi).
+// Time pickers. Values are "YYYY-MM-DDTHH:MM" (datetime-local compatible).
+// Dates default to the current project week; pass minDate/maxDate to widen.
 import { useMemo } from "react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -27,6 +21,15 @@ function startOfWeekISO(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+// 5-min grid, plus the current value so a 19:47 punch is not blank.
+function minuteOptions(current: string): string[] {
+  const base = Array.from({ length: 12 }, (_, i) => pad(i * 5));
+  if (/^\d{2}$/.test(current) && !base.includes(current)) {
+    return [...base, current].sort();
+  }
+  return base;
+}
+
 function parseLocal(v: string): { date: string; h: string; m: string } {
   if (!v || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)) {
     const now = new Date();
@@ -41,9 +44,7 @@ function parseLocal(v: string): { date: string; h: string; m: string } {
   return { date: datePart, h, m };
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// <TimePicker> — Date + Heure + Minute (saisie precise)
-// ─────────────────────────────────────────────────────────────────────────
+// <TimePicker> - date + hour + minute (precise punch times).
 export function TimePicker({
   value, onChange, minDate, maxDate, disabled = false,
 }: {
@@ -67,7 +68,7 @@ export function TimePicker({
   };
 
   const hours = Array.from({ length: 24 }, (_, i) => pad(i));
-  const minutes = Array.from({ length: 12 }, (_, i) => pad(i * 5));
+  const minutes = minuteOptions(m);
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
@@ -102,10 +103,7 @@ export function TimePicker({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// <HourMinutePicker> — Juste heure + minute (HH:MM), sans date.
-// Pour les modales ou on choisit l'heure de debut/fin sur une date deja fixee.
-// ─────────────────────────────────────────────────────────────────────────
+// <HourMinutePicker> - hour + minute only (HH:MM), no date.
 export function HourMinutePicker({
   value, onChange, disabled = false,
 }: {
@@ -124,7 +122,7 @@ export function HourMinutePicker({
     onChange(`${next.h ?? h}:${next.m ?? m}`);
   };
   const hours = Array.from({ length: 24 }, (_, i) => pad(i));
-  const minutes = Array.from({ length: 12 }, (_, i) => pad(i * 5));
+  const minutes = minuteOptions(m);
   return (
     <div className="flex items-center gap-1.5">
       <Select value={h} onValueChange={(v) => update({ h: v })} disabled={disabled}>
@@ -143,11 +141,8 @@ export function HourMinutePicker({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// <DurationPicker> — Date + Duree totale (heures, minutes)
-// Pour editer une entree simplement : "Le 24 mai, j'ai bosse 3h00".
-// Sortie : { date: "YYYY-MM-DD", durationMin: number }
-// ─────────────────────────────────────────────────────────────────────────
+// <DurationPicker> - date + total duration.
+// Output: { date: "YYYY-MM-DD", durationMin: number }
 export function DurationPicker({
   date, durationMin, onChange, minDate, maxDate, disabled = false,
 }: {
@@ -162,12 +157,11 @@ export function DurationPicker({
   const max = maxDate ?? todayISO();
   const h = Math.floor(Math.max(0, durationMin) / 60);
   const m = Math.max(0, durationMin) % 60;
-  const mRounded = Math.round(m / 5) * 5; // snap aux pas de 5
-
   const hourOptions = Array.from({ length: 25 }, (_, i) => i); // 0..24h
-  const minuteOptions = Array.from({ length: 12 }, (_, i) => i * 5); // 0, 5, ..., 55
+  // Exact minutes: snapping would rewrite a 27-minute entry to 25 on open.
+  const minuteChoices = Array.from(new Set([...Array.from({ length: 12 }, (_, i) => i * 5), m])).sort((a, b) => a - b);
 
-  const setH = (newH: number) => onChange({ date, durationMin: newH * 60 + mRounded });
+  const setH = (newH: number) => onChange({ date, durationMin: newH * 60 + m });
   const setM = (newM: number) => onChange({ date, durationMin: h * 60 + newM });
   const setDate = (newDate: string) => onChange({ date: newDate, durationMin });
 
@@ -189,10 +183,10 @@ export function DurationPicker({
             ))}
           </SelectContent>
         </Select>
-        <Select value={String(mRounded)} onValueChange={(v) => setM(Number(v))} disabled={disabled}>
+        <Select value={String(m)} onValueChange={(v) => setM(Number(v))} disabled={disabled}>
           <SelectTrigger className="h-9 w-[94px] text-sm font-mono tabular-nums"><SelectValue /></SelectTrigger>
           <SelectContent className="max-h-[280px]">
-            {minuteOptions.map((mn) => (
+            {minuteChoices.map((mn) => (
               <SelectItem key={mn} value={String(mn)} className="font-mono">{pad(mn)} min</SelectItem>
             ))}
           </SelectContent>

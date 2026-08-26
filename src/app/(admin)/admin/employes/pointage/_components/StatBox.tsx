@@ -1,7 +1,7 @@
 "use client";
 
-// Petite tuile de KPI thème VNK — palette pastel adoucie + accent navy
-// Utilisée dans la Vue d'ensemble admin + Mon pointage employé
+// VNK KPI tile: soft pastel palette with a navy accent.
+// Used by the admin overview and the employee timesheet.
 import type { LucideIcon } from "lucide-react";
 
 export function StatBox({

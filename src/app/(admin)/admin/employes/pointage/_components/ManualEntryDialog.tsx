@@ -1,6 +1,5 @@
 "use client";
-// ManualEntryDialog — modal de saisie d'une entree manuelle de pointage.
-// Refonte pro : date par défaut = aujourd'hui + calendrier mini inline + time picker visuel.
+// Manual time entry dialog. `targetAdmin` fills in for another employee.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -32,7 +31,7 @@ function sameDay(a: Date, b: Date): boolean {
 
 function defaultManualEntry(presetDate?: string | null): ManualEntry {
   const now = new Date();
-  // Date par défaut : presetDate si fourni, sinon AUJOURD'HUI (plus pertinent que hier)
+  // Defaults to presetDate, otherwise today.
   const target = presetDate ? new Date(presetDate + "T12:00:00") : now;
   const isToday = sameDay(target, now);
 
@@ -66,7 +65,7 @@ export function ManualEntryDialog({
   onClose: () => void;
   onSaved: () => void;
   presetDate: string | null;
-  /** Si fourni, l'entry est créée pour cet admin (mode "rattrapage manager"). */
+  /** When set, the entry is created for that admin instead of the caller. */
   targetAdmin?: { id: number; name: string } | null;
 }) {
   const [entry, setEntry] = useState<ManualEntry>(() => defaultManualEntry(presetDate));
@@ -110,14 +109,19 @@ export function ManualEntryDialog({
     if (!ciDate || !coDate || !validation.ok) { setOverlap(null); return; }
     timer.current = setTimeout(async () => {
       try {
-        const r = await fetch(`/api/admin/timeclock/check-overlap?from=${encodeURIComponent(ciDate.toISOString())}&to=${encodeURIComponent(coDate.toISOString())}`);
+        // Without the target, HR is checked against their own punches.
+        const overlapUrl =
+          `/api/admin/timeclock/check-overlap?from=${encodeURIComponent(ciDate.toISOString())}`
+          + `&to=${encodeURIComponent(coDate.toISOString())}`
+          + (targetAdmin ? `&adminId=${targetAdmin.id}` : "");
+        const r = await fetch(overlapUrl);
         if (!r.ok) { setOverlap(null); return; }
         const d = await r.json();
         setOverlap(d);
       } catch { setOverlap(null); }
     }, 400);
     return () => { if (timer.current) clearTimeout(timer.current); };
-  }, [ciDate, coDate, validation.ok]);
+  }, [ciDate, coDate, validation.ok, targetAdmin]);
 
   const duration = useMemo(() => {
     if (!ciDate || !coDate || !validation.ok) return null;
@@ -128,7 +132,7 @@ export function ManualEntryDialog({
     setEntry((e) => ({ ...e, startTime: start, endTime: end }));
   };
 
-  // Raccourcis date + erreurs au niveau du champ (le rouge = erreur seulement)
+  // Date shortcuts; red is reserved for actual field errors.
   const todayISO = toISO(new Date());
   const yesterdayISO = useMemo(() => {
     const y = new Date();
@@ -153,7 +157,9 @@ export function ManualEntryDialog({
     });
     setPending(false);
     if (r.success) {
-      toast.success("Entrée ajoutée — pensez à cliquer « Soumettre la semaine » pour validation");
+      toast.success(targetAdmin
+        ? `Entrée ajoutée pour ${targetAdmin.name} — il devra soumettre sa semaine`
+        : "Entrée ajoutée — pensez à cliquer « Soumettre la semaine » pour validation");
       onSaved();
       onClose();
     } else {
@@ -178,7 +184,6 @@ export function ManualEntryDialog({
           </DialogHeader>
         </div>
         <div className="px-4 sm:px-5 py-4 space-y-4 overflow-y-auto flex-1">
-          {/* ─── 1. Date ── raccourcis + calendrier replié par défaut ── */}
           <FormSection icon={CalendarIcon} title="1. Date">
             <div className="flex items-center gap-1.5 flex-wrap">
               <Button
@@ -220,7 +225,6 @@ export function ManualEntryDialog({
             )}
           </FormSection>
 
-          {/* ─── 2. Heures ── presets + steppers + durée en direct ──── */}
           <FormSection
             icon={ClockIcon}
             title="2. Heures"
@@ -228,7 +232,6 @@ export function ManualEntryDialog({
               <span className="font-mono text-sm font-bold text-[#0F2D52] tabular-nums">{duration}</span>
             ) : undefined}
           >
-            {/* Presets rapides */}
             <div className="flex flex-wrap gap-1.5">
               {[
                 { label: "9h–12h", start: "09:00", end: "12:00" },
@@ -252,7 +255,6 @@ export function ManualEntryDialog({
               })}
             </div>
 
-            {/* Time pickers steppers — rouge réservé aux erreurs */}
             <div className="grid grid-cols-2 gap-3 pt-1">
               <TimeStepper
                 label="Début"
@@ -271,7 +273,6 @@ export function ManualEntryDialog({
             </div>
           </FormSection>
 
-          {/* ─── 3. Notes ─────────────────────────────────────────── */}
           <FormSection icon={FileText} title="3. Notes (optionnel)">
             <Input
               value={entry.notes}
@@ -280,7 +281,6 @@ export function ManualEntryDialog({
             />
           </FormSection>
 
-          {/* ─── Validation + chevauchement ───────────────────────── */}
           {!validation.ok && (
             <div className="flex items-start gap-2 p-2 rounded bg-red-50 border border-red-200 text-xs text-red-900">
               <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
@@ -291,12 +291,14 @@ export function ManualEntryDialog({
             <div className="flex items-start gap-2 p-2 rounded bg-amber-50 border border-amber-200 text-xs text-amber-900">
               <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
               <span>
-                Chevauche avec un pointage du {overlap.with ? new Date(overlap.with.clockIn).toLocaleDateString("fr-CA") : ""}
+                Chevauche un pointage du{" "}
+                {overlap.with
+                  ? `${new Date(overlap.with.clockIn).toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" })} à ${pad(new Date(overlap.with.clockIn).getHours())}:${pad(new Date(overlap.with.clockIn).getMinutes())}`
+                  : ""}
               </span>
             </div>
           )}
 
-          {/* ─── Récap durée ──────────────────────────────────────── */}
           {duration && (
             <div className="flex items-center justify-center py-3 rounded-lg border-2 border-[#0F2D52] bg-gradient-to-br from-[#0F2D52]/5 to-[#0F2D52]/10">
               <div className="text-center">
@@ -306,7 +308,6 @@ export function ManualEntryDialog({
             </div>
           )}
 
-          {/* ─── Hint brouillon ───────────────────────────────────── */}
           <p className="text-[10px] text-muted-foreground italic text-center">
             Brouillon · Modifiable jusqu&apos;à soumission de la semaine
           </p>
@@ -326,7 +327,7 @@ export function ManualEntryDialog({
   );
 }
 
-// ─── Mini calendrier inline avec 3 modes (jours/mois/années) ─────────────
+// Inline mini calendar with three modes: days, months, years.
 const MONTHS_FR = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
   "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
@@ -352,14 +353,14 @@ function InlineCalendar({
   const today = new Date();
   const maxDate = max ? parseISO(max) : null;
 
-  // Re-center quand value change (ex: click preset extérieur)
+  // Re-center when the value changes from outside (preset click).
   useEffect(() => {
     setViewDate(parseISO(value));
   }, [value]);
 
   const firstOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
   const startWeekday = firstOfMonth.getDay(); // 0=dim
-  const leadingBlanks = startWeekday; // dimanche-first : 0 blanc si le mois commence un dimanche
+  const leadingBlanks = startWeekday; // Sunday-first: no blank when the month starts on a Sunday
   const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
 
   const cells: Array<{ d: Date | null }> = [];
@@ -367,7 +368,7 @@ function InlineCalendar({
   for (let i = 1; i <= daysInMonth; i++) cells.push({ d: new Date(viewDate.getFullYear(), viewDate.getMonth(), i) });
   while (cells.length % 7 !== 0) cells.push({ d: null });
 
-  // Grille années (12 années par décennie)
+  // Year grid: 12 per decade.
   const yearGrid = useMemo(() => {
     const baseYear = Math.floor(viewDate.getFullYear() / 12) * 12;
     return Array.from({ length: 12 }, (_, i) => baseYear + i);
@@ -381,9 +382,6 @@ function InlineCalendar({
 
   return (
     <div className="rounded-md border bg-card overflow-hidden">
-      {/* Les raccourcis Aujourd'hui/Hier + la date sélectionnée vivent dans la
-          section parente — ici uniquement la navigation et la grille. */}
-      {/* Navigation : chevrons adaptés au mode + titre cliquable */}
       <div className="flex items-center justify-between px-2 py-1.5 border-b">
         <ActionTooltip label={mode === "days" ? "Mois précédent" : mode === "months" ? "Année précédente" : "Décennie précédente"} side="bottom">
           <Button
@@ -426,7 +424,6 @@ function InlineCalendar({
         </ActionTooltip>
       </div>
 
-      {/* Mode JOURS */}
       {mode === "days" && (
         <>
           <div className="grid grid-cols-7 px-2 pt-1.5 pb-0.5">
@@ -465,7 +462,6 @@ function InlineCalendar({
         </>
       )}
 
-      {/* Mode MOIS — grille 3×4 */}
       {mode === "months" && (
         <div className="p-2.5">
           <div className="grid grid-cols-3 gap-1.5">
@@ -497,7 +493,6 @@ function InlineCalendar({
         </div>
       )}
 
-      {/* Mode ANNÉES — grille 3×4 (12 années) */}
       {mode === "years" && (
         <div className="p-2.5">
           <div className="grid grid-cols-3 gap-1.5">
@@ -532,7 +527,7 @@ function InlineCalendar({
   );
 }
 
-// ─── Time stepper : grande heure + boutons +/- ────────────────────────────
+// Time stepper: large time display with +/- buttons.─────
 function TimeStepper({
   label, value, onChange, accent, invalid = false,
 }: {
@@ -588,7 +583,6 @@ function TimeStepper({
         </div>
       </div>
       <div className="flex items-center justify-center gap-1">
-        {/* Heures */}
         <div className="flex flex-col items-center">
           <button type="button" onClick={() => setHour(h + 1)} className="h-5 w-7 rounded hover:bg-muted flex items-center justify-center">
             <ChevronLeft className="h-3 w-3 rotate-90" />
@@ -609,7 +603,6 @@ function TimeStepper({
           </button>
         </div>
         <span className={`text-2xl font-bold ${accentCls}`}>:</span>
-        {/* Minutes */}
         <div className="flex flex-col items-center">
           <button type="button" onClick={() => setMinute(Math.min(59, m + 5))} className="h-5 w-7 rounded hover:bg-muted flex items-center justify-center">
             <ChevronLeft className="h-3 w-3 rotate-90" />

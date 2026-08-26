@@ -1,16 +1,17 @@
 "use server";
-// Actions pointage horaire employé.
-// L'employé pointe lui-même son entrée/sortie ; un superviseur peut approuver.
+// Employee time clock actions.
+// The employee punches in and out; a supervisor approves.
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { startOfWeek } from "@/lib/week";
+import { workedMin, minutesBetween, closeRunningBreak, MERGE_MAX_GAP_MIN } from "@/lib/time-entry";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
-// Revalide toutes les routes liees au pointage (admin liste, mon-espace, dashboard)
+// Revalidate every route the time clock feeds.
 function revalidateTimeclock() {
   revalidatePath("/admin/employes/pointage");
   revalidatePath("/admin/mon-espace/pointage");
@@ -34,8 +35,7 @@ async function isSuperAdmin(adminId: number): Promise<boolean> {
 }
 
 async function isFounderAdmin(adminId: number): Promise<boolean> {
-  // SQL brut : resilient si le client Prisma n'est pas regenere apres ajout
-  // du champ is_founder.
+  // Raw SQL: survives a Prisma client not regenerated after is_founder was added.
   try {
     const rows = await prisma.$queryRaw<{ is_founder: boolean }[]>`
       SELECT is_founder FROM admins WHERE id = ${adminId} LIMIT 1
@@ -46,33 +46,33 @@ async function isFounderAdmin(adminId: number): Promise<boolean> {
   }
 }
 
-// ── Regle metier : pas d'auto-approbation des heures ──
-// Un manager/HR non-fondateur ne peut PAS approuver/rejeter/debloquer ses propres
-// entrees. Seul son superieur (ou le fondateur) peut. Le fondateur est la racine
-// de la pyramide : personne au-dessus, donc il peut tout faire y compris sur soi.
+// ── Business rule: nobody approves their own hours ──
+// A non-founder manager/HR cannot approve, reject or unlock their own entries;
+// only someone above them can. The founder is the root of the org chart —
+// nobody sits above them, so they may act on themselves.
 async function canReviewTargets(actorId: number, targetAdminIds: number[]): Promise<boolean> {
   if (!targetAdminIds.some((id) => id === actorId)) return true;
   return isFounderAdmin(actorId);
 }
 
-// ── Securite : verifie que l'acteur a l'autorite hierarchique sur la cible ──
-// Cumule : (1) anti-self-approval (sauf fondateur) ET (2) scope hierarchique.
-// Returns true si l'acteur peut gerer cet employe :
-//   - Fondateur OU super_admin OU permissions users.write / hr.write / payroll.write -> ok
-//   - Sinon : doit etre manager direct (target.managerId === actorId)
-//     OU chef d'une equipe dont la cible fait partie (team.leadAdminId === actorId)
+// ── Security: does the actor have authority over the target? ──
+// Both rules at once: no self-approval (founder excepted) AND org-chart scope.
+// True when the actor may manage this employee:
+//   - founder, super_admin, or users.write / hr.write / payroll.write
+//   - otherwise: direct manager (target.managerId === actorId) or lead of a
+//     team the target belongs to (team.leadAdminId === actorId)
 async function assertCanReviewAdmin(actorId: number, targetAdminId: number): Promise<boolean> {
-  // (1) Anti-self-approval (sauf fondateur)
+  // (1) No self-approval, founder excepted.
   if (!(await canReviewTargets(actorId, [targetAdminId]))) return false;
 
-  // (2) Scope hierarchique
+  // (2) Org-chart scope.
   const actor = await prisma.admin.findUnique({
     where: { id: actorId },
     include: { customRole: true },
   });
   if (!actor) return false;
 
-  // Fondateur OU super_admin : bypass scope
+  // Founder or super_admin: scope bypassed.
   if (await isFounderAdmin(actorId)) return true;
   if (actor.customRole?.name === "super_admin") return true;
 
@@ -84,7 +84,7 @@ async function assertCanReviewAdmin(actorId: number, targetAdminId: number): Pro
     || (perms.timeclock ?? []).includes("write");
   if (isHr) return true;
 
-  // Sinon, le target doit etre dans le scope hierarchique de l'acteur
+  // Otherwise the target must sit inside the actor's org-chart scope.
   const target = await prisma.admin.findUnique({
     where: { id: targetAdminId },
     select: { managerId: true, teamId: true },
@@ -104,9 +104,8 @@ async function assertCanReviewAdmin(actorId: number, targetAdminId: number): Pro
   return false;
 }
 
-// ── Verification bulk : evite le N+1 en pre-chargeant tous les targets en
-// une seule query, puis valide en memoire. Conserve les memes regles que
-// assertCanReviewAdmin (anti-self-approval + scope hierarchique).
+// ── Bulk check: one query for every target, then validated in memory.
+// Same rules as assertCanReviewAdmin, without the N+1.
 async function assertCanReviewMany(actorId: number, targetAdminIds: number[]): Promise<boolean> {
   const unique = Array.from(new Set(targetAdminIds));
   if (unique.length === 0) return true;
@@ -114,7 +113,7 @@ async function assertCanReviewMany(actorId: number, targetAdminIds: number[]): P
   // (1) Anti-self-approval (sauf fondateur)
   if (!(await canReviewTargets(actorId, unique))) return false;
 
-  // (2) Privileges actor : founder / super_admin / users.write / hr.write / payroll.write -> bypass scope
+  // (2) Privileged actor: founder / super_admin / users.write / hr.write / payroll.write bypasses the scope.
   const actor = await prisma.admin.findUnique({
     where: { id: actorId },
     include: { customRole: true },
@@ -132,7 +131,7 @@ async function assertCanReviewMany(actorId: number, targetAdminIds: number[]): P
     || (perms.timeclock ?? []).includes("write");
   if (isHr) return true;
 
-  // (3) Sinon : pre-load tous les targets et les teams en 2 queries, verif en memoire
+  // (3) Otherwise: two queries for targets and teams, checked in memory.
   const targets = await prisma.admin.findMany({
     where: { id: { in: unique } },
     select: { id: true, managerId: true, teamId: true },
@@ -158,10 +157,10 @@ async function assertCanReviewMany(actorId: number, targetAdminIds: number[]): P
 
 const ERR_NO_AUTHORITY = "Vous n'avez pas l'autorité pour gérer cet employé.";
 
-// ── Helper : verifie qu'une date n'est pas dans une PayPeriod verrouillee/payee ──
-// Retourne null si ok, sinon un message d'erreur a renvoyer.
-// "paid" : refus dur, meme pour super_admin / fondateur.
-// "locked" : refus sauf isPrivileged (super_admin OU fondateur).
+// ── Is this date inside a locked or paid PayPeriod? ──
+// Returns null when fine, otherwise the error message to send back.
+// "paid": hard refusal, super_admin and founder included.
+// "locked": refused unless isPrivileged (super_admin or founder).
 async function checkPayPeriodForDate(date: Date, isPrivileged: boolean): Promise<string | null> {
   const day = new Date(date);
   day.setHours(0, 0, 0, 0);
@@ -184,8 +183,8 @@ async function getActorName(adminId: number): Promise<string> {
   return a?.fullName || a?.email || `Admin#${adminId}`;
 }
 
-// ── Garde-fou : refuse toute action de pointage si le compte est desactive.
-// Retourne un Result d'erreur si KO, null si OK.
+// ── Guard: a deactivated account may not punch at all.
+// Returns an error Result when refused, null when fine.
 async function assertAccountActive(adminId: number): Promise<{ success: false; error: string } | null> {
   const a = await prisma.admin.findUnique({ where: { id: adminId }, select: { isActive: true } });
   if (!a || !a.isActive) {
@@ -195,8 +194,8 @@ async function assertAccountActive(adminId: number): Promise<{ success: false; e
 }
 
 // ── Clock-in ────────────────────────────────────────────────
-// REGLE : jobCodeId est OBLIGATOIRE si l'employe a au moins 1 code actif pour
-// son poste. Sinon (poste sans codes configures) on autorise pointer sans code.
+// jobCodeId is REQUIRED when the employee's position has at least one active
+// code. A position with no code configured may punch without one.
 // Optional lat/lng: GPS capture (settings hr_pointage). When geofencing is
 // enabled, web punches outside the configured radius are rejected.
 export async function clockInAction(input: { jobCodeId?: number; category?: string; notes?: string; lat?: number; lng?: number }): Promise<Result<{ id: number }>> {
@@ -204,17 +203,17 @@ export async function clockInAction(input: { jobCodeId?: number; category?: stri
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
   const adminId = session.user.adminId!;
 
-  // Garde-fou : refus si le compte est desactive
+  // Refused when the account is deactivated.
   const inactive = await assertAccountActive(adminId);
   if (inactive) return inactive;
 
-  // Verifier qu'il n'y a pas deja un pointage ouvert
+  // Refuse a second open punch.
   const open = await prisma.timeClock.findFirst({
     where: { adminId, clockOut: null },
   });
   if (open) return { success: false, error: "Vous avez déjà un pointage ouvert — fermez-le d'abord" };
 
-  // Charger le poste de l'employe + codes dispos
+  // Position of the employee plus the codes available to it.
   const me = await prisma.admin.findUnique({
     where: { id: adminId },
     select: { positionId: true },
@@ -228,7 +227,7 @@ export async function clockInAction(input: { jobCodeId?: number; category?: stri
 
   let jobCodeId: number | null = null;
   if (availableCodes.length > 0) {
-    // Au moins 1 code dispo : obligatoire
+    // At least one code available: choosing one is mandatory.
     if (!input.jobCodeId) {
       return { success: false, error: "Choisissez un code de tâche pour commencer" };
     }
@@ -254,11 +253,8 @@ export async function clockInAction(input: { jobCodeId?: number; category?: stri
       category: cat,
       notes: input.notes?.slice(0, 500) ?? null,
       jobCodeId,
-      // Cast: columns may be missing from a stale generated client.
-      ...({
-        clockInLat: coords?.lat ?? null,
-        clockInLng: coords?.lng ?? null,
-      } as object),
+      clockInLat: coords?.lat ?? null,
+      clockInLng: coords?.lng ?? null,
     },
     select: { id: true },
   });
@@ -268,14 +264,14 @@ export async function clockInAction(input: { jobCodeId?: number; category?: stri
 }
 
 // ── Clock-out ───────────────────────────────────────────────
-// Si une pause est en cours au moment du clockOut, on la ferme automatiquement
-// (ajoute la duree de la pause au total avant de calculer la duree travaillee).
+// A break still running at clock-out is closed first, so its minutes land in
+// the totals before the worked duration is computed.
 export async function clockOutAction(input?: { lat?: number; lng?: number }): Promise<Result<{ durationMin: number }>> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
   const adminId = session.user.adminId!;
 
-  // Garde-fou : refus si le compte est desactive
+  // Refused when the account is deactivated.
   const inactive = await assertAccountActive(adminId);
   if (inactive) return inactive;
 
@@ -294,27 +290,15 @@ export async function clockOutAction(input?: { lat?: number; lng?: number }): Pr
   const rawNow = new Date();
   const rounded = roundToStep(rawNow, cfg.roundingMin);
   const now = rounded.getTime() > open.clockIn.getTime() ? rounded : rawNow;
-  // ── Verification PayPeriod : refus si paid (toujours) ou locked (sauf privileges) ──
-  // Verifie a la fois la date d'ouverture du shift ET le moment present (fin).
+  // PayPeriod check on BOTH ends of the shift: the day it opened and now.
   const isPrivileged = (await isFounderAdmin(adminId)) || (await isSuperAdmin(adminId));
   const ppOpenErr = await checkPayPeriodForDate(open.clockIn, isPrivileged);
   if (ppOpenErr) return { success: false, error: ppOpenErr };
   const ppNowErr = await checkPayPeriodForDate(now, isPrivileged);
   if (ppNowErr) return { success: false, error: ppNowErr };
 
-  // Ferme la pause en cours si necessaire (repas = deduite, payee = tracee).
-  let totalBreakMin = open.totalBreakMin;
-  let paidBreakMin = ((open as unknown as { paidBreakMin?: number }).paidBreakMin) ?? 0;
-  if (open.pausedAt) {
-    const added = Math.floor((now.getTime() - open.pausedAt.getTime()) / 60000);
-    if (((open as unknown as { pausedKind?: string | null }).pausedKind) === "paid") {
-      paidBreakMin += added;
-    } else {
-      totalBreakMin += added;
-    }
-  }
-  const elapsedMin = Math.floor((now.getTime() - open.clockIn.getTime()) / 60000);
-  const durationMin = Math.max(0, elapsedMin - totalBreakMin);
+  const { totalBreakMin, paidBreakMin } = closeRunningBreak(open, now);
+  const durationMin = workedMin(open.clockIn, now, totalBreakMin);
 
   await prisma.timeClock.update({
     where: { id: open.id },
@@ -323,13 +307,10 @@ export async function clockOutAction(input?: { lat?: number; lng?: number }): Pr
       durationMin,
       pausedAt: null,
       totalBreakMin,
-      // Cast: columns may be missing from a stale generated client.
-      ...({
-        paidBreakMin,
-        pausedKind: null,
-        clockOutLat: coords?.lat ?? null,
-        clockOutLng: coords?.lng ?? null,
-      } as object),
+      paidBreakMin,
+      pausedKind: null,
+      clockOutLat: coords?.lat ?? null,
+      clockOutLng: coords?.lng ?? null,
     },
   });
   await logAudit({ adminId, action: "update", entityType: "time_clock", entityId: open.id, changes: { closed: true, durationMin, totalBreakMin } });
@@ -403,7 +384,7 @@ export async function pauseClockAction(input?: { kind?: "meal" | "paid" }): Prom
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
   const adminId = session.user.adminId!;
 
-  // Garde-fou : refus si le compte est desactive
+  // Refused when the account is deactivated.
   const inactive = await assertAccountActive(adminId);
   if (inactive) return inactive;
 
@@ -414,7 +395,7 @@ export async function pauseClockAction(input?: { kind?: "meal" | "paid" }): Prom
   if (!open) return { success: false, error: "Aucun pointage en cours" };
   if (open.pausedAt) return { success: false, error: "Deja en pause" };
 
-  // Verifie que la PayPeriod du shift en cours n'est pas verrouillee/payee.
+  // The running shift's PayPeriod must not be locked or paid.
   const isPrivilegedP = (await isFounderAdmin(adminId)) || (await isSuperAdmin(adminId));
   const ppErrP = await checkPayPeriodForDate(open.clockIn, isPrivilegedP);
   if (ppErrP) return { success: false, error: ppErrP };
@@ -424,7 +405,7 @@ export async function pauseClockAction(input?: { kind?: "meal" | "paid" }): Prom
     where: { id: open.id },
     data: {
       pausedAt: new Date(),
-      ...({ pausedKind: kind } as object),
+      pausedKind: kind,
     },
   });
   await logAudit({ adminId, action: "update", entityType: "time_clock", entityId: open.id, changes: { paused: true, kind } });
@@ -433,13 +414,13 @@ export async function pauseClockAction(input?: { kind?: "meal" | "paid" }): Prom
 }
 
 // ── Reprendre ──────────────────────────────────────────────
-// L'employe revient de pause. On ajoute la duree de la pause au total cumule.
+// Back from a break: its minutes are added to the running total.
 export async function resumeClockAction(): Promise<Result<{ breakAddedMin: number }>> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
   const adminId = session.user.adminId!;
 
-  // Garde-fou : refus si le compte est desactive
+  // Refused when the account is deactivated.
   const inactive = await assertAccountActive(adminId);
   if (inactive) return inactive;
 
@@ -450,38 +431,26 @@ export async function resumeClockAction(): Promise<Result<{ breakAddedMin: numbe
   if (!open) return { success: false, error: "Aucun pointage en cours" };
   if (!open.pausedAt) return { success: false, error: "Pas en pause" };
 
-  // Verifie PayPeriod du shift en cours.
+  // PayPeriod check on the running shift.
   const isPrivilegedR = (await isFounderAdmin(adminId)) || (await isSuperAdmin(adminId));
   const ppErrR = await checkPayPeriodForDate(open.clockIn, isPrivilegedR);
   if (ppErrR) return { success: false, error: ppErrR };
 
   const now = new Date();
-  const breakAddedMin = Math.max(0, Math.floor((now.getTime() - open.pausedAt.getTime()) / 60000));
-  const runningKind =
-    ((open as unknown as { pausedKind?: string | null }).pausedKind) === "paid" ? "paid" : "meal";
+  const { totalBreakMin, paidBreakMin, addedMin: breakAddedMin } = closeRunningBreak(open, now);
+  const runningKind = open.pausedKind === "paid" ? "paid" : "meal";
   await prisma.timeClock.update({
     where: { id: open.id },
-    data: {
-      pausedAt: null,
-      // Meal break: deducted. Paid break: tracked separately, not deducted.
-      ...(runningKind === "paid"
-        ? ({
-            paidBreakMin:
-              (((open as unknown as { paidBreakMin?: number }).paidBreakMin) ?? 0) + breakAddedMin,
-          } as object)
-        : { totalBreakMin: open.totalBreakMin + breakAddedMin }),
-      ...({ pausedKind: null } as object),
-    },
+    data: { pausedAt: null, pausedKind: null, totalBreakMin, paidBreakMin },
   });
   await logAudit({ adminId, action: "update", entityType: "time_clock", entityId: open.id, changes: { resumed: true, breakAddedMin, kind: runningKind } });
   revalidateTimeclock();
   return { success: true, data: { breakAddedMin } };
 }
 
-// ── Saisie manuelle d'une période ──────────────────────────
-// `targetAdminId` optionnel : un manager/HR peut créer une entry pour un employé
-// de son scope (utile pour rattraper un oubli identifié dans "Pointages du jour").
-// Si absent, l'entry est créée pour l'utilisateur courant.
+// ── Manual entry ───────────────────────────────────────────
+// Optional `targetAdminId`: a manager/HR may enter time for someone in their
+// scope, to catch up a missed punch. Without it, the entry is for the caller.
 const manualSchema = z.object({
   clockIn: z.string(),
   clockOut: z.string(),
@@ -490,34 +459,29 @@ const manualSchema = z.object({
   targetAdminId: z.number().int().positive().optional(),
 });
 
-// ── Saisie manuelle : workflow complet de bout en bout ──────────────────
+// ── The entry lifecycle, from punch to pay ─────────────────────
 //
-// CYCLE COMPLET (de la saisie a la paie) :
+//   1. PUNCH OR MANUAL ENTRY
+//      -> created as a draft: submittedAt = null, approvedAt = null
+//      -> the employee may still edit or delete it
 //
-//   1. CLOCK-IN/OUT REEL ou SAISIE MANUELLE
-//      → cree l'entry en "brouillon"
-//      → submittedAt = null, approvedAt = null
-//      → l'employe peut encore modifier / supprimer
+//   2. THE EMPLOYEE SUBMITS THE WEEK
+//      -> submitWeekTimeClocksAction stamps submittedAt on the week's entries
+//      -> they become read-only for the employee (padlock shown)
+//      -> the direct manager is notified
 //
-//   2. L'EMPLOYE CLIQUE "Soumettre la semaine"
-//      → submitWeekTimeClocksAction marque submittedAt = now sur les entries
-//        de la semaine
-//      → les entries deviennent VERROUILLEES pour l'employe (cadenas affiche)
-//      → notification envoyee au superviseur direct (managerId)
+//   3. THE SUPERVISOR APPROVES OR REJECTS
+//      -> approve: approvedAt + approvedBy
+//      -> reject: submittedAt cleared, reason recorded in the history
 //
-//   3. LE SUPERVISEUR APPROUVE ou REJETTE
-//      → approveTimeClockAction : approvedAt + approvedBy
-//      → ou rejectTimeClockAction : retire submittedAt + ajoute note de rejet
+//   4. PAY CYCLE
+//      -> PayPeriod "locked": payroll running, no changes
+//      -> PayPeriod "paid": stubs issued, untouchable
 //
-//   4. CYCLE DE PAIE BI-HEBDO
-//      → PayPeriod.status = "locked" : paie en cours, modifications interdites
-//      → PayPeriod.status = "paid"   : bulletins emis, intouchable
-//
-// REGLES D'ACCES :
-//   - Employe / manager : ne peut PAS saisir dans une PayPeriod "locked"
-//   - Super_admin / founder : peut saisir meme dans une periode "locked",
-//     mais pas "paid" (debloquer le bulletin d'abord)
-//   - Tous : refus si futur, si > 16h, si chevauchement
+// ACCESS RULES:
+//   - employee / manager: cannot write into a "locked" PayPeriod
+//   - super_admin / founder: may write into "locked" but never "paid"
+//   - everyone: refused in the future, past 16h, or on an overlap
 const MAX_HOURS_PER_ENTRY = 16;
 
 export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>): Promise<Result<{ id: number; submittedForApproval: boolean }>> {
@@ -527,9 +491,8 @@ export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>)
   const parsed = manualSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
-  // ── Saisie pour autrui (manager/HR rattrape un oubli) ──
-  // On vérifie que l'acteur a l'autorité sur la cible. Sinon, la saisie reste
-  // pour soi-même (comportement historique).
+  // Entering time for someone else requires authority over them; without it
+  // the entry falls back to the caller's own.
   let adminId = actorId;
   if (parsed.data.targetAdminId && parsed.data.targetAdminId !== actorId) {
     if (!(await assertCanReviewAdmin(actorId, parsed.data.targetAdminId))) {
@@ -552,16 +515,14 @@ export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>)
   if (ci > nowDate) return { success: false, error: "Date de début dans le futur refusée" };
   if (co > nowDate) return { success: false, error: "Date de fin dans le futur refusée" };
 
-  // ── Niveau d'autorite : super_admin ou founder = bypass des periodes "locked" ──
-  // Check basé sur l'acteur (qui exécute), pas la cible (qui peut être un employé
-  // standard pour qui un manager rattrape une saisie).
+  // super_admin and founder bypass "locked" periods. Judged on the ACTOR, not
+  // the target, who may well be a regular employee.
   const isFounder = await isFounderAdmin(actorId);
   const isSuper = await isSuperAdmin(actorId);
   const isPrivileged = isFounder || isSuper;
 
-  // ── Verification de la PayPeriod qui couvre la date ─────────────────
-  // On cherche la periode qui contient le jour de ci. Si la periode est
-  // verrouillee ou payee, on refuse (sauf super_admin pour "locked").
+  // The PayPeriod covering that day: locked or paid means refused, super_admin
+  // excepted on "locked".
   const ciDay = new Date(ci); ciDay.setHours(0, 0, 0, 0);
   const coDay = new Date(co); coDay.setHours(23, 59, 59, 999);
   const period = await prisma.payPeriod.findFirst({
@@ -587,9 +548,8 @@ export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>)
     }
   }
 
-  // ── Refus si chevauchement avec un pointage deja sur un bulletin ──
-  // (defense en profondeur au cas ou une PayPeriod aurait ete supprimee mais
-  // pas le PayStub lie)
+  // Overlapping an entry already on a pay stub is refused — defence in depth
+  // for a PayPeriod deleted while its stub survived.
   const paidEntry = await prisma.timeClock.findFirst({
     where: { adminId, clockIn: { gte: ciDay, lte: coDay }, payStubId: { not: null } },
     select: { id: true, clockIn: true },
@@ -601,10 +561,10 @@ export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>)
     };
   }
 
-  // ── Chevauchement avec un pointage existant (open ou non) ──
-  // Cas 1 : entry fermee qui chevauche [ci, co]
-  // Cas 2 : entry ouverte (clockOut=null) dont le clockIn precede notre co
-  //         -> elle court potentiellement jusqu'a maintenant et entre dans [ci, co]
+  // Overlap with an existing entry, open or closed:
+  //   1. a closed entry crossing [ci, co]
+  //   2. an open entry starting before co — it runs until now, so it lands
+  //      inside [ci, co] too
   const overlap = await prisma.timeClock.findFirst({
     where: {
       adminId,
@@ -619,11 +579,9 @@ export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>)
     return { success: false, error: `Chevauchement avec un pointage existant le ${overlap.clockIn.toLocaleDateString("fr-CA")}` };
   }
 
-  const durationMin = Math.floor(durationMs / 60000);
-  // L'entry nait en "brouillon" : pas soumise, pas approuvee. L'employe peut
-  // encore la modifier ou supprimer jusqu'a ce qu'il clique "Soumettre la
-  // semaine" — c'est CE bouton qui declenche la notification au superviseur
-  // et le verrouillage. Pas d'auto-soumission ici.
+  const durationMin = workedMin(ci, co, 0);
+  // Born a draft. The employee may edit or delete it until they submit the
+  // week — that button, not this one, notifies the supervisor and locks it.
   const tc = await prisma.timeClock.create({
     data: {
       adminId,
@@ -654,7 +612,7 @@ function fmtHoursShort(min: number): string {
   return m === 0 ? `${h}h` : `${h}h${m.toString().padStart(2, "0")}`;
 }
 
-// ── Suppression par l'employé (uniquement si non approuvé/non payé) ──
+// ── Employee deletion, only while unapproved and unpaid ──
 export async function deleteTimeClockAction(input: { id: number }): Promise<Result> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
@@ -677,7 +635,7 @@ export async function deleteTimeClockAction(input: { id: number }): Promise<Resu
   return { success: true };
 }
 
-// Helper : crée un snapshot pour potentielle annulation (24h TTL)
+// Snapshot for a possible undo (24h TTL).
 async function createSnapshot(actorId: number, reason: string, payload: unknown): Promise<number> {
   const snap = await prisma.timeClockSnapshot.create({
     data: {
@@ -691,9 +649,9 @@ async function createSnapshot(actorId: number, reason: string, payload: unknown)
   return snap.id;
 }
 
-// ── Fusion des pointages "work" d'une même journée ──────────
-// Combine toutes les entrées non-approuvées/non-payées de la journée en une seule
-// (clockIn = plus tôt, clockOut = plus tard, durationMin = somme).
+// ── Merge a day's "work" punches ────────────────────────────
+// Every unapproved, unpaid entry of the day becomes one: earliest start,
+// latest end.
 export async function mergeDayTimeClockAction(
   input: { date: string },
 ): Promise<Result<{ id: number; snapshotId: number; groups: number; punches: number }>> {
@@ -701,7 +659,7 @@ export async function mergeDayTimeClockAction(
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
   const adminId = session.user.adminId!;
 
-  // Plage [date 00:00, date+1 00:00) en local
+  // Local [day 00:00, next day 00:00).
   const day = new Date(input.date + "T00:00:00");
   if (isNaN(day.getTime())) return { success: false, error: "Date invalide" };
   const next = new Date(day.getTime() + 24 * 60 * 60 * 1000);
@@ -726,12 +684,11 @@ export async function mergeDayTimeClockAction(
   // that was not worked. Only the mis-punch case (out and back in within
   // minutes) may be bridged. Instead of refusing the whole day when one gap is
   // too wide, split the punches into runs and merge each run separately.
-  const MAX_GAP_MIN = 15;
   const runs: (typeof entries)[] = [];
   let run: typeof entries = [entries[0]];
   for (let i = 1; i < entries.length; i++) {
-    const gap = Math.round((entries[i].clockIn.getTime() - entries[i - 1].clockOut!.getTime()) / 60000);
-    if (gap <= MAX_GAP_MIN) run.push(entries[i]);
+    const gap = minutesBetween(entries[i - 1].clockOut!, entries[i].clockIn);
+    if (gap <= MERGE_MAX_GAP_MIN) run.push(entries[i]);
     else { runs.push(run); run = [entries[i]]; }
   }
   runs.push(run);
@@ -739,7 +696,7 @@ export async function mergeDayTimeClockAction(
   if (mergeable.length === 0) {
     return {
       success: false,
-      error: `Aucun pointage à fusionner : ils sont tous séparés de plus de ${MAX_GAP_MIN} minutes. Les fusionner créerait des heures non travaillées.`,
+      error: `Aucun pointage à fusionner : ils sont tous séparés de plus de ${MERGE_MAX_GAP_MIN} minutes. Les fusionner créerait des heures non travaillées.`,
     };
   }
 
@@ -764,29 +721,36 @@ export async function mergeDayTimeClockAction(
     await tx.timeClock.deleteMany({ where: { id: { in: allIds } } });
     const out: number[] = [];
     for (const group of mergeable) {
-      const totalMin = group.reduce((s, e) => s + (e.durationMin ?? 0), 0);
       // Gaps inside the bracket are recorded as break time, so
       // gross - breaks = worked and the bracket stays truthful.
       const gapMin = group.slice(1).reduce((s, e, i) => {
-        return s + Math.max(0, Math.round((e.clockIn.getTime() - group[i].clockOut!.getTime()) / 60000));
+        return s + minutesBetween(group[i].clockOut!, e.clockIn);
       }, 0);
       const jobCodeIds = Array.from(new Set(group.map((e) => e.jobCodeId).filter((x): x is number => x != null)));
+      // Keep only the humans' own notes, deduplicated.
+      const mergedNotes =
+        Array.from(new Set(group.map((e) => (e.notes ?? "").trim()).filter(Boolean))).join(" · ").slice(0, 500)
+        || null;
+      const clockIn = group[0].clockIn;
+      const clockOut = group[group.length - 1].clockOut!;
+      const totalBreakMin = group.reduce((s, e) => s + (e.totalBreakMin ?? 0), 0) + gapMin;
+      // From the merged bracket, not the sum of sub-durations: per-entry
+      // flooring drifts and the row would stop adding up on screen.
+      const totalMin = workedMin(clockIn, clockOut, totalBreakMin);
       const created = await tx.timeClock.create({
         data: {
           adminId,
-          clockIn: group[0].clockIn,
-          clockOut: group[group.length - 1].clockOut!,
+          clockIn,
+          clockOut,
           durationMin: totalMin,
           category: "work",
-          notes: `[FUSION de ${group.length} pointages]${gapMin > 0 ? ` — ${gapMin} min entre les pointages comptées en pause` : ""}`,
-          totalBreakMin: group.reduce((s, e) => s + (e.totalBreakMin ?? 0), 0) + gapMin,
+          // Provenance lives in columns; `notes` belongs to the employee.
+          notes: mergedNotes,
+          totalBreakMin,
           jobCodeId: jobCodeIds.length === 1 ? jobCodeIds[0] : null,
-          ...({
-            paidBreakMin: group.reduce(
-              (s, e) => s + (((e as unknown as { paidBreakMin?: number }).paidBreakMin) ?? 0),
-              0,
-            ),
-          } as object),
+          mergedFrom: group.length,
+          mergedGapMin: gapMin,
+          paidBreakMin: group.reduce((s, e) => s + (e.paidBreakMin ?? 0), 0),
         },
         select: { id: true },
       });
@@ -803,7 +767,7 @@ export async function mergeDayTimeClockAction(
   };
 }
 
-// ── Suppression des pointages courts (< maxMin minutes) d'une journée ──
+// ── Delete a day's short punches, under maxMin minutes ──
 export async function deleteShortTimeClockAction(input: { date: string; maxMin: number }): Promise<Result<{ deleted: number; snapshotId: number }>> {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return { success: false, error: "Non autorisé" };
@@ -848,13 +812,13 @@ export async function deleteShortTimeClockAction(input: { date: string; maxMin: 
   return { success: true, data: { deleted: r.count, snapshotId } };
 }
 
-// ── Approbation par superviseur ────────────────────────────
+// ── Supervisor approval ───────────────────────────────────
 export async function approveTimeClockAction(input: { ids: number[] }): Promise<Result<{ approved: number }>> {
   const actorId = await requirePayrollWrite();
   if (!actorId) return { success: false, error: "Non autorisé (rôle paie/RH requis)" };
   if (!Array.isArray(input.ids) || input.ids.length === 0) return { success: false, error: "Aucune entrée fournie" };
 
-  // Pas d'auto-approbation + check du scope hierarchique sur chaque adminId cible.
+  // No self-approval, and an org-chart check on every target.
   const targets = await prisma.timeClock.findMany({
     where: { id: { in: input.ids } },
     select: { adminId: true },
@@ -877,7 +841,7 @@ export async function approveTimeClockAction(input: { ids: number[] }): Promise<
     return { success: false, error: "Aucune entrée soumise à approuver — l'employé doit d'abord soumettre sa semaine" };
   }
 
-  // Notifier chaque employé dont le pointage vient d'être approuvé (batch)
+  // Notify every employee whose hours were just approved.
   const approved = await prisma.timeClock.findMany({
     where: { id: { in: input.ids }, approvedBy: actorId },
     select: { id: true, adminId: true, clockIn: true },
@@ -895,7 +859,7 @@ export async function approveTimeClockAction(input: { ids: number[] }): Promise<
       })),
     }).catch(() => null);
 
-    // Historique : trace fine par entry (alimente le popover "Historique")
+    // Per-entry trail, feeding the history popover.
     await prisma.timeClockHistory.createMany({
       data: approved.map((e) => ({
         timeClockId: e.id,
@@ -910,7 +874,7 @@ export async function approveTimeClockAction(input: { ids: number[] }): Promise<
   return { success: true, data: { approved: r.count } };
 }
 
-// ── Approuver toute la semaine en cours d'un employé ──────
+// ── Approve an employee's whole week ──────────────────────
 export async function approveWeekTimeClockAction(input: { adminId: number; weekStart?: string }): Promise<Result<{ approved: number }>> {
   const actorId = await requirePayrollWrite();
   if (!actorId) return { success: false, error: "Non autorisé (rôle paie/RH requis)" };
@@ -945,7 +909,7 @@ export async function approveWeekTimeClockAction(input: { adminId: number; weekS
     select: { id: true },
   });
   if (targets.length === 0) {
-    // Message clarifie : distinguer "rien dans la semaine" vs "tout deja approuve"
+    // Tell "nothing this week" apart from "everything already approved".
     const totalThisWeek = await prisma.timeClock.count({
       where: {
         adminId: input.adminId,
@@ -962,11 +926,9 @@ export async function approveWeekTimeClockAction(input: { adminId: number; weekS
   return approveTimeClockAction({ ids: targets.map((t) => t.id) });
 }
 
-// ── Annulation d'une approbation (revient à "En attente") ────
-// Le superviseur revient sur sa décision : approvedAt + approvedBy mis à null,
-// submittedAt conservé (l'entry reste "soumise" et apparaît à nouveau dans
-// "À approuver"). Refusé si l'entrée est déjà sur un bulletin de paie.
-// Trace via audit log + notification à l'employé.
+// ── Undo an approval, back to "pending" ─────────────────────
+// approvedAt and approvedBy cleared, submittedAt kept so the entry returns to
+// the approval queue. Refused once the entry sits on a pay stub.
 export async function unapproveTimeClockAction(input: { ids: number[]; reason?: string }): Promise<Result<{ unapproved: number }>> {
   const actorId = await requirePayrollWrite();
   if (!actorId) return { success: false, error: "Non autorisé (rôle paie/RH requis)" };
@@ -978,7 +940,7 @@ export async function unapproveTimeClockAction(input: { ids: number[]; reason?: 
   });
   if (targets.length === 0) return { success: false, error: "Aucune entrée trouvée" };
 
-  // Refus dur si au moins une est déjà payée
+  // Hard refusal as soon as one is already paid.
   const paid = targets.filter((t) => t.payStubId != null);
   if (paid.length > 0) {
     return { success: false, error: "Une ou plusieurs entrées sont déjà sur un bulletin de paie — non modifiables" };
@@ -992,19 +954,18 @@ export async function unapproveTimeClockAction(input: { ids: number[]; reason?: 
     return { success: false, error: ERR_NO_AUTHORITY };
   }
 
-  // Filtre : seules les entries effectivement approuvées
+  // Only the entries actually approved.
   const approvedTargets = targets.filter((t) => t.approvedAt != null);
   if (approvedTargets.length === 0) return { success: false, error: "Aucune entrée approuvée à annuler" };
 
-  // ── Pas de préfixage des notes ── l'historique vit dans `TimeClockHistory`.
-  // Bulk update : on garde les notes user intactes, on retire juste l'approbation.
+  // `notes` belongs to the employee: the trail lives in TimeClockHistory.
   const r = await prisma.timeClock.updateMany({
     where: { id: { in: approvedTargets.map((t) => t.id) }, payStubId: null },
     data: { approvedAt: null, approvedBy: null },
   });
   const unapproved = r.count;
 
-  // Historique : un événement "unapproved" par entry effectivement annulée
+  // One "unapproved" event per entry actually reverted.
   if (unapproved > 0) {
     await prisma.timeClockHistory.createMany({
       data: approvedTargets.map((t) => ({
@@ -1015,7 +976,7 @@ export async function unapproveTimeClockAction(input: { ids: number[]; reason?: 
       })),
     }).catch(() => null);
 
-    // Notifier chaque employé concerné (un message par entry annulée)
+    // One message per reverted entry.
     await prisma.notification.createMany({
       data: approvedTargets.map((t) => ({
         recipientType: "admin",
@@ -1039,7 +1000,7 @@ export async function unapproveTimeClockAction(input: { ids: number[]; reason?: 
   return { success: true, data: { unapproved } };
 }
 
-// ── Rejet (renvoie à l'employé) ────────────────────────────
+// ── Rejection: back to the employee ───────────────────────
 export async function rejectTimeClockAction(input: { id: number; reason: string }): Promise<Result<{ snapshotId: number }>> {
   const actorId = await requirePayrollWrite();
   if (!actorId) return { success: false, error: "Non autorisé" };
@@ -1071,9 +1032,8 @@ export async function rejectTimeClockAction(input: { id: number; reason: string 
     }],
   });
 
-  // Rejet = retour en brouillon : reset submittedAt pour que l'employe puisse
-  // re-modifier l'entry sans demande de deblocage. Trace dans TimeClockHistory
-  // (les notes utilisateur ne sont plus polluées).
+  // A rejection returns the entry to draft: submittedAt is cleared so the
+  // employee can edit it again without an unlock request.
   await prisma.timeClock.update({
     where: { id: input.id },
     data: {
@@ -1083,7 +1043,7 @@ export async function rejectTimeClockAction(input: { id: number; reason: string 
     },
   });
 
-  // Historique : événement "rejected" avec raison
+  // "rejected" event, with its reason.
   await prisma.timeClockHistory.create({
     data: {
       timeClockId: input.id,
@@ -1093,7 +1053,7 @@ export async function rejectTimeClockAction(input: { id: number; reason: string 
     },
   }).catch(() => null);
 
-  // Notifier l'employé du rejet
+  // Tell the employee.
   await prisma.notification.create({
     data: {
       recipientType: "admin",
@@ -1111,9 +1071,9 @@ export async function rejectTimeClockAction(input: { id: number; reason: string 
   return { success: true, data: { snapshotId } };
 }
 
-// ── Bulk rejet : 1 seul round-trip SQL via updateMany + createMany ────────
-// Avant : N appels individuels a rejectTimeClockAction (lent + surcharge audit/snapshot).
-// Maintenant : un snapshot global + updateMany + createMany (history + notifications).
+// ── Bulk rejection in one round trip ─────────────────────────────────────
+// One global snapshot, then updateMany + createMany for history and
+// notifications, instead of N calls to rejectTimeClockAction.
 export async function rejectManyTimeClockAction(
   input: { ids: number[]; reason: string },
 ): Promise<Result<{ rejected: number; skipped: number; snapshotId: number }>> {
@@ -1136,7 +1096,7 @@ export async function rejectManyTimeClockAction(
   });
   if (targets.length === 0) return { success: false, error: "Aucune entrée trouvée" };
 
-  // Refus dur si une entree est deja payee
+  // Hard refusal as soon as one is already paid.
   const paid = targets.filter((t) => t.payStubId != null);
   if (paid.length > 0) {
     return { success: false, error: "Une ou plusieurs entrées sont déjà sur un bulletin de paie — non rejetables" };
@@ -1156,7 +1116,7 @@ export async function rejectManyTimeClockAction(
 
   const reason = input.reason.trim().slice(0, 500);
 
-  // 1 snapshot global pour permettre un undo
+  // One global snapshot so the batch can be undone.
   const snapshotId = await createSnapshot(actorId, "reject_many", {
     entries: targets.map((t) => ({
       id: t.id,
@@ -1173,13 +1133,13 @@ export async function rejectManyTimeClockAction(
     reason,
   });
 
-  // 1 SQL : updateMany pour reset approval + submittedAt
+  // One updateMany to clear approval and submission.
   const r = await prisma.timeClock.updateMany({
     where: { id: { in: targets.map((t) => t.id) }, payStubId: null },
     data: { approvedAt: null, approvedBy: null, submittedAt: null },
   });
 
-  // 1 SQL : history bulk
+  // One createMany for the history.
   await prisma.timeClockHistory.createMany({
     data: targets.map((t) => ({
       timeClockId: t.id,
@@ -1189,7 +1149,7 @@ export async function rejectManyTimeClockAction(
     })),
   }).catch(() => null);
 
-  // 1 SQL : notifications bulk
+  // One createMany for the notifications.
   await prisma.notification.createMany({
     data: targets.map((t) => ({
       recipientType: "admin",
@@ -1212,7 +1172,7 @@ export async function rejectManyTimeClockAction(
   return { success: true, data: { rejected: r.count, skipped: targets.length - r.count, snapshotId } };
 }
 
-// ── Update d'une entrée existante (employé ou admin override) ──
+// ── Update an existing entry: employee, or admin override ──
 const updateSchema = z.object({
   id: z.number().int().positive(),
   clockIn: z.string().optional(),
@@ -1238,12 +1198,9 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
 
   if (tc.payStubId) return { success: false, error: "Déjà sur un bulletin de paie — non modifiable" };
 
-  // ── Regle de modification d'une entree approuvee ──────────────────
-  // Une entree approuvee peut etre modifiee dans 2 cas :
-  //   1. Admin override : actor != owner ET payroll.write
-  //   2. Fondateur : toujours autorise (y compris sur ses propres heures)
-  // Dans les deux cas, la modification retire l'approbation (passage en
-  // "En attente" pour re-validation).
+  // An approved entry may only be edited by an admin override (actor is not
+  // the owner and holds payroll.write) or by the founder. Either way the edit
+  // withdraws the approval and sends the entry back for review.
   const wasApproved = tc.approvedAt != null;
   const isFounder = await isFounderAdmin(actorId);
   if (wasApproved && !isAdminOverride && !isFounder) {
@@ -1262,7 +1219,7 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
     return { success: false, error: "Entrée soumise — demandez un déblocage pour la modifier" };
   }
 
-  // Construire le nouvel etat
+  // Build the new state.
   const newCi = parsed.data.clockIn ? new Date(parsed.data.clockIn) : tc.clockIn;
   const newCo = parsed.data.clockOut === undefined
     ? tc.clockOut
@@ -1275,8 +1232,8 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
   if (newCo && newCo > nowDate) return { success: false, error: "Date de fin dans le futur refusée" };
   if (newCo && newCo <= newCi) return { success: false, error: "Sortie doit être après entrée" };
 
-  // ── Verification PayPeriod (cycle de paie bi-hebdo) ────────────
-  // Refus si la nouvelle date tombe dans une periode locked/paid (sauf privileges).
+  // Refused when the new date falls in a locked or paid period, privileges
+  // excepted.
   const _isFounder = await isFounderAdmin(actorId);
   const _isSuper = await isSuperAdmin(actorId);
   const _isPrivileged = _isFounder || _isSuper;
@@ -1300,7 +1257,7 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
     }
   }
 
-  // Chevauchement (exclut la ligne en cours)
+  // Overlap check, excluding the row being edited.
   if (newCo) {
     const overlap = await prisma.timeClock.findFirst({
       where: {
@@ -1316,9 +1273,8 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
     if (overlap) return { success: false, error: `Chevauchement avec un pointage du ${overlap.clockIn.toLocaleDateString("fr-CA")}` };
   }
 
-  const durationMin = newCo ? Math.floor((newCo.getTime() - newCi.getTime()) / 60000) : null;
-  // Note : on ne pollue plus le champ `notes` avec un tag ADMIN OVERRIDE — c'est
-  // tracé dans TimeClockHistory + audit log. Les notes restent celles de l'employe.
+  const durationMin = workedMin(newCi, newCo, tc.totalBreakMin);
+  // `notes` stays the employee's: the override is traced in TimeClockHistory.
   const newNotes = parsed.data.notes !== undefined
     ? (parsed.data.notes ? parsed.data.notes.slice(0, 500) : null)
     : tc.notes;
@@ -1332,17 +1288,17 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
       durationMin,
       category: parsed.data.category ?? tc.category,
       notes: newNotes,
-      // Si admin OU founder modifie une entrée approuvée, on retire l'approbation
-      // (passage en "En attente" → re-validation requise)
+      // An admin or founder editing an approved entry withdraws the approval.
       ...(willUnapprove ? { approvedAt: null, approvedBy: null } : {}),
       // Editing the TIMES redefines the entry as a net duration: the old
       // accumulated breaks no longer describe it — reset them so the row
-      // stays coherent (durée = fin − début − pauses).
+      // stays coherent: duration = end - start - breaks.
       ...(parsed.data.clockIn !== undefined || parsed.data.clockOut !== undefined
         ? {
             totalBreakMin: 0,
             pausedAt: null,
-            ...({ paidBreakMin: 0, pausedKind: null } as object),
+            paidBreakMin: 0,
+            pausedKind: null,
           }
         : {}),
     },
@@ -1356,8 +1312,8 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
     changes: { adminOverride: isAdminOverride, hadApproval: wasApproved },
   });
 
-  // Historique : trace "edited" (utile pour distinguer une modification d'un
-  // simple changement d'approbation). On note "admin_override" si applicable.
+  // "edited" event, flagged admin_override where it applies, so an edit reads
+  // differently from a plain approval change.
   await prisma.timeClockHistory.create({
     data: {
       timeClockId: tc.id,
@@ -1367,9 +1323,8 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
     },
   }).catch(() => null);
 
-  // ── Notification employe : si l'admin/founder a modifie l'entry et l'a
-  // remise en attente, prevenir le proprietaire (sauf si l'auteur EST le owner :
-  // cas founder qui modifie ses propres heures).
+  // Warn the owner when someone else's edit sent their entry back to pending;
+  // silent when the author IS the owner (founder editing their own hours).
   if (willUnapprove && !isOwner) {
     const actorName = await getActorName(actorId);
     await prisma.notification.create({
@@ -1389,10 +1344,10 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
   return { success: true, data: { id: tc.id } };
 }
 
-// ── Soumettre la semaine pour validation (employé) ────────
-// Soumet UNIQUEMENT les entries work/meeting/training de la semaine indiquee.
-// Les pauses (break) restent informatives, les conges (vacation/sick/etc.) sont
-// crees automatiquement par le workflow conges et n'ont pas besoin d'etre soumis.
+// ── Submit the week for review (employee) ─────────────────
+// Only work/meeting/training entries of that week are submitted.
+// Breaks stay informational, and leave entries are created by the leave
+// workflow, so neither needs submitting.
 const submitWeekSchema = z.object({ weekStart: z.string().optional() });
 
 export async function submitWeekTimeClocksAction(
@@ -1448,7 +1403,7 @@ export async function submitWeekTimeClocksAction(
     data: { submittedAt: new Date() },
   });
 
-  // ── Notifier d'abord le manager direct, puis fallback super_admins si absent ──
+  // Direct manager first, super_admins only when there is none.
   const me = await prisma.admin.findUnique({
     where: { id: adminId },
     select: { fullName: true, email: true, managerId: true },
@@ -1461,7 +1416,7 @@ export async function submitWeekTimeClocksAction(
   if (me?.managerId) {
     recipientIds.push(me.managerId);
   } else {
-    // Pas de manager assigne -> notifier tous les super_admins
+    // No manager assigned: notify every super_admin.
     const supers = await prisma.admin.findMany({
       where: { customRole: { name: "super_admin" }, isActive: true },
       select: { id: true },
@@ -1492,7 +1447,7 @@ export async function submitWeekTimeClocksAction(
   return { success: true, data: { submitted: r.count, workMin, breakMin, leaveMin } };
 }
 
-// ── Employe demande de debloquer des entries deja soumises ──
+// ── Employee asks for submitted entries to be unlocked ──
 const requestEditSchema = z.object({
   ids: z.array(z.number().int().positive()).min(1),
   reason: z.string().min(3).max(500),
@@ -1507,7 +1462,7 @@ export async function requestEditTimeClockAction(
   const parsed = requestEditSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
 
-  // Verifie que les entries appartiennent a l'employe et sont bien soumises
+  // The entries must belong to the employee and actually be submitted.
   const entries = await prisma.timeClock.findMany({
     where: { id: { in: parsed.data.ids }, adminId },
     select: { id: true, clockIn: true, submittedAt: true, payStubId: true },
@@ -1575,7 +1530,7 @@ export async function requestEditTimeClockAction(
   return { success: true, data: { id: req.id } };
 }
 
-// ── Admin debloque les entries (reset submittedAt) ──
+// ── Admin unlocks the entries: submittedAt cleared ──
 const unlockSchema = z.object({
   requestId: z.number().int().positive(),
 });
@@ -1634,7 +1589,7 @@ export async function unlockTimeClockEntriesAction(
   return { success: true, data: { unlocked: r.count } };
 }
 
-// ── Admin refuse la demande ──
+// ── Admin turns the request down ──
 const denySchema = z.object({
   requestId: z.number().int().positive(),
   reason: z.string().max(500).optional(),
@@ -1691,10 +1646,9 @@ export async function denyEditRequestAction(input: z.infer<typeof denySchema>): 
   return { success: true };
 }
 
-// ── Forcer la fermeture d'un pointage ouvert (admin) ──────
-// Calcule la duree correctement : (closeAt - clockIn) - totalBreakMin, en
-// fermant la pause en cours si necessaire. Verifie aussi PayPeriod (refus si
-// "paid", refus si "locked" sauf super_admin/founder).
+// ── Force-close an open punch (admin) ─────────────────────
+// Duration is (closeAt - clockIn) - totalBreakMin, closing a running break
+// first. Refused on a "paid" period, and on "locked" without privileges.
 export async function forceClockOutAction(input: { adminId: number; when?: string }): Promise<Result<{ id: number }>> {
   const actorId = await requirePayrollWrite();
   if (!actorId) return { success: false, error: "Non autorisé" };
@@ -1716,25 +1670,13 @@ export async function forceClockOutAction(input: { adminId: number; when?: strin
   if (closeAt <= open.clockIn) return { success: false, error: "La date de fermeture doit être après l'ouverture" };
   if (closeAt > new Date(Date.now() + 60_000)) return { success: false, error: "Date dans le futur refusée" };
 
-  // ── Verification PayPeriod : refus si "paid", refus si "locked" sauf privilege.
+  // Refused on a "paid" period, and on "locked" without privileges.
   const isPrivileged = (await isFounderAdmin(actorId)) || (await isSuperAdmin(actorId));
   const ppErr = await checkPayPeriodForDate(closeAt, isPrivileged);
   if (ppErr) return { success: false, error: ppErr };
 
-  // Calcule la duree nette : (closeAt - clockIn) - pauses repas (en fermant
-  // la pause en cours selon son type).
-  const elapsedMin = Math.floor((closeAt.getTime() - open.clockIn.getTime()) / 60000);
-  let totalBreakMin = open.totalBreakMin;
-  let paidBreakMin = ((open as unknown as { paidBreakMin?: number }).paidBreakMin) ?? 0;
-  if (open.pausedAt) {
-    const added = Math.floor((closeAt.getTime() - open.pausedAt.getTime()) / 60000);
-    if (((open as unknown as { pausedKind?: string | null }).pausedKind) === "paid") {
-      paidBreakMin += added;
-    } else {
-      totalBreakMin += added;
-    }
-  }
-  const durationMin = Math.max(0, elapsedMin - totalBreakMin);
+  const { totalBreakMin, paidBreakMin } = closeRunningBreak(open, closeAt);
+  const durationMin = workedMin(open.clockIn, closeAt, totalBreakMin);
 
   const actorName = await getActorName(actorId);
   await prisma.timeClock.update({
@@ -1744,12 +1686,13 @@ export async function forceClockOutAction(input: { adminId: number; when?: strin
       durationMin,
       pausedAt: null,
       totalBreakMin,
-      ...({ paidBreakMin, pausedKind: null } as object),
+      paidBreakMin,
+      pausedKind: null,
     },
   });
 
-  // Historique fin : trace l'event force_closed (le tag dans notes est retire,
-  // l'audit log + history sont la source de verite).
+  // force_closed goes to the history: no tag in `notes`, the audit log and
+  // the history are the source of truth.
   await prisma.timeClockHistory.create({
     data: {
       timeClockId: open.id,
@@ -1775,7 +1718,7 @@ export async function forceClockOutAction(input: { adminId: number; when?: strin
   return { success: true, data: { id: open.id } };
 }
 
-// ── Undo d'un snapshot (merge / delete_short / reject) ───
+// ── Undo a snapshot: merge, delete_short or reject ──────
 type SnapshotEntry = {
   id?: number;
   adminId: number;
@@ -1814,7 +1757,7 @@ export async function undoTimeClockSnapshotAction(input: { snapshotId: number })
   let restored = 0;
   await prisma.$transaction(async (tx) => {
     if (snap.reason === "merge_day") {
-      // Trouver le pointage "fusionné" et le supprimer
+      // Drop the merged entry.
       const earliest = entries.reduce((min, e) =>
         new Date(e.clockIn).getTime() < new Date(min.clockIn).getTime() ? e : min, entries[0]);
       const latest = entries.reduce((max, e) => {
@@ -1832,7 +1775,7 @@ export async function undoTimeClockSnapshotAction(input: { snapshotId: number })
         },
       });
       if (merged) await tx.timeClock.delete({ where: { id: merged.id } });
-      // Re-créer les originales (nouveaux IDs)
+      // Recreate the originals under new ids.
       for (const e of entries) {
         await tx.timeClock.create({
           data: {
@@ -1841,7 +1784,8 @@ export async function undoTimeClockSnapshotAction(input: { snapshotId: number })
             clockOut: e.clockOut ? new Date(e.clockOut) : null,
             durationMin: e.durationMin,
             category: e.category,
-            notes: `[RESTAURÉ de snapshot #${snap.id}] ${e.notes ?? ""}`.slice(0, 500),
+            notes: e.notes,
+            restoredFromSnapshotId: snap.id,
             jobCodeId: e.jobCodeId ?? null,
             isManual: e.isManual ?? false,
             pausedAt: e.pausedAt ? new Date(e.pausedAt) : null,
@@ -1859,7 +1803,8 @@ export async function undoTimeClockSnapshotAction(input: { snapshotId: number })
             clockOut: e.clockOut ? new Date(e.clockOut) : null,
             durationMin: e.durationMin,
             category: e.category,
-            notes: `[RESTAURÉ de snapshot #${snap.id}] ${e.notes ?? ""}`.slice(0, 500),
+            notes: e.notes,
+            restoredFromSnapshotId: snap.id,
             jobCodeId: e.jobCodeId ?? null,
             isManual: e.isManual ?? false,
             pausedAt: e.pausedAt ? new Date(e.pausedAt) : null,
@@ -1896,13 +1841,9 @@ export async function undoTimeClockSnapshotAction(input: { snapshotId: number })
   return { success: true, data: { restored } };
 }
 
-// ─────────────────────────────────────────────────────────────────
-// notifyForgottenDaysAction — signaler a un employe les jours non
-// pointes de sa semaine. Cree une Notification de type warning avec
-// la liste des jours et un lien vers /admin/mon-espace/pointage.
-// Securite : assertCanReviewAdmin (manager direct, chef d'equipe,
-// HR/super_admin/fondateur).
-// ─────────────────────────────────────────────────────────────────
+// notifyForgottenDaysAction — flag an employee's unpunched days of the week.
+// Creates a warning notification listing them, linked to their own time clock.
+// Scope-checked like every review action.
 const notifyForgottenSchema = z.object({
   adminId: z.number().int().positive(),
   days: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1).max(14),
@@ -1928,8 +1869,8 @@ export async function notifyForgottenDaysAction(
   });
   if (!target) return { success: false, error: "Employé introuvable." };
 
-  // ── Idempotence : refuse un second appel pour le meme adminId dans les 24h.
-  // On detecte la derniere notification "Pointages manquants" envoyee a cet employe.
+  // Idempotent: a second call for the same employee within 24h is refused,
+  // detected from the last "Pointages manquants" notification sent to them.
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const recent = await prisma.notification.findFirst({
     where: {
@@ -1947,7 +1888,7 @@ export async function notifyForgottenDaysAction(
   }
 
   const actorName = await getActorName(actorId);
-  // Format lisible des jours : "lun 18 mai, mar 19 mai..."
+  // Human-readable list: "lun 18 mai, mar 19 mai...".
   const formatDay = (d: string) => {
     const dt = new Date(`${d}T12:00:00`);
     return dt.toLocaleDateString("fr-CA", { weekday: "short", day: "numeric", month: "short" });
@@ -2016,6 +1957,7 @@ export async function updateTimeclockSettingsAction(input: {
   geofenceLng: number | null;
   geofenceRadiusM: number;
   kioskEnabled: boolean;
+  overtimeWeeklyMin: number;
 }): Promise<Result> {
   const actorId = await requirePayrollWrite();
   if (!actorId) return { success: false, error: "Non autorisé" };
@@ -2032,6 +1974,11 @@ export async function updateTimeclockSettingsAction(input: {
     }
   }
   const radius = Math.min(50000, Math.max(10, Math.round(input.geofenceRadiusM)));
+  // 20h to 80h: below is not a work week, above cannot be a legal threshold.
+  const overtime = Math.round(input.overtimeWeeklyMin);
+  if (!Number.isFinite(overtime) || overtime < 1200 || overtime > 4800) {
+    return { success: false, error: "Seuil d'heures supplémentaires invalide (entre 20 h et 80 h)" };
+  }
 
   const entries: Array<{ key: string; value: string; label: string }> = [
     { key: "rounding_min", value: String(input.roundingMin), label: "Arrondi des punchs (minutes)" },
@@ -2041,6 +1988,7 @@ export async function updateTimeclockSettingsAction(input: {
     { key: "geofence_lng", value: input.geofenceLng === null ? "" : String(input.geofenceLng), label: "Longitude du lieu de travail" },
     { key: "geofence_radius_m", value: String(radius), label: "Rayon autorisé (mètres)" },
     { key: "kiosk_enabled", value: String(input.kioskEnabled), label: "Mode kiosque (borne partagée)" },
+    { key: "overtime_weekly_min", value: String(overtime), label: "Seuil hebdomadaire des heures supplémentaires (minutes)" },
   ];
 
   for (const e of entries) {

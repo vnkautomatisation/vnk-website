@@ -1,4 +1,4 @@
-// Réutilise la TimeclockView en mode "self only".
+// TimeclockView in "self only" mode.
 import { prisma } from "@/lib/prisma";
 import { startOfWeek, endOfWeek } from "@/lib/week";
 import { auth } from "@/lib/auth";
@@ -6,6 +6,10 @@ import { redirect } from "next/navigation";
 import { TimeclockView } from "../../employes/pointage/timeclock-view";
 import { getHolidaysInRange } from "@/lib/services/holidays";
 
+
+// Long periods with several punches a day exceed this; the view says so
+// rather than under-reporting the employee's own totals in silence.
+const MAX_ENTRIES = 1000;
 
 export default async function MyPointagePage({
   searchParams,
@@ -18,7 +22,7 @@ export default async function MyPointagePage({
 
   const sp = await searchParams;
   const now = new Date();
-  // Defaut : semaine en cours (dimanche -> aujourd'hui)
+  // Default: current week (Sunday -> today).
   const defaultFrom = startOfWeek(now);
   // Date-only strings parse as UTC and shift a day: force LOCAL midnight.
   const from = sp.from
@@ -33,7 +37,7 @@ export default async function MyPointagePage({
     prisma.timeClock.findMany({
       where: { adminId, clockIn: { gte: periodFrom, lte: periodTo } },
       orderBy: { clockIn: "desc" },
-      take: 200,
+      take: MAX_ENTRIES + 1,
       include: {
         approver: { select: { fullName: true, email: true } },
         // History feeds the structured "Rejeté" badge (with reason) in rows.
@@ -44,7 +48,7 @@ export default async function MyPointagePage({
         },
       },
     }),
-    prisma.timeClock.findFirst({ where: { adminId, clockOut: null } }),
+    prisma.timeClock.findFirst({ where: { adminId, clockOut: null }, orderBy: { clockIn: "desc" } }),
     getHolidaysInRange(periodFrom, periodTo),
     getTimeclockConfig(),
     // Kiosk PIN state only, never its value.
@@ -56,6 +60,9 @@ export default async function MyPointagePage({
     `,
   ]);
 
+  const entriesTruncated = myEntries.length > MAX_ENTRIES;
+  if (entriesTruncated) myEntries.length = MAX_ENTRIES;
+
   const holidaysJson: Record<string, { name: string; isPaid: boolean; type: string }> = {};
   for (const [k, v] of holidaysMap) holidaysJson[k] = v;
 
@@ -63,6 +70,7 @@ export default async function MyPointagePage({
     <TimeclockView
       mode="employee"
       myEntries={JSON.parse(JSON.stringify(myEntries))}
+      entriesTruncated={entriesTruncated}
       openEntry={openEntry ? JSON.parse(JSON.stringify(openEntry)) : null}
       currentAdminId={adminId}
       periodFrom={periodFrom.toISOString()}
