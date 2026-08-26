@@ -8,7 +8,7 @@ import { SettingsView } from "./settings-view";
 import type { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations({ namespace: "settings" });
+  const t = await getTranslations("settings");
   return {
     title: t("page_title"),
     description: t("page_subtitle"),

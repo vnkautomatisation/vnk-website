@@ -4,10 +4,10 @@ import { createNavigation } from "next-intl/navigation";
 export const routing = defineRouting({
   locales: ["fr", "en"],
   defaultLocale: "fr",
-  // Jamais de préfixe dans l'URL pour le français (par défaut).
-  // L'anglais utilise /en/... seulement si l'utilisateur le choisit.
+  // French, the default, carries no URL prefix; English uses /en/... and only
+  // when the visitor picks it - never guessed from accept-language.
   localePrefix: "as-needed",
-  localeDetection: false, // on laisse l'utilisateur choisir via le bouton FR/EN
+  localeDetection: false,
 });
 
 export type Locale = (typeof routing.locales)[number];

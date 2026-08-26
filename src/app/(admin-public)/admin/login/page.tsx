@@ -6,7 +6,7 @@ import { LoginForm } from "./login-form";
 import type { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations({ namespace: "auth" });
+  const t = await getTranslations("auth");
   return { title: t("admin_login_title") };
 }
 

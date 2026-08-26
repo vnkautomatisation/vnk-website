@@ -65,7 +65,7 @@ export default async function PortalDashboard() {
     redirect("/portail/login");
   }
   const clientId = session.user.clientId;
-  const t = await getTranslations({ namespace: "portal.dashboard" });
+  const t = await getTranslations("portal.dashboard");
 
   const { activeMandates, pendingQuotes, pendingInvoices, unreadDocs, totalMandates, totalContracts, overdueInvoices, recentEvents, client, nextAppointment } = await getDashboardData(clientId);
 
